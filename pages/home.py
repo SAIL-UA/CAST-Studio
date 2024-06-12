@@ -40,25 +40,7 @@ card = html.Div(dbc.Card([
         #     }		
 )
 		
-
-
 dragable = [card,card,card]
-
-# html.Div(id="drag_container", className="container", children=[
-#         dbc.Col(
-#             [card,
-#              card,
-#              card,
-             
-#         ]   ),
-#         dbc.Col(card),
-#         dbc.Col(card),
-#         ])
-
-
-# def create_dragable():
-    
-#     return
 
 def create_home():
     def Header(name, app):
@@ -86,7 +68,7 @@ def create_home():
 			),
             dbc.Row(
                 dbc.Col([
-                    html.H5("Data Story Bin"),
+                    html.H5("Data Storyboard"),
                     html.Hr(),
                     dbc.Row(id='drag_container2',children=
                         dragable,
@@ -103,6 +85,7 @@ def create_home():
     dash.clientside_callback(
         ClientsideFunction(namespace="clientside", function_name="make_draggable"),
         Output("drag_container", "data-drag"),
+        Output("drag_container2","data-drag"),
         [Input("drag_container", "id"),Input("drag_container2", "id")],
     )
   
