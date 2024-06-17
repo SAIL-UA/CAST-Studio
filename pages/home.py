@@ -8,7 +8,7 @@ import plotly.graph_objs as go
 import networkx as nx
 import os
 from dash.dependencies import Input, Output, State, ClientsideFunction
-
+from loadcache import cards_layout
 placehold =  html.Div(
                 "Placeholder",
                 style={
@@ -21,15 +21,15 @@ placehold =  html.Div(
                 }
             )
 
-card = html.Div(dbc.Card([
-            dbc.CardHeader("Card 1"),
-            dbc.CardBody(
-                "Some content"
-            ),
+# card = html.Div(dbc.Card([
+#             dbc.CardHeader("Card 1"),
+#             dbc.CardBody(
+#                 "Some content"
+#             ),
             
             
-        ]),
-        style={"width": "18rem"}
+#         ]),
+#         style={"width": "18rem"}
         # style={
         #     'width': '200px',
         #     'height': '100px',
@@ -38,9 +38,9 @@ card = html.Div(dbc.Card([
         #     'border': '2px dashed gray',
         #     'borderRadius': '10px'
         #     }		
-)
+# )
 		
-dragable = [card,card,card]
+# dragable = [card,card,card]
 
 def create_home():
     def Header(name, app):
@@ -59,10 +59,10 @@ def create_home():
                     html.H5("Data Story Bin"),
                     html.Hr(),
                     dbc.Row(id='drag_container',children=
-                        dragable,
+                        cards_layout,
                     ),
                 ],
-                style={'padding': '20px'},
+                # style={'padding': '20px'},
                 )
 				
 			),
@@ -70,11 +70,11 @@ def create_home():
                 dbc.Col([
                     html.H5("Data Storyboard"),
                     html.Hr(),
-                    dbc.Row(id='drag_container2',children=
-                        dragable,
+                    dbc.Row(id='drag_container2',
+                            children=cards_layout,
                     ),
                 ],
-                style={'padding': '20px'},
+                # style={'padding': '20px'},
                 )
 				
 			)

@@ -25,6 +25,8 @@ from textwrap import dedent
 from sidebar import create_sidebar
 from pages.home import create_home
 from pages.search import create_searchpage
+
+
 app = dash.Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP],
     # these meta_tags ensure content is scaled correctly on different devices
