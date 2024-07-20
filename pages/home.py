@@ -9,6 +9,14 @@ import networkx as nx
 import os
 from dash.dependencies import Input, Output, State, ClientsideFunction
 from loadcache import cards_layout
+
+
+data_bin = {}
+story_bin= {}
+
+
+
+
 placehold =  html.Div(
                 "Placeholder",
                 style={
@@ -20,27 +28,6 @@ placehold =  html.Div(
                     'borderRadius': '10px'
                 }
             )
-
-# card = html.Div(dbc.Card([
-#             dbc.CardHeader("Card 1"),
-#             dbc.CardBody(
-#                 "Some content"
-#             ),
-            
-            
-#         ]),
-#         style={"width": "18rem"}
-        # style={
-        #     'width': '200px',
-        #     'height': '100px',
-        #     'lineHeight': '100px',
-        #     'textAlign': 'center',
-        #     'border': '2px dashed gray',
-        #     'borderRadius': '10px'
-        #     }		
-# )
-		
-# dragable = [card,card,card]
 
 def create_home():
     def Header(name, app):
@@ -88,6 +75,7 @@ def create_home():
         Output("drag_container2","data-drag"),
         [Input("drag_container", "id"),Input("drag_container2", "id")],
     )
+  
   
     return home
     

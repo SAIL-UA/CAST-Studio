@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 import dash
 from dash import dcc, html
 import dash_bootstrap_components as dbc
-
+import json
 # Set the path to the cache directory
 cache_dir = 'cache'
 
@@ -53,6 +53,12 @@ for png_file in png_files:
             'image': img_str,
             'text': text
         })
+
+
+cache_info = json.load(open("cache/cleaned_log_file.json",'r'))
+print(cache_info[0].keys())
+
+
 
 
 # Define the layout of the app
