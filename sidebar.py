@@ -1,10 +1,16 @@
-
-import dash
+# import dash
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, dcc, html
-def create_sidebar():
-    # we use the Row and Col components to construct the sidebar header
-    # it consists of a title, and a toggle, the latter is hidden on large screens
+
+def create_sidebar(is_hidden=False, is_collapsed=False):
+    # Determine the sidebar class based on its state
+    if is_hidden:
+        sidebar_class = "hidden"
+    elif is_collapsed:
+        sidebar_class = "collapsed"
+    else:
+        sidebar_class = "expanded"
+    
     sidebar_header = dbc.Row(
         [
             dbc.Col(html.H2("CAST-UA\n", className="h2")),
@@ -33,10 +39,7 @@ def create_sidebar():
                         id="sidebar-toggle",
                     ),
                 ],
-                # the column containing the toggle will be only as wide as the
-                # toggle, resulting in the toggle being right aligned
                 width="auto",
-                # vertically align the toggle in the center
                 align="center",
             ),
         ]
@@ -45,46 +48,39 @@ def create_sidebar():
     sidebar = html.Div(
         [
             sidebar_header,
-            # we wrap the horizontal rule and short blurb in a div that can be
-            # hidden on a small screen
             html.Div(
                 [
                     html.Hr(),
                     html.P(
-                        "Story Sudio: Coaching Data Storytelling ",
+                        "Story Studio: Coaching Data Storytelling ",
                         className="lead",
                     ),
                 ],
                 id="blurb",
             ),
-            # use the Collapse component to animate hiding / revealing links
             dbc.Collapse(
                 dbc.Nav(
                     [
-                        dbc.NavLink("Home", href="/", active="exact"),
+                        dbc.NavLink("Home", href="/home", active="exact"),
                         dbc.NavLink("About the Data", href="/about", active="exact"),
                         dbc.NavLink("Resources", href="/resources", active="exact"),
                         dbc.NavLink("Search", href="/search", active="exact"),
                         dbc.NavLink("Contact Us", href="/contact", active="exact"),
-                        dbc.Col(
-                html.Img(src="assets/UAENGLog.png",className="display-4",style={'position': 'absolute', 'bottom': '10%', 'left': '10%', 'width': '60%'}),
-                # html.Img(src='/assets/your_image.jpg', style={'position': 'absolute', 'bottom': '0', 'left': '0', 'width': '100%'}),
-                # width={"size": 0, "o  rder": "last", "offset": 1},
-                
-            )
+                        dbc.NavLink("Logout", href="/login", id="logout-link", active="exact"),
+                        html.Div(
+                            html.Img(src="assets/UAENGLog.png", 
+                                     className="logo-img", 
+                                     style={'position': 'absolute', 'bottom': '5%', 'left': '5%', 'width': '10rem'}
+                                     ),
+                        ),
                     ],
-                    
                     vertical=True,
                     pills=True,
                 ),
-                
                 id="collapse",
-                
             ),
-
-        
         ],
         id="sidebar",
-        
+        className=sidebar_class  # Assign the class dynamically
     )
     return sidebar

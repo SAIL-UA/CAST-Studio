@@ -12,12 +12,7 @@ import dash_bootstrap_components as dbc
 
 # Sample data for the table
 data = [
-    {"Datasets": "N-SSATS", "info": 30, "Datasource": "https://www.samhsa.gov/data/data-we-collect/n-ssats-national-survey-substance-abuse-treatment-services"},
-    {"Datasets": "NSDUH", "info": 2022, "Datasource": "San Francisco"},
-    {"Datasets": "NSUMHSS", "info": 29, "Datasource": "Los Angeles"},
-	{"Datasets": "Rural Urban Codes", "Year": 29, "Datasource": "Los Angeles"},
-	{"Datasets": "NSUMHSS", "Year": 29, "Datasource": "Los Angeles"},
-	{"Datasets": "NSUMHSS", "Year": 29, "Datasource": "Los Angeles"},
+    {"Datasets": "Example Dataset", "info": 30, "Datasource": "https://www.samhsa.gov/data/data-we-collect/n-ssats-national-survey-substance-abuse-treatment-services"},
 	
 ]
 

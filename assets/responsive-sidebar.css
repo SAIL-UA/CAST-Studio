@@ -10,7 +10,35 @@
 }
 
 /* Hide the blurb on a small screen */
-#blurb {
+/* #blurb {
+  display: none;
+} */
+
+#sidebar.expanded #blurb {
+  display: block;
+}
+
+#sidebar.collapsed #blurb {
+  display: none;
+}
+
+#sidebar.hidden #blurb {
+  display: none;
+}
+
+#sidebar.expanded #collapse {
+  display: block;
+}
+
+#sidebar.collapsed #collapse {
+  display: none;
+}
+
+#sidebar.hidden #collapse {
+  display: none;
+}
+
+#sidebar.hidden {
   display: none;
 }
 
@@ -22,15 +50,17 @@
   margin-top: 1rem;
 }
 
-/* add the three horizontal bars icon for the toggle */
+/* Add the three horizontal bars icon for the toggle */
 .navbar-toggler-icon {
   background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3e%3cpath stroke='rgba(0, 0, 0, 0.5)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
 #page-content {
   padding: 1rem 1rem;
+  transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
 }
 
+/* Define the default layout for large screens (>= 48em) */
 @media (min-width: 48em) {
   #sidebar {
     position: fixed;
@@ -42,54 +72,111 @@
     transition: margin 0.3s ease-in-out, padding 0.3s ease-in-out;
   }
 
+  /* Sidebar toggle visibility */
   #sidebar-toggle {
     display: inline-block;
     position: relative;
     top: 0;
     transition: top 0.3s ease-in-out;
   }
-
-  /* add negative margin to sidebar to achieve the collapse */
   #sidebar.collapsed {
     margin-left: -15.5rem;
     padding-right: 0.5rem;
+    transition: margin-left 0.3s ease-in-out;
   }
 
-  /* move the sidebar toggle up to the top left corner */
+  /* When the sidebar is collapsed, move the sidebar up and collapse its content */
   #sidebar.collapsed #sidebar-toggle {
     top: -2rem;
   }
 
-  /* also adjust margin of page content */
-  #sidebar.collapsed ~ #page-content {
-    margin-left: 1rem;
-  }
-
-  /* move all contents of navbar other than header (containing toggle) further
-     off-screen */
+  /* Move all contents of the sidebar off-screen when collapsed */
   #sidebar.collapsed > *:not(:first-child) {
     margin-left: -6rem;
     margin-right: 6rem;
   }
 
-  /* reveal the blurb on a large screen */
+  /* Reveal the blurb on large screens */
   #blurb {
     display: block;
   }
 
-  /* Hide the toggle on a large screen */
+  /* Hide the navbar toggle on large screens */
   #navbar-toggle {
     display: none;
   }
 
-  #collapse {
-    display: block;
-  }
-
-  /* set margins of the main content so that it doesn't overlap the sidebar */
+  /* Sidebar expanded, set margins for main content */
   #page-content {
     margin-left: 19rem;
     margin-right: 0rem;
-    transition: margin-left 0.3s ease-in-out;
+  }
+
+  /* Adjust page content when sidebar-wrapper has the 'collapsed' class */
+  #sidebar-wrapper.collapsed ~ #page-content {
+    margin-left: 2rem;
+    width: calc(100% - 2rem);
+  }
+
+  /* Adjust page content when sidebar-wrapper has the 'hidden' class (no sidebar at all) */
+  #sidebar-wrapper.hidden ~ #page-content {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* Define behavior for small screens (< 48em) */
+@media (max-width: 48em) {
+  /* On small screens, hide the sidebar and make page content full width */
+  #sidebar-wrapper.hidden #page-content {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  #sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%; /* Full width of the screen */
+    height: 20rem;
+    padding: 1rem; /* Reduce padding */
+    background-color: #f8f9fa;
+    transition: height 0.3s ease-in-out, padding 0.3s ease-in-out, overflow 0.3s ease-in-out;
+  }
+
+  #sidebar.collapsed {
+    padding: 0.5rem; /* Smaller padding when collapsed */
+    height: 3rem; /* Adjust the collapsed sidebar height */
+    overflow: hidden;
+    transition: height 0.3s ease-in-out, padding 0.3s ease-in-out, overflow 0.3s ease-in-out;
+  }
+
+  #collapse {
+    transition: height 0.3s ease-in-out
+  }
+
+  #sidebar h2 {
+    font-size: 1.2rem; /* Reduce font size to save space */
+  }
+
+  #sidebar .nav-link {
+    padding: 0.25rem 0; /* Adjust padding of links */
+    font-size: 0.9rem; /* Adjust font size of links */
+  }
+
+  /* Page content takes the full width when sidebar is hidden */
+  #page-content {
+    margin-top: 19rem; /* Ensure page content starts below the sidebar */
+    padding: 1rem;
+    width: 100%;
+  }
+  #sidebar-wrapper.hidden ~ #page-content {
+    margin-top: 1rem;
+  }
+
+  #sidebar-wrapper.collapsed ~ #page-content {
+    margin-top: 3rem;
+    width: calc(100% - 1rem);
+    transition: margin-top 0.3s ease-in-out;
   }
 }

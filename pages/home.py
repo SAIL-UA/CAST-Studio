@@ -8,14 +8,11 @@ import plotly.graph_objs as go
 import networkx as nx
 import os
 from dash.dependencies import Input, Output, State, ClientsideFunction
-from loadcache import cards_layout
+from loadcache import get_cards_layout
 
 
 data_bin = {}
 story_bin= {}
-
-
-
 
 placehold =  html.Div(
                 "Placeholder",
@@ -46,7 +43,7 @@ def create_home():
                     html.H5("Data Story Bin"),
                     html.Hr(),
                     dbc.Row(id='drag_container',children=
-                        cards_layout,
+                        get_cards_layout(),
                     ),
                 ],
                 # style={'padding': '20px'},
@@ -58,7 +55,7 @@ def create_home():
                     html.H5("Data Storyboard"),
                     html.Hr(),
                     dbc.Row(id='drag_container2',
-                            children=cards_layout,
+                            children=get_cards_layout(),
                     ),
                 ],
                 # style={'padding': '20px'},

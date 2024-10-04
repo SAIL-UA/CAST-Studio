@@ -19,12 +19,21 @@ documentation: https://dash.plot.ly/urls
 import dash
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, dcc, html
+from dash import callback_context as ctx
 from pages import about,contact,resources,search
 from openai import OpenAI
 from textwrap import dedent
 from sidebar import create_sidebar
 from pages.home import create_home
 from pages.search import create_searchpage
+from pages.login import create_login
+from flask import request, session
+import pam
+import time
+
+last_click_time = 0
+
+
 
 
 app = dash.Dash(
@@ -38,19 +47,95 @@ app = dash.Dash(
     suppress_callback_exceptions=True
 )
 
-sidebar = create_sidebar()
-home_page = create_home()
+app.server.secret_key = "Hmu9m43V58EJZXLBkSNsQdI2"
+
+# sidebar = create_sidebar()
+# home_page = create_home()
 search_page = create_searchpage()
+login_page = create_login()
 title_banner = html.Div(dbc.Row(dbc.Col(html.H1("CAST Story Board",className = "h5",style={'background-color': '#8B0000', 'padding': '20px', 'color': 'white'}))))
 
 # home = create_home()
-content = html.Div(id="page-content")
+# content = html.Div(id="page-content")
 
-app.layout = html.Div([dcc.Location(id="url"), sidebar,content])
-@app.callback(Output("page-content", "children"), [Input("url", "pathname")])
+app.layout = html.Div([
+    dcc.Location(id="url"), 
+    html.Div(id="sidebar-wrapper", children=[create_sidebar()]), 
+    html.Div(id="page-content")
+])
+
+
+pam_auth = pam.pam()
+
+def authenticate_user(username, password):
+    return pam_auth.authenticate(username, password,service='login')
+
+@app.callback(
+    [Output('output-state', 'children'), 
+     Output('url', 'pathname')],
+    [Input('login-button', 'n_clicks')],
+    [State('uname-box', 'value'), 
+    State('pwd-box', 'value')],
+    prevent_initial_call=True
+)
+def debug_login(n_clicks, username, password):
+    global last_click_time
+    current_time = time.time()
+
+    if current_time - last_click_time < 3:
+        return dash.no_update, dash.no_update
+    
+    last_click_time = current_time
+
+    # print(f"Username: {username}, Password: {password}")  # Debugging
+
+    if n_clicks is not None:
+        if n_clicks > 0:
+            if not username or not password:
+                return "Please enter both username and password.", "/"
+            
+            try:
+                if authenticate_user(username, password):  # Assuming authenticate_user is the correct function
+                    print("Authentication successful")
+                    session['authenticated'] = True
+                    session['username'] = username
+                    return None, "/home"  # Redirect to the home page on success
+                else:
+                    print("Authentication failed")
+                    return None, "/"
+                    # return "Invalid credentials, please try again.", "/"
+            
+            except Exception as e:
+                print(f"Error during authentication: {e}")
+                return None, "/"
+                return "An error occurred during authentication, please try again.", "/"
+
+    return dash.no_update, dash.no_update
+
+    # If authentication is successful (you can replace this with actual authentication logic)
+    
+# Callback to handle logout action
+@app.callback(
+    [Input('logout-link', 'n_clicks')]
+)
+def logout_user(n_clicks):
+    if n_clicks:
+        session.pop('authenticated', None)  # Clear the session
+        session.pop('username', None)
+    return 
+
+
+@app.callback(
+    Output("page-content", "children"), 
+    [Input("url", "pathname")]
+)
 def render_page_content(pathname):
-    if pathname == "/":
-        return html.Div([title_banner,home_page])
+    if 'authenticated' not in session or not session['authenticated']:
+        return login_page
+    if not pathname or pathname == "/login" or pathname == "/":
+        return login_page
+    elif pathname == "/home":
+        return html.Div([title_banner,create_home()])
     elif pathname == "/about":
         return html.Div([title_banner,about.layout])
     elif pathname == "/resources":
@@ -70,14 +155,39 @@ def render_page_content(pathname):
     )
 
 @app.callback(
-    Output("sidebar", "className"),
-    [Input("sidebar-toggle", "n_clicks")],
-    [State("sidebar", "className")],
+    [Output("sidebar-wrapper", "className"),
+     Output("sidebar",  "className")],
+    [Input("sidebar-toggle", "n_clicks"),
+     Input("navbar-toggle", "n_clicks"), 
+     Input('url', 'pathname')],
+    [State("sidebar-wrapper", "className")],
 )
-def toggle_classname(n, classname):
-    if n and classname == "":
-        return "collapsed"
-    return ""
+def toggle_classname(n_clicks1, n_clicks2, pathname, classname):
+
+    if not ctx.triggered:
+        return dash.no_update, dash.no_update
+    
+    # Get the ID of the input that triggered the callback
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if triggered_id == 'url':
+        if pathname == '/login':
+            return 'hidden', 'hidden'
+        else:
+            return dash.no_update, dash.no_update
+    elif triggered_id == 'sidebar-toggle' or triggered_id == "navbar-toggle":
+        if classname is None:
+            return "collapsed", "collapsed"
+        elif "collapsed" in classname:
+            return "expanded", "expanded"
+        elif "expanded" in classname:
+            return "collapsed", "collapsed"
+        else:
+            return dash.no_update, dash.no_update
+    else:
+        return dash.no_update, dash.no_update
+
+
 
 
 @app.callback(
@@ -94,4 +204,4 @@ def toggle_collapse(n, is_open):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(host='0.0.0.0', port=8050, debug=True)
