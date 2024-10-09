@@ -2,6 +2,7 @@
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, dcc, html
 
+
 def create_sidebar(is_hidden=False, is_collapsed=False):
     # Determine the sidebar class based on its state
     if is_hidden:
@@ -10,7 +11,7 @@ def create_sidebar(is_hidden=False, is_collapsed=False):
         sidebar_class = "collapsed"
     else:
         sidebar_class = "expanded"
-    
+
     sidebar_header = dbc.Row(
         [
             dbc.Col(html.H2("CAST-UA\n", className="h2")),
@@ -23,7 +24,7 @@ def create_sidebar(is_hidden=False, is_collapsed=False):
                         # the navbar-toggler classes don't set color
                         style={
                             "color": "rgba(0,0,0,.5)",
-                            "border-color": "rgba(0,0,0,.1)",
+                            "borderColor": "rgba(0,0,0,.1)",
                         },
                         id="navbar-toggle",
                     ),
@@ -34,7 +35,7 @@ def create_sidebar(is_hidden=False, is_collapsed=False):
                         # the navbar-toggler classes don't set color
                         style={
                             "color": "rgba(0,0,0,.5)",
-                            "border-color": "rgba(0,0,0,.1)",
+                            "borderColor": "rgba(0,0,0,.1)",
                         },
                         id="sidebar-toggle",
                     ),
@@ -62,15 +63,20 @@ def create_sidebar(is_hidden=False, is_collapsed=False):
                 dbc.Nav(
                     [
                         dbc.NavLink("Home", href="/home", active="exact"),
-                        dbc.NavLink("About the Data", href="/about", active="exact"),
-                        dbc.NavLink("Resources", href="/resources", active="exact"),
+                        dbc.NavLink("About the Data",
+                                    href="/about", active="exact"),
+                        dbc.NavLink("Resources", href="/resources",
+                                    active="exact"),
                         dbc.NavLink("Search", href="/search", active="exact"),
-                        dbc.NavLink("Contact Us", href="/contact", active="exact"),
-                        dbc.NavLink("Logout", href="/login", id="logout-link", active="exact"),
+                        dbc.NavLink("Contact Us", href="/contact",
+                                    active="exact"),
+                        dbc.NavLink("Logout", href="/login",
+                                    id="logout-link", active="exact"),
                         html.Div(
-                            html.Img(src="assets/UAENGLog.png", 
-                                     className="logo-img", 
-                                     style={'position': 'absolute', 'bottom': '5%', 'left': '5%', 'width': '10rem'}
+                            html.Img(src="assets/UAENGLog.png",
+                                     className="logo-img",
+                                     style={
+                                         'position': 'absolute', 'bottom': '5%', 'left': '5%', 'width': '10rem'}
                                      ),
                         ),
                     ],

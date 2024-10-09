@@ -1,7 +1,7 @@
 #sidebar {
   text-align: center;
   padding: 2rem 1rem;
-  background-color: #f8f9fa;
+  backgroundColor: #f8f9fa;
 }
 
 #sidebar h2 {
@@ -79,6 +79,7 @@
     top: 0;
     transition: top 0.3s ease-in-out;
   }
+
   #sidebar.collapsed {
     margin-left: -15.5rem;
     padding-right: 0.5rem;
@@ -91,7 +92,7 @@
   }
 
   /* Move all contents of the sidebar off-screen when collapsed */
-  #sidebar.collapsed > *:not(:first-child) {
+  #sidebar.collapsed>*:not(:first-child) {
     margin-left: -6rem;
     margin-right: 6rem;
   }
@@ -113,13 +114,13 @@
   }
 
   /* Adjust page content when sidebar-wrapper has the 'collapsed' class */
-  #sidebar-wrapper.collapsed ~ #page-content {
+  #sidebar-wrapper.collapsed~#page-content {
     margin-left: 2rem;
     width: calc(100% - 2rem);
   }
 
   /* Adjust page content when sidebar-wrapper has the 'hidden' class (no sidebar at all) */
-  #sidebar-wrapper.hidden ~ #page-content {
+  #sidebar-wrapper.hidden~#page-content {
     margin-left: 0;
     width: 100%;
   }
@@ -127,6 +128,7 @@
 
 /* Define behavior for small screens (< 48em) */
 @media (max-width: 48em) {
+
   /* On small screens, hide the sidebar and make page content full width */
   #sidebar-wrapper.hidden #page-content {
     margin-left: 0;
@@ -137,16 +139,20 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%; /* Full width of the screen */
+    width: 100%;
+    /* Full width of the screen */
     height: 20rem;
-    padding: 1rem; /* Reduce padding */
-    background-color: #f8f9fa;
+    padding: 1rem;
+    /* Reduce padding */
+    backgroundColor: #f8f9fa;
     transition: height 0.3s ease-in-out, padding 0.3s ease-in-out, overflow 0.3s ease-in-out;
   }
 
   #sidebar.collapsed {
-    padding: 0.5rem; /* Smaller padding when collapsed */
-    height: 3rem; /* Adjust the collapsed sidebar height */
+    padding: 0.5rem;
+    /* Smaller padding when collapsed */
+    height: 3rem;
+    /* Adjust the collapsed sidebar height */
     overflow: hidden;
     transition: height 0.3s ease-in-out, padding 0.3s ease-in-out, overflow 0.3s ease-in-out;
   }
@@ -156,25 +162,30 @@
   }
 
   #sidebar h2 {
-    font-size: 1.2rem; /* Reduce font size to save space */
+    font-size: 1.2rem;
+    /* Reduce font size to save space */
   }
 
   #sidebar .nav-link {
-    padding: 0.25rem 0; /* Adjust padding of links */
-    font-size: 0.9rem; /* Adjust font size of links */
+    padding: 0.25rem 0;
+    /* Adjust padding of links */
+    font-size: 0.9rem;
+    /* Adjust font size of links */
   }
 
   /* Page content takes the full width when sidebar is hidden */
   #page-content {
-    margin-top: 19rem; /* Ensure page content starts below the sidebar */
+    margin-top: 19rem;
+    /* Ensure page content starts below the sidebar */
     padding: 1rem;
     width: 100%;
   }
-  #sidebar-wrapper.hidden ~ #page-content {
+
+  #sidebar-wrapper.hidden~#page-content {
     margin-top: 1rem;
   }
 
-  #sidebar-wrapper.collapsed ~ #page-content {
+  #sidebar-wrapper.collapsed~#page-content {
     margin-top: 3rem;
     width: calc(100% - 1rem);
     transition: margin-top 0.3s ease-in-out;

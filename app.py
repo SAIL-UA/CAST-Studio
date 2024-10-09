@@ -20,7 +20,7 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, dcc, html
 from dash import callback_context as ctx
-from pages import about,contact,resources,search
+from pages import about, contact, resources, search
 from openai import OpenAI
 from textwrap import dedent
 from sidebar import create_sidebar
@@ -34,8 +34,6 @@ import time
 last_click_time = 0
 
 
-
-
 app = dash.Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP],
     # these meta_tags ensure content is scaled correctly on different devices
@@ -43,7 +41,8 @@ app = dash.Dash(
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1"}
     ],
-    external_scripts=["https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.2/dragula.min.js"],
+    external_scripts=[
+        "https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.2/dragula.min.js"],
     suppress_callback_exceptions=True
 )
 
@@ -53,29 +52,32 @@ app.server.secret_key = "Hmu9m43V58EJZXLBkSNsQdI2"
 # home_page = create_home()
 search_page = create_searchpage()
 login_page = create_login()
-title_banner = html.Div(dbc.Row(dbc.Col(html.H1("CAST Story Board",className = "h5",style={'background-color': '#8B0000', 'padding': '20px', 'color': 'white'}))))
+title_banner = html.Div(dbc.Row(dbc.Col(html.H1("CAST Story Board", className="h5", style={
+                        'backgroundColor': '#8B0000', 'padding': '20px', 'color': 'white'}))))
 
 # home = create_home()
 # content = html.Div(id="page-content")
 
 app.layout = html.Div([
-    dcc.Location(id="url"), 
-    html.Div(id="sidebar-wrapper", children=[create_sidebar()]), 
+    dcc.Location(id="url"),
+    html.Div(id="sidebar-wrapper", children=[create_sidebar()]),
     html.Div(id="page-content")
 ])
 
 
 pam_auth = pam.pam()
 
+
 def authenticate_user(username, password):
-    return pam_auth.authenticate(username, password,service='login')
+    return pam_auth.authenticate(username, password, service='login')
+
 
 @app.callback(
-    [Output('output-state', 'children'), 
+    [Output('output-state', 'children'),
      Output('url', 'pathname')],
     [Input('login-button', 'n_clicks')],
-    [State('uname-box', 'value'), 
-    State('pwd-box', 'value')],
+    [State('uname-box', 'value'),
+     State('pwd-box', 'value')],
     prevent_initial_call=True
 )
 def debug_login(n_clicks, username, password):
@@ -84,7 +86,7 @@ def debug_login(n_clicks, username, password):
 
     if current_time - last_click_time < 3:
         return dash.no_update, dash.no_update
-    
+
     last_click_time = current_time
 
     # print(f"Username: {username}, Password: {password}")  # Debugging
@@ -93,28 +95,31 @@ def debug_login(n_clicks, username, password):
         if n_clicks > 0:
             if not username or not password:
                 return "Please enter both username and password.", "/"
-            
+
             try:
-                if authenticate_user(username, password):  # Assuming authenticate_user is the correct function
-                    print("Authentication successful")
+                # Assuming authenticate_user is the correct function
+                if authenticate_user(username, password):
+                    # print("Authentication successful")
                     session['authenticated'] = True
                     session['username'] = username
                     return None, "/home"  # Redirect to the home page on success
                 else:
-                    print("Authentication failed")
+                    # print("Authentication failed")
                     return None, "/"
                     # return "Invalid credentials, please try again.", "/"
-            
+
             except Exception as e:
-                print(f"Error during authentication: {e}")
+                # print(f"Error during authentication: {e}")
                 return None, "/"
                 return "An error occurred during authentication, please try again.", "/"
 
     return dash.no_update, dash.no_update
 
     # If authentication is successful (you can replace this with actual authentication logic)
-    
+
 # Callback to handle logout action
+
+
 @app.callback(
     [Input('logout-link', 'n_clicks')]
 )
@@ -122,28 +127,28 @@ def logout_user(n_clicks):
     if n_clicks:
         session.pop('authenticated', None)  # Clear the session
         session.pop('username', None)
-    return 
+    return
 
 
 @app.callback(
-    Output("page-content", "children"), 
+    Output("page-content", "children"),
     [Input("url", "pathname")]
 )
 def render_page_content(pathname):
     if 'authenticated' not in session or not session['authenticated']:
         return login_page
-    if not pathname or pathname == "/login" or pathname == "/":
+    if not pathname or pathname == "/login" or pathname == "/" or pathname == "":
         return login_page
     elif pathname == "/home":
-        return html.Div([title_banner,create_home()])
+        return html.Div([title_banner, create_home()])
     elif pathname == "/about":
-        return html.Div([title_banner,about.layout])
+        return html.Div([title_banner, about.layout])
     elif pathname == "/resources":
-        return html.Div([title_banner,resources.layout])
+        return html.Div([title_banner, resources.layout])
     elif pathname == "/search":
-        return html.Div([title_banner,search_page])
+        return html.Div([title_banner, search_page])
     elif pathname == "/contact":
-        return html.Div([title_banner,contact.layout])
+        return html.Div([title_banner, contact.layout])
     # If the user tries to reach a different page, return a 404 message
     return html.Div(
         [
@@ -154,11 +159,12 @@ def render_page_content(pathname):
         className="p-3 bg-light rounded-3",
     )
 
+
 @app.callback(
     [Output("sidebar-wrapper", "className"),
      Output("sidebar",  "className")],
     [Input("sidebar-toggle", "n_clicks"),
-     Input("navbar-toggle", "n_clicks"), 
+     Input("navbar-toggle", "n_clicks"),
      Input('url', 'pathname')],
     [State("sidebar-wrapper", "className")],
 )
@@ -166,12 +172,12 @@ def toggle_classname(n_clicks1, n_clicks2, pathname, classname):
 
     if not ctx.triggered:
         return dash.no_update, dash.no_update
-    
+
     # Get the ID of the input that triggered the callback
     triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
     if triggered_id == 'url':
-        if pathname == '/login':
+        if pathname == '/login' or pathname == '/' or pathname == '':
             return 'hidden', 'hidden'
         else:
             return dash.no_update, dash.no_update
@@ -188,8 +194,6 @@ def toggle_classname(n_clicks1, n_clicks2, pathname, classname):
         return dash.no_update, dash.no_update
 
 
-
-
 @app.callback(
     Output("collapse", "is_open"),
     [Input("navbar-toggle", "n_clicks")],
@@ -199,8 +203,6 @@ def toggle_collapse(n, is_open):
     if n:
         return not is_open
     return is_open
-
-
 
 
 if __name__ == "__main__":

@@ -1,14 +1,31 @@
-if (!window.dash_clientside) {
-    window.dash_clientside = {};
-}
-window.dash_clientside.clientside = {
-    make_draggable: function(id,id2) {
-        setTimeout(function() {
-            dragula([document.getElementById(id),document.getElementById(id2)], {
-                removeOnSpill: true
-              })
-        }, 1)
+(function() {
+    var id = 'drag_container';
+    var id2 = 'drag_container2';
 
-        return window.dash_clientside.no_update
+    function initializeDragula() {
+        var container1 = document.getElementById(id);
+        var container2 = document.getElementById(id2);
+
+        if (container1 && container2) {
+            console.log('Containers found. Initializing Dragula.');
+            dragula([container1, container2], {
+                removeOnSpill: true
+            });
+            observer.disconnect(); // Stop observing after initialization
+        }
     }
-}
+
+    // Create a MutationObserver to watch for changes in the DOM
+    var observer = new MutationObserver(function(mutations, me) {
+        initializeDragula();
+    });
+
+    // Start observing the document body for added nodes
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Also try to initialize immediately in case the elements are already present
+    initializeDragula();
+})();
