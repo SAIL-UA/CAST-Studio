@@ -14,7 +14,7 @@ def get_cache_dir():
     else:
         raise Exception("No username found in session.")
 
-    base_cache_dir = '/home/aii03admin/CAST_ext/users/'
+    base_cache_dir = '/data/CAST_ext/users/'
 
     cache_dir = os.path.join(base_cache_dir, username, "workspace/cache")
 
