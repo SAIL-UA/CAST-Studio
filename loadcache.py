@@ -14,7 +14,7 @@ def get_cache_dir():
     else:
         raise Exception("No username found in session.")
 
-    base_cache_dir = '/home/aii03admin/CAST_ext/users/'
+    base_cache_dir = '/data/CAST_ext/users/'
 
     cache_dir = os.path.join(base_cache_dir, username, "workspace/cache")
 
@@ -82,12 +82,20 @@ def get_cards_layout():
             dbc.Card(
                 [
                     dbc.CardImg(
-                        src='data:image/png;base64,{}'.format(card['image']), top=True),
+                        src='data:image/png;base64,{}'.format(card['image']),
+                        top=True,
+                        id=f'card-img-{os.path.splitext(png_file)[0]}',  # Use image file name as the ID for the image
+                        className='card-img-top'
+                    ),
                     dbc.CardBody(
-                        html.P(card['text'], className="card-text")
+                        html.P(card['text'], className="card-text", id=f'card-text-{os.path.splitext(png_file)[0]}')  # Use image file name for text
                     ),
                 ],
-                style={"width": "10rem"}
+                style={"width": "10rem"},
+                id=f'card-{os.path.splitext(png_file)[0]}'  # Use image file name as the ID for the card
             ),
-        ) for card in cards
+            id=f'col-card-{os.path.splitext(png_file)[0]}'  # Use image file name as the ID for the column container
+        )
+        for png_file, card in zip([f for f in os.listdir(get_cache_dir()) if f.endswith('.png')], load_cards())
     ]
+

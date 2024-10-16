@@ -30,6 +30,7 @@ from pages.login import create_login
 from flask import request, session
 import pam
 import time
+import os
 
 last_click_time = 0
 
@@ -61,7 +62,10 @@ title_banner = html.Div(dbc.Row(dbc.Col(html.H1("CAST Story Board", className="h
 app.layout = html.Div([
     dcc.Location(id="url"),
     html.Div(id="sidebar-wrapper", children=[create_sidebar()]),
-    html.Div(id="page-content")
+    html.Div(id="page-content"),
+    dcc.Store(id='click-data'),
+    html.Button(id='dummy-input', style={'display': 'none'}),  # Hidden button
+    html.Div(id='dummy-output', style={'display': 'none'})      # Hidden div for output
 ])
 
 
@@ -204,6 +208,61 @@ def toggle_collapse(n, is_open):
         return not is_open
     return is_open
 
+# Clientside callback to capture click data
+app.clientside_callback(
+    """
+    function(n_clicks) {
+        if (window.latestClickData) {
+            var data = window.latestClickData;
+            window.latestClickData = null; // Reset after reading
+            return data;
+        } else {
+            return null;
+        }
+    }
+    """,
+    Output('click-data', 'data'),
+    [Input('dummy-input', 'n_clicks')],
+    prevent_initial_call=True
+)
+
+@app.callback(
+    Output('dummy-output', 'children'),
+    [Input('click-data', 'data')],
+    prevent_initial_call=True
+)
+def process_clickstream(click_data):
+    # Check if the user is authenticated
+    if 'username' in session:
+        username = session['username']
+    else:
+        return ""
+
+    # Define the directory and file path
+    base_dir = '/data/CAST_ext/logs/'
+    user_dir = os.path.join(base_dir, username)
+
+    # Create the user directory if it doesn't exist
+    if not os.path.exists(user_dir):
+        os.makedirs(user_dir)
+
+    log_file_path = os.path.join(user_dir, 'clickstream_log.txt')
+
+    # Write the click data to the file
+    if click_data:
+        # Create the click_info string
+        click_info = f"Clicked on: {click_data['target']}, " \
+                     f"Time: {click_data['timestamp']}, " \
+                     f"Mouse Down Position: {click_data['down_position']}, " \
+                     f"Mouse Up Position: {click_data['up_position']}\n"
+
+        # Append the click_info to the log file
+        with open(log_file_path, 'a') as log_file:
+            log_file.write(click_info)
+
+    return ""
+
+
 
 if __name__ == "__main__":
-    app.run_server(host='0.0.0.0', port=8050, debug=True)
+    app.run_server(host='0.0.0.0', port=8075, debug=True)
