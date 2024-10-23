@@ -1,0 +1,46 @@
+.drag-container {
+    min-height: 20vh;  /* Set min-height to 20% of viewport height */
+    border: 1px solid #ccc;  /* Optional: for visualization */
+    padding: 2vh;  /* Set padding relative to viewport height */
+    margin-bottom: 2vh;  /* Set margin relative to viewport height */
+}
+
+.fixed-image {
+    width: 16vw;   /* Set width to 30% of viewport width */
+    height: 20vh;  /* Set height to 20% of viewport height */
+    object-fit: contain;  /* Maintain aspect ratio while fitting */
+}
+
+.card-box {
+    height: 40vh;
+}
+
+.responsive-text {
+    font-size: 2vw;  /* Font size is 2% of the viewport width */
+    line-height: 1.2;  /* Adjust line height for readability */
+}
+
+@media (max-width: 1200px) {
+    .responsive-text {
+        font-size: 1rem;  /* Increase font size on smaller screens */
+    }
+    .fixed-image {
+        width:14vw;
+    }
+    .card-box {
+        width:16vw;
+    }
+
+}
+
+@media (min-width: 1200px) {
+    .responsive-text {
+        font-size: 1.5rem;  /* Adjust font size for larger screens */
+    }
+    .fixed-image {
+        width:10vw;
+    }
+    .card-box {
+        width: 12vw;
+    }
+}

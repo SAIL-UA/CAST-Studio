@@ -9,7 +9,7 @@
         if (container1 && container2) {
             console.log('Containers found. Initializing Dragula.');
             dragula([container1, container2], {
-                removeOnSpill: true
+                removeOnSpill: false
             });
             observer.disconnect(); // Stop observing after initialization
         }

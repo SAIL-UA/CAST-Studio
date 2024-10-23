@@ -85,14 +85,14 @@ def get_cards_layout():
                         src='data:image/png;base64,{}'.format(card['image']),
                         top=True,
                         id=f'card-img-{os.path.splitext(png_file)[0]}',  # Use image file name as the ID for the image
-                        className='card-img-top'
+                        className='card-img-top fixed-image'
                     ),
                     dbc.CardBody(
-                        html.P(card['text'], className="card-text", id=f'card-text-{os.path.splitext(png_file)[0]}')  # Use image file name for text
+                        html.P(card['text'], className="card-text responsive-text", id=f'card-text-{os.path.splitext(png_file)[0]}')  # Use image file name for text
                     ),
                 ],
-                style={"width": "10rem"},
-                id=f'card-{os.path.splitext(png_file)[0]}'  # Use image file name as the ID for the card
+                id=f'card-{os.path.splitext(png_file)[0]}',  # Use image file name as the ID for the card
+                className='card-box'
             ),
             id=f'col-card-{os.path.splitext(png_file)[0]}'  # Use image file name as the ID for the column container
         )
