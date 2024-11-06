@@ -27,6 +27,7 @@ from sidebar import create_sidebar
 from pages.home import create_home
 from pages.search import create_searchpage
 from pages.login import create_login
+from generate_narrative import generate_story
 from flask import request, session
 import pam
 import time
@@ -262,7 +263,19 @@ def process_clickstream(click_data):
 
     return ""
 
+@app.callback(
+    Output('narrative-text', 'children'),
+    Input('generate-narrative-button', 'n_clicks'),
+    prevent_initial_call=True
+)
+def update_narrative(n_clicks):
+    if n_clicks:
+        username = session['username']
+        narrative = generate_story(username)
+        return narrative  # Return the narrative to be displayed
+    return ''
+
 
 
 if __name__ == "__main__":
-    app.run_server(host='0.0.0.0', port=8050, debug=True)
+    app.run_server(host='0.0.0.0', port=8050, debug=False)

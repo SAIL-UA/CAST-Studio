@@ -28,7 +28,7 @@ def load_cards():
     cache_dir = get_cache_dir()  # Now this will be called only when needed
 
     # Read all .png and .txt files from the cache directory
-    png_files = [f for f in os.listdir(cache_dir) if f.endswith('.png')]
+    png_files = [f for f in os.listdir(cache_dir) if f.endswith(('.png', '.jpg'))]
     txt_files = [f for f in os.listdir(cache_dir) if f.endswith('.txt')]
 
     # Combine each pair into a card
@@ -76,7 +76,10 @@ def load_cards():
 
 
 def get_cards_layout():
+    cache_dir = get_cache_dir()
+    image_files = [f for f in os.listdir(cache_dir) if f.endswith(('.png', '.jpg'))]
     cards = load_cards()  # Load cards inside a function where session is available
+
     return [
         dbc.Col(
             dbc.Card(
@@ -84,18 +87,18 @@ def get_cards_layout():
                     dbc.CardImg(
                         src='data:image/png;base64,{}'.format(card['image']),
                         top=True,
-                        id=f'card-img-{os.path.splitext(png_file)[0]}',  # Use image file name as the ID for the image
+                        id=f'card-img-{os.path.splitext(image_file)[0]}',  # Use image file name as the ID for the image
                         className='card-img-top fixed-image'
                     ),
                     dbc.CardBody(
-                        html.P(card['text'], className="card-text responsive-text", id=f'card-text-{os.path.splitext(png_file)[0]}')  # Use image file name for text
+                        html.P(card['text'], className="card-text responsive-text", id=f'card-text-{os.path.splitext(image_file)[0]}')  # Use image file name for text
                     ),
                 ],
-                id=f'card-{os.path.splitext(png_file)[0]}',  # Use image file name as the ID for the card
+                id=f'card-{os.path.splitext(image_file)[0]}',  # Use image file name as the ID for the card
                 className='card-box'
             ),
-            id=f'col-card-{os.path.splitext(png_file)[0]}'  # Use image file name as the ID for the column container
+            id=f'col-card-{os.path.splitext(image_file)[0]}'  # Use image file name as the ID for the column container
         )
-        for png_file, card in zip([f for f in os.listdir(get_cache_dir()) if f.endswith('.png')], load_cards())
+        for image_file, card in zip(image_files, cards)
     ]
 

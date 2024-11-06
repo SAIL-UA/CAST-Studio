@@ -1,0 +1,23 @@
+### Instruction:
+You are provided with the following inputs:
+
+1. A set of descriptions for each data insight.
+2. The ordered sequence of these data insights.
+
+Your task is to generate a fully coherent narrative that integrates these elements into a clear and structured story. Follow these steps:
+
+1. **Integrate Data Insights**: Using the descriptions of each data insight, incorporate them into the appropriate sections of the story template. Ensure each data insight is smoothly introduced and connected to the relevant part of the narrative.
+
+2. **Maintain Logical Flow**: Follow the provided sequence to maintain the logical progression of the narrative. The story should flow smoothly from one insight to the next, ensuring that the reader can easily follow the connections between different data points.
+
+3. **Create a Coherent Narrative**:
+Generate a coherent and concise narrative that:
+
+(1) Clearly explains the context, data, methods, and results.
+(2) Highlights key insights and their significance.
+(3) Provides conclusions or implications based on the data.
+(4) Ensures that the narrative aligns with the structure of the story template.
+
+
+### Outputs:
+A fully coherent narrative that integrates all data insights, follows the sequence, and presents the story in a clear and structured manner.

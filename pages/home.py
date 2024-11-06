@@ -59,17 +59,65 @@ def create_home():
 
             ),
             dbc.Row(
+                [
+                    dbc.Col(html.H5("Data Storyboard"), width="auto"),
+                    dbc.Col(
+                        dbc.Button(
+                            "Generate Narrative",
+                            id="generate-narrative-button",
+                            color="primary",
+                        ),
+                        width="auto",
+                    )
+                ],
+                justify="between",  # Adjusts column alignment to space between
+                className="w-100",
+                align="center",
+                style={'padding': '0 20px'}
+            ),
+            dbc.Row(
                 dbc.Col([
-                    html.H5("Data Storyboard"),
                     html.Hr(),
                     dbc.Row(id='drag_container2',
                             className='drag-container',
                             children=[],
                             ),
                 ],
-                    # style={'padding': '20px'},
                 )
-            )
+            ),
+            # Add the text block here
+            dbc.Row(
+                dbc.Col([
+                    html.H5("Generated Story"),
+                    html.Hr(),
+                ]
+                )
+             ),
+            dbc.Container(
+                [
+                    dcc.Loading(
+                        id="loading-spinner",
+                        type="circle",
+                        children=[
+                            dcc.Markdown(
+                                id='narrative-text',
+                                style={
+                                    'whiteSpace': 'pre-wrap',
+                                    'textAlign': 'justify',
+                                    'padding': '20px',
+                                    'backgroundColor': '#f9f9f9',
+                                    'border': '1px solid #ddd',
+                                    'borderRadius': '5px',
+                                    'minHeight': '200px',
+                                    'overflowY': 'auto',
+                                    #'marginTop': '20px',
+                                }
+                            )
+                        ]
+                    )
+                ],
+                fluid=True,
+            ),
         ]
     )
 
