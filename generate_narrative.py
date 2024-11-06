@@ -1,10 +1,14 @@
 from openai import OpenAI
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+API_KEY = os.getenv("API_KEY")
 
 def generate_story(username):
     # OpenAI API Key
     client = OpenAI(
-        api_key='',
+        api_key=API_KEY,
     )
 
     # Define base directory for the cache

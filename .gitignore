@@ -1,3 +1,4 @@
 multi_agent/
 old/
 __pycache__/
+.env
