@@ -34,10 +34,14 @@ import time
 import os
 
 last_click_time = 0
+external_stylesheets = [
+    dbc.themes.BOOTSTRAP,
+    "https://use.fontawesome.com/releases/v5.15.1/css/all.css",
+]
 
 
 app = dash.Dash(
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    external_stylesheets=external_stylesheets,
     # these meta_tags ensure content is scaled correctly on different devices
     # see: https://www.w3schools.com/css/css_rwd_viewport.asp for more
     meta_tags=[
@@ -76,47 +80,55 @@ pam_auth = pam.pam()
 def authenticate_user(username, password):
     return pam_auth.authenticate(username, password, service='login')
 
+@app.callback(
+    [Output('pwd-box', 'type'),
+     Output('password-toggle-icon', 'className')],
+    [Input('password-toggle-icon', 'n_clicks')],
+    [State('pwd-box', 'type')],
+    prevent_initial_call=True
+)
+def toggle_password_visibility(n_clicks, current_type):
+    if n_clicks:
+        if current_type == 'password':
+            # Change input type to 'text' to show the password and update icon
+            return 'text', 'fas fa-eye'
+        else:
+            # Change input type back to 'password' to hide it
+            return 'password', 'fas fa-eye-slash'
+    return current_type, 'fas fa-eye-slash'
+
 
 @app.callback(
     [Output('output-state', 'children'),
      Output('url', 'pathname')],
-    [Input('login-button', 'n_clicks')],
+    [Input('login-button', 'n_clicks'),
+     Input('uname-box', 'n_submit'),
+     Input('pwd-box', 'n_submit')],
     [State('uname-box', 'value'),
      State('pwd-box', 'value')],
     prevent_initial_call=True
 )
-def debug_login(n_clicks, username, password):
-    global last_click_time
-    current_time = time.time()
+def debug_login(n_clicks, uname_n_submit, pwd_n_submit, username, password):
+    # Check if any login attempt has been made
+    if not (n_clicks or uname_n_submit or pwd_n_submit):
+        raise dash.exceptions.PreventUpdate
 
-    if current_time - last_click_time < 3:
-        return dash.no_update, dash.no_update
+    # Determine which input triggered the callback
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
-    last_click_time = current_time
+    if triggered_id in ['login-button', 'uname-box', 'pwd-box']:
+        if not username or not password:
+            return "Please enter both username and password.", dash.no_update
 
-    # print(f"Username: {username}, Password: {password}")  # Debugging
-
-    if n_clicks is not None:
-        if n_clicks > 0:
-            if not username or not password:
-                return "Please enter both username and password.", "/"
-
-            try:
-                # Assuming authenticate_user is the correct function
-                if authenticate_user(username, password):
-                    # print("Authentication successful")
-                    session['authenticated'] = True
-                    session['username'] = username
-                    return None, "/home"  # Redirect to the home page on success
-                else:
-                    # print("Authentication failed")
-                    return None, "/"
-                    # return "Invalid credentials, please try again.", "/"
-
-            except Exception as e:
-                # print(f"Error during authentication: {e}")
-                return None, "/"
-                return "An error occurred during authentication, please try again.", "/"
+        try:
+            if authenticate_user(username, password):
+                session['authenticated'] = True
+                session['username'] = username
+                return None, "/home"  # Redirect to the home page on success
+            else:
+                return "Invalid credentials, please try again.", dash.no_update
+        except Exception as e:
+            return "An error occurred during authentication, please try again.", dash.no_update
 
     return dash.no_update, dash.no_update
 

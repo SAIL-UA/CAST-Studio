@@ -44,12 +44,30 @@ def create_login():
                                                     width=12
                                                 ),
                                                 dbc.Col(
-                                                    dbc.Input(
-                                                        placeholder="Enter your password",
-                                                        type="password",
-                                                        id="pwd-box",
-                                                        className="mb-3",
-                                                        style={'border-radius': '5px'}
+                                                    html.Div(
+                                                        [
+                                                            dbc.Input(
+                                                                placeholder="Enter your password",
+                                                                type="password",
+                                                                id="pwd-box",
+                                                                className="mb-3",
+                                                                style={'border-radius': '5px'}
+                                                            ),
+                                                            html.I(
+                                                                className="fas fa-eye-slash",
+                                                                id="password-toggle-icon",
+                                                                n_clicks=0,
+                                                                style={
+                                                                    'position': 'absolute',
+                                                                    'right': '15px',
+                                                                    'top': '50%',
+                                                                    'transform': 'translateY(-50%)',
+                                                                    'cursor': 'pointer',
+                                                                    'color': '#6c757d'
+                                                                }
+                                                            ),
+                                                        ],
+                                                        style={"position": "relative"}
                                                     ),
                                                     width=12
                                                 )
