@@ -1,5 +1,7 @@
 .drag-container {
     min-height: 20vh;  /* Set min-height to 20% of viewport height */
+    max-height: 50vh;      /* Set maximum height to 50% of viewport height */
+    overflow-y: auto;      /* Enable vertical scrolling if content exceeds max-height */
     border: 1px solid #ccc;  /* Optional: for visualization */
     padding: 2vh;  /* Set padding relative to viewport height */
     margin-bottom: 2vh;  /* Set margin relative to viewport height */
