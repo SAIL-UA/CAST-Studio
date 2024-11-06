@@ -37,6 +37,20 @@ def create_home():
     # Load images
     IMAGES = {"OKN": dash.get_asset_url("UALogo.jpg")}
 
+    drag_container_children = get_cards_layout()
+
+    def get_container_style(children):
+        if children:
+            return {'height': '50vh'}
+        else:
+            return {}
+    
+    drag_container_style = get_container_style(drag_container_children)
+
+    # For drag_container2, which starts empty
+    drag_container2_children = []  
+    drag_container2_style = get_container_style(drag_container2_children)
+
     home = html.Div(
         [
             html.Link(
@@ -45,18 +59,17 @@ def create_home():
                 src='https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.2/dragula.min.js'),
 
 
-            dbc.Row(
+           dbc.Row(
                 dbc.Col([
                     html.H5("Data Story Bin"),
                     html.Hr(),
-                    dbc.Row(id='drag_container', 
-                            className='drag-container', 
-                            children=get_cards_layout(),
-                            ),
-                ],
-                    # style={'padding': '20px'},
-                )
-
+                    dbc.Row(
+                        id='drag_container',
+                        className='drag-container',
+                        style=drag_container_style,  # Apply the style here
+                        children=drag_container_children,
+                    ),
+                ])
             ),
             dbc.Row(
                 [
@@ -70,7 +83,7 @@ def create_home():
                         width="auto",
                     )
                 ],
-                justify="between",  # Adjusts column alignment to space between
+                justify="between",
                 className="w-100",
                 align="center",
                 style={'padding': '0 20px'}
@@ -78,12 +91,13 @@ def create_home():
             dbc.Row(
                 dbc.Col([
                     html.Hr(),
-                    dbc.Row(id='drag_container2',
-                            className='drag-container',
-                            children=[],
-                            ),
-                ],
-                )
+                    dbc.Row(
+                        id='drag_container2',
+                        className='drag-container',
+                        style=drag_container2_style,  # Apply the style here
+                        children=drag_container2_children,
+                    ),
+                ])
             ),
             # Add the text block here
             dbc.Row(
