@@ -1,0 +1,17 @@
+### Instruction:
+Given the descriptions of figures (data insights) derived from a paper using the MIMIC-III dataset, analyze the insights provided and classify the paper into one or more of the following themes:
+
+1. Predictive Modeling and Risk Stratification.
+
+2. Disease Progression and Phenotyping.
+
+3. Clinical Decision Support Systems (CDSS)
+
+4. Treatment Effectiveness and Outcomes Research
+
+5. Natural Language Processing (NLP) in Clinical Text Analysis
+
+6. Physiological Signal Analysis
+
+### Outputs: 
+Determine the only one primary theme that the descriptions indicate.
