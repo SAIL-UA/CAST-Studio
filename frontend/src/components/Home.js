@@ -3,6 +3,8 @@ import axios from 'axios';
 import Bin from './Bin';
 import './App.css';
 import { Container, Row, Col, Button, Spinner } from 'react-bootstrap';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 function Home() {
   const [images, setImages] = useState([]);
@@ -135,7 +137,7 @@ function Home() {
         </Col>
       </Row>
 
-      {/* Generated Story Section (Always Visible) */}
+      {/* Generated Story Section */}
       <Row>
         <Col>
           <div className="bins-container" style={{ marginTop: '30px' }}>
@@ -146,9 +148,11 @@ function Home() {
                   <Spinner animation="border" />
                 </div>
               ) : (
-                <p className="story-text">
-                  {output.trim() !== '' ? output : 'No story generated yet.'}
-                </p>
+                <ReactMarkdown
+                  className="story-text"
+                  children={output.trim() !== '' ? output : 'No story generated yet.'}
+                  remarkPlugins={[remarkGfm]} // Enables support for GitHub-flavored Markdown
+                />
               )}
             </div>
           </div>

@@ -460,10 +460,38 @@
 }
 
 .story-text {
-  font-size: 1.5rem; /* Increased text size */
-  line-height: 1.5;
-  color: #333;
+  font-size: 18px;
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
+
+.story-text h1, .story-text h2, .story-text h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+.story-text p {
+  margin-bottom: 10px;
+}
+
+.story-text ul, .story-text ol {
+  margin-left: 20px;
+}
+
+.story-text code {
+  background-color: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.story-text pre {
+  background-color: #f4f4f4;
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
 
 /* For center-aligning the spinner */
 .loading-center {

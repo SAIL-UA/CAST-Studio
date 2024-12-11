@@ -99,6 +99,7 @@ def generate_story(username):
         return response.choices[0].message.content
 
     ordered_insights = match_and_order_data_insights(prompt_4, data_insights, research_topic)
+    # print(f"the ordered insights are {ordered_insights}")
 
     # Step 3: Generate Coherent Narrative
     with open(os.path.join(os.path.dirname(__file__), "..", "prompts", "step_generate story.txt"), "r") as file:
