@@ -2,3 +2,4 @@ multi_agent/
 old/
 __pycache__/
 .env
+node_modules
