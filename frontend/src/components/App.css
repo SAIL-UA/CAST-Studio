@@ -1,0 +1,474 @@
+.header-container {
+  width: 100%; /* Full width */
+  background-color: #9E1B32; /* Crimson background */
+  color: #ffffff; /* White text */
+  text-align: center; /* Center align the text */
+  padding: 20px 0; /* Vertical padding */
+  margin: 0; /* No margins */
+  position: relative; /* Ensure correct positioning */
+  z-index: 1; /* Make sure it stays on top if overlapping */
+}
+
+.header-container h1 {
+  color: #ffffff; /* White text */
+  font-size: 2.5rem; /* Larger font size */
+  font-weight: bold; /* Bold text */
+  margin: 0; /* Remove default margin */
+}
+
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 75vh;
+  background-color: #ffffff;
+  margin-left: 0; /* No sidebar space */
+  width: 100%; /* Full width */
+}
+
+/* Title Above the Login Form */
+.login-title {
+  font-size: 48px; /* Larger title */
+  text-align: center;
+  padding-bottom: 100px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Login Form Container */
+.login-form {
+  background-color: #ffffff; /* White background */
+  padding: 40px;
+  border-radius: 10px; /* Rounded corners */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  width: 100%; /* Adjust width */
+}
+
+/* Form Input Fields */
+.login-form input {
+  display: block;
+  margin-bottom: 20px;
+  width: 100%; /* Responsive full width */
+  padding: 12px;
+  font-size: 18px;
+  border: 1px solid #ccc;
+  border-radius: 6px; /* Rounded corners */
+}
+
+/* Login Button */
+.login-form button {
+  width: 100%;
+  padding: 12px;
+  font-size: 18px;
+  background-color: #4169e1; /* Royal blue */
+  color: #ffffff;
+  border: none;
+  border-radius: 6px; /* Rounded corners */
+  cursor: pointer;
+}
+
+.login-form button:hover {
+  background-color: #365bb3; /* Darker blue on hover */
+}
+  
+.home-container {
+  text-align: center;
+}
+
+.bins-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Align bins to the left */
+  margin-left: 160px; /* Reduced margin from the left */
+  width: calc(100% - 180px); /* Adjust based on the new margin */
+}
+
+.bin-label {
+  font-size: 24px;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.bin {
+  border: 1px solid #ccc;
+  width: 100%; /* Match container width */
+  max-height: 300px; /* Set max height for top bin */
+  height: auto; /* Allow bottom bin to grow as needed */
+  overflow-y: auto; /* Enable scrolling for bins with many images */
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+#top-bin {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  justify-content: flex-start;
+  align-items: flex-start;
+  max-height: 200px; /* Smaller height for the top bin */
+  overflow-y: auto; /* Enable vertical scrolling for overflow */
+}
+
+#bottom-bin {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  justify-content: flex-start;
+  align-items: flex-start;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.draggable-image {
+  width: 120px;
+  height: auto;
+  margin: 5px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.output-container {
+  margin-top: 20px;
+  text-align: left;
+  width: calc(100% - 180px); /* Matches bins' width */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.output-container h2 {
+  margin-bottom: 10px;
+}
+
+.output-container p {
+  white-space: pre-wrap;
+  background-color: #f9f9f9;
+  padding: 10px;
+  border: 1px solid #ccc;
+}
+
+.App {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+}
+
+.App.no-sidebar .content {
+  margin-left: 0; /* Remove margin when sidebar is not present */
+  width: 100%;
+}
+
+.sidebar {
+  width: 300px;
+  background-color: #f8f9fa;
+  border-right: 1px solid #ddd;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s;
+}
+
+/* Sidebar Content */
+.sidebar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Space between nav links and logo */
+}
+
+.sidebar-brand {
+  font-size: 5rem; /* Increase font size */
+  font-weight: bold; /* Make the font bold */
+  text-align: center; /* Center align the text */
+  padding: 20px;
+  color: #333; /* Default text color */
+  text-transform: uppercase; /* Optional: Make the text uppercase */
+}
+
+.sidebar .sidebar-brand {
+  font-size: 2.5rem !important; /* Larger font size */
+  font-weight: bold !important; /* Ensure bold text */
+  display: block; /* Convert span to block element for proper styling */
+  text-align: center; /* Center the text */
+  color: #333;
+}
+
+.sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.sidebar .nav-link {
+  font-size: 1.5rem; /* Increased font size */
+  padding: 30px 30px;
+  width: 100%;
+  color: #007bff; /* Blue text */
+  text-decoration: none;
+  background-color: #f8f9fa;
+  border: none;
+  text-align: left;
+  display: block;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.nav-link:hover {
+  background-color: #e9ecef; /* Light gray background on hover */
+  color: #0056b3; /* Blue text on hover */
+}
+
+.nav-link.active {
+  background-color: #007bff; /* Blue background */
+  color: #f8f9fa; /* White text */
+  font-weight: bold;
+  border-radius: 8px;
+}
+
+.sidebar .navbar-brand {
+  font-size: 24px; /* Bigger text */
+  padding: 20px;
+}
+
+.sidebar .nav-link,
+.sidebar .logout-link {
+  width: 100%;          /* Make the buttons take full width of sidebar */
+  padding: 10px 20px;    /* Less vertical padding (10px) = shorter buttons */
+  margin-bottom: 10px;   /* Add space between buttons vertically */
+  font-size: 1.5rem;     /* Keep the increased font size if desired */
+  display: block;
+  text-align: left;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  color: #007bff;
+  text-decoration: none;
+  transition: background-color 0.3s, color 0.3s, border-radius 0.3s;
+}
+
+.sidebar .nav-link.active,
+.sidebar .logout-link.active {
+  background-color: #007bff !important; /* Blue background */
+  color: #ffffff !important; /* White text */
+  font-weight: bold;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .logout-link:hover {
+  background-color: #e9ecef; /* Light gray on hover */
+  color: #0056b3;            /* Darker blue text on hover */
+}
+
+
+/* Logo Container */
+.logo-container {
+  text-align: center;
+  padding: 20px;
+  margin-top: auto; /* Push logo to the bottom */
+}
+
+.logo-container img {
+  max-width: 80%;
+  height: auto;
+  margin-bottom: 20px;
+}
+
+.sidebar-toggle {
+  width: 39px; /* Fixed width for the toggle button */
+  height: 40px; /* Square button for a consistent look */
+  padding: 5px;
+  position: relative; /* Relative positioning ensures it's part of the sidebar layout */
+  display: flex;
+  justify-content: center; /* Center the icon horizontally */
+  align-items: center; /* Center the icon vertically */
+  margin-left: auto; /* Push the button to the right inside the sidebar */
+  background-color: #f8f9fa; /* Adjust background color to match sidebar */
+  color: #444; /* Icon color */
+  cursor: pointer;
+  border: none; /* Remove any borders */
+  border-radius: 0; /* No circular appearance */
+  transition: background-color 0.3s ease; /* Smooth hover effect */
+  z-index: 10; /* Ensure it stays above other elements */
+}
+
+.sidebar-toggle:hover {
+  background-color: #d8d9d8; /* Highlight the button when hovered */
+}
+
+/* Make the icon 30% bigger */
+.sidebar-toggle svg {
+  font-size: 150%; /* Increase the font size by 30% */
+}
+
+.sidebar.collapsed .sidebar-toggle {
+  position: relative;
+  margin: 0 auto; /* Center horizontally inside the collapsed sidebar */
+}
+
+.sidebar.collapsed {
+  width: 40px;
+}
+
+/* Hide Elements When Collapsed */
+.sidebar.collapsed .sidebar-brand,
+.sidebar.collapsed .nav-link,
+.sidebar.collapsed .logout-link,
+.sidebar.collapsed .logo-container {
+  display: none;
+}
+
+.content {
+  margin-left: 280px; /* Default with sidebar */
+  transition: margin-left 0.3s;
+  padding: 20px;
+  width: calc(100% - 280px);
+}
+
+/* No Sidebar */
+.App.no-sidebar .content {
+  margin-left: 0; /* No margin for pages without a sidebar */
+  width: 100%;
+}
+
+/* Collapsed Sidebar */
+.sidebar.collapsed ~ .content {
+  margin-left: 60px;
+  width: calc(100% - 60px);
+}
+
+.logout-link {
+  font-size: 1.5rem; /* Increased font size */
+  color: #007bff; /* Blue text */
+  text-decoration: none;
+  background-color: #f8f9fa; /* White background */
+  padding: 15px 20px;
+  display: block;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.logout-link:hover {
+  background-color: #e9ecef; /* Light gray background on hover */
+  color: #0056b3; /* Prevent color change on hover */
+}
+
+.home-container {
+  background-color: #ffffff; /* White background */
+  min-height: 100vh;
+  padding: 20px;
+  text-align: center;
+}
+
+.home-container h1 {
+  font-size: 36px; /* Bigger title */
+  margin-bottom: 40px;
+}
+
+.bins-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center items horizontally */
+  justify-content: center; /* Center items vertically */
+  margin: 0 auto; /* Center horizontally within the parent */
+  width: 100%; /* Full width */
+  max-width: 2000px; /* Optional: Add a max-width for better layout */
+  padding: 20px; /* Add some padding for spacing */
+}
+
+
+.bin-label {
+  font-size: 24px; /* Bigger text */
+  margin-top: 30px;
+}
+
+.bin {
+  border: 1px solid #ccc;
+  width: 95%; /* Stretch bins */
+  height: 500px; /* Increased height */
+  margin-bottom: 30px;
+  position: relative;
+  overflow: hidden;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 110px;
+  }
+
+  .sidebar.collapsed {
+    width: 20px;
+  }
+
+  .sidebar .nav-link {
+    font-size: 0.75rem; /* Increased font size */
+    padding: 15px 4px;
+  }
+
+  .sidebar .sidebar-brand {
+    font-size: 1rem !important; /* Larger font size */
+  }
+
+  .content {
+    margin-left: 100px;
+  }
+
+  .sidebar.collapsed ~ .content {
+    margin-left: 20px;
+  }
+}
+
+.password-input {
+  padding-right: 40px; /* Space for the icon */
+}
+
+.password-icon {
+  position: absolute;
+  top: 62.5%; /* Center vertically */
+  right: 10px; /* Align inside the input field */
+  transform: translateY(-50%);
+  font-size: 24px; /* Larger size for the icon */
+  color: #666;
+  cursor: pointer;
+}
+
+.password-icon:hover {
+  color: #365bb3; /* Highlight on hover */
+}
+
+.story-bin {
+  /* Same styling as .bin but no fixed height */
+  border: 1px solid #ccc;
+  width: 95%;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 30px;
+  /* Remove height limits */
+  height: auto;
+  max-height: none;
+}
+
+.story-text {
+  font-size: 1.5rem; /* Increased text size */
+  line-height: 1.5;
+  color: #333;
+}
+
+/* For center-aligning the spinner */
+.loading-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50px; /* Just to ensure some space */
+}
