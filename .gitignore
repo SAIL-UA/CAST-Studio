@@ -3,3 +3,5 @@ old/
 __pycache__/
 .env
 node_modules
+backend/jupyterhub_cookie_secret
+backend/jupyterhub.sqlite
