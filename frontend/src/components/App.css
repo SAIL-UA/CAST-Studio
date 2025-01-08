@@ -77,7 +77,7 @@
 }
 
 .bins-container {
-  display: flex;
+  /*display: flex;*/
   flex-direction: column;
   align-items: flex-start; /* Align bins to the left */
   margin-left: 160px; /* Reduced margin from the left */
@@ -91,25 +91,18 @@
   font-weight: bold;
 }
 
-.bin {
-  border: 1px solid #ccc;
-  width: 100%; /* Match container width */
-  max-height: 300px; /* Set max height for top bin */
-  height: auto; /* Allow bottom bin to grow as needed */
-  overflow-y: auto; /* Enable scrolling for bins with many images */
-  margin-bottom: 20px;
-  padding: 10px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
+
+.buttons-container {
+  padding-right: 20px; /* Align buttons with bins */
 }
 
 #top-bin {
   display: flex;
   flex-wrap: wrap;
+  height: 160px;
   align-content: flex-start;
   justify-content: flex-start;
   align-items: flex-start;
-  max-height: 200px; /* Smaller height for the top bin */
   overflow-y: auto; /* Enable vertical scrolling for overflow */
 }
 
@@ -123,7 +116,26 @@
   overflow-y: auto;
 }
 
-.draggable-image {
+.bin {
+  border: 1px solid #ccc;
+  width: 95%;
+  /* Instead of a fixed height, let the user resize: */
+  min-height: 160px;   /* some reasonable minimum */
+  height: auto;
+  max-height: 1000px;  /* an optional max if you like */
+  
+  /* The magic: make it vertically resizable */
+  resize: vertical;   
+  overflow-y: auto;
+
+  margin-bottom: 30px;
+  padding: 10px;
+  position: relative;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+}
+
+.draggable-card {
   width: 120px;
   height: auto;
   margin: 5px;
@@ -500,3 +512,6 @@
   align-items: center;
   min-height: 50px; /* Just to ensure some space */
 }
+
+
+

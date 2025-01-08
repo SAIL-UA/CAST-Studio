@@ -1,7 +1,8 @@
+// frontend/src/components/Home.js
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Bin from './Bin';
-import './App.css';
 import { Container, Row, Col, Button, Spinner } from 'react-bootstrap';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -29,22 +30,24 @@ function Home() {
       });
   }, []);
 
+  // This function updates the images array with new short/long descriptions
+  const handleDescriptionsUpdate = (id, newShortDesc, newLongDesc) => {
+    setImages((prevImages) =>
+      prevImages.map((img) =>
+        img.id === id
+          ? { ...img, short_desc: newShortDesc, long_desc: newLongDesc }
+          : img
+      )
+    );
+  };
+
   const updateImageData = (imageId, data) => {
     axios
-      .post(
-        '/update_image_data',
-        {
-          id: imageId,
-          ...data,
-        },
-        { withCredentials: true }
-      )
+      .post('/update_image_data', { id: imageId, ...data }, { withCredentials: true })
       .then((response) => {
         console.log('Image data updated:', response.data);
         setImages((prevImages) =>
-          prevImages.map((img) =>
-            img.id === imageId ? { ...img, ...data } : img
-          )
+          prevImages.map((img) => (img.id === imageId ? { ...img, ...data } : img))
         );
       })
       .catch((error) => {
@@ -100,18 +103,13 @@ function Home() {
         </Col>
       </Row>
 
-      {/* Buttons Row */}
-      <Row className="justify-content-end" style={{ marginTop: '10px' }}>
+      <Row className="justify-content-end buttons-container" style={{ marginTop: '10px' }}>
         <Col md="auto">
           <Button variant="secondary" onClick={generateDescriptions}>
             Generate Descriptions
           </Button>{' '}
           {loadingDescriptions && (
-            <Spinner
-              animation="border"
-              size="sm"
-              style={{ marginRight: '10px' }}
-            />
+            <Spinner animation="border" size="sm" style={{ marginRight: '10px' }} />
           )}
           <Button onClick={runScript}>Generate Narrative</Button>
         </Col>
@@ -126,17 +124,18 @@ function Home() {
               id="top-bin"
               images={images.filter((img) => !img.in_storyboard)}
               updateImageData={updateImageData}
+              onDescriptionsUpdate={handleDescriptionsUpdate}
             />
             <div className="bin-label">Data Storyboard</div>
             <Bin
               id="bottom-bin"
               images={images.filter((img) => img.in_storyboard)}
               updateImageData={updateImageData}
+              onDescriptionsUpdate={handleDescriptionsUpdate}
             />
           </div>
         </Col>
       </Row>
-
       {/* Generated Story Section */}
       <Row>
         <Col>

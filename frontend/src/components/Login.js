@@ -71,7 +71,7 @@ function Login({ setUserAuthenticated }) {
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </div>
                 </Form.Group>
-                <Button variant="primary" block onClick={handleLogin}>
+                <Button variant="primary" className="w-100" onClick={handleLogin}>
                   Login
                 </Button>
               </Form>
