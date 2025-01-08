@@ -1,5 +1,6 @@
 import os
 import json
+import base64  # Needed for encoding images
 from openai import Client
 from dotenv import load_dotenv
 from datetime import datetime, timezone
@@ -13,10 +14,27 @@ if not API_KEY:
 
 DATA_PATH = '/data/CAST_ext/users/'
 
-def generate_long_description(source_code):
+def find_corresponding_image(json_filename, user_folder):
+    """
+    Given the JSON filename (e.g., 'image123.json'), find an existing image
+    with the same base name and a recognized extension (.png, .jpg, .jpeg) 
+    inside 'user_folder'. Return the full path if found, otherwise None.
+    """
+    base_name = os.path.splitext(json_filename)[0]  # e.g. 'image123'
+    possible_exts = [".png", ".jpg", ".jpeg"]
+
+    for ext in possible_exts:
+        candidate = os.path.join(user_folder, base_name + ext)
+        if os.path.exists(candidate):
+            return candidate
+
+    return None
+
+def generate_long_description(source_code, image_base64=None):
     """
     Given source code that generated a figure, use OpenAI to generate
     a few-sentence description of what the figure depicts.
+    Optionally provide the image in base64 for more context.
     """
     from openai import Client
 
@@ -29,11 +47,24 @@ def generate_long_description(source_code):
         "resulting figure depicts. Do not mention code in your explanation; focus on the "
         "meaning of the resulting visualization.\n\n"
         f"Source code:\n{source_code}\n\n"
+    )
+
+    # If we have a base64 image, append it to the prompt
+    if False:#image_base64:
+        prompt += (
+            "The base64-encoded data contains a visual representation of the figure. "
+            "Please decode it, analyze the visual details, and incorporate those "
+            "observations into your response. \n\n"
+            f"Image (base64-encoded):\n\"{image_base64}\"\n\n"
+        )
+
+    prompt += (
         "Provide a few sentences describing the resulting figure's content "
         "and insights it conveys."
     )
 
     try:
+        print(prompt)
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
@@ -66,12 +97,25 @@ def update_json_files(username):
         with open(json_path, 'r') as f:
             data = json.load(f)
 
-        # Only proceed if we have source code and no existing long_desc
+        # Only proceed if we have source code
         if 'source' in data and data['source'].strip():
-            # If long_desc is empty or you want to regenerate regardless, adjust condition
+            # Check if we want to skip if 'long_desc' already exists
             if not data.get('long_desc'):
                 source_code = data['source']
-                long_desc = generate_long_description(source_code)
+
+                # Find the matching image (same base name). If found, encode it.
+                image_path = find_corresponding_image(json_file, user_folder)
+                image_base64 = None
+                if image_path:
+                    try:
+                        with open(image_path, 'rb') as img_f:
+                            img_data = img_f.read()
+                            image_base64 = base64.b64encode(img_data).decode('utf-8')
+                    except Exception as e:
+                        print(f"Failed to read image for '{json_file}': {e}")
+
+                # Generate description with code + optional base64 image
+                long_desc = generate_long_description(source_code, image_base64)
 
                 if long_desc:
                     data['long_desc'] = long_desc
@@ -89,6 +133,61 @@ def update_json_files(username):
         else:
             print(f"No source code in '{json_file}' or unable to process.")
 
+def update_single_json_file(username, image_id):
+    """
+    Generates a long_desc for a single image JSON file (identified by image_id).
+    This mirrors update_json_files but only for one file.
+    """
+    print(f"Updating JSON for image_id='{image_id}'")
+
+    user_folder = os.path.join(DATA_PATH, username, 'workspace', 'cache')
+    if not os.path.exists(user_folder):
+        print(f"No cache folder found for user '{username}'.")
+        return None  # Return something to indicate no update
+
+    # The JSON file for this image
+    json_file = image_id + '.json'
+    json_path = os.path.join(user_folder, json_file)
+
+    if not os.path.exists(json_path):
+        print(f"File does not exist for image_id='{image_id}'")
+        return None
+
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+
+    if 'source' in data and data['source'].strip():
+        source_code = data['source']
+
+        # Find the matching image (same base name). If found, encode it.
+        image_path = find_corresponding_image(json_file, user_folder)
+        image_base64 = None
+        if image_path:
+            try:
+                with open(image_path, 'rb') as img_f:
+                    img_data = img_f.read()
+                    image_base64 = base64.b64encode(img_data).decode('utf-8')
+            except Exception as e:
+                print(f"Failed to read image for '{json_file}': {e}")
+
+        # Generate the long_desc
+        long_desc = generate_long_description(source_code, image_base64)
+        if long_desc:
+            data['long_desc'] = long_desc
+            data['last_saved'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+            # Update the JSON file
+            with open(json_path, 'w') as f:
+                json.dump(data, f, indent=2)
+
+            print(f"Updated '{json_file}' with a generated long description.")
+            return long_desc
+        else:
+            print(f"No description generated for '{json_file}'.")
+            return None
+    else:
+        print(f"No source code in '{json_file}' or unable to process.")
+        return None
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

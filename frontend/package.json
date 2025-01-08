@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "version": "0.1.0",
-  "proxy": "http://localhost:8075",
+  "proxy": "http://localhost:8076",
   "dependencies": {
     "axios": "^1.7.7",
     "bootstrap": "^5.3.3",
@@ -15,7 +15,7 @@
     "react-scripts": "^5.0.1"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "PORT=8075 react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
