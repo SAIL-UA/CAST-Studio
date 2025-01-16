@@ -1,5 +1,3 @@
-// frontend/src/components/Home.js
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Bin from './Bin';
@@ -10,9 +8,11 @@ import remarkGfm from 'remark-gfm';
 function Home() {
   const [images, setImages] = useState([]);
   const [output, setOutput] = useState('');
+  const [recommendedOrder, setRecommendedOrder] = useState([]);
   const [loadingNarrative, setLoadingNarrative] = useState(false);
   const [loadingDescriptions, setLoadingDescriptions] = useState(false);
 
+  // Fetch user data and narrative cache on component mount
   useEffect(() => {
     axios
       .get('/get_user_data', { withCredentials: true })
@@ -24,13 +24,37 @@ function Home() {
         }));
         setImages(images);
       })
-      .catch((error) => {
-        console.error('Error fetching user data:', error);
-        alert('Error fetching user data: ' + error.message);
-      });
+      .catch((error) => console.error('Error fetching user data:', error));
+
+    axios
+      .get('/get_narrative_cache', { withCredentials: true })
+      .then((response) => {
+        if (response.data.status === 'success' && response.data.data) {
+          const { suggested_order = [], generated_narrative = '' } = response.data.data;
+          setRecommendedOrder(suggested_order);
+          setOutput(generated_narrative);
+        }
+      })
+      .catch((error) => console.error('Error fetching narrative cache:', error));
   }, []);
 
-  // This function updates the images array with new short/long descriptions
+  const updateNarrativeCache = (data) => {
+    axios
+      .post('/update_narrative_cache', data, { withCredentials: true })
+      .then(() => console.log('Narrative cache updated'))
+      .catch((error) => console.error('Error updating narrative cache:', error));
+  };
+
+  const clearNarrativeCache = () => {
+    axios
+      .post('/clear_narrative_cache', {}, { withCredentials: true })
+      .then(() => {
+        setRecommendedOrder([]);
+        setOutput('');
+      })
+      .catch((error) => console.error('Error clearing narrative cache:', error));
+  };
+
   const handleDescriptionsUpdate = (id, newShortDesc, newLongDesc) => {
     setImages((prevImages) =>
       prevImages.map((img) =>
@@ -45,15 +69,11 @@ function Home() {
     axios
       .post('/update_image_data', { id: imageId, ...data }, { withCredentials: true })
       .then((response) => {
-        console.log('Image data updated:', response.data);
         setImages((prevImages) =>
           prevImages.map((img) => (img.id === imageId ? { ...img, ...data } : img))
         );
       })
-      .catch((error) => {
-        console.error('Error updating image data:', error);
-        alert('Error updating image data: ' + error.message);
-      });
+      .catch((error) => console.error('Error updating image data:', error));
   };
 
   const runScript = () => {
@@ -61,7 +81,19 @@ function Home() {
     axios
       .post('/run_script', {}, { withCredentials: true })
       .then((response) => {
-        setOutput(response.data.output);
+        if (response.data.status === 'success') {
+          const { narrative, recommended_order } = response.data;
+          setOutput(narrative);
+          setRecommendedOrder(recommended_order);
+
+          // Update narrative cache
+          updateNarrativeCache({
+            suggested_order: recommended_order,
+            generated_narrative: narrative,
+          });
+        } else {
+          console.error('Error in script:', response.data.message);
+        }
         setLoadingNarrative(false);
       })
       .catch((error) => {
@@ -74,11 +106,7 @@ function Home() {
     setLoadingDescriptions(true);
     axios
       .post('/generate_long_descriptions', {}, { withCredentials: true })
-      .then((response) => {
-        console.log(response.data.message);
-        // After generating descriptions, re-fetch data
-        return axios.get('/get_user_data', { withCredentials: true });
-      })
+      .then(() => axios.get('/get_user_data', { withCredentials: true }))
       .then((response) => {
         const updatedImages = response.data.images.map((img) => ({
           ...img,
@@ -94,9 +122,12 @@ function Home() {
       });
   };
 
+  const suggestedOrderImages = recommendedOrder
+    .map((filename) => images.find((img) => img.filename === filename))
+    .filter((img) => img);
+
   return (
     <Container fluid>
-      {/* Header Banner */}
       <Row className="header-container">
         <Col>
           <h1>CAST Story Board</h1>
@@ -107,15 +138,19 @@ function Home() {
         <Col md="auto">
           <Button variant="secondary" onClick={generateDescriptions}>
             Generate Descriptions
-          </Button>{' '}
-          {loadingDescriptions && (
-            <Spinner animation="border" size="sm" style={{ marginRight: '10px' }} />
-          )}
-          <Button onClick={runScript}>Generate Narrative</Button>
+          </Button>
+          {' '}
+          {loadingDescriptions && <Spinner animation="border" size="sm" style={{ marginRight: '10px' }} />}
+          <Button variant="primary" onClick={runScript}>
+            Generate Narrative
+          </Button>
+          {' '}
+          <Button variant="danger" onClick={clearNarrativeCache}>
+            Clear Results
+          </Button>
         </Col>
       </Row>
 
-      {/* Data Story Bin & Storyboard */}
       <Row>
         <Col>
           <div className="bins-container">
@@ -136,12 +171,39 @@ function Home() {
           </div>
         </Col>
       </Row>
-      {/* Generated Story Section */}
+
+      <Row style={{ marginTop: '10px' }}>
+        <Col>
+          <div className="bins-container">
+            <div className="bin-label">Suggested Order</div>
+            <Bin
+              id="suggested-order-bin"
+              images={suggestedOrderImages}
+              updateImageData={() => {}}
+              onDescriptionsUpdate={() => {}}
+              isSuggestedOrderBin={true}
+            />
+          </div>
+        </Col>
+      </Row>
+
       <Row>
         <Col>
-          <div className="bins-container" style={{ marginTop: '30px' }}>
+          <div className="bins-container" style={{ marginTop: '10px' }}>
             <div className="bin-label">Generated Story</div>
-            <div className="bin story-bin" style={{ height: 'auto', maxHeight: 'none' }}>
+            <div
+              className="bin story-bin"
+              style={{
+                border: '1px solid #ccc',
+                padding: '10px',
+                borderRadius: '5px',
+                backgroundColor: '#f0f0f0',
+                width: '100%',
+                minHeight: '160px',
+                maxHeight: '1000px',
+                overflowY: 'auto',
+              }}
+            >
               {loadingNarrative ? (
                 <div className="loading-center">
                   <Spinner animation="border" />
@@ -150,7 +212,7 @@ function Home() {
                 <ReactMarkdown
                   className="story-text"
                   children={output.trim() !== '' ? output : 'No story generated yet.'}
-                  remarkPlugins={[remarkGfm]} // Enables support for GitHub-flavored Markdown
+                  remarkPlugins={[remarkGfm]}
                 />
               )}
             </div>

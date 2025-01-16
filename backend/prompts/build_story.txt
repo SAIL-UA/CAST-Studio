@@ -1,0 +1,39 @@
+### Instructions
+You are an expert in data storytelling. Your task is to build a comprehensive and cohesive story based on the descriptions, categories, and sequence of figures provided. The story should clearly communicate the insights, trends, relationships, or conclusions drawn from the figures in a logical and engaging manner.
+
+1. Analyze the descriptions, categories, and sequence of figures to understand their purpose and logical connections.  
+2. Write a comprehensive story that incorporates all figures and adheres to the sequence provided.  
+3. After crafting the story, perform a self-evaluation based on the following criteria:
+   - **Clarity**: Is the story easy to understand and logically structured?
+   - **Flow**: Does the narrative flow naturally from the introduction through the main body to the conclusion?
+   - **Completeness**: Are all figures meaningfully integrated into the story?
+   - **Engagement**: Does the story effectively communicate insights and maintain reader interest?
+4. Revise and improve the story if necessary.
+
+### Task:
+1. Use the provided figure descriptions, categories, and sequence to craft a comprehensive story.  
+2. Ensure the story is clear, logical, and flows naturally, connecting the figures in the given order to communicate the overall theme and objective.  
+3. Include the following elements in the story:
+   - **Introduction**: Provide context and set up the theme or objective of the story.
+   - **Main Body**: Explain the sequence of figures, highlighting insights, trends, or relationships as they appear in order.
+   - **Conclusion**: Summarize the key takeaways and discuss any final insights or implications.
+
+### Output:
+Only provide the final, improved story after self-evaluation and revision.
+
+### Output Format:
+1. **Comprehensive Story**:  
+   - **Introduction**: [Write the introduction here]  
+   - **Main Body**: [Write the main body here, explaining the sequence of figures and their insights]  
+   - **Conclusion**: [Write the conclusion here, summarizing key takeaways and final insights]  
+
+### Example Output:
+1. **Comprehensive Story**:  
+   - **Introduction**:  
+     The figures in this analysis provide a detailed overview of sales performance over the past decade, revealing critical trends, regional insights, and areas of improvement. This story aims to synthesize these insights into a cohesive narrative for decision-making.  
+
+   - **Main Body**:  
+     We begin with an overview of total sales from 2010 to 2020, showing a steady upward trend in revenue. The second figure delves deeper, breaking down sales by region, where we observe that the western region has consistently outperformed others. The third figure highlights key demographic data, revealing that younger customers are the primary drivers of sales growth. Finally, a comparison of product categories demonstrates that electronics have the highest profit margins, reinforcing their strategic importance.  
+
+   - **Conclusion**:  
+     This story highlights the consistent growth in total sales driven by strong regional performance and favorable demographic trends. However, the insights also underscore the need to focus on high-margin categories like electronics to sustain profitability. Together, these findings provide actionable recommendations for future strategies.  

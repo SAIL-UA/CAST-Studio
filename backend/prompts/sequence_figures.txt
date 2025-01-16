@@ -1,0 +1,67 @@
+### Instructions:
+You are an expert in data storytelling and logical sequencing of data visualizations. We have several figures with their descriptions, categories, and an overarching theme and objective. Your task is to determine the most appropriate sequence of these figures to create a coherent and impactful story.
+
+1. Analyze the figure descriptions, categories, and the overall theme and objective to determine the most logical storytelling structure.
+2. Choose one storytelling structure from the list below that best suits the provided information.
+3. Arrange the figures in a sequence that aligns with the chosen storytelling structure.
+4. Perform a self-evaluation of your sequence based on the following criteria:
+   - **Clarity**: Is the sequence easy to understand and logically structured?
+   - **Alignment**: Does the sequence align with the chosen storytelling structure?
+   - **Completeness**: Are all figures included and categorized correctly?
+   - **Coherence**: Does the sequence flow naturally and tell a clear story?
+5. Revise and improve the sequence if necessary.
+
+### Task:
+Using the provided figure descriptions, categories, and the overall theme and objective, arrange the figures in a logical order that best communicates the intended story. Select one of the following storytelling structures to sequence the figures:
+
+1. **Time-Based Progression**:  
+   If the data spans across time, arrange the figures chronologically to show evolution.  
+   Example: Start with initial conditions → intermediate years → current outcomes.  
+
+2. **Overview to Detail**:  
+   Begin with high-level summaries and then zoom into specific details.  
+   Example: Start with total revenue overview → revenue breakdown by region → top-performing cities.  
+
+3. **Cause-and-Effect**:  
+   If causal relationships exist, order the figures to illustrate these relationships.  
+   Example: Ad spend over time → Product sales over time → Correlation between ad spend and sales.  
+
+4. **Workflow/Process**:  
+   Arrange figures to reflect steps in an analytical process or workflow.  
+   Example: Raw data visualization → Processed data → Final results or predictions.  
+
+5. **Comparison First, Insight Later**:  
+   Start with comparisons, then move to conclusions or patterns.  
+   Example: Revenue by category → Profit margin by category → Insights on most profitable categories.  
+
+6. **Highlight Change/Impact**:  
+   Focus on how variables change under different conditions.  
+   Example: Pre-pandemic sales → Post-pandemic sales → Percentage change in revenue.  
+
+7. **Build a Narrative**:  
+   Follow a beginning → middle → end storytelling structure:  
+   - Beginning: Introduce the problem, context, or baseline data.  
+   - Middle: Show trends, comparisons, or relationships.  
+   - End: Present insights, conclusions, or actions to take.
+
+### Output:
+Only provide the final, improved response based on your self-evaluation.
+
+### Output Format:
+1. **Chosen Storytelling Structure**: [Insert the chosen structure here]  
+2. **Sequence of Figures**:  
+   - Step 1: [Figure Name]  
+   - Step 2: [Figure Name]  
+   - Step 3: [Figure Name]  
+   (...continue as needed)  
+3. **Justification**:  
+   - Explain why this storytelling structure was chosen and how it effectively communicates the intended story.  
+
+### Example Output:
+1. **Chosen Storytelling Structure**: Overview to Detail  
+2. **Sequence of Figures**:  
+   - Step 1: Total revenue over time (Overview).  
+   - Step 2: Revenue breakdown by region (Detail).  
+   - Step 3: Top-performing cities or stores (More detail).  
+3. **Justification**:  
+   - The "Overview to Detail" structure was chosen because it starts with a broad context (total revenue) and progressively drills down into specific details, providing a logical flow of information and helping the audience better understand the data.

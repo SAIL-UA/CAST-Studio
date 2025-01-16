@@ -1,27 +1,89 @@
+# backend/scripts/generate_description.py
+
 import os
 import json
 import base64  # Needed for encoding images
 from openai import Client
 from dotenv import load_dotenv
 from datetime import datetime, timezone
+import cv2
+import pytesseract
 import sys
 
 # Load environment variables
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
+
 if not API_KEY:
     raise ValueError("API_KEY not found in environment. Make sure .env is set correctly.")
 
+client = Client(api_key=API_KEY)
+
 DATA_PATH = '/data/CAST_ext/users/'
+
+def is_image_file(filename):
+    """
+    Check if a file is an image based on its extension.
+    """
+    valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.tiff')
+    return filename.lower().endswith(valid_extensions)
+
+def is_script_file(filename):
+    """
+    Check if a file is a JSON script file.
+    """
+    return filename.lower().endswith('.json')  # Adjusted to JSON
+
+def extract_text_from_image(image_path):
+    """
+    Use OpenCV and pytesseract to extract text from the given image.
+    """
+    try:
+        image = cv2.imread(image_path)
+        if image is None:
+            print(f"Failed to read image: {image_path}")
+            return ""
+        
+        # Convert to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Apply threshold to get binary image
+        _, binary_image = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
+
+        # Detect contours to check if it's a compound figure
+        contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Store detected regions of interest (ROIs)
+        regions = []
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            # Filter small contours by size
+            if w * h > 100:
+                regions.append((x, y, w, h))
+
+        # Use OCR to extract any text found in the image
+        detected_text = pytesseract.image_to_string(image)
+
+        # Combine extracted text and caption
+        detected_info = f"Detected Text: {detected_text}\n"
+        if len(regions) > 1:
+            detected_info += "Detected multiple sub-regions, possibly a compound figure.\n"
+        else:
+            detected_info += "Single figure detected.\n"
+
+        return detected_info
+    except Exception as e:
+        print(f"Error processing image {image_path}: {e}")
+        return ""
 
 def find_corresponding_image(json_filename, user_folder):
     """
     Given the JSON filename (e.g., 'image123.json'), find an existing image
-    with the same base name and a recognized extension (.png, .jpg, .jpeg) 
+    with the same base name and a recognized extension (.png, .jpg, .jpeg, .bmp, .tiff) 
     inside 'user_folder'. Return the full path if found, otherwise None.
     """
-    base_name = os.path.splitext(json_filename)[0]  # e.g. 'image123'
-    possible_exts = [".png", ".jpg", ".jpeg"]
+    base_name = os.path.splitext(json_filename)[0]  # e.g., 'image123'
+    possible_exts = [".png", ".jpg", ".jpeg", ".bmp", ".tiff"]
 
     for ext in possible_exts:
         candidate = os.path.join(user_folder, base_name + ext)
@@ -30,60 +92,38 @@ def find_corresponding_image(json_filename, user_folder):
 
     return None
 
-def generate_long_description(source_code, image_base64=None):
+def generate_description(file, info, prompt_gd):
     """
-    Given source code that generated a figure, use OpenAI to generate
-    a few-sentence description of what the figure depicts.
-    Optionally provide the image in base64 for more context.
+    Generate a description for a figure using the OpenAI API.
     """
-    from openai import Client
-
-    # Initialize the client with the API key
-    client = Client(api_key=API_KEY)
-
-    prompt = (
-        "I will provide you with Python code used to generate a figure, and you will "
-        "provide a concise and clear long description (a few sentences) about what the "
-        "resulting figure depicts. Do not mention code in your explanation; focus on the "
-        "meaning of the resulting visualization.\n\n"
-        f"Source code:\n{source_code}\n\n"
-    )
-
-    # If we have a base64 image, append it to the prompt
-    if False:#image_base64:
-        prompt += (
-            "The base64-encoded data contains a visual representation of the figure. "
-            "Please decode it, analyze the visual details, and incorporate those "
-            "observations into your response. \n\n"
-            f"Image (base64-encoded):\n\"{image_base64}\"\n\n"
-        )
-
-    prompt += (
-        "Provide a few sentences describing the resulting figure's content "
-        "and insights it conveys."
-    )
+    prompt = f"""
+### Input
+Figure Name: {file}
+Extracted Information: {info['text']}
+Related Code Script: {info['script']}
+{prompt_gd}
+"""
 
     try:
-        print(prompt)
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a data storytelling assistant."},
+                {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=4096,
-            temperature=0.01,
+            temperature=0.1
         )
-        # Parse the response correctly
-        description = response.choices[0].message.content
-        return description.strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"Error generating description: {e}")
+        print(f"Error generating description for {file}: {e}")
         return ""
 
 def update_json_files(username):
-    print("Update json files called")
-    user_folder = os.path.join(DATA_PATH, username, 'workspace', 'cache')
+    """
+    Batch process all figures for a user to generate and update descriptions.
+    """
+    print("Batch updating JSON files with generated descriptions...")
+    user_folder = os.path.join(DATA_PATH, username, 'workspace/cache')
     if not os.path.exists(user_folder):
         print(f"No cache folder found for user '{username}'.")
         return
@@ -93,57 +133,55 @@ def update_json_files(username):
 
     for json_file in json_files:
         json_path = os.path.join(user_folder, json_file)
+        image_path = find_corresponding_image(json_file, user_folder)
 
-        with open(json_path, 'r') as f:
-            data = json.load(f)
+        if not image_path:
+            print(f"No corresponding image found for '{json_file}', skipping.")
+            continue
 
-        # Only proceed if we have source code
-        if 'source' in data and data['source'].strip():
-            # Check if we want to skip if 'long_desc' already exists
-            if not data.get('long_desc'):
-                source_code = data['source']
+        extracted_info = extract_text_from_image(image_path)
 
-                # Find the matching image (same base name). If found, encode it.
-                image_path = find_corresponding_image(json_file, user_folder)
-                image_base64 = None
-                if image_path:
-                    try:
-                        with open(image_path, 'rb') as img_f:
-                            img_data = img_f.read()
-                            image_base64 = base64.b64encode(img_data).decode('utf-8')
-                    except Exception as e:
-                        print(f"Failed to read image for '{json_file}': {e}")
+        with open(json_path, 'r') as script_file:
+            json_data = json.load(script_file)
+            script_content = json_data.get('source', "No associated source code found.")
 
-                # Generate description with code + optional base64 image
-                long_desc = generate_long_description(source_code, image_base64)
+        fig_info = {
+            "text": extracted_info,
+            "script": script_content if script_content else "No associated script found."
+        }
 
-                if long_desc:
-                    data['long_desc'] = long_desc
-                    data['last_saved'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        # Load prompt for description generation
+        prompts_dir = os.path.join(os.path.dirname(__file__), '..', 'prompts')
+        prompt_path = os.path.join(prompts_dir, 'generate_description.txt')
+        if not os.path.exists(prompt_path):
+            print(f"Prompt file not found: {prompt_path}")
+            continue
 
-                    # Update the JSON file
-                    with open(json_path, 'w') as f:
-                        json.dump(data, f, indent=2)
-                    
-                    print(f"Updated '{json_file}' with a generated long description.")
-                else:
-                    print(f"No description generated for '{json_file}'.")
-            else:
-                print(f"'{json_file}' already has a long_desc, skipping.")
-        else:
-            print(f"No source code in '{json_file}' or unable to process.")
+        with open(prompt_path, 'r') as prompt_file:
+            prompt_gd = prompt_file.read()
+
+        # Generate description
+        description = generate_description(json_file, fig_info, prompt_gd)
+
+        # Update JSON data with the generated description
+        json_data['long_desc'] = description
+        json_data['last_saved'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        # Save the updated JSON file
+        with open(json_path, 'w') as f:
+            json.dump(json_data, f, indent=2)
+
+        print(f"Updated '{json_file}' with generated description.")
 
 def update_single_json_file(username, image_id):
     """
-    Generates a long_desc for a single image JSON file (identified by image_id).
-    This mirrors update_json_files but only for one file.
+    Generate a long description for a single image JSON file identified by image_id.
     """
     print(f"Updating JSON for image_id='{image_id}'")
-
-    user_folder = os.path.join(DATA_PATH, username, 'workspace', 'cache')
+    user_folder = os.path.join(DATA_PATH, username, 'workspace/cache')
     if not os.path.exists(user_folder):
         print(f"No cache folder found for user '{username}'.")
-        return None  # Return something to indicate no update
+        return None  # Indicate no update
 
     # The JSON file for this image
     json_file = image_id + '.json'
@@ -154,34 +192,47 @@ def update_single_json_file(username, image_id):
         return None
 
     with open(json_path, 'r') as f:
-        data = json.load(f)
+        json_data = json.load(f)
 
-    if 'source' in data and data['source'].strip():
-        source_code = data['source']
-
-        # Find the matching image (same base name). If found, encode it.
+    # Only proceed if we have source code
+    if 'source' in json_data and json_data['source'].strip():
+        # Check if we want to skip if 'long_desc' already exists
         image_path = find_corresponding_image(json_file, user_folder)
-        image_base64 = None
-        if image_path:
-            try:
-                with open(image_path, 'rb') as img_f:
-                    img_data = img_f.read()
-                    image_base64 = base64.b64encode(img_data).decode('utf-8')
-            except Exception as e:
-                print(f"Failed to read image for '{json_file}': {e}")
+        if not image_path:
+            print(f"No corresponding image found for '{json_file}', skipping.")
+            return None
 
-        # Generate the long_desc
-        long_desc = generate_long_description(source_code, image_base64)
-        if long_desc:
-            data['long_desc'] = long_desc
-            data['last_saved'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        # Extract text from the image
+        extracted_info = extract_text_from_image(image_path)
 
-            # Update the JSON file
+        fig_info = {
+            "text": extracted_info,
+            "script": json_data.get('source', "No associated source code found.")
+        }
+
+        # Load prompt for description generation
+        prompts_dir = os.path.join(os.path.dirname(__file__), '..', 'prompts')
+        prompt_path = os.path.join(prompts_dir, 'generate_description.txt')
+        if not os.path.exists(prompt_path):
+            print(f"Prompt file not found: {prompt_path}")
+            return None
+
+        with open(prompt_path, 'r') as prompt_file:
+            prompt_gd = prompt_file.read()
+
+        # Generate description
+        description = generate_description(json_file, fig_info, prompt_gd)
+
+        if description:
+            json_data['long_desc'] = description
+            json_data['last_saved'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+            # Save the updated JSON file
             with open(json_path, 'w') as f:
-                json.dump(data, f, indent=2)
+                json.dump(json_data, f, indent=2)
 
-            print(f"Updated '{json_file}' with a generated long description.")
-            return long_desc
+            print(f"Updated '{json_file}' with generated description.")
+            return description
         else:
             print(f"No description generated for '{json_file}'.")
             return None
@@ -189,10 +240,36 @@ def update_single_json_file(username, image_id):
         print(f"No source code in '{json_file}' or unable to process.")
         return None
 
-if __name__ == "__main__":
+def main():
+    """
+    Main function to handle command-line arguments for batch or single image processing.
+    Usage:
+        python generate_description.py <username> [<image_id>]
+    If <image_id> is provided, only that image's description is generated.
+    Otherwise, all applicable images for the user are processed.
+    """
     if len(sys.argv) < 2:
-        print("Usage: python generate_description.py <username>")
+        print("Usage: python generate_description.py <username> [<image_id>]")
         sys.exit(1)
 
     username = sys.argv[1]
-    update_json_files(username)
+    user_folder = os.path.join(DATA_PATH, username, 'workspace/cache')
+
+    if not os.path.exists(user_folder):
+        print(f"User folder does not exist: {user_folder}")
+        sys.exit(1)
+
+    if len(sys.argv) == 3:
+        # Single image processing
+        image_id = sys.argv[2]
+        description = update_single_json_file(username, image_id)
+        if description:
+            print(f"Generated description for image '{image_id}':\n{description}")
+        else:
+            print(f"Failed to generate description for image '{image_id}'.")
+    else:
+        # Batch processing
+        update_json_files(username)
+
+if __name__ == "__main__":
+    main()
