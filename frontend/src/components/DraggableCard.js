@@ -8,7 +8,7 @@ import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 
-function DraggableCard({ image, onDescriptionsUpdate }) {
+function DraggableCard({ image, onDescriptionsUpdate, draggable = true }) {
   const [showModal, setShowModal] = useState(false);
   const [tempShortDesc, setTempShortDesc] = useState(image.short_desc || '');
   const [tempLongDesc, setTempLongDesc] = useState(image.long_desc || '');
@@ -64,38 +64,40 @@ function DraggableCard({ image, onDescriptionsUpdate }) {
   };
 
   /**
-   * Updated useDrag to provide page-relative oldX, oldY, and drag offsets.
+   * If the card is draggable, set up the useDrag hook.
+   * Otherwise, render a static card.
    */
   const [{ isDragging }, drag] = useDrag(
     () => ({
-      type: 'image',
-      // Provide old coords as page-relative and drag offsets
-      item: (monitor) => {
+      type: 'image', // Define the drag type
+      canDrag: draggable, // Control whether the card is draggable
+      item: () => {
         if (cardRef.current) {
           const rect = cardRef.current.getBoundingClientRect();
-          const initialClientOffset = monitor.getInitialClientOffset();
-          const initialPageOffset = {
-            x: initialClientOffset.x + window.pageXOffset,
-            y: initialClientOffset.y + window.pageYOffset,
+          const initialMousePosition = {
+            x: window.event.clientX,
+            y: window.event.clientY,
           };
+          const offsetX = initialMousePosition.x - rect.left;
+          const offsetY = initialMousePosition.y - rect.top;
+  
           const oldX = rect.left + window.pageXOffset;
           const oldY = rect.top + window.pageYOffset;
-          const offsetX = initialPageOffset.x - oldX;
-          const offsetY = initialPageOffset.y - oldY;
-          console.log(`Dragging ${image.id} from (${oldX}, ${oldY}) with offset (${offsetX}, ${offsetY})`);
+  
           return {
             id: image.id,
-            oldX, // page-relative
-            oldY, // page-relative
-            offsetX, // distance from cursor to card's top-left
+            oldX,
+            oldY,
+            offsetX,
             offsetY,
           };
         }
-        // Fallback in case ref is not available
+  
+        // Fallback if cardRef is unavailable
         return {
           id: image.id,
-          oldX: image.x, // May not be accurate
-          oldY: image.y,
+          oldX: image.x || 0,
+          oldY: image.y || 0,
           offsetX: 0,
           offsetY: 0,
         };
@@ -104,27 +106,40 @@ function DraggableCard({ image, onDescriptionsUpdate }) {
         isDragging: !!monitor.isDragging(),
       }),
     }),
-    [image.id] // Removed image.x and image.y from dependencies
+    [draggable, image.id]
   );
+  
+  
 
-  const style = image.in_storyboard
+  const style = draggable
+  ? image.in_storyboard
     ? {
         left: `${image.x}px`, // bin-relative
         top: `${image.y}px`,  // bin-relative
         opacity: isDragging ? 0.5 : 1,
         position: 'absolute',
         cursor: 'move',
+        border: image.long_desc?.trim() ? '1px solid #ccc' : '2px solid red', // Red border if long_desc is blank
       }
     : {
         opacity: isDragging ? 0.5 : 1,
         position: 'relative',
         margin: '5px',
         cursor: 'grab',
-      };
+        border: image.long_desc?.trim() ? '1px solid #ccc' : '2px solid red', // Red border if long_desc is blank
+      }
+  : {
+      opacity: 1,
+      position: 'relative',
+      margin: '5px',
+      cursor: 'default',
+      border: image.long_desc?.trim() ? '1px solid #ccc' : '2px solid red', // Red border if long_desc is blank
+    };
+
 
   return (
     <>
-      <div ref={drag} style={style} onDoubleClick={handleShow}>
+      <div ref={draggable ? drag : null} style={style} onDoubleClick={handleShow}>
         <Card ref={cardRef} style={{ width: '150px', overflow: 'hidden' }}>
           <Card.Img
             variant="top"

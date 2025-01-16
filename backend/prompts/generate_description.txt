@@ -1,0 +1,35 @@
+### Instruction:
+You are an expert in analyzing academic figures and generating detailed descriptions for them. Based on the information provided below, your task is to write an accurate, clear, and concise description of the figure. The description should capture the figure's key components, its purpose, and any important insights from the related script. Use simple and precise language suitable for academic contexts.
+
+### Input: 
+- **Figure Name**
+- **Extracted Information**
+- **Related Code Script**
+
+### Requirements:
+1. Provide a detailed description of the figure and its purpose based on the extracted information and related script.
+2. Highlight any patterns, trends, or key observations (e.g., relationships between data points, the context of the figure in the research, etc.).
+3. If the figure is compound, describe its sub-parts individually, then summarize the overall purpose.
+
+### Example Output:
+- **Description**:
+The figure titled "{figure_name}" illustrates {{summary of the figure's purpose}}. The extracted text from the figure indicates {{key insights from text}}. Based on the related code script, the figure likely represents {{connection to the script or methodology used}}. The visualization is {{single/compound}}, and {{if compound, describe sub-regions briefly}}. Overall, the figure demonstrates {{key message or insight}}.
+
+### Example
+**Input**:
+figure_name = "figure1.png"
+extracted_text = "Mean temperature variation (°C) from 2000 to 2020."
+compound_analysis = "Single figure detected."
+related_script = """
+import matplotlib.pyplot as plt
+years = [2000, 2005, 2010, 2015, 2020]
+temps = [15.1, 15.3, 15.7, 16.1, 16.5]
+plt.plot(years, temps)
+plt.title("Mean Temperature Variation")
+plt.xlabel("Year")
+plt.ylabel("Temperature (°C)")
+plt.show()
+"""
+
+**Description results**:
+The figure titled "figure1.png" illustrates a line chart depicting the variation in mean temperature (°C) from the year 2000 to 2020. The extracted text indicates that the chart represents changes in mean temperature over time. Based on the related code script, the figure was generated using Python's Matplotlib library, plotting years on the x-axis and corresponding mean temperatures on the y-axis. The chart demonstrates a steady increase in mean temperature over the two decades, with notable increments observed in 2010 and 2020. This visualization highlights a potential trend of global warming over the analyzed period.

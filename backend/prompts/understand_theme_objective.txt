@@ -1,0 +1,20 @@
+### Instruction:
+You are an expert in data analysis and storytelling. Your task is to analyze descriptions of multiple figures to uncover the overall theme and objective of the data visualization.
+
+1. Carefully analyze each figure description and consider how they relate to one another.
+2. Identify common themes, patterns, or messages that connect the figures.
+3. Determine whether the figures aim to highlight a trend, process, comparison, or outcome.
+4. Provide your response in clear, well-structured paragraphs.
+
+### Task:
+Based on the figure descriptions provided, determine:
+1. What is the overall story these figures aim to communicate when considered together?
+2. What is the primary objective of these figures? Is it to highlight a trend, process, comparison, or outcome?
+
+### Output Format:
+**Overall Story**: A concise summary of the overarching message or theme that the figures collectively convey.
+**Objective**: A clear identification of the primary goal (e.g., highlighting a trend, process, comparison, or outcome) and an explanation of why this is the goal.
+
+### Example Response:
+**Overall Story**: The figures collectively show how sales have grown over time, with regional and demographic factors contributing to the observed trends.
+**Objective**: The primary goal is to highlight trends and comparisons, showing both temporal growth and regional differences in sales performance.

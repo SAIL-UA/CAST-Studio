@@ -117,6 +117,7 @@
 }
 
 .bin {
+  display: flex;
   border: 1px solid #ccc;
   width: 95%;
   /* Instead of a fixed height, let the user resize: */
@@ -174,8 +175,13 @@
   width: 100%;
 }
 
+.App:not(.no-sidebar) .content {
+  margin-left: 280px;
+  width: calc(100% - 280px);
+}
+
 .sidebar {
-  width: 300px;
+  width: 280px;
   background-color: #f8f9fa;
   border-right: 1px solid #ddd;
   height: 100vh;
@@ -412,33 +418,7 @@
   border-radius: 8px;
 }
 
-/* Media Queries */
-@media (max-width: 768px) {
-  .sidebar {
-    width: 110px;
-  }
 
-  .sidebar.collapsed {
-    width: 20px;
-  }
-
-  .sidebar .nav-link {
-    font-size: 0.75rem; /* Increased font size */
-    padding: 15px 4px;
-  }
-
-  .sidebar .sidebar-brand {
-    font-size: 1rem !important; /* Larger font size */
-  }
-
-  .content {
-    margin-left: 100px;
-  }
-
-  .sidebar.collapsed ~ .content {
-    margin-left: 20px;
-  }
-}
 
 .password-input {
   padding-right: 40px; /* Space for the icon */
@@ -459,17 +439,19 @@
 }
 
 .story-bin {
-  /* Same styling as .bin but no fixed height */
   border: 1px solid #ccc;
-  width: 95%;
   background-color: #f0f0f0;
   border-radius: 8px;
   padding: 10px;
   margin-bottom: 30px;
-  /* Remove height limits */
+  width: 100%; /* Match the width of .bin */
+  min-height: 160px; /* Add a minimum height like other bins */
   height: auto;
-  max-height: none;
+  max-height: 1000px; /* Optional: Align with .bin */
+  overflow-y: auto; /* Enable scrolling if content exceeds max height */
+  position: relative;
 }
+
 
 .story-text {
   font-size: 18px;
@@ -513,5 +495,32 @@
   min-height: 50px; /* Just to ensure some space */
 }
 
+/* Media Queries */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 110px;
+  }
 
+  .sidebar.collapsed {
+    width: 40px;
+  }
+
+  .sidebar .nav-link {
+    font-size: 0.75rem; /* Increased font size */
+    padding: 15px 4px;
+  }
+
+  .sidebar .sidebar-brand {
+    font-size: 1rem !important; /* Larger font size */
+  }
+
+  .sidebar:not(.collapsed) ~ .content {
+    margin-left: 100px;
+    width: calc(100% - 100px);
+  }
+
+  .sidebar.collapsed ~ .content {
+    margin-left: 40px;
+  }
+}
 
