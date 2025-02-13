@@ -25,10 +25,13 @@ def extract_figure_filenames(sequence_response):
     :param sequence_response: The raw sequence response string from GPT.
     :return: A list of filenames.
     """
-    # Regex to match '- Step #: filename' pattern
-    print(f"The sequence response is {sequence_response}")
-    matches = re.findall(r"- Step \d+: `?([\w\-.]+\.(?:png|jpg|jpeg|bmp|tiff))`?", sequence_response)
-    print(f"The matches are {matches}")
+    print(f"The sequence response is: {sequence_response}")
+
+    # Regex pattern with optional bold markers (i.e. **)
+    pattern = r"- Step \d+: (?:\*\*|`)?([\w\-.]+\.(?:png|jpg|jpeg|bmp|tiff))(?:\*\*|`)?"
+    matches = re.findall(pattern, sequence_response)
+    
+    print(f"The matches are: {matches}")
     return matches
 
 def categorize_figures(description, prompt_cf):

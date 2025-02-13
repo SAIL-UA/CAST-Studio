@@ -418,6 +418,10 @@
   border-radius: 8px;
 }
 
+.suggested-order-bin {
+  display: flex;
+  flex-wrap: wrap;
+}
 
 
 .password-input {
