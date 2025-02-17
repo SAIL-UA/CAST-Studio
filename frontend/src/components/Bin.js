@@ -3,7 +3,7 @@ import { useDrop } from 'react-dnd';
 import axios from 'axios';
 import DraggableCard from './DraggableCard';
 
-function Bin({ id, images, updateImageData, onDescriptionsUpdate, isSuggestedOrderBin = false }) {
+function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSuggestedOrderBin = false }) {
   const binRef = useRef(null);
 
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
@@ -69,7 +69,8 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, isSuggestedOrd
           key={image.id}
           image={image}
           onDescriptionsUpdate={onDescriptionsUpdate}
-          draggable={!isSuggestedOrderBin} // Disable dragging in suggested order bin
+          onDelete={onDelete}
+          draggable={!isSuggestedOrderBin} 
         />
       ))}
     </div>
