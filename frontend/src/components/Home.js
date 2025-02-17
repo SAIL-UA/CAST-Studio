@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Bin from './Bin';
-import { Container, Row, Col, Button, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Button, Spinner, Form } from 'react-bootstrap';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -11,20 +11,27 @@ function Home() {
   const [recommendedOrder, setRecommendedOrder] = useState([]);
   const [loadingNarrative, setLoadingNarrative] = useState(false);
   const [loadingDescriptions, setLoadingDescriptions] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
-  // Fetch user data and narrative cache on component mount
-  useEffect(() => {
+  // Reusable function to fetch user data
+  const fetchUserData = () => {
     axios
       .get('/get_user_data', { withCredentials: true })
       .then((response) => {
-        const images = response.data.images.map((img) => ({
+        const fetchedImages = response.data.images.map((img) => ({
           ...img,
           x: img.in_storyboard ? img.x : 0,
           y: img.in_storyboard ? img.y : 0,
         }));
-        setImages(images);
+        setImages(fetchedImages);
       })
       .catch((error) => console.error('Error fetching user data:', error));
+  };
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchUserData();
 
     axios
       .get('/get_narrative_cache', { withCredentials: true })
@@ -68,12 +75,46 @@ function Home() {
   const updateImageData = (imageId, data) => {
     axios
       .post('/update_image_data', { id: imageId, ...data }, { withCredentials: true })
-      .then((response) => {
+      .then(() => {
         setImages((prevImages) =>
           prevImages.map((img) => (img.id === imageId ? { ...img, ...data } : img))
         );
       })
       .catch((error) => console.error('Error updating image data:', error));
+  };
+
+  const handleFileUpload = async () => {
+    if (!fileInputRef.current.files.length) return;
+
+    setUploading(true);
+    const file = fileInputRef.current.files[0];
+    const formData = new FormData();
+    formData.append('figure', file);
+
+    try {
+      const res = await axios.post('/upload_figure', formData, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (res.data.status === 'success') {
+        fetchUserData();
+        fileInputRef.current.value = '';
+      } else {
+        alert(res.data.message || 'Error uploading figure');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('An error occurred while uploading the figure');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onFileChange = () => {
+    handleFileUpload();
   };
 
   const runScript = () => {
@@ -85,8 +126,6 @@ function Home() {
           const { narrative, recommended_order } = response.data;
           setOutput(narrative);
           setRecommendedOrder(recommended_order);
-
-          // Update narrative cache
           updateNarrativeCache({
             suggested_order: recommended_order,
             generated_narrative: narrative,
@@ -122,6 +161,11 @@ function Home() {
       });
   };
 
+  // onDelete callback: re-fetch data after deletion
+  const handleDelete = () => {
+    fetchUserData();
+  };
+
   const suggestedOrderImages = recommendedOrder
     .map((filename) => images.find((img) => img.filename === filename))
     .filter((img) => img);
@@ -134,39 +178,63 @@ function Home() {
         </Col>
       </Row>
 
-      <Row className="justify-content-end buttons-container" style={{ marginTop: '10px' }}>
-        <Col md="auto">
-          <Button variant="secondary" onClick={generateDescriptions}>
-            Generate Descriptions
-          </Button>
-          {' '}
-          {loadingDescriptions && <Spinner animation="border" size="sm" style={{ marginRight: '10px' }} />}
-          <Button variant="primary" onClick={runScript}>
-            Generate Narrative
-          </Button>
-          {' '}
-          <Button variant="danger" onClick={clearNarrativeCache}>
-            Clear Results
-          </Button>
-        </Col>
-      </Row>
+      <div 
+        className="d-flex justify-content-center align-items-center my-3" 
+        style={{ gap: '1rem' }}  // Adds spacing between items
+      >
+        <input
+          type="file"
+          accept=".png, .jpg, .jpeg, .bmp, .tiff"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          onChange={onFileChange}
+        />
+
+        <Button
+          variant="success"
+          onClick={() => fileInputRef.current.click()}
+          disabled={uploading}
+        >
+          {uploading ? 'Uploading...' : 'Upload Figure'}
+        </Button>
+
+        <Button variant="secondary" onClick={generateDescriptions}>
+          Generate Descriptions
+        </Button>
+        {loadingDescriptions && <Spinner animation="border" size="sm" />}
+
+        <Button variant="primary" onClick={runScript}>
+          Generate Narrative
+        </Button>
+
+        <Button variant="danger" onClick={clearNarrativeCache}>
+          Clear Results
+        </Button>
+        {loadingNarrative && <Spinner animation="border" size="sm" />}
+      </div>
+
+
+
+
 
       <Row>
         <Col>
           <div className="bins-container">
-            <div className="bin-label">Data Story Bin</div>
+            <div className="bin-label" style={{width: '100%', alignSelf: 'flex-start', textAlign: 'left' }}>Data Story Bin</div>
             <Bin
               id="top-bin"
               images={images.filter((img) => !img.in_storyboard)}
               updateImageData={updateImageData}
               onDescriptionsUpdate={handleDescriptionsUpdate}
+              onDelete={handleDelete}  // Pass onDelete here
             />
-            <div className="bin-label">Data Storyboard</div>
+            <div className="bin-label" style={{width: '100%', alignSelf: 'flex-start', textAlign: 'left' }}>Data Storyboard</div>
             <Bin
               id="bottom-bin"
               images={images.filter((img) => img.in_storyboard)}
               updateImageData={updateImageData}
               onDescriptionsUpdate={handleDescriptionsUpdate}
+              onDelete={handleDelete}
             />
           </div>
         </Col>
@@ -175,10 +243,12 @@ function Home() {
       <Row style={{ marginTop: '10px' }}>
         <Col>
           <div className="bins-container">
-            <div className="bin-label">Suggested Order</div>
+            <div className="bin-label" style={{width: '100%', alignSelf: 'flex-start', textAlign: 'left' }}>Suggested Order</div>
             <Bin
               id="suggested-order-bin"
-              images={suggestedOrderImages}
+              images={recommendedOrder
+                .map((filename) => images.find((img) => img.filename === filename))
+                .filter((img) => img)}
               updateImageData={() => {}}
               onDescriptionsUpdate={() => {}}
               isSuggestedOrderBin={true}
@@ -190,7 +260,7 @@ function Home() {
       <Row>
         <Col>
           <div className="bins-container" style={{ marginTop: '10px' }}>
-            <div className="bin-label">Generated Story</div>
+            <div className="bin-label" style={{width: '100%', alignSelf: 'flex-start', textAlign: 'left' }}>Generated Story</div>
             <div
               className="bin story-bin"
               style={{

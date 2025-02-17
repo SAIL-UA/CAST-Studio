@@ -7,6 +7,7 @@ import os
 import json
 import pam
 from datetime import datetime, timezone
+import uuid
 
 # Import your script functions
 from scripts.generate_description import update_json_files, update_single_json_file
@@ -20,6 +21,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 DATA_PATH = '/data/CAST_ext/users/'
+ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff'}
 
 class User(UserMixin):
     def __init__(self, username):
@@ -93,6 +95,93 @@ def get_user_data():
         images_data.append(image_data)
 
     return jsonify({'images': images_data})
+
+def allowed_file(filename):
+    _, ext = os.path.splitext(filename.lower())
+    return ext in ALLOWED_EXTENSIONS
+
+@app.route('/upload_figure', methods=['POST'])
+def upload_figure():
+    """
+    Receives a file from the frontend and saves it to the user's cache folder.
+    Also creates a corresponding JSON file with the same basename.
+    """
+    username = session['_user_id']
+    user_folder = os.path.join(DATA_PATH, username, 'workspace/cache')
+    os.makedirs(user_folder, exist_ok=True)
+
+    if 'figure' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No file part in the request'}), 400
+
+    file = request.files['figure']
+    if file.filename == '':
+        return jsonify({'status': 'error', 'message': 'No selected file'}), 400
+
+    if file and allowed_file(file.filename):
+        original_filename = file.filename
+        # Generate a unique base name for the file
+        figure_id = str(uuid.uuid4())
+        # Extract the original extension
+        ext = os.path.splitext(original_filename)[1]
+        # Append the extension to the unique base name
+        saved_filename = figure_id + ext
+
+        # Save the image file with the original extension
+        filepath = os.path.join(user_folder, saved_filename)
+        file.save(filepath)
+
+        # Create a JSON file with the same base name (excluding the extension)
+        json_filename = f"{figure_id}.json"
+        json_filepath = os.path.join(user_folder, json_filename)
+
+        # Initialize some default JSON structure and include the saved filename in "src"
+        image_data = {
+            "short_desc":"",
+            "long_desc":"",
+            "source":"", 
+            "in_storyboard": False,
+            "x": 0,
+            "y": 0,
+            "has_order": False,
+            "order_num": 0,
+            "last_saved": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        }
+
+        with open(json_filepath, 'w') as f:
+            json.dump(image_data, f, indent=2)
+
+        return jsonify({'status': 'success', 'message': 'Figure uploaded successfully'})
+    else:
+        return jsonify({'status': 'error', 'message': 'Unsupported file type'}), 400
+
+@app.route('/delete_figure', methods=['POST'])
+@login_required
+def delete_figure():
+    """
+    Expects JSON body with { "filename": "<image_filename>" }
+    Deletes the file and its corresponding JSON.
+    """
+    data = request.get_json()
+    filename = data.get('filename')  # e.g. "myplot.png"
+
+    if not filename:
+        return jsonify({'status': 'error', 'message': 'No filename provided'}), 400
+
+    username = session['_user_id']
+    user_folder = os.path.join(DATA_PATH, username, 'workspace/cache')
+    file_path = os.path.join(user_folder, filename)
+    base_name, ext = os.path.splitext(filename)
+    json_path = os.path.join(user_folder, base_name + '.json')
+
+    # Remove image file if it exists
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    # Remove JSON file if it exists
+    if os.path.exists(json_path):
+        os.remove(json_path)
+
+    return jsonify({'status': 'success', 'message': 'Figure and JSON deleted successfully'})
 
 @app.route('/images/<filename>')
 @login_required

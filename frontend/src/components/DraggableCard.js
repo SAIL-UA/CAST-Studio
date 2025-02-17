@@ -8,7 +8,7 @@ import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 
-function DraggableCard({ image, onDescriptionsUpdate, draggable = true }) {
+function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true }) {
   const [showModal, setShowModal] = useState(false);
   const [tempShortDesc, setTempShortDesc] = useState(image.short_desc || '');
   const [tempLongDesc, setTempLongDesc] = useState(image.long_desc || '');
@@ -38,6 +38,30 @@ function DraggableCard({ image, onDescriptionsUpdate, draggable = true }) {
         console.error('Error updating descriptions:', error);
         setShowModal(false);
       });
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this figure?')) {
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        '/delete_figure',
+        { filename: image.filename },
+        { withCredentials: true }
+      );
+      if (res.data.status === 'success') {
+        // Call the onDelete callback (pass the deleted image id if desired)
+        if (onDelete) onDelete(image.id);
+        setShowModal(false);
+      } else {
+        alert(res.data.message || 'Error deleting figure');
+      }
+    } catch (err) {
+      console.error('Error deleting figure:', err);
+      alert('An error occurred while deleting the figure');
+    }
   };
 
   const handleGenerateDescription = () => {
@@ -139,8 +163,37 @@ function DraggableCard({ image, onDescriptionsUpdate, draggable = true }) {
 
   return (
     <>
-      <div ref={draggable ? drag : null} style={style} onDoubleClick={handleShow}>
-        <Card ref={cardRef} style={{ width: '150px', overflow: 'hidden' }}>
+      <div
+        ref={draggable ? drag : null}
+        style={{
+          // Use your computed position/opacity styles here if needed.
+          // For example, if the card is in the storyboard:
+          ...(image.in_storyboard
+            ? {
+                left: `${image.x}px`,
+                top: `${image.y}px`,
+                opacity: isDragging ? 0.5 : 1,
+                position: 'absolute',
+                cursor: 'move'
+              }
+            : {
+                opacity: isDragging ? 0.5 : 1,
+                position: 'relative',
+                margin: '5px',
+                cursor: 'grab'
+              })
+        }}
+        onDoubleClick={handleShow}
+      >
+        <Card
+          ref={cardRef}
+          style={{
+            width: '150px',
+            overflow: 'hidden',
+            // Apply the border directly to the Card.
+            border: image.long_desc?.trim() ? '1px solid #ccc' : '2px solid red'
+          }}
+        >
           <Card.Img
             variant="top"
             src={`/images/${image.filename}`}
@@ -155,7 +208,7 @@ function DraggableCard({ image, onDescriptionsUpdate, draggable = true }) {
                 textOverflow: 'ellipsis',
                 display: '-webkit-box',
                 WebkitLineClamp: 4,
-                WebkitBoxOrient: 'vertical',
+                WebkitBoxOrient: 'vertical'
               }}
             >
               {image.short_desc}
@@ -163,7 +216,7 @@ function DraggableCard({ image, onDescriptionsUpdate, draggable = true }) {
           </Card.Body>
         </Card>
       </div>
-
+  
       <Modal show={showModal} onHide={handleClose} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Editing: {image.id}</Modal.Title>
@@ -176,7 +229,7 @@ function DraggableCard({ image, onDescriptionsUpdate, draggable = true }) {
               style={{ maxWidth: '100%', height: 'auto' }}
             />
           </div>
-
+  
           <Form>
             <Form.Group controlId="shortDesc">
               <Form.Label>Short Description</Form.Label>
@@ -187,7 +240,7 @@ function DraggableCard({ image, onDescriptionsUpdate, draggable = true }) {
                 onChange={(e) => setTempShortDesc(e.target.value)}
               />
             </Form.Group>
-
+  
             <Form.Group controlId="longDesc" className="mt-3">
               <Form.Label>Long Description</Form.Label>
               <Form.Control
@@ -198,7 +251,7 @@ function DraggableCard({ image, onDescriptionsUpdate, draggable = true }) {
               />
             </Form.Group>
           </Form>
-
+  
           <div className="mt-3 text-center">
             <Button
               variant="primary"
@@ -211,13 +264,16 @@ function DraggableCard({ image, onDescriptionsUpdate, draggable = true }) {
           </div>
         </Modal.Body>
         <Modal.Footer>
+          <Button variant="danger" onClick={handleDelete}>
+            Delete Figure
+          </Button>
           <Button className="btn save-close" variant="secondary" onClick={handleClose}>
             Save &amp; Close
           </Button>
         </Modal.Footer>
       </Modal>
     </>
-  );
+  );    
 }
 
 export default DraggableCard;
