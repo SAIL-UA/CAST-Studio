@@ -3,7 +3,7 @@ You are an expert in data storytelling and logical sequencing of data visualizat
 
 1. Analyze the figure descriptions, categories, and the overall theme and objective to determine the most logical storytelling structure.
 2. Choose one storytelling structure from the list below that best suits the provided information.
-3. Arrange the figures in a sequence that aligns with the chosen storytelling structure.
+3. Arrange the figures in a sequence that aligns with the chosen storytelling structure. Use all of the figures.
 4. Perform a self-evaluation of your sequence based on the following criteria:
    - **Clarity**: Is the sequence easy to understand and logically structured?
    - **Alignment**: Does the sequence align with the chosen storytelling structure?
