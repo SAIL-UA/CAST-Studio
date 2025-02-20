@@ -240,7 +240,8 @@ def update_image_data():
 @login_required
 def run_script():
     """
-    Generate a narrative story and recommended order for the user's figures.
+    Generate a narrative story, recommended order, and return intermediate GPT outputs.
+    Also automatically update the narrative cache with theme, categories, etc.
     """
     try:
         username = session['_user_id']
@@ -260,26 +261,68 @@ def run_script():
             with open(prompt_path, 'r') as file:
                 prompts[key] = file.read()
 
-        # Call generate_story with the loaded prompts
-        narrative, recommended_order = generate_story(
+        # Generate story & intermediate outputs
+        narrative, recommended_order, categorize_response, theme_response, sequence_response = generate_story(
             username,
             prompts["categorize_figures"],
             prompts["understand_theme_objective"],
             prompts["sequence_figures"],
             prompts["build_story"]
         )
+
         app.logger.info(f"The recommended order is {recommended_order}")
         print(f"The recommended order is {recommended_order}")
 
+        # Build new cache fields
+        new_cache_data = {
+            "generated_narrative": narrative,
+            "suggested_order": recommended_order,
+            "theme": theme_response,
+            "categories": categorize_response,
+            "sequence_justification": sequence_response
+        }
+
+        # Merge into narrative_cache.json
+        _merge_narrative_cache(username, new_cache_data)
+
+        # Return final results to frontend
         return jsonify({
             "status": "success",
             "narrative": narrative,
-            "recommended_order": recommended_order
+            "recommended_order": recommended_order,
+            "categorize_figures_response": categorize_response,
+            "theme_response": theme_response,
+            "sequence_response": sequence_response
         })
 
     except Exception as e:
         print(f"Error in run_script: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+def _merge_narrative_cache(username, new_data):
+    """
+    Loads the existing narrative cache for the user (if any),
+    merges `new_data` in, and writes it back.
+    """
+    cache_file = os.path.join(DATA_PATH, username, 'workspace/cache', 'narrative_cache.json')
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, 'r') as f:
+                existing_data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            existing_data = {}
+    else:
+        existing_data = {}
+
+    # Merge new data into the existing data
+    existing_data.update(new_data)
+
+    # Write it back
+    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+    with open(cache_file, 'w') as f:
+        json.dump(existing_data, f, indent=2)
+
 
 @app.route('/get_narrative_cache', methods=['GET'])
 @login_required
@@ -304,16 +347,12 @@ def get_narrative_cache():
 @login_required
 def update_narrative_cache():
     """
-    Update the cached narrative JSON.
+    Merge the posted JSON data with the existing narrative_cache.json,
+    rather than overwriting it.
     """
     data = request.get_json()
     username = session['_user_id']
-    cache_file = os.path.join(DATA_PATH, username, 'workspace/cache', 'narrative_cache.json')
-
-    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
-    with open(cache_file, 'w') as f:
-        json.dump(data, f, indent=2)
-
+    _merge_narrative_cache(username, data)
     return jsonify({"status": "success"})
 
 @app.route('/clear_narrative_cache', methods=['POST'])

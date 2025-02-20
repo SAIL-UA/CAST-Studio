@@ -63,7 +63,6 @@ function App() {
           },
           { withCredentials: true }
         )
-        .then(() => console.log('Click logged successfully'))
         .catch((err) => console.error('Error logging click:', err));
 
       setMouseDownPos(null);
