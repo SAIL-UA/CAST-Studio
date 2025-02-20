@@ -3,7 +3,8 @@ You are an expert in data analysis and storytelling. Your task is to analyze the
 
 1. Carefully analyze the description of figure to understand its primary purpose and message.
 2. Assign each figure to the most appropriate category from the list below. If a figure fits multiple categories, assign it to the one that best represents its main purpose.
-3. Maintain a clear and structured format for your output.
+3. For each figure, include a brief explanation of why you categorized it that way.
+4. Maintain a clear and structured format for your output.
 
 ### Task:
 Carefully review the provided figure descriptions and assign each figure to one of the following categories:
@@ -27,7 +28,11 @@ Carefully review the provided figure descriptions and assign each figure to one 
    Plots summarizing key takeaways or presenting final results.
 
 ### Output Format:
-   Category: [Insert category here]  
+**Figure Name**: [Insert figure name here]  
+    **Category**: [Insert category here]  
+    **Reason**: [Provide a brief explanation for the categorization, highlighting key aspects of the figure description that influenced your decision.]
 
 ### Example Response:
-   Category: Trends/Time-Based Changes 
+**Figure Name**: "figure1.png"  
+    **Category**: Trends/Time-Based Changes 
+    **Reason**: The figure displays sales growth over several quarters, clearly illustrating a time-based change.

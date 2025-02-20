@@ -249,7 +249,7 @@ function Home() {
         {loadingDescriptions && <Spinner animation="border" size="sm" />}
 
         <Button variant="primary" onClick={runScript}>
-          Generate Narrative
+          Generate Story
         </Button>
 
         <Button variant="danger" onClick={clearNarrativeCache}>
@@ -288,7 +288,7 @@ function Home() {
               className="bin-label" 
               style={{ width: '100%', alignSelf: 'flex-start', textAlign: 'left' }}
             >
-              Topic Theme &amp; Figure Categories
+              Figure Insight Generation
             </div>
             <div 
               className="bin story-bin" 
@@ -332,7 +332,7 @@ function Home() {
         <Col>
           <div className="bins-container">
           <div className="bin-label" style={{ width: '100%', alignSelf: 'flex-start', textAlign: 'left' }}>
-            Suggested Order
+            Narrative Structuring
           </div>
           {loadingNarrative ? (
             <div 
@@ -394,7 +394,7 @@ function Home() {
       <Row>
         <Col>
           <div className="bins-container" style={{ marginTop: '10px' }}>
-            <div className="bin-label" style={{width: '100%', alignSelf: 'flex-start', textAlign: 'left' }}>Generated Story</div>
+            <div className="bin-label" style={{width: '100%', alignSelf: 'flex-start', textAlign: 'left' }}>Story Construction</div>
             <div
               className="bin story-bin"
               style={{

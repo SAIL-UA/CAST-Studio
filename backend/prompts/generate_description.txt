@@ -1,5 +1,5 @@
 ### Instruction:
-You are an expert in analyzing academic figures and generating detailed descriptions for them. Based on the information provided below, your task is to write an accurate, clear, and concise description of the figure. The description should capture the figure's key components, its purpose, and any important insights from the related script. Use simple and precise language suitable for academic contexts.
+You are an expert in analyzing figures and generating detailed descriptions for them. Based on the information provided below, your task is to write an accurate, clear, and concise description of the figure. The description should capture the figure's key components, its purpose, and any important insights from the related script. Use simple and precise language suitable for academic contexts.
 
 ### Input: 
 - **Figure Name**
