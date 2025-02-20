@@ -2,19 +2,21 @@ import React from 'react';
 import { Carousel } from 'react-bootstrap';
 
 const tutorialImages = [
-  { src: '/images/Tutorial1.png', caption: "1/13" },
-  { src: '/images/Tutorial2.png', caption: "2/13" },
-  { src: '/images/Tutorial3.png', caption: "3/13" },
-  { src: '/images/Tutorial4.png', caption: "4/13" },
-  { src: '/images/Tutorial5.png', caption: "5/13" },
-  { src: '/images/Tutorial6.png', caption: "6/13" },
-  { src: '/images/Tutorial7.png', caption: "7/13" },
-  { src: '/images/Tutorial8.png', caption: "8/13" },
-  { src: '/images/Tutorial9.png', caption: "9/13" },
-  { src: '/images/Tutorial10.png', caption: "10/13" },
-  { src: '/images/Tutorial11.png', caption: "11/13" },
-  { src: '/images/Tutorial12.png', caption: "12/13" },
-  { src: '/images/Tutorial13.png', caption: "13/13" },
+  { src: '/images/Tutorial1.png', caption: "1/15" },
+  { src: '/images/Tutorial2.png', caption: "2/15" },
+  { src: '/images/Tutorial3.png', caption: "3/15" },
+  { src: '/images/Tutorial4.png', caption: "4/15" },
+  { src: '/images/Tutorial5.png', caption: "5/15" },
+  { src: '/images/Tutorial6.png', caption: "6/15" },
+  { src: '/images/Tutorial7.png', caption: "7/15" },
+  { src: '/images/Tutorial8.png', caption: "8/15" },
+  { src: '/images/Tutorial9.png', caption: "9/15" },
+  { src: '/images/Tutorial10.png', caption: "10/15" },
+  { src: '/images/Tutorial11.png', caption: "11/15" },
+  { src: '/images/Tutorial12.png', caption: "12/15" },
+  { src: '/images/Tutorial13.png', caption: "13/15" },
+  { src: '/images/Tutorial14.png', caption: "14/15" },
+  { src: '/images/Tutorial15.png', caption: "15/15" },
 ];
 
 const Tutorial = () => {

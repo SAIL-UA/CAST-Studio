@@ -28,11 +28,9 @@ Carefully review the provided figure descriptions and assign each figure to one 
    Plots summarizing key takeaways or presenting final results.
 
 ### Output Format:
-**Figure Name**: [Insert figure name here]  
-    **Category**: [Insert category here]  
-    **Reason**: [Provide a brief explanation for the categorization, highlighting key aspects of the figure description that influenced your decision.]
+   **Category**: [Insert category here]  
+   **Reason**: [Provide a brief explanation for the categorization, highlighting key aspects of the figure description that influenced your decision.]
 
 ### Example Response:
-**Figure Name**: "figure1.png"  
-    **Category**: Trends/Time-Based Changes 
-    **Reason**: The figure displays sales growth over several quarters, clearly illustrating a time-based change.
+   **Category**: Trends/Time-Based Changes 
+   **Reason**: The figure displays sales growth over several quarters, clearly illustrating a time-based change.
