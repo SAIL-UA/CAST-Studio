@@ -24,7 +24,7 @@ function Sidebar({ handleLogout }) {
       <div className="sidebar-content">
         <Navbar expand="lg" className="flex-column">
           <Navbar.Brand className="sidebar-brand">CAST-UA</Navbar.Brand>
-          <Nav className="flex-column">
+          <Nav className="flex-column align-items-center">
             <Nav.Link
               as={Link}
               to="/home"
@@ -34,24 +34,10 @@ function Sidebar({ handleLogout }) {
             </Nav.Link>
             <Nav.Link
               as={Link}
-              to="/about"
-              className={location.pathname === '/about' ? 'nav-link active' : 'nav-link'}
+              to="/tutorial"
+              className={location.pathname === '/tutorial' ? 'nav-link active' : 'nav-link'}
             >
-              About the Data
-            </Nav.Link>
-            <Nav.Link
-              as={Link}
-              to="/resources"
-              className={location.pathname === '/resources' ? 'nav-link active' : 'nav-link'}
-            >
-              Resources
-            </Nav.Link>
-            <Nav.Link
-              as={Link}
-              to="/contact"
-              className={location.pathname === '/contact' ? 'nav-link active' : 'nav-link'}
-            >
-              Contact Us
+              Tutorial
             </Nav.Link>
             <Nav.Link
               as="button"

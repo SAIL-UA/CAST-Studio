@@ -237,7 +237,7 @@ html {
   text-decoration: none;
   background-color: #f8f9fa;
   border: none;
-  text-align: left;
+  text-align: center;
   display: block;
   transition: background-color 0.3s, color 0.3s;
 }
@@ -444,6 +444,15 @@ html {
 
 .password-icon:hover {
   color: #365bb3; /* Highlight on hover */
+}
+
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23000' d='M4.146 0.146a.5.5 0 0 1 .708 0L8 3.293a.5.5 0 0 1 0 .707l-2.146 2.146a.5.5 0 1 1-.708-.708L6.293 4 4.146 1.854a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+}
+
+.carousel-control-next-icon {
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23000' d='M3.854 0.146a.5.5 0 0 0-.708 0L0 3.293a.5.5 0 0 0 0 .707l2.146 2.146a.5.5 0 1 0 .708-.707L1.707 4l2.147-2.146a.5.5 0 0 0 0-.708z'/%3E%3C/svg%3E");
 }
 
 .story-bin {
