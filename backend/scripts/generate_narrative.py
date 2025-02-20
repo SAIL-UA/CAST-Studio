@@ -19,6 +19,32 @@ client = Client(api_key=API_KEY)
 
 DATA_PATH = '/data/CAST_ext/users/'
 
+def categorize_figure(description, prompt_cf):
+    """
+    Categorize a single figure based on its description using the OpenAI API.
+    Returns a string (the category) or an empty string on error.
+    """
+    prompt = f"""
+    ### Input
+    This is a single figure description:
+    {description}
+
+    {prompt_cf}
+    """
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error categorizing figure: {e}")
+        return ""
+
 def extract_figure_filenames(sequence_response):
     """
     Extracts figure filenames from the GPT response based on 'Step #' patterns.
@@ -34,38 +60,15 @@ def extract_figure_filenames(sequence_response):
     print(f"The matches are: {matches}")
     return matches
 
-def categorize_figures(description, prompt_cf):
-    """
-    Categorize figures based on their descriptions using OpenAI API.
-    """
-    prompt = f"""
-### Input
-Descriptions of figures: {description}
-{prompt_cf}
-"""
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        print(f"Error categorizing figures: {e}")
-        return ""
-
 def understand_theme_objective(fig_descriptions, prompt_uto):
     """
     Understand the theme and objective based on figure descriptions using OpenAI API.
     """
     prompt = f"""
-### Input
-Descriptions of figures: {fig_descriptions}
-{prompt_uto}
-"""
+    ### Input
+    Descriptions of figures: {fig_descriptions}
+    {prompt_uto}
+    """
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -85,11 +88,11 @@ def sequence_figures(fig_descriptions_category, theme, prompt_sf):
     Sequence figures based on their descriptions and the identified theme using OpenAI API.
     """
     prompt = f"""
-### Input
-Descriptions and categories of figures: {fig_descriptions_category}
-Topic theme and objective: {theme}
-{prompt_sf}
-"""
+    ### Input
+    Descriptions and categories of figures: {fig_descriptions_category}
+    Topic theme and objective: {theme}
+    {prompt_sf}
+    """
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -109,11 +112,11 @@ def build_story(fig_descriptions_category, sequence, prompt_bs):
     Build a comprehensive story based on figure descriptions and their sequence using OpenAI API.
     """
     prompt = f"""
-### Input
-Descriptions and categories of figures: {fig_descriptions_category}
-Sequence: {sequence}
-{prompt_bs}
-"""
+    ### Input
+    Descriptions and categories of figures: {fig_descriptions_category}
+    Sequence: {sequence}
+    {prompt_bs}
+    """
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -128,46 +131,16 @@ Sequence: {sequence}
         print(f"Error building story: {e}")
         return ""
 
-def storytelling_pipeline(fig_descriptions_category, prompt_cf, prompt_uto, prompt_sf, prompt_bs):
-    """
-    Execute the storytelling pipeline: categorize figures, understand theme, sequence figures, and build story.
-    """
-    # Concatenate all descriptions for theming
-    all_descriptions = "\n".join([f"{file}: {info['description']}" for file, info in fig_descriptions_category.items()])
-
-    # Step 1: Categorize figures
-    categories = categorize_figures(all_descriptions, prompt_cf)
-
-    # Update fig_descriptions_category with categories
-    for idx, (file, info) in enumerate(fig_descriptions_category.items()):
-        category = categories.split('\n')[idx].strip() if idx < len(categories.split('\n')) else "Uncategorized"
-        fig_descriptions_category[file]['category'] = category
-
-    # Step 2: Understand theme and objective
-    theme = understand_theme_objective(all_descriptions, prompt_uto)
-
-    # Step 3: Sequence figures
-    sequence = sequence_figures(fig_descriptions_category, theme, prompt_sf)
-
-    # Step 4: Build comprehensive story
-    story = build_story(fig_descriptions_category, sequence, prompt_bs)
-
-    return theme, sequence, story
-
-def categorize_figures_individual(fig_descriptions_category, prompt_cf):
-    """
-    Categorize each figure individually and update the fig_descriptions_category dictionary.
-    """
-    for file, info in fig_descriptions_category.items():
-        description = info['description']
-        category = categorize_figures(description, prompt_cf)
-        fig_descriptions_category[file]['category'] = category
-    return fig_descriptions_category
-
 def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs):
     """
     Generate a comprehensive narrative story based on the user's storyboard images and descriptions.
     Additionally, provide a recommended order of figures.
+    Returns:
+       story (str): The final narrative story.
+       recommended_order (list): List of filenames in recommended order.
+       categories_string (str): Figure categories as a single formatted string.
+       theme (str): The theme text.
+       sequence (str): The sequence justification.
     """
     try:
         base_cache_dir = DATA_PATH
@@ -175,7 +148,7 @@ def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs):
 
         if not os.path.exists(cache_dir):
             print(f"Cache directory does not exist for user '{username}'.")
-            return "No storyboard images found.", []
+            return "No storyboard images found.", [], "", "", ""
 
         # Identify JSON files matching image files
         supported_img_exts = ('.png', '.jpg', '.jpeg', '.bmp', '.tiff')
@@ -202,31 +175,41 @@ def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs):
                             data = json.load(jf)
                         if data.get('in_storyboard') and data.get('long_desc', '').strip():
                             description = data['long_desc'].strip()
-                            category = data.get('category', 'Uncategorized')
                             fig_descriptions_category[matching_image_file] = {
-                                "description": description,
-                                "category": category
+                                "description": description
                             }
 
         if not fig_descriptions_category:
-            return "No storyboard images with long descriptions found.", []
+            return "No storyboard images with long descriptions found.", [], "", "", ""
+        
+        # Categorize each figure and build a single string of categories.
+        for file, info in fig_descriptions_category.items():
+            category = categorize_figure(info["description"], prompt_cf)
+            fig_descriptions_category[file]["category"] = category
 
-        # Generate the narrative
+        categories_string = "\n".join(
+            [f"- **{file}**: {info['category']}" for file, info in fig_descriptions_category.items()]
+        )
+
+        # Combine all descriptions for theming
         all_descriptions = "\n".join(
             [f"{file}: {info['description']}" for file, info in fig_descriptions_category.items()]
         )
+
+        # Get theme and sequence justification
         theme = understand_theme_objective(all_descriptions, prompt_uto)
         sequence = sequence_figures(fig_descriptions_category, theme, prompt_sf)
         story = build_story(fig_descriptions_category, sequence, prompt_bs)
 
-        # Extract filenames from the sequence
+        # Extract recommended order
         recommended_order = extract_figure_filenames(sequence)
 
-        return story, recommended_order
+        return story, recommended_order, categories_string, theme, sequence
 
     except Exception as e:
         print(f"Error generating narrative: {e}")
-        return "An error occurred while generating the narrative.", []
+        return "An error occurred while generating the narrative.", [], "", "", ""
+
 
 
 def main():

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Bin from './Bin';
-import { Container, Row, Col, Button, Spinner, Form } from 'react-bootstrap';
+import { Container, Row, Col, Button, Spinner} from 'react-bootstrap';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -12,7 +12,22 @@ function Home() {
   const [loadingNarrative, setLoadingNarrative] = useState(false);
   const [loadingDescriptions, setLoadingDescriptions] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [categorizeOutput, setCategorizeOutput] = useState('');
+  const [themeOutput, setThemeOutput] = useState('');
+
+  
+  const [sequenceOutput, setSequenceOutput] = useState('');
   const fileInputRef = useRef(null);
+  const categoriesMarkdown = Object.entries(categorizeOutput)
+    .map(([filename, category]) => `- **${filename}**: ${category}`)
+    .join('\n');
+  const combinedThemeAndCategories = `${themeOutput || ""}\n\n${categorizeOutput || ""}`;
+
+
+
+  useEffect(() => {
+    console.log(combinedThemeAndCategories);
+  }, [combinedThemeAndCategories]);
 
   // Reusable function to fetch user data
   const fetchUserData = () => {
@@ -34,16 +49,25 @@ function Home() {
     fetchUserData();
 
     axios
-      .get('/get_narrative_cache', { withCredentials: true })
-      .then((response) => {
-        if (response.data.status === 'success' && response.data.data) {
-          const { suggested_order = [], generated_narrative = '' } = response.data.data;
-          setRecommendedOrder(suggested_order);
-          setOutput(generated_narrative);
-        }
-      })
-      .catch((error) => console.error('Error fetching narrative cache:', error));
-  }, []);
+    .get('/get_narrative_cache', { withCredentials: true })
+    .then((response) => {
+      if (response.data.status === 'success' && response.data.data) {
+        const {
+          suggested_order = [],
+          generated_narrative = '',
+          theme = '',
+          categories = '',
+          sequence_justification = ''
+        } = response.data.data;
+        setRecommendedOrder(suggested_order);
+        setOutput(generated_narrative);
+        setThemeOutput(theme);
+        setCategorizeOutput(categories);
+        setSequenceOutput(sequence_justification);
+      }
+    })
+    .catch((error) => console.error('Error fetching narrative cache:', error));
+}, []);
 
   const updateNarrativeCache = (data) => {
     axios
@@ -58,6 +82,9 @@ function Home() {
       .then(() => {
         setRecommendedOrder([]);
         setOutput('');
+        setCategorizeOutput({});
+        setThemeOutput('');
+        setSequenceOutput('');
       })
       .catch((error) => console.error('Error clearing narrative cache:', error));
   };
@@ -123,12 +150,29 @@ function Home() {
       .post('/run_script', {}, { withCredentials: true })
       .then((response) => {
         if (response.data.status === 'success') {
-          const { narrative, recommended_order } = response.data;
+          const { 
+            narrative, 
+            recommended_order, 
+            categorize_figures_response, 
+            theme_response, 
+            sequence_response 
+          } = response.data;
+          // Set final outputs
           setOutput(narrative);
           setRecommendedOrder(recommended_order);
+
+          // Set intermediate outputs
+          setCategorizeOutput(categorize_figures_response);
+          setThemeOutput(theme_response);
+          setSequenceOutput(sequence_response);
+
+          // Update the narrative cache if needed
           updateNarrativeCache({
             suggested_order: recommended_order,
             generated_narrative: narrative,
+            theme: theme_response,
+            categories: categorize_figures_response,
+            sequence_justification: sequence_response
           });
         } else {
           console.error('Error in script:', response.data.message);
@@ -214,10 +258,6 @@ function Home() {
         {loadingNarrative && <Spinner animation="border" size="sm" />}
       </div>
 
-
-
-
-
       <Row>
         <Col>
           <div className="bins-container">
@@ -244,7 +284,74 @@ function Home() {
       <Row style={{ marginTop: '10px' }}>
         <Col>
           <div className="bins-container">
-            <div className="bin-label" style={{width: '100%', alignSelf: 'flex-start', textAlign: 'left' }}>Suggested Order</div>
+            <div 
+              className="bin-label" 
+              style={{ width: '100%', alignSelf: 'flex-start', textAlign: 'left' }}
+            >
+              Topic Theme &amp; Figure Categories
+            </div>
+            <div 
+              className="bin story-bin" 
+              style={{
+                border: '1px solid #ccc',
+                padding: '10px',
+                borderRadius: '5px',
+                backgroundColor: '#f0f0f0',
+                width: '100%',
+                minHeight: '160px',
+                maxHeight: '1000px',
+                overflowY: 'auto',
+                display: 'flex',
+              }}
+            >
+              {loadingNarrative ? (
+                <div className="loading-center">
+                  <Spinner animation="border" />
+                </div>
+                ) : (
+              <textarea
+                value={combinedThemeAndCategories}
+                onChange={(e) => setCombinedThemeAndCategories(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '100%',  // Match outer container height
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  outline: 'none',
+                  resize: 'none',  // Disable textarea resizing
+                }}
+              />
+              )}
+            </div>
+          </div>
+        </Col>
+      </Row>
+
+
+      <Row style={{ marginTop: '10px' }}>
+        <Col>
+          <div className="bins-container">
+          <div className="bin-label" style={{ width: '100%', alignSelf: 'flex-start', textAlign: 'left' }}>
+            Suggested Order
+          </div>
+          {loadingNarrative ? (
+            <div 
+              className="bin story-bin" 
+              style={{
+                border: '1px solid #ccc',
+                padding: '10px',
+                borderRadius: '5px',
+                backgroundColor: '#f0f0f0',
+                width: '100%',
+                minHeight: '160px',
+                maxHeight: '1000px',
+                overflowY: 'auto',
+              }}>
+                <div className="loading-center">
+                  <Spinner animation="border" />
+                </div>
+            </div>
+          ) : (
             <Bin
               id="suggested-order-bin"
               images={recommendedOrder
@@ -254,6 +361,32 @@ function Home() {
               onDescriptionsUpdate={() => {}}
               isSuggestedOrderBin={true}
             />
+          )}
+
+
+            <div 
+              className="bin story-bin" 
+              style={{
+                border: '1px solid #ccc',
+                padding: '10px',
+                borderRadius: '5px',
+                backgroundColor: '#f0f0f0',
+                width: '100%',
+                minHeight: '160px',
+                maxHeight: '1000px',
+                overflowY: 'auto',
+              }}
+            >
+              {loadingNarrative ? (
+                <div className="loading-center">
+                  <Spinner animation="border" />
+                </div>
+                ) : (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                { sequenceOutput || '' }
+              </ReactMarkdown>
+              )}
+            </div>
           </div>
         </Col>
       </Row>
