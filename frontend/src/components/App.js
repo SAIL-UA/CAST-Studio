@@ -7,6 +7,10 @@ import Home from './Home';
 import Login from './Login';
 import Sidebar from './Sidebar';
 import './App.css';
+// In App.js
+import Tutorial from './Tutorial';
+
+
 
 function App() {
   const [userAuthenticated, setUserAuthenticated] = useState(null); // Initially null to represent loading state
@@ -122,6 +126,10 @@ function App() {
           <Route
             path="/home"
             element={userAuthenticated ? <Home /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/tutorial"
+            element={userAuthenticated ? <Tutorial /> : <Navigate to="/login" />}
           />
           <Route
             path="/"
