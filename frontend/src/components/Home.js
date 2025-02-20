@@ -219,7 +219,7 @@ function Home() {
     <Container fluid>
       <Row className="header-container">
         <Col>
-          <h1>CAST Storyboard</h1>
+          <h1>CAST Story Studio</h1>
         </Col>
       </Row>
 
