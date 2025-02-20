@@ -154,6 +154,7 @@ function Home() {
         }));
         setImages(updatedImages);
         setLoadingDescriptions(false);
+        window.location.reload();
       })
       .catch((error) => {
         console.error('Error generating descriptions:', error);
