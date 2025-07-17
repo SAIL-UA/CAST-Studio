@@ -13,17 +13,18 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-COPY requirements.txt .
+COPY requirements.txt /app/
 
 # Install Python dependencies, including gunicorn
 RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir gunicorn
 
 # Copy application code
-COPY . .
+COPY . /app/
 
 # Create necessary directories
 RUN mkdir -p /data/CAST_ext/users
+RUN chmod -R 755 /data/CAST_ext/users
 
 # Expose port
 EXPOSE 8051
