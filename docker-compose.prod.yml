@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cast-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=production
+    ports:
+      - "8051:8051"
+    volumes:
+      - /data/CAST_ext/users:/data/CAST_ext/users
+    networks:
+      - cast-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8051/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cast-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./frontend:/app
+      - frontend_build:/var/www/html  # Separate volume for frontend build
+    expose:
+      - "80"
+    depends_on:
+      - backend
+    networks:
+      - cast-network
+    restart: always
+    command: ["tail", "-f", "/dev/null"]
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: cast-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/project.conf:/etc/nginx/conf.d/default.conf:ro
+      - nginx-logs:/var/log/nginx
+      - frontend_build:/var/www/html 
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - cast-network
+
+networks:
+  cast-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  nginx-logs:
+  frontend-build:

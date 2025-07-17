@@ -23,6 +23,7 @@ login_manager.init_app(app)
 DATA_PATH = '/data/CAST_ext/users/'
 ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff'}
 
+
 class User(UserMixin):
     def __init__(self, username):
         self.id = username
@@ -40,6 +41,8 @@ def login():
     if authenticate_user(username, password):
         user = User(username)
         login_user(user)
+        log_path = init_logfile(username)
+        session["log_path"] = log_path
         return jsonify({'status': 'success', 'user': username})
     else:
         return jsonify({'status': 'fail'}), 401
@@ -47,6 +50,24 @@ def login():
 def authenticate_user(username, password):
     pam_auth = pam.pam()
     return pam_auth.authenticate(username, password)
+
+def init_logfile(username):
+    try:
+        # separate logs directories for storystudio and jupyterhub
+        logs_dir = f"/data/CAST_ext/logs/{username}/StoryStudio"
+        os.makedirs(logs_dir, exist_ok=True)
+
+        # create a logfile for this session
+        timestamp = datetime.now()
+        log_path = os.path.join(logs_dir, f"{timestamp}.json")
+        
+        # Create an empty file
+        open(log_path, 'w').close()
+        
+        return log_path
+    except Exception as e:
+        raise Exception(f"Error initializing logfile: {e}")
+    
 
 @app.route('/logout', methods=['POST'])
 @login_required
@@ -114,45 +135,48 @@ def upload_figure():
         return jsonify({'status': 'error', 'message': 'No file part in the request'}), 400
 
     file = request.files['figure']
-    if file.filename == '':
+    file_exists = file and file.filename != '' and file.filename is not None
+    if not file_exists:
         return jsonify({'status': 'error', 'message': 'No selected file'}), 400
-
-    if file and allowed_file(file.filename):
-        original_filename = file.filename
-        # Generate a unique base name for the file
-        figure_id = str(uuid.uuid4())
-        # Extract the original extension
-        ext = os.path.splitext(original_filename)[1]
-        # Append the extension to the unique base name
-        saved_filename = figure_id + ext
-
-        # Save the image file with the original extension
-        filepath = os.path.join(user_folder, saved_filename)
-        file.save(filepath)
-
-        # Create a JSON file with the same base name (excluding the extension)
-        json_filename = f"{figure_id}.json"
-        json_filepath = os.path.join(user_folder, json_filename)
-
-        # Initialize some default JSON structure and include the saved filename in "src"
-        image_data = {
-            "short_desc":"",
-            "long_desc":"",
-            "source":"", 
-            "in_storyboard": False,
-            "x": 0,
-            "y": 0,
-            "has_order": False,
-            "order_num": 0,
-            "last_saved": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-        }
-
-        with open(json_filepath, 'w') as f:
-            json.dump(image_data, f, indent=2)
-
-        return jsonify({'status': 'success', 'message': 'Figure uploaded successfully'})
-    else:
+    if not allowed_file(file.filename):
         return jsonify({'status': 'error', 'message': 'Unsupported file type'}), 400
+
+    original_filename = file.filename
+
+    # Generate a unique base name for the file
+    figure_id = str(uuid.uuid4())
+
+    # Extract the original extension
+    ext = os.path.splitext(original_filename)[1]
+
+    # Append the extension to the unique base name
+    saved_filename = figure_id + ext
+
+    # Save the image file with the original extension
+    filepath = os.path.join(user_folder, saved_filename)
+    file.save(filepath)
+
+    # Create a JSON file with the same base name (excluding the extension)
+    json_filename = f"{figure_id}.json"
+    json_filepath = os.path.join(user_folder, json_filename)
+
+    # Initialize some default JSON structure and include the saved filename in "src"
+    image_data = {
+        "short_desc":"",
+        "long_desc":"",
+        "source":"", 
+        "in_storyboard": False,
+        "x": 0,
+        "y": 0,
+        "has_order": False,
+        "order_num": 0,
+        "last_saved": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    }
+
+    with open(json_filepath, 'w') as f:
+        json.dump(image_data, f, indent=2)
+
+    return jsonify({'status': 'success', 'message': 'Figure uploaded successfully'})
 
 @app.route('/delete_figure', methods=['POST'])
 @login_required
@@ -386,7 +410,32 @@ def generate_narrative_route():
     """
     username = session['_user_id']
     app.logger.info("Generating narrative for figures")
-    narrative, recommended_order = generate_story(username)
+    
+    # Load prompts
+    prompts_dir = os.path.join(os.path.dirname(__file__), 'prompts')
+    prompt_files = {
+        "categorize_figures": "categorize_figures.txt",
+        "understand_theme_objective": "understand_theme_objective.txt",
+        "sequence_figures": "sequence_figures.txt",
+        "build_story": "build_story.txt",
+    }
+
+    prompts = {}
+    for key, filename in prompt_files.items():
+        prompt_path = os.path.join(prompts_dir, filename)
+        if os.path.exists(prompt_path):
+            with open(prompt_path, 'r') as file:
+                prompts[key] = file.read()
+        else:
+            prompts[key] = ""
+
+    narrative, recommended_order, _, _, _ = generate_story(
+        username,
+        prompts["categorize_figures"],
+        prompts["understand_theme_objective"],
+        prompts["sequence_figures"],
+        prompts["build_story"]
+    )
     app.logger.info(f"The recommended order is {recommended_order}")
     return jsonify({
         'status': 'success',
@@ -433,22 +482,17 @@ def log_click():
     """
     data = request.get_json()
     username = session['_user_id']
-
-    # 1. Create the logs directory if it doesn't exist
-    logs_dir = os.path.join('/data/CAST_ext/logs', username)
-    if not os.path.exists(logs_dir):
-        os.makedirs(logs_dir)
-        print(f"Made log directory at {logs_dir}")
-    else:
-        print("Log directory exists")
-
-    # 2. Log file path
-    log_file = os.path.join(logs_dir, 'clickstream_log.json')
+    log_path = session['log_path']
+    
+    if not log_path:
+        log_path = init_logfile(username)
+        session['log_path'] = log_path
+        print(f"Log path not found during log_click for user {username}, init new logfile at {log_path}")
 
     # 3. Read existing JSON array or start a new one
-    if os.path.exists(log_file):
+    if os.path.exists(log_path):
         try:
-            with open(log_file, 'r') as f:
+            with open(log_path, 'r') as f:
                 logs = json.load(f)
         except (json.JSONDecodeError, OSError):
             # If the file is corrupted or empty, start fresh
@@ -456,24 +500,43 @@ def log_click():
     else:
         logs = []
 
+    # Extract real client IP if behind a proxy
+    if request.headers.get('X-Forwarded-For'):
+        req_addr = request.headers.get('X-Forwarded-For')
+    else:
+        req_addr = request.remote_addr
+    
+    frontend_port = os.environ.get('FRONTEND_PORT')
+    
+    print(f"Request JSON: {data}")
+
     # 4. Create a new entry in the "similar format" you used to have
     # but stored in a JSON-friendly structure.
     new_entry = {
+        "User": username,
         "Clicked on": data.get('objectClicked', ''),
         "Time": data.get('time', ''),
         "Mouse Down Position": data.get('mouseDownPosition', {}),
         "Mouse Up Position": data.get('mouseUpPosition', {}),
-        "Interaction": data.get('interaction', 'unknown')
+        "Interaction": data.get('interaction', 'unknown'),
+        "Request Address": req_addr,
+        "Port": frontend_port
     }
 
     # 5. Append to our logs array
     logs.append(new_entry)
 
     # 6. Write updated logs back to the file in JSON
-    with open(log_file, 'w') as f:
+    with open(log_path, 'w') as f:
         json.dump(logs, f, indent=2)
 
     return jsonify({"status": "success"})
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for Docker container monitoring"""
+    return jsonify({"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()})
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8076)
+    backend_port = int(os.environ.get('BACKEND_PORT', 8051))
+    app.run(debug=True, host='0.0.0.0', port=backend_port)

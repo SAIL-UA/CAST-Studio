@@ -4,6 +4,7 @@ import Bin from './Bin';
 import { Container, Row, Col, Button, Spinner} from 'react-bootstrap';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+// import { BACKEND_URL } from './App.js';
 
 function Home() {
   const [images, setImages] = useState([]);
@@ -31,8 +32,7 @@ function Home() {
 
   // Reusable function to fetch user data
   const fetchUserData = () => {
-    axios
-      .get('/get_user_data', { withCredentials: true })
+    axios.get(`/api/get_user_data`, { withCredentials: true })
       .then((response) => {
         const fetchedImages = response.data.images.map((img) => ({
           ...img,
@@ -48,8 +48,7 @@ function Home() {
   useEffect(() => {
     fetchUserData();
 
-    axios
-    .get('/get_narrative_cache', { withCredentials: true })
+    axios.get(`/api/get_narrative_cache`, { withCredentials: true })
     .then((response) => {
       if (response.data.status === 'success' && response.data.data) {
         const {
@@ -70,15 +69,13 @@ function Home() {
 }, []);
 
   const updateNarrativeCache = (data) => {
-    axios
-      .post('/update_narrative_cache', data, { withCredentials: true })
+    axios.post(`/api/update_narrative_cache`, data, { withCredentials: true })
       .then(() => console.log('Narrative cache updated'))
       .catch((error) => console.error('Error updating narrative cache:', error));
   };
 
   const clearNarrativeCache = () => {
-    axios
-      .post('/clear_narrative_cache', {}, { withCredentials: true })
+    axios.post(`/api/clear_narrative_cache`, {}, { withCredentials: true })
       .then(() => {
         setRecommendedOrder([]);
         setOutput('');
@@ -100,8 +97,7 @@ function Home() {
   };
 
   const updateImageData = (imageId, data) => {
-    axios
-      .post('/update_image_data', { id: imageId, ...data }, { withCredentials: true })
+    axios.post(`/api/update_image_data`, { id: imageId, ...data }, { withCredentials: true })
       .then(() => {
         setImages((prevImages) =>
           prevImages.map((img) => (img.id === imageId ? { ...img, ...data } : img))
@@ -117,9 +113,10 @@ function Home() {
     const file = fileInputRef.current.files[0];
     const formData = new FormData();
     formData.append('figure', file);
-
+  
     try {
-      const res = await axios.post('/upload_figure', formData, {
+      const res = await axios.post(`/api/upload_figure`,
+        formData, {
         withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -146,8 +143,7 @@ function Home() {
 
   const runScript = () => {
     setLoadingNarrative(true);
-    axios
-      .post('/run_script', {}, { withCredentials: true })
+    axios.post(`/api/run_script`, {}, { withCredentials: true })
       .then((response) => {
         if (response.data.status === 'success') {
           const { 
@@ -187,9 +183,8 @@ function Home() {
 
   const generateDescriptions = () => {
     setLoadingDescriptions(true);
-    axios
-      .post('/generate_long_descriptions', {}, { withCredentials: true })
-      .then(() => axios.get('/get_user_data', { withCredentials: true }))
+    axios.post(`/api/generate_long_descriptions`, {}, { withCredentials: true })
+      .then(() => axios.get(`/api/get_user_data`, { withCredentials: true }))
       .then((response) => {
         const updatedImages = response.data.images.map((img) => ({
           ...img,
@@ -210,6 +205,7 @@ function Home() {
   const handleDelete = () => {
     fetchUserData();
   };
+
 
   const suggestedOrderImages = recommendedOrder
     .map((filename) => images.find((img) => img.filename === filename))
@@ -239,20 +235,21 @@ function Home() {
           variant="success"
           onClick={() => fileInputRef.current.click()}
           disabled={uploading}
+          className="upload-figure-header"
         >
           {uploading ? 'Uploading...' : 'Upload Figure'}
         </Button>
 
-        <Button variant="secondary" onClick={generateDescriptions}>
+        <Button variant="secondary" className="generate-desc-header" onClick={generateDescriptions}>
           Generate Descriptions
         </Button>
         {loadingDescriptions && <Spinner animation="border" size="sm" />}
 
-        <Button variant="primary" onClick={runScript}>
+        <Button variant="primary" className="generate-story-header" onClick={runScript}>
           Generate Story
         </Button>
 
-        <Button variant="danger" onClick={clearNarrativeCache}>
+        <Button variant="danger" className="clear-results-header" onClick={clearNarrativeCache}>
           Clear Results
         </Button>
         {loadingNarrative && <Spinner animation="border" size="sm" />}
@@ -413,11 +410,12 @@ function Home() {
                   <Spinner animation="border" />
                 </div>
               ) : (
+                <div className="story-text" style={{width: '100%', height: '100%', overflowY: 'auto'}}>
                 <ReactMarkdown
-                  className="story-text"
                   children={output.trim() !== '' ? output : 'No story generated yet.'}
                   remarkPlugins={[remarkGfm]}
                 />
+                </div>
               )}
             </div>
           </div>

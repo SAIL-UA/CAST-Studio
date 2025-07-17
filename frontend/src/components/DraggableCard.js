@@ -7,6 +7,7 @@ import Card from 'react-bootstrap/Card';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+// import { BACKEND_URL } from './App.js';
 
 function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true }) {
   const [showModal, setShowModal] = useState(false);
@@ -82,9 +83,8 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
   };
 
   const handleClose = () => {
-    axios
-      .post(
-        '/update_image_data',
+    axios.post(
+        `/api/update_image_data`,
         {
           id: image.id,
           short_desc: tempShortDesc,
@@ -107,9 +107,11 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
       return;
     }
 
+    
+
     try {
       const res = await axios.post(
-        '/delete_figure',
+        `/api/delete_figure`,
         { filename: image.filename },
         { withCredentials: true }
       );
@@ -127,9 +129,8 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
 
   const handleGenerateDescription = () => {
     setLoadingGenDesc(true);
-    axios
-      .post(
-        '/generate_long_description_for_image',
+    axios.post(
+        `/api/generate_long_description_for_image`,
         { id: image.id },
         { withCredentials: true }
       )

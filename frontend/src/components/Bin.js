@@ -2,6 +2,8 @@ import React, { useRef } from 'react';
 import { useDrop } from 'react-dnd';
 import axios from 'axios';
 import DraggableCard from './DraggableCard';
+// import { BACKEND_URL } from './App.js';
+import { getEasternISO } from '../utils/datetimeUtils';
 
 function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSuggestedOrderBin = false }) {
   const binRef = useRef(null);
@@ -33,12 +35,14 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSu
         y: y_bin,
       });
 
+
+
       // Log the drag event
       axios.post(
-        '/log_click',
+        `/api/log_click`,
         {
           objectClicked: item.id,
-          time: new Date().toISOString(),
+          time: getEasternISO(),
           mouseDownPosition: { x: item.oldX, y: item.oldY },
           mouseUpPosition: { x: x_bin + binPageLeft, y: y_bin + binPageTop },
           interaction: 'drag',

@@ -1,6 +1,7 @@
 // frontend/src/components/App.js
 
 import React, { useState, useEffect } from 'react';
+import { getEasternISO } from '../utils/datetimeUtils';
 import axios from 'axios';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Home from './Home';
@@ -11,10 +12,10 @@ import './App.css';
 import Tutorial from './Tutorial';
 
 
-
 function App() {
   const [userAuthenticated, setUserAuthenticated] = useState(null); // Initially null to represent loading state
   const location = useLocation();
+  
 
   // For capturing click events (distance <= 10)
   const [mouseDownPos, setMouseDownPos] = useState(null);
@@ -44,7 +45,7 @@ function App() {
       if (!userAuthenticated) return;
       setClickedElement(getElementDescription(e));
       setMouseDownPos({ x: e.pageX, y: e.pageY });
-      setMouseDownTime(new Date().toISOString());
+      setMouseDownTime(getEasternISO());
     };
 
     const handlePointerUp = (e) => {
@@ -54,10 +55,12 @@ function App() {
       const dy = e.pageY - mouseDownPos.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      const time = mouseDownTime || new Date().toISOString();
-      axios
-        .post(
-          '/log_click',
+      const time = mouseDownTime || getEasternISO();
+
+      
+
+      axios.post(
+          `/api/log_click`,
           {
             objectClicked: clickedElement,
             time: time,
@@ -85,8 +88,7 @@ function App() {
 
   useEffect(() => {
     // Check authentication on load
-    axios
-      .get('/check_auth', { withCredentials: true })
+    axios.get(`/api/check_auth`, { withCredentials: true })
       .then((response) => {
         setUserAuthenticated(response.data.authenticated);
       })
@@ -97,8 +99,7 @@ function App() {
   }, []);
 
   const handleLogout = () => {
-    axios
-      .post('/logout', {}, { withCredentials: true })
+    axios.post(`/api/logout`, {}, { withCredentials: true })
       .then(() => {
         setUserAuthenticated(false);
       })
@@ -121,7 +122,7 @@ function App() {
         <Routes>
           <Route
             path="/login"
-            element={<Login setUserAuthenticated={setUserAuthenticated} />}
+            element={userAuthenticated ? <Navigate to="/home" /> : <Login setUserAuthenticated={setUserAuthenticated} />}
           />
           <Route
             path="/home"

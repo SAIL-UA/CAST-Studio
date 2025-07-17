@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Form, Button, Container, Row, Col } from 'react-bootstrap';
 import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Import eye icons for toggling password visibility
 import './App.css'; // Ensure updated styles are imported
+// import { BACKEND_URL } from './App.js';
 
 function Login({ setUserAuthenticated }) {
   const [username, setUsername] = useState('');
@@ -12,8 +13,7 @@ function Login({ setUserAuthenticated }) {
   const navigate = useNavigate();
 
   const handleLogin = () => {
-    axios
-      .post('/login', { username, password }, { withCredentials: true })
+    axios.post(`/api/login`, { username, password }, { withCredentials: true })
       .then(response => {
         if (response.data.status === 'success') {
           setUserAuthenticated(true);
