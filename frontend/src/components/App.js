@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { getEasternISO } from '../utils/datetimeUtils';
-import axios from 'axios';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { checkAuth, logout, logClick } from '../services/api';
 import Home from './Home';
 import Login from './Login';
 import Sidebar from './Sidebar';
@@ -59,17 +59,13 @@ function App() {
 
       
 
-      axios.post(
-          `/api/log_click`,
-          {
+      logClick({
             objectClicked: clickedElement,
             time: time,
             mouseDownPosition: mouseDownPos,
             mouseUpPosition: { x: e.pageX, y: e.pageY },
             interaction: 'click',
-          },
-          { withCredentials: true }
-        )
+          })
         .catch((err) => console.error('Error logging click:', err));
 
       setMouseDownPos(null);
@@ -88,9 +84,9 @@ function App() {
 
   useEffect(() => {
     // Check authentication on load
-    axios.get(`/api/check_auth`, { withCredentials: true })
+    checkAuth()
       .then((response) => {
-        setUserAuthenticated(response.data.authenticated);
+        setUserAuthenticated(response.authenticated);
       })
       .catch((error) => {
         console.error('Error checking authentication:', error);
@@ -99,7 +95,7 @@ function App() {
   }, []);
 
   const handleLogout = () => {
-    axios.post(`/api/logout`, {}, { withCredentials: true })
+    logout()
       .then(() => {
         setUserAuthenticated(false);
       })

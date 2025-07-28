@@ -18,8 +18,8 @@ const USER_API = axios.create({
 
 
 // user endpoints
-export const login = async() => {
-  const response = await USER_API.post('/login')
+export const login = async(credentials) => {
+  const response = await USER_API.post('/login', credentials)
   return response.data;
 };
 
@@ -89,5 +89,20 @@ export const generateLongDescriptions = async() => {
 
 export const generateSingleLongDescription = async(imageId) => {
   const response = await API.post('/generate_single_long_description', { image_id: imageId })
+  return response.data;
+};
+
+export const checkAuth = async() => {
+  const response = await API.get('/check_auth')
+  return response.data;
+};
+
+export const logClick = async(data) => {
+  const response = await API.post('/log_action', data)
+  return response.data;
+};
+
+export const generateLongDescriptionForImage = async(imageId) => {
+  const response = await API.post('/generate_single_long_description', { id: imageId })
   return response.data;
 };

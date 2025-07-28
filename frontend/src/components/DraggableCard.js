@@ -1,8 +1,8 @@
 // frontend/src/components/DraggableCard.js
 
 import React, { useState, useRef } from 'react';
-import axios from 'axios';
 import { useDrag } from 'react-dnd';
+import { updateImageData, deleteFigure, generateLongDescriptionForImage } from '../services/api';
 import Card from 'react-bootstrap/Card';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
@@ -83,15 +83,10 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
   };
 
   const handleClose = () => {
-    axios.post(
-        `/api/update_image_data`,
-        {
-          id: image.id,
+    updateImageData(image.id, {
           short_desc: tempShortDesc,
           long_desc: tempLongDesc,
-        },
-        { withCredentials: true }
-      )
+        })
       .then(() => {
         onDescriptionsUpdate(image.id, tempShortDesc, tempLongDesc);
         setShowModal(false);
@@ -110,16 +105,12 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
     
 
     try {
-      const res = await axios.post(
-        `/api/delete_figure`,
-        { filename: image.filename },
-        { withCredentials: true }
-      );
-      if (res.data.status === 'success') {
+      const res = await deleteFigure(image.id);
+      if (res.status === 'success') {
         if (onDelete) onDelete(image.id);
         setShowModal(false);
       } else {
-        alert(res.data.message || 'Error deleting figure');
+        alert(res.message || 'Error deleting figure');
       }
     } catch (err) {
       console.error('Error deleting figure:', err);
@@ -129,16 +120,12 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
 
   const handleGenerateDescription = () => {
     setLoadingGenDesc(true);
-    axios.post(
-        `/api/generate_long_description_for_image`,
-        { id: image.id },
-        { withCredentials: true }
-      )
+    generateLongDescriptionForImage(image.id)
       .then((res) => {
-        if (res.data.status === 'success') {
-          setTempLongDesc(res.data.long_desc);
+        if (res.status === 'success') {
+          setTempLongDesc(res.long_desc);
         } else {
-          console.log('Error generating single description:', res.data.message);
+          console.log('Error generating single description:', res.message);
         }
       })
       .catch((err) => {

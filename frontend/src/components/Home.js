@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
 import Bin from './Bin';
+import { getUserData, uploadFigure, getNarrativeCache, updateNarrativeCache, clearNarrativeCache, updateImageData, runScript, generateLongDescriptions } from '../services/api';
 import { Container, Row, Col, Button, Spinner} from 'react-bootstrap';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -32,9 +32,9 @@ function Home() {
 
   // Reusable function to fetch user data
   const fetchUserData = () => {
-    axios.get(`/api/get_user_data`, { withCredentials: true })
+    getUserData()
       .then((response) => {
-        const fetchedImages = response.data.images.map((img) => ({
+        const fetchedImages = response.images.map((img) => ({
           ...img,
           x: img.in_storyboard ? img.x : 0,
           y: img.in_storyboard ? img.y : 0,
@@ -48,16 +48,16 @@ function Home() {
   useEffect(() => {
     fetchUserData();
 
-    axios.get(`/api/get_narrative_cache`, { withCredentials: true })
+    getNarrativeCache()
     .then((response) => {
-      if (response.data.status === 'success' && response.data.data) {
+      if (response.status === 'success' && response.data) {
         const {
           suggested_order = [],
           generated_narrative = '',
           theme = '',
           categories = '',
           sequence_justification = ''
-        } = response.data.data;
+        } = response.data;
         setRecommendedOrder(suggested_order);
         setOutput(generated_narrative);
         setThemeOutput(theme);
@@ -68,14 +68,14 @@ function Home() {
     .catch((error) => console.error('Error fetching narrative cache:', error));
 }, []);
 
-  const updateNarrativeCache = (data) => {
-    axios.post(`/api/update_narrative_cache`, data, { withCredentials: true })
+  const updateNarrativeCacheLocal = (data) => {
+    updateNarrativeCache({ data })
       .then(() => console.log('Narrative cache updated'))
       .catch((error) => console.error('Error updating narrative cache:', error));
   };
 
-  const clearNarrativeCache = () => {
-    axios.post(`/api/clear_narrative_cache`, {}, { withCredentials: true })
+  const clearNarrativeCacheLocal = () => {
+    clearNarrativeCache()
       .then(() => {
         setRecommendedOrder([]);
         setOutput('');
@@ -96,8 +96,8 @@ function Home() {
     );
   };
 
-  const updateImageData = (imageId, data) => {
-    axios.post(`/api/update_image_data`, { id: imageId, ...data }, { withCredentials: true })
+  const updateImageDataLocal = (imageId, data) => {
+    updateImageData(imageId, data)
       .then(() => {
         setImages((prevImages) =>
           prevImages.map((img) => (img.id === imageId ? { ...img, ...data } : img))
@@ -115,19 +115,13 @@ function Home() {
     formData.append('figure', file);
   
     try {
-      const res = await axios.post(`/api/upload_figure`,
-        formData, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const res = await uploadFigure(formData);
 
-      if (res.data.status === 'success') {
+      if (res.status === 'success') {
         fetchUserData();
         fileInputRef.current.value = '';
       } else {
-        alert(res.data.message || 'Error uploading figure');
+        alert(res.message || 'Error uploading figure');
       }
     } catch (err) {
       console.error('Upload error:', err);
@@ -141,18 +135,18 @@ function Home() {
     handleFileUpload();
   };
 
-  const runScript = () => {
+  const runScriptLocal = () => {
     setLoadingNarrative(true);
-    axios.post(`/api/run_script`, {}, { withCredentials: true })
+    runScript()
       .then((response) => {
-        if (response.data.status === 'success') {
+        if (response.status === 'success') {
           const { 
             narrative, 
             recommended_order, 
             categorize_figures_response, 
             theme_response, 
             sequence_response 
-          } = response.data;
+          } = response;
           // Set final outputs
           setOutput(narrative);
           setRecommendedOrder(recommended_order);
@@ -163,7 +157,7 @@ function Home() {
           setSequenceOutput(sequence_response);
 
           // Update the narrative cache if needed
-          updateNarrativeCache({
+          updateNarrativeCacheLocal({
             suggested_order: recommended_order,
             generated_narrative: narrative,
             theme: theme_response,
@@ -171,7 +165,7 @@ function Home() {
             sequence_justification: sequence_response
           });
         } else {
-          console.error('Error in script:', response.data.message);
+          console.error('Error in script:', response.message);
         }
         setLoadingNarrative(false);
       })
@@ -181,12 +175,12 @@ function Home() {
       });
   };
 
-  const generateDescriptions = () => {
+  const generateDescriptionsLocal = () => {
     setLoadingDescriptions(true);
-    axios.post(`/api/generate_long_descriptions`, {}, { withCredentials: true })
-      .then(() => axios.get(`/api/get_user_data`, { withCredentials: true }))
+    generateLongDescriptions()
+      .then(() => getUserData())
       .then((response) => {
-        const updatedImages = response.data.images.map((img) => ({
+        const updatedImages = response.images.map((img) => ({
           ...img,
           x: img.in_storyboard ? img.x : 0,
           y: img.in_storyboard ? img.y : 0,
@@ -240,16 +234,16 @@ function Home() {
           {uploading ? 'Uploading...' : 'Upload Figure'}
         </Button>
 
-        <Button variant="secondary" className="generate-desc-header" onClick={generateDescriptions}>
+        <Button variant="secondary" className="generate-desc-header" onClick={generateDescriptionsLocal}>
           Generate Descriptions
         </Button>
         {loadingDescriptions && <Spinner animation="border" size="sm" />}
 
-        <Button variant="primary" className="generate-story-header" onClick={runScript}>
+        <Button variant="primary" className="generate-story-header" onClick={runScriptLocal}>
           Generate Story
         </Button>
 
-        <Button variant="danger" className="clear-results-header" onClick={clearNarrativeCache}>
+        <Button variant="danger" className="clear-results-header" onClick={clearNarrativeCacheLocal}>
           Clear Results
         </Button>
         {loadingNarrative && <Spinner animation="border" size="sm" />}
@@ -262,7 +256,7 @@ function Home() {
             <Bin
               id="top-bin"
               images={images.filter((img) => !img.in_storyboard)}
-              updateImageData={updateImageData}
+              updateImageData={updateImageDataLocal}
               onDescriptionsUpdate={handleDescriptionsUpdate}
               onDelete={handleDelete}  // Pass onDelete here
             />
@@ -270,7 +264,7 @@ function Home() {
             <Bin
               id="bottom-bin"
               images={images.filter((img) => img.in_storyboard)}
-              updateImageData={updateImageData}
+              updateImageData={updateImageDataLocal}
               onDescriptionsUpdate={handleDescriptionsUpdate}
               onDelete={handleDelete}
             />

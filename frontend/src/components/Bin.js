@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useDrop } from 'react-dnd';
-import axios from 'axios';
 import DraggableCard from './DraggableCard';
+import { logClick } from '../services/api';
 // import { BACKEND_URL } from './App.js';
 import { getEasternISO } from '../utils/datetimeUtils';
 
@@ -38,17 +38,13 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSu
 
 
       // Log the drag event
-      axios.post(
-        `/api/log_click`,
-        {
+      logClick({
           objectClicked: item.id,
           time: getEasternISO(),
           mouseDownPosition: { x: item.oldX, y: item.oldY },
           mouseUpPosition: { x: x_bin + binPageLeft, y: y_bin + binPageTop },
           interaction: 'drag',
-        },
-        { withCredentials: true }
-      )
+        })
         .then(() => console.log('Drag event logged'))
         .catch((err) => console.error('Error logging drag event:', err));
     },
