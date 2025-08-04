@@ -11,7 +11,7 @@ from prompts.load_prompts import generate_desc_prompt
 
 # Load environment variables
 load_dotenv()
-API_KEY = os.getenv("API_KEY")
+API_KEY = os.getenv("OPENAI_API_KEY")
 
 if not API_KEY:
     raise ValueError("API_KEY not found in environment. Make sure .env is set correctly.")

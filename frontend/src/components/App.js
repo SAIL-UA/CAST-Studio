@@ -6,6 +6,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { checkAuth, logout, logClick } from '../services/api';
 import Home from './Home';
 import Login from './Login';
+import Register from './Register';
 import Sidebar from './Sidebar';
 import './App.css';
 // In App.js
@@ -51,9 +52,9 @@ function App() {
     const handlePointerUp = (e) => {
       if (!userAuthenticated || !mouseDownPos) return;
 
-      const dx = e.pageX - mouseDownPos.x;
-      const dy = e.pageY - mouseDownPos.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      // const dx = e.pageX - mouseDownPos.x;
+      // const dy = e.pageY - mouseDownPos.y;
+      // const dist = Math.sqrt(dx * dx + dy * dy);
 
       const time = mouseDownTime || getEasternISO();
 
@@ -105,6 +106,7 @@ function App() {
   };
 
   const isLoginPage = location.pathname === '/login';
+  const isRegisterPage = location.pathname === '/register';
 
   // While authentication status is being determined, show a loading state
   if (userAuthenticated === null) {
@@ -112,13 +114,17 @@ function App() {
   }
 
   return (
-    <div className={`App ${isLoginPage ? 'no-sidebar' : ''}`}>
-      {userAuthenticated && !isLoginPage && <Sidebar handleLogout={handleLogout} />}
+    <div className={`App ${isLoginPage || isRegisterPage ? 'no-sidebar' : ''}`}>
+      {userAuthenticated && !isLoginPage && !isRegisterPage && <Sidebar handleLogout={handleLogout} />}
       <div className="content">
         <Routes>
           <Route
             path="/login"
             element={userAuthenticated ? <Navigate to="/home" /> : <Login setUserAuthenticated={setUserAuthenticated} />}
+          />
+          <Route
+            path="/register"
+            element={userAuthenticated ? <Navigate to="/home" /> : <Register setUserAuthenticated={setUserAuthenticated} />}
           />
           <Route
             path="/home"

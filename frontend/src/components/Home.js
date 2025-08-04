@@ -4,7 +4,6 @@ import { getUserData, uploadFigure, getNarrativeCache, updateNarrativeCache, cle
 import { Container, Row, Col, Button, Spinner} from 'react-bootstrap';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-// import { BACKEND_URL } from './App.js';
 
 function Home() {
   const [images, setImages] = useState([]);
@@ -19,29 +18,26 @@ function Home() {
   
   const [sequenceOutput, setSequenceOutput] = useState('');
   const fileInputRef = useRef(null);
-  const categoriesMarkdown = Object.entries(categorizeOutput)
-    .map(([filename, category]) => `- **${filename}**: ${category}`)
-    .join('\n');
   const combinedThemeAndCategories = `${themeOutput || ""}\n\n${categorizeOutput || ""}`;
 
 
 
-  useEffect(() => {
-    console.log(combinedThemeAndCategories);
-  }, [combinedThemeAndCategories]);
 
   // Reusable function to fetch user data
   const fetchUserData = () => {
     getUserData()
       .then((response) => {
-        const fetchedImages = response.images.map((img) => ({
+        const fetchedImages = response.data.images.map((img) => ({
           ...img,
           x: img.in_storyboard ? img.x : 0,
           y: img.in_storyboard ? img.y : 0,
         }));
         setImages(fetchedImages);
       })
-      .catch((error) => console.error('Error fetching user data:', error));
+      .catch((error) => {
+        console.error('Error fetching user data:', error);
+        alert('Failed to load user data. Please refresh the page.');
+      });
   };
 
   // Fetch on mount
@@ -65,13 +61,19 @@ function Home() {
         setSequenceOutput(sequence_justification);
       }
     })
-    .catch((error) => console.error('Error fetching narrative cache:', error));
+    .catch((error) => {
+      console.error('Error fetching narrative cache:', error);
+      // Silent fail for cache - not critical
+    });
 }, []);
 
   const updateNarrativeCacheLocal = (data) => {
     updateNarrativeCache({ data })
       .then(() => console.log('Narrative cache updated'))
-      .catch((error) => console.error('Error updating narrative cache:', error));
+      .catch((error) => {
+        console.error('Error updating narrative cache:', error);
+        // Silent fail for cache update
+      });
   };
 
   const clearNarrativeCacheLocal = () => {
@@ -79,11 +81,14 @@ function Home() {
       .then(() => {
         setRecommendedOrder([]);
         setOutput('');
-        setCategorizeOutput({});
+        setCategorizeOutput('');
         setThemeOutput('');
         setSequenceOutput('');
       })
-      .catch((error) => console.error('Error clearing narrative cache:', error));
+      .catch((error) => {
+        console.error('Error clearing narrative cache:', error);
+        alert('Failed to clear results. Please try again.');
+      });
   };
 
   const handleDescriptionsUpdate = (id, newShortDesc, newLongDesc) => {
@@ -103,7 +108,10 @@ function Home() {
           prevImages.map((img) => (img.id === imageId ? { ...img, ...data } : img))
         );
       })
-      .catch((error) => console.error('Error updating image data:', error));
+      .catch((error) => {
+        console.error('Error updating image data:', error);
+        alert('Failed to update image data. Please try again.');
+      });
   };
 
   const handleFileUpload = async () => {
@@ -172,6 +180,7 @@ function Home() {
       .catch((error) => {
         console.error('Error running script:', error);
         setLoadingNarrative(false);
+        alert('Failed to generate story. Please try again.');
       });
   };
 
@@ -180,18 +189,18 @@ function Home() {
     generateLongDescriptions()
       .then(() => getUserData())
       .then((response) => {
-        const updatedImages = response.images.map((img) => ({
+        const updatedImages = response.data.images.map((img) => ({
           ...img,
           x: img.in_storyboard ? img.x : 0,
           y: img.in_storyboard ? img.y : 0,
         }));
         setImages(updatedImages);
         setLoadingDescriptions(false);
-        window.location.reload();
       })
       .catch((error) => {
         console.error('Error generating descriptions:', error);
         setLoadingDescriptions(false);
+        alert('Failed to generate descriptions. Please try again.');
       });
   };
 
@@ -201,9 +210,6 @@ function Home() {
   };
 
 
-  const suggestedOrderImages = recommendedOrder
-    .map((filename) => images.find((img) => img.filename === filename))
-    .filter((img) => img);
 
   return (
     <Container fluid>
@@ -302,7 +308,7 @@ function Home() {
                 ) : (
               <textarea
                 value={combinedThemeAndCategories}
-                onChange={(e) => setCombinedThemeAndCategories(e.target.value)}
+                readOnly
                 style={{
                   width: '100%',
                   height: '100%',  // Match outer container height

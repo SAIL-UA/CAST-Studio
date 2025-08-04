@@ -14,10 +14,10 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements
 COPY requirements.txt /app/
-
-# Install Python dependencies, including gunicorn
-RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir gunicorn
+# Install Python dependencies
+COPY requirements.txt /app/
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . /app/
@@ -29,9 +29,5 @@ RUN chmod -R 755 /data/CAST_ext/users
 # Expose port
 EXPOSE 8051
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8051/health || exit 1
-
-# Run with Gunicorn for production
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8051", "app:app"]
+# Command to run Gunicorn
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8051", "--workers", "3"]

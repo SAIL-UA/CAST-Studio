@@ -25,8 +25,8 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
         if (cardRef.current) {
           const rect = cardRef.current.getBoundingClientRect();
           const initialMousePosition = {
-            x: window.event.clientX,
-            y: window.event.clientY,
+            x: window.event?.clientX || 0,
+            y: window.event?.clientY || 0,
           };
           const offsetX = initialMousePosition.x - rect.left;
           const offsetY = initialMousePosition.y - rect.top;
@@ -105,7 +105,7 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
     
 
     try {
-      const res = await deleteFigure(image.id);
+      const res = await deleteFigure(image.filename);
       if (res.status === 'success') {
         if (onDelete) onDelete(image.id);
         setShowModal(false);

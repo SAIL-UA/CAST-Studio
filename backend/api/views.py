@@ -11,6 +11,7 @@ from scripts.generate_description import update_json_files, update_single_json_f
 import json
 import uuid
 from datetime import datetime, timezone
+from django.core.exceptions import ObjectDoesNotExist
 
 class LogActionView(APIView):
   permission_classes = [IsAuthenticated]
@@ -63,7 +64,9 @@ class UploadFigureView(APIView):
     
     figure_path = f"{user_folder}/{figure_id}{ext}"
     
-    figure.save(figure_path)
+    with open(figure_path, 'wb+') as destination:
+      for chunk in figure.chunks():
+        destination.write(chunk)
     
     now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     
@@ -96,8 +99,7 @@ class DeleteFigureView(APIView):
     Expects JSON body with { "filename": "<image_filename>" }
     Deletes the file and its corresponding JSON.
     """
-    data = request.get_json()
-    filename = data.get('filename')
+    filename = request.data.get('filename')
 
     if not filename:
       return Response({"message": "No filename provided"}, status=status.HTTP_400_BAD_REQUEST)
@@ -133,8 +135,8 @@ class ServeImageView(APIView):
 class UpdateImageDataView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
-    data = request.get_json()
-    image_id = data.get('id')
+    image_id = request.data.get('image_id')
+    update_data = request.data.get('data')
     
     if not image_id:
       return Response({"message": "No image ID provided"}, status=status.HTTP_400_BAD_REQUEST)
@@ -144,7 +146,7 @@ class UpdateImageDataView(APIView):
     if not existing_image_data:
       return Response({"message": "Image data not found"}, status=status.HTTP_404_NOT_FOUND)
     
-    serializer = ImageDataSerializer(existing_image_data, data=data, partial=True)
+    serializer = ImageDataSerializer(existing_image_data, data=update_data, partial=True)
     
     if serializer.is_valid():
       serializer.save()
@@ -196,21 +198,24 @@ class RunScriptView(APIView):
 class GetNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
-    cache = NarrativeCache.objects.get(user=request.user)
-    if not cache: 
+    try:
+      print(request.user)
+      cache = NarrativeCache.objects.get(user=request.user)
+    except ObjectDoesNotExist:
       return Response({"status": "error", "message": "Cache not found"}, status=status.HTTP_404_NOT_FOUND)
+
     return Response({"status": "success", "data": cache.data}, status=status.HTTP_200_OK)  
   
 class UpdateNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
-    data = request.get_json()
+    cache_data = request.data.get('data')
     
     cache = NarrativeCache.objects.get(user=request.user)
     if not cache:
       return Response({"status": "error", "message": "Cache not found"}, status=status.HTTP_404_NOT_FOUND)
     
-    serializer = NarrativeCacheSerializer(cache, data=data, partial=True)
+    serializer = NarrativeCacheSerializer(cache, data={'data': cache_data}, partial=True)
     if serializer.is_valid():
       serializer.save()
       return Response({"status": "success"}, status=status.HTTP_200_OK)
@@ -220,10 +225,11 @@ class UpdateNarrativeCacheView(APIView):
 class ClearNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
-    user_folder = request.session.get('user_folder')
-    cache_file = os.path.join(user_folder, 'narrative_cache.json')
-    if os.path.exists(cache_file):
-      os.remove(cache_file)
+    try:
+      cache = NarrativeCache.objects.get(user=request.user)
+      cache.delete()
+    except ObjectDoesNotExist:
+      pass
     return Response({"status": "success"}, status=status.HTTP_200_OK)
   
 class GenerateLongDescriptionsView(APIView):

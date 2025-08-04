@@ -20,7 +20,7 @@ CORS(app, supports_credentials=True)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-DATA_PATH = '/data/CAST_ext/users/'
+DATA_PATH = os.getenv('DATA_PATH', '/data/CAST_ext/users/')
 ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff'}
 
 

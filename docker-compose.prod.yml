@@ -1,28 +1,46 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:17
+    container_name: cast-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # - ./backend/${BACKUP_FILE}:/docker-entrypoint-initdb.d/${BACKUP_FILE}
+    networks:
+      - cast-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: cast-backend
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     env_file:
       - .env
-    environment:
-      - FLASK_ENV=production
     expose:
       - "8051"
     volumes:
       - /data/CAST_ext/users:/data/CAST_ext/users
     networks:
       - cast-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8051/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8051 --workers 3"
 
   frontend:
     build:
@@ -32,17 +50,13 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      - REACT_APP_API_URL=http://localhost:8050
     volumes:
-      - ./frontend:/app
-      - frontend_build:/var/www/html  # Separate volume for frontend build
-    expose:
-      - "80"
+      - frontend_build:/shared-build  # Volume to share build with nginx
     depends_on:
       - backend
     networks:
       - cast-network
-    restart: always
-    command: ["tail", "-f", "/dev/null"]
 
   nginx:
     image: nginx:alpine
@@ -64,10 +78,8 @@ services:
 networks:
   cast-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
 
 volumes:
+  db_data:
   nginx-logs:
   frontend_build:

@@ -49,7 +49,7 @@ class NarrativeCache(models.Model):
   """
   Narrative cache.
   """
-  user = models.ForeignKey(Users, on_delete=models.CASCADE, db_column='user_id', unique=True, related_name='narrative_cache')
+  user = models.OneToOneField(Users, on_delete=models.CASCADE, db_column='user_id', unique=True, related_name='narrative_cache')
   narrative = models.TextField(default="")
   order = models.JSONField(default=list)
   theme = models.TextField(default="")

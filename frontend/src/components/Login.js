@@ -15,7 +15,7 @@ function Login({ setUserAuthenticated }) {
   const handleLogin = () => {
     login({ username, password })
       .then(response => {
-        if (response.status === 'success') {
+        if (response.status === 200) {
           setUserAuthenticated(true);
           navigate('/home');
         } else {
@@ -73,6 +73,11 @@ function Login({ setUserAuthenticated }) {
                 </Form.Group>
                 <Button variant="primary" className="w-100" onClick={handleLogin}>
                   Login
+                </Button>
+                <Button variant="primary" className="w-100" onClick={() => {
+                  navigate('/register');
+                }}>
+                  New User? Register Here
                 </Button>
               </Form>
             </div>

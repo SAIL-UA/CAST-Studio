@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils import timezone
+import uuid
 
 class CustomUserManager(BaseUserManager):
   """
@@ -32,10 +33,11 @@ class Users(AbstractUser):
   Each user is linked to one Faculty profile.
   With Microsoft OAuth SSO, users are created without a local password.
   """
-  username = models.CharField(max_length=150, unique=True, db_column='username')
-  email = models.EmailField(max_length=320, unique=True, db_column='email')
-  first_name = models.CharField(max_length=32, db_column='first_name')
-  last_name = models.CharField(max_length=64, db_column='last_name')
+  id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  username = models.CharField(max_length=150, unique=True)
+  email = models.EmailField(max_length=320, unique=True)
+  first_name = models.CharField(max_length=32)
+  last_name = models.CharField(max_length=64)
 
   objects = CustomUserManager()
 
@@ -44,3 +46,4 @@ class Users(AbstractUser):
 
   class Meta:
     db_table = 'users'
+    managed = True

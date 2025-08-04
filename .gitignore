@@ -1,7 +1,17 @@
-multi_agent/
-old/
 __pycache__/
 .env
+.DS_Store
 node_modules
+.vscode
+
 backend/jupyterhub_cookie_secret
 backend/jupyterhub.sqlite
+
+# Django migrations
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# Helper scripts for docker launch/takedown
+docker-down.sh
+docker-up.sh
+run.sh

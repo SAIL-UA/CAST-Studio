@@ -35,6 +35,12 @@ debugpy
 decorator
 defusedxml
 distro
+django
+djangorestframework
+django-cors-headers
+django-environ
+djangorestframework-simplejwt
+psycopg2-binary
 EditorConfig
 executing
 fastjsonschema
@@ -45,6 +51,7 @@ Flask-Login
 fonttools
 fqdn
 greenlet
+gunicorn
 h11
 httpcore
 httpx
