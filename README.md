@@ -33,7 +33,11 @@ The two components must be started separately, and **the backend must be started
     cd frontend/
     conda activate cast
     ```
-3. **Start the frontend**:
+3. **Install the dependencies**:
+    ```bash
+    npm install
+    ```
+4. **Start the frontend**:
     ```bash
     npm run start
     ```
