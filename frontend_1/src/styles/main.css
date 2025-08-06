@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+.bg-bama-crimson {
+    background-color: theme('colors.bama-crimson');
+}
+
+.bg-bama-burgundy {
+    background-color: theme('colors.bama-burgundy');
+}
+
+.bg-cool-gray {
+    background-color: theme('colors.cool-gray');
+}
