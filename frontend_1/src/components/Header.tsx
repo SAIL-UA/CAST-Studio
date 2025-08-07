@@ -15,7 +15,7 @@ const Header = () => {
 
     // Visible component
     return (
-        <header className="h-[min(6vh,6vw)] sticky top-0 bg-bama-crimson flex items-center px-6">
+        <header className="h-full w-full sticky top-0 bg-bama-crimson flex items-center px-6">
             {/* Left: Logo + Title */}
             <div className="w-1/5 pl-10">
                 <div onClick={() => navigate('/')}

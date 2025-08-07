@@ -28,12 +28,8 @@ const Workspace = () => {
 
             {/* Workspace */}
             <div id="workspace-content" className="flex w-full h-4/5 mt-4 bg-white">
-                
+                FILL WITH USER CONTENT HERE
             </div>
-
-
-
-
         </div>
     )
 }

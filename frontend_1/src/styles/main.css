@@ -47,3 +47,18 @@
     left: 50%;
   }
 }
+
+/* Dropdown animation */
+@layer utilities {
+  .dropdown-open {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 1.0s ease, opacity 1.0s ease;
+  }
+
+  .dropdown-open-active {
+    max-height: 500px; /* adjust based on content */
+    opacity: 1;
+  }
+}
