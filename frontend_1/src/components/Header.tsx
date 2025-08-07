@@ -1,8 +1,9 @@
 // Import dependencies
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 // Header component
-const Header = () => {
+const Header = ({ userAuthenticated, setUserAuthenticated }: { userAuthenticated: boolean, setUserAuthenticated: (authenticated: boolean) => void }) => {
 
     // Navigation helper
     const navigate = useNavigate();
@@ -12,6 +13,19 @@ const Header = () => {
         e.preventDefault();
         navigate('/construction');
     }
+
+    // Logout functionality
+    const handleLogout = () => {
+        axios
+            .post('/logout', {}, { withCredentials: true })
+            .then(() => {
+                setUserAuthenticated(false);
+                navigate('/login');
+            })
+            .catch((error) => {
+                console.error('Logout error:', error);
+            });
+    };
 
     // Visible component
     return (
@@ -63,7 +77,11 @@ const Header = () => {
             {/* Right: Login */}
             <div className="flex justify-end w-1/5">
                 {/* If user is logged in, show logout button */}
-                <span className="text-white cursor-pointer">Login</span>
+                {userAuthenticated ? (
+                    <span className="text-white cursor-pointer" onClick={handleLogout}>Logout</span>
+                ) : (
+                    <span className="text-white cursor-pointer" onClick={() => navigate('/login')}>Login</span>
+                )}
             </div>
         </header>
 

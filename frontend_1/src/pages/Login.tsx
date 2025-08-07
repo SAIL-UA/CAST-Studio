@@ -1,21 +1,39 @@
 // Import dependencies
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import axios from 'axios';
 
 // Import components
 
 // Import pages
 
 // Login page component
-const Login = () => {
-
-    // Navigation constant
+const Login = ({ setUserAuthenticated }: { setUserAuthenticated: (authenticated: boolean) => void }) => {
+    // Helpers
     const navigate = useNavigate();
+    
+    // States
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
 
     // Login functionality
     const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        navigate('/construction');
-    }
+        axios
+          .post('/login', { username, password }, { withCredentials: true })
+          .then(response => {
+            if (response.data.status === 'success') {
+              setUserAuthenticated(true);
+              navigate('/home');
+            } else {
+              alert('Login failed.');
+            }
+          })
+          .catch(error => {
+            console.error('Login error:', error);
+            alert('An error occurred during login.');
+          });
+    };
 
     // Visible component
     return (
@@ -54,11 +72,13 @@ const Login = () => {
                     type="text"
                     placeholder="Username"
                     className="px-4 py-2 rounded-md text-black"
+                    onChange={(e) => setUsername(e.target.value)}
                     />
                     <input
                     type="password"
                     placeholder="Password"
                     className="px-4 py-2 rounded-md text-black"
+                    onChange={(e) => setPassword(e.target.value)}
                     />
                     <button
                     type="submit"

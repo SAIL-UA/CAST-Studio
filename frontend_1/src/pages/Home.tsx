@@ -1,5 +1,5 @@
 // Import dependencies
-import React from 'react';
+import{ useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Import components
@@ -12,8 +12,19 @@ import Footer from '../components/Footer';
 // Import images
 import avatar from '../assets/images/avatar.svg';
 
+// Import utils
+import { handleAuthRequired } from '../utils/utils';
+
 // Login page component
-const Home = () => {
+const Home = ({ userAuthenticated }: { userAuthenticated: boolean }) => {
+
+    // Helpers
+    const navigate = useNavigate();
+
+    // Check authentication
+    useEffect(() => {
+        handleAuthRequired(userAuthenticated, navigate);
+    }, [userAuthenticated]);
 
     // Visible component
     return <div id="home-container" className="flex w-full">
