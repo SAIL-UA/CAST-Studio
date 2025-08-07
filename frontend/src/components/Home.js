@@ -46,7 +46,7 @@ function Home() {
 
     getNarrativeCache()
     .then((response) => {
-      if (response.status === 'success' && response.data) {
+      if (response.status === 200 && response.data) {
         const {
           suggested_order = [],
           generated_narrative = '',
@@ -59,6 +59,10 @@ function Home() {
         setThemeOutput(theme);
         setCategorizeOutput(categories);
         setSequenceOutput(sequence_justification);
+      } else if (response.status === 204) {
+        console.log('Cache not found');
+      } else {
+        console.error('Error fetching narrative cache:', response);
       }
     })
     .catch((error) => {

@@ -44,10 +44,6 @@ psycopg2-binary
 EditorConfig
 executing
 fastjsonschema
-Flask
-Flask-Caching
-Flask-Cors
-Flask-Login
 fonttools
 fqdn
 greenlet

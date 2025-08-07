@@ -26,22 +26,26 @@ class LoginView(APIView):
   permission_classes = [AllowAny]
 
   def post(self, request):
-    username = request.data.get("username")
-    password = request.data.get("password")
-    user = authenticate(request, username=username, password=password)
+    try:
+      username = request.data.get("username")
+      password = request.data.get("password")
+      user = authenticate(request, username=username, password=password)
 
-    if user is not None:
-      refresh = RefreshToken.for_user(user)
-      request.session['user_folder'] = os.path.join(settings.DATA_PATH, user.username, "workspace", "cache")
-      os.makedirs(request.session['user_folder'], exist_ok=True)
+      if user is not None:
+        refresh = RefreshToken.for_user(user)
+        request.session['user_folder'] = os.path.join(settings.DATA_PATH, user.username, "workspace", "cache")
+        os.makedirs(request.session['user_folder'], exist_ok=True)
 
-      return Response({
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
-        "user": UserSerializer(user).data
-      })
-    else:
-      return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({
+          "access": str(refresh.access_token),
+          "refresh": str(refresh),
+          "user": UserSerializer(user).data
+        })
+      else:
+        return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+    except Exception as e:
+      print(e)
+      return Response({"detail": "An error occurred during login."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class LogoutView(APIView):
   def post(self, request):

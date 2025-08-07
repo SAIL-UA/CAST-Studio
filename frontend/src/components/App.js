@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { getEasternISO } from '../utils/datetimeUtils';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { checkAuth, logout, logClick } from '../services/api';
+import { checkAuth, logout, logAction } from '../services/api';
 import Home from './Home';
 import Login from './Login';
 import Register from './Register';
@@ -60,7 +60,7 @@ function App() {
 
       
 
-      logClick({
+      logAction({
             objectClicked: clickedElement,
             time: time,
             mouseDownPosition: mouseDownPos,

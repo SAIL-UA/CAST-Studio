@@ -8,7 +8,7 @@ class UserAction(models.Model):
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
   user = models.ForeignKey(Users, on_delete=models.CASCADE, db_column='user_id', related_name='user_actions')
-  action = models.CharField(max_length=255)
+  action = models.JSONField(default=dict)
   timestamp = models.DateTimeField(auto_now_add=True)
   
   def __str__(self):
@@ -25,20 +25,20 @@ class ImageData(models.Model):
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
   user = models.ForeignKey(Users, on_delete=models.CASCADE, db_column='user_id', related_name='image_data')
-  image_full_path = models.CharField(max_length=255)
+  filepath = models.CharField(max_length=255)
   short_desc = models.TextField(default="")
   long_desc = models.TextField(default="")
   source = models.TextField(default="")
   in_storyboard = models.BooleanField(default=False)
-  x = models.IntegerField(default=0)
-  y = models.IntegerField(default=0)
+  x = models.FloatField(default=0.0)
+  y = models.FloatField(default=0.0)
   has_order = models.BooleanField(default=False)
   order_num = models.IntegerField(default=0)
   last_saved = models.DateTimeField(auto_now_add=True)
   created_at = models.DateTimeField(auto_now_add=True)
   
   def __str__(self):
-    return f"{self.user.username} - {self.image_full_path}"
+    return f"{self.user.username} - {self.filepath}"
   
   class Meta:
     db_table = 'image_data'

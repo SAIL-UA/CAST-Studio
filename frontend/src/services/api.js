@@ -152,13 +152,26 @@ export const deleteFigure = async(filename) => {
 };
 
 export const serveImage = async(filename) => {
-  const response = await API.get(`/serve_image/${filename}/`)
-  return response.data;
+  try {
+    const response = await API.get(`/serve_image/${filename}/`, {
+      responseType: 'blob',
+    })
+    
+    if (response.status !== 200) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const blob = await response.data;
+    return URL.createObjectURL(blob); 
+  } catch (err) {
+    console.error('Failed to fetch image blob:', err);
+    return ''; 
+  }
 };
 
 export const updateImageData = async(imageId, data) => {
   const response = await API.post('/update_image_data/', { image_id: imageId, data })
-  return response.data;
+  return response;
 };
 
 export const runScript = async() => {
@@ -168,7 +181,7 @@ export const runScript = async() => {
 
 export const getNarrativeCache = async() => {
   const response = await API.get('/get_narrative_cache/');
-  return response.data;
+  return response;
 };
 
 export const updateNarrativeCache = async(data) => {
@@ -192,12 +205,12 @@ export const generateSingleLongDescription = async(imageId) => {
 };
 
 
-export const logClick = async(data) => {
-  const response = await API.post('/log_click/', data)
+export const logAction = async(data) => {
+  const response = await API.post('/log_action/', data)
   return response.data;
 };
 
 export const generateLongDescriptionForImage = async(imageId) => {
-  const response = await API.post('/generate_long_description_for_image/', { id: imageId })
+  const response = await API.post('/generate_single_long_description/', { image_id: imageId })
   return response.data;
 };

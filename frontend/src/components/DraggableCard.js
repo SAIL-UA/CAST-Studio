@@ -1,22 +1,34 @@
 // frontend/src/components/DraggableCard.js
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
-import { updateImageData, deleteFigure, generateLongDescriptionForImage } from '../services/api';
+import { updateImageData, deleteFigure, generateLongDescriptionForImage, serveImage } from '../services/api';
 import Card from 'react-bootstrap/Card';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
-// import { BACKEND_URL } from './App.js';
 
 function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true }) {
   const [showModal, setShowModal] = useState(false);
   const [tempShortDesc, setTempShortDesc] = useState(image.short_desc || '');
   const [tempLongDesc, setTempLongDesc] = useState(image.long_desc || '');
   const [loadingGenDesc, setLoadingGenDesc] = useState(false);
+  const [imageUrl, setImageUrl] = useState(null);
   const cardRef = useRef(null);
 
-  // Move the useDrag hook above the cardStyle calculation.
+  // Fetch and resolve image blob URL
+  useEffect(() => {
+    const fetchImageBlob = async () => {
+      try {
+        const blobUrl = await serveImage(image.filepath);
+        setImageUrl(blobUrl);
+      } catch (err) {
+        console.error('Failed to fetch image blob:', err);
+      }
+    };
+    fetchImageBlob();
+  }, [image.filepath]);
+
   const [{ isDragging }, drag] = useDrag(
     () => ({
       type: 'image',
@@ -55,7 +67,6 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
     [draggable, image.id]
   );
 
-  // Now compute cardStyle using isDragging from the hook.
   const cardStyle = draggable
     ? image.in_storyboard
       ? {
@@ -84,9 +95,9 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
 
   const handleClose = () => {
     updateImageData(image.id, {
-          short_desc: tempShortDesc,
-          long_desc: tempLongDesc,
-        })
+      short_desc: tempShortDesc,
+      long_desc: tempLongDesc,
+    })
       .then(() => {
         onDescriptionsUpdate(image.id, tempShortDesc, tempLongDesc);
         setShowModal(false);
@@ -101,11 +112,8 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
     if (!window.confirm('Are you sure you want to delete this figure?')) {
       return;
     }
-
-    
-
     try {
-      const res = await deleteFigure(image.filename);
+      const res = await deleteFigure(image.filepath);
       if (res.status === 'success') {
         if (onDelete) onDelete(image.id);
         setShowModal(false);
@@ -153,7 +161,7 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
         >
           <Card.Img
             variant="top"
-            src={`/images/${image.filename}`}
+            src={imageUrl || 'placeholder.jpg'}
             alt={image.id}
             style={{ height: '100px', objectFit: 'cover' }}
           />
@@ -181,7 +189,7 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, draggable = true
         <Modal.Body>
           <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
             <img
-              src={`/images/${image.filename}`}
+              src={imageUrl || 'placeholder.jpg'}
               alt={image.id}
               style={{ maxWidth: '100%', height: 'auto' }}
             />

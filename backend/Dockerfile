@@ -14,8 +14,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements
 COPY requirements.txt /app/
-# Install Python dependencies
-COPY requirements.txt /app/
+
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -31,3 +30,6 @@ EXPOSE 8051
 
 # Command to run Gunicorn
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8051", "--workers", "3"]
+
+
+# YOU NEED TO ./DOCKER-DOWN.SH, REBUILD THE NOTEBOOK IMAGE, AND THEN ./DOCKER-UP.SH TO TEST EVERYTHING.

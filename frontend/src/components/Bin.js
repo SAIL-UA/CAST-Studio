@@ -1,8 +1,7 @@
 import React, { useRef } from 'react';
 import { useDrop } from 'react-dnd';
 import DraggableCard from './DraggableCard';
-import { logClick } from '../services/api';
-// import { BACKEND_URL } from './App.js';
+import { logAction } from '../services/api';
 import { getEasternISO } from '../utils/datetimeUtils';
 
 function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSuggestedOrderBin = false }) {
@@ -26,7 +25,6 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSu
       x_bin = Math.max(0, Math.min(x_bin, dropTargetRect.width - 150)); // Card width
       y_bin = Math.max(0, Math.min(y_bin, dropTargetRect.height - 100)); // Card height
 
-      console.log(`Dropped ${item.id} into ${id} at (${x_bin}, ${y_bin})`);
 
       // Update the card's position and bin status based on target bin ID
       updateImageData(item.id, {
@@ -38,15 +36,13 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSu
 
 
       // Log the drag event
-      logClick({
+      logAction({
           objectClicked: item.id,
           time: getEasternISO(),
           mouseDownPosition: { x: item.oldX, y: item.oldY },
           mouseUpPosition: { x: x_bin + binPageLeft, y: y_bin + binPageTop },
           interaction: 'drag',
         })
-        .then(() => console.log('Drag event logged'))
-        .catch((err) => console.error('Error logging drag event:', err));
     },
     canDrop: () => !isSuggestedOrderBin,
     collect: (monitor) => ({

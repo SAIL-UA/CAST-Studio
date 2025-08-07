@@ -34,7 +34,7 @@ services:
     expose:
       - "8051"
     volumes:
-      - /data/CAST_ext/users:/data/CAST_ext/users
+      - /data/CAST_ext:/data/CAST_ext
     networks:
       - cast-network
     command: >
@@ -75,9 +75,26 @@ services:
       - cast-network
     restart: always
 
+  jupyterhub:
+    build:
+      context: /home/aii03admin/CAST_ext
+      dockerfile: Dockerfile
+    container_name: cast-jupyterhub
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - /home/aii03admin/CAST_ext:/app
+      - /data/CAST_ext:/data/CAST_ext
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - cast-network
+
 networks:
   cast-network:
-    driver: bridge
+    external: true
 
 volumes:
   db_data:
