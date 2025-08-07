@@ -79,7 +79,7 @@ const DataStories = () => {
             </div>
 
             {/* Content */}
-            <div id="data-stories-content" className="flex w-full flex-1 mt-4 bg-white border border-gray-300 rounded-lg p-4 overflow-y-auto min-h-0">
+            <div id="data-stories-content" className="flex w-full flex-1 mt-4 bg-white rounded-sm p-4 overflow-y-auto min-h-0">
                 {narrativeSelected ? (
                     // Narrative Structuring Content
                     <div className="w-full space-y-6">

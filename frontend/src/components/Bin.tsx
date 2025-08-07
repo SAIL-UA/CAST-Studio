@@ -56,7 +56,7 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSu
 
   // Dynamic styling based on drop state
   const getBinClasses = () => {
-    let baseClasses = "relative w-full h-full border-2 p-3 rounded-lg transition-colors duration-200";
+    let baseClasses = "relative w-full h-full rounded-sm transition-colors duration-200";
     
     if (isSuggestedOrderBin) {
       baseClasses += " bg-gray-50 border-gray-300";
