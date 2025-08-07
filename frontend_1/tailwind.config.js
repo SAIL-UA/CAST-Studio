@@ -8,7 +8,8 @@ module.exports = {
       colors: {
         'bama-crimson': '#005c84',
         'bama-burgundy': '#05648d',
-        'cool-gray': '#eaf1f7',
+        'gray': '#b8c2cc',
+        'gray-light': '#dae1e7',
         'indigo-focus': '#6574cd',
       },
     },

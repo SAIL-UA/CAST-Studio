@@ -1,5 +1,5 @@
 // Import dependencies
-import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // Import components
 
@@ -8,12 +8,21 @@ import React from 'react';
 // Login page component
 const Login = () => {
 
+    // Navigation constant
+    const navigate = useNavigate();
+
+    // Login functionality
+    const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        navigate('/construction');
+    }
+
     // Visible component
     return (
         <div className="flex w-full h-screen text-white">
             {/* Left: Logo + Title */}
             <div id="left-login" className="w-1/2 flex items-center justify-center">
-                <div className="flex flex-col items-center justify-center bg-gradient-to-br from-bama-crimson via-indigo-focus to-cool-gray h-full w-full">
+                <div className="flex flex-col items-center justify-center bg-gradient-to-br from-bama-crimson via-indigo-focus to-gray-light h-full w-full">
                 <svg
                     className="w-1/4 h-1/4 mx-auto mb-2 text-white"
                     xmlns="http://www.w3.org/2000/svg"
@@ -27,20 +36,23 @@ const Login = () => {
                     clipRule="evenodd"
                     />
                 </svg>
-                <h1 className="text-4xl font-bold">Story Studio</h1>
+                <h1 className="text-4xl font-bold mb-2 text-white">Story Studio</h1>
+                <h3 className="text-lg font-semibold mb-2 text-white">University of Alabama</h3>
+                <h3 className="text-lg font-semibold mb-2 text-white">University of Maryland, Baltimore County</h3>
                 </div>
             </div>
 
             {/* Right: Login Form */}
-            <div id="right-login" className="w-1/2 flex items-center justify-center bg-gradient-to-bl from-bama-crimson via-indigo-focus to-cool-gray">
+            <div id="right-login" className="w-1/2 flex items-center justify-center bg-gradient-to-bl from-bama-crimson via-indigo-focus to-gray-light">
                 <div className="w-3/4 max-w-sm">
-                <h1 className="text-2xl font-bold mb-2">Welcome Back</h1>
-                <p className="mb-6">Please enter your details</p>
+                <h1 className="text-2xl font-bold mb-2 text-white">Welcome Back!</h1>
+                <h3 className="text-lg font-semibold mb-6 text-white">Log in to get building stories!</h3>
 
-                <form className="flex flex-col gap-4">
+                <form className="flex flex-col gap-4"
+                onSubmit={(e: React.FormEvent<HTMLFormElement>) => handleLogin(e)}>
                     <input
                     type="text"
-                    placeholder="Email"
+                    placeholder="Username"
                     className="px-4 py-2 rounded-md text-black"
                     />
                     <input
@@ -50,7 +62,7 @@ const Login = () => {
                     />
                     <button
                     type="submit"
-                    className="mt-2 bg-white text-bama-crimson font-semibold py-2 rounded-md hover:bg-gray-100 transition"
+                    className="mt-2 bg-gray-light text-bama-crimson font-semibold py-2 rounded-md hover:bg-gray-100 transition"
                     >
                     Login
                     </button>

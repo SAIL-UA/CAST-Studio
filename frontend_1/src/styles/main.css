@@ -5,13 +5,45 @@
 
 
 .bg-bama-crimson {
-    background-color: theme('colors.bama-crimson');
+  background-color: theme('colors.bama-crimson');
 }
 
 .bg-bama-burgundy {
-    background-color: theme('colors.bama-burgundy');
+  background-color: theme('colors.bama-burgundy');
 }
 
-.bg-cool-gray {
-    background-color: theme('colors.cool-gray');
+.bg-gray {
+  background-color: theme('colors.gray');
+}
+
+.bg-gray-light {
+  background-color: theme('colors.gray-light');
+}
+
+/* Underline button animation */
+@layer utilities {
+
+  .underline-animate {
+    position: relative;
+    display: inline-block;
+  }
+
+  .underline-animate::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0%;
+    height: 2px;
+    background-color: currentColor;
+    transition: width 0.3s ease, left 0.3s ease;
+    transform: translateX(-50%);
+  }
+  
+  .underline-animate:hover::after,
+  .underline-animate:focus::after,
+  .underline-animate.active::after {
+    width: 100%;
+    left: 50%;
+  }
 }

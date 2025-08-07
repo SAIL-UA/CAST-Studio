@@ -14,8 +14,8 @@ const Construction = () => {
             </h1>
           </div>
           <p className="text-lg text-gray-600 leading-relaxed">
-            Our dev team is actively making changes and pushing code to production. 
-            Please reach out with any questions!
+            Our development team is actively making changes and pushing code to production. 
+            Please reach out to our <a href="mailto:crerickson@crimson.ua.edu, thassan1@ua.edu" className="text-bama-crimson font-bold">development team</a> with any questions!
           </p>
         </div>
       </div>

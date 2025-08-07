@@ -15,7 +15,7 @@ function App() {
   //  Visible component
   return (
     <Router>
-      <div id="app-container">
+      <div id="app-container" className="bg-gray-light">
         <Header /> 
             <Routes>
                 <Route path='/' element={<Home />} /> {/* TODO: If use auth, send to /home. If not, send to /login */}
