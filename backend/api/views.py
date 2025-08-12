@@ -1,27 +1,49 @@
 import os
+import uuid
+from openai import OpenAI
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import UserAction, ImageData, NarrativeCache
-from .serializers import ImageDataSerializer, NarrativeCacheSerializer
+from .serializers import ImageDataSerializer, NarrativeCacheSerializer, JupyterLogsSerializer
+from users.models import Users
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from prompts.load_prompts import categorize_figs_prompt, theme_objective_prompt, sequence_figs_prompt, build_story_prompt, generate_desc_prompt
-from scripts.generate_narrative import generate_story, merge_narrative_cache
-from scripts.generate_description import update_json_files, update_single_json_file
+from scripts.generate_narrative import generate_story
 from django.http import FileResponse
-import json
-import uuid
 from datetime import datetime, timezone
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils._os import safe_join
-import base64
-from openai import OpenAI
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 from rest_framework.throttling import UserRateThrottle
+from .tasks import generate_description_task
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 class BurstRateThrottle(UserRateThrottle):
-  rate = '5/min'
+  rate = '10/min'
 
+
+class RefreshTokenView(APIView):
+  permission_classes = [AllowAny]
+  
+  def post(self, request):
+    refresh = request.data.get("refresh")
+    if not refresh:
+      return Response({"detail": "No refresh token provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = TokenRefreshSerializer(data={"refresh": refresh})
+    try:
+      serializer.is_valid(raise_exception=True)
+    except (TokenError, InvalidToken) as e:
+      return Response({"detail": "Token is invalid or expired"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Returns {'access': '...'} and, if ROTATE_REFRESH_TOKENS=True, also {'refresh': '...'}
+    return Response(serializer.validated_data, status=status.HTTP_200_OK)
+    
+    
+    
 class LogActionView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -29,17 +51,32 @@ class LogActionView(APIView):
     user_action.save()
     return Response({"message": "Action logged successfully"}, status=status.HTTP_200_OK)
   
-class GetUserDataView(APIView):
+class UploadJupyterLogView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request):
+    log_data = request.data
+    log_data['user'] = Users.objects.get(username=request.user.username).id
+    serializer = JupyterLogsSerializer(data=log_data)
+    if serializer.is_valid():
+      serializer.save()
+      return Response({"message": "Jupyter log uploaded successfully"}, status=status.HTTP_200_OK)
+    else:
+      return Response({"message": "Jupyter log upload failed", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+  
+  
+class ImageDataView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
-    image_data = ImageData.objects.filter(user=request.user)
+    image_id = request.query_params.get("image_id")
+    if image_id: # single image
+      image_data = ImageData.objects.get(id=image_id)
+    else: # all images
+      image_data = ImageData.objects.filter(user=request.user)
     
     if not image_data:
       return Response({"message": "No image data found"}, status=status.HTTP_204_NO_CONTENT)
-    
-    serialized_image_data = ImageDataSerializer(image_data, many=True)
-    
-    
+      
+    serialized_image_data = ImageDataSerializer(image_data, many=False if image_id else True)
     
     return Response({"images": serialized_image_data.data}, status=status.HTTP_200_OK)
   
@@ -244,8 +281,6 @@ class ClearNarrativeCacheView(APIView):
       pass
     return Response({"status": "success"}, status=status.HTTP_200_OK)
   
-  
-  
 class GenerateDescriptionsView(APIView):
   permission_classes = [IsAuthenticated]
   throttle_classes = [BurstRateThrottle]
@@ -256,79 +291,28 @@ class GenerateDescriptionsView(APIView):
     if image_id:
       # Handle single image case
       image = ImageData.objects.get(id=image_id)
-      long_desc = self.__generate_description(image)
-
-      image.long_desc = long_desc
+      image.long_desc_generating = True
       image.save()
+      generate_description_task.delay(image_id)
 
-      serializer = ImageDataSerializer(image)
       return Response(
-        {"message": "Description generated for one image", "image": serializer.data},
-        status=status.HTTP_200_OK,
+        {"message": "Began generating description for image."},
+        status=status.HTTP_202_ACCEPTED,
       )
     else:
       # Handle all images
       images = ImageData.objects.all()
-      updated_images = []
 
       for image in images:
-          long_desc = self.__generate_description(image)
-          image.long_desc = long_desc
-          image.save()
-          updated_images.append(image)
+        image.long_desc_generating = True
+        image.save()
+        generate_description_task.delay(image.id)
 
-      serializer = ImageDataSerializer(updated_images, many=True)
       return Response(
-        {"message": f"Descriptions generated for {len(updated_images)} images", "images": serializer.data},
-        status=status.HTTP_200_OK,
+        {"message": f"Began generating descriptions for {len(images)} images"},
+        status=status.HTTP_202_ACCEPTED,
       )
-      
-  def __generate_description(self, image):
-    """
-    Send the encoded image to GPT-4o to obtain a description.
-    """
-    image_path = os.path.join(os.getenv('DATA_PATH'), image.user.username, "workspace", "cache", image.filepath)
-    with open(image_path, "rb") as image_file:
-      base64_image = base64.b64encode(image_file.read()).decode("utf-8")
-    response = client.chat.completions.create(
-      model="gpt-4o",
-      temperature=0.1,
-      messages=[
-        {
-          "role": "user",
-          "content": [
-            {
-              "type": "text",
-              "text": "generate the description into the paragraph(s) based on this image",
-            },
-            {
-              "type": "image_url",
-              "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-            },
-          ],
-        }
-      ],
-    )
-    return response.choices[0].message.content
   
-class GenerateLongDescriptionsView(APIView):
-  permission_classes = [IsAuthenticated]
-  def post(self, request):
-    # TODO: refactor this to use the new image data model
-    user_folder = request.session.get('user_folder')
-    update_json_files(user_folder)
-    return Response({"status": "success"}, status=status.HTTP_200_OK)
-  
-
-  
-class GenerateSingleLongDescriptionView(APIView):
-  permission_classes = [IsAuthenticated]
-  def post(self, request):
-    image_id = request.data.get('image_id')
-    image_data = ImageData.objects.get(id=image_id)
-    long_desc = update_single_json_file(image_data.filepath, image_id)
-    return Response({"status": "success", "long_desc": long_desc}, status=status.HTTP_200_OK)
-
 class GenerateNarrativeView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):

@@ -14,6 +14,7 @@ bleach
 blinker
 Brotli
 cachelib
+celery
 certifi
 certipy
 cffi
@@ -137,6 +138,7 @@ PyYAML
 pyzmq
 qtconsole
 QtPy
+redis
 referencing
 requests
 retrying

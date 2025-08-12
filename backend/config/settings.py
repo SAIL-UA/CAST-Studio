@@ -34,6 +34,12 @@ DATA_PATH = env('DATA_PATH')
 # Read the .env file located at the root directory
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
+# Celery Configuration
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('DJANGO_SECRET_KEY')
 
@@ -170,14 +176,6 @@ REST_FRAMEWORK = {
   'DEFAULT_AUTHENTICATION_CLASSES': (
     'users.cookie_jwt_auth.CookieJWTAuthentication',  # Replace DRF tokens
   ),
-  'DEFAULT_THROTTLE_CLASSES': [
-    'rest_framework.throttling.AnonRateThrottle',
-    'rest_framework.throttling.UserRateThrottle',
-  ],
-  'DEFAULT_THROTTLE_RATES': {
-    'anon': '50/minute',  # Adjust based on your needs
-    'user': '200/minute',
-  },
 }
 
 from datetime import timedelta

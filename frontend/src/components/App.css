@@ -512,6 +512,86 @@ html {
   min-height: 50px; /* Just to ensure some space */
 }
 
+
+/* Styled placeholder for long description generation */
+.ai-placeholder {
+  border: 1px dashed #c9c9c9;
+  border-radius: 8px;
+  background: #f8f9fa;
+  padding: 12px;
+  position: relative;
+}
+
+.ai-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3b5bfd;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.ai-lines {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ai-line {
+  height: 10px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    #ebedf0 0%,
+    #f3f4f6 45%,
+    #ebedf0 80%
+  );
+  background-size: 200% 100%;
+  animation: ai-shimmer 1.2s infinite linear;
+}
+
+/* add a few variable widths so it looks more natural */
+.ai-line:nth-child(1) { width: 95%; }
+.ai-line:nth-child(2) { width: 88%; }
+.ai-line:nth-child(3) { width: 92%; }
+.ai-line:nth-child(4) { width: 70%; }
+
+@keyframes ai-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.ai-ellipsis {
+  font-style: italic;
+  color: #6b7280; /* slate-500-ish */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-ellipsis .dots {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.ai-ellipsis .dots span {
+  animation: blink 1.2s infinite steps(1, end);
+  opacity: 0.2;
+}
+
+.ai-ellipsis .dots span:nth-child(1) { animation-delay: 0s; }
+.ai-ellipsis .dots span:nth-child(2) { animation-delay: .2s; }
+.ai-ellipsis .dots span:nth-child(3) { animation-delay: .4s; }
+
+@keyframes blink {
+  50% { opacity: 1; }
+}
+
+
 /* Media Queries */
 @media (max-width: 768px) {
   .sidebar {

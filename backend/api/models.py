@@ -18,6 +18,28 @@ class UserAction(models.Model):
     db_table = 'user_actions'
     managed = True
     
+class JupyterLogs(models.Model):
+  """
+  User-code execution logs from the JupyterHub server.
+  """
+  id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  user = models.ForeignKey(Users, on_delete=models.CASCADE, db_column='user_id', related_name='jupyter_logs')
+  cell_type = models.TextField(default="")
+  source = models.TextField(default="")
+  metadata = models.JSONField(default=dict)
+  output = models.JSONField(default=dict)
+  execution_count = models.IntegerField(default=0)
+  timestamp = models.DateTimeField(auto_now_add=True)
+  request_headers = models.JSONField(default=dict)
+  
+  def __str__(self):
+    return f"{self.user.username} - {self.cell_type} - {self.timestamp}"
+  
+  class Meta:
+    db_table = 'jupyter_logs'
+    managed = True
+    
+    
   
 class ImageData(models.Model):
   """
@@ -28,6 +50,7 @@ class ImageData(models.Model):
   filepath = models.CharField(max_length=255)
   short_desc = models.TextField(default="")
   long_desc = models.TextField(default="")
+  long_desc_generating = models.BooleanField(default=False)
   source = models.TextField(default="")
   in_storyboard = models.BooleanField(default=False)
   x = models.FloatField(default=0.0)

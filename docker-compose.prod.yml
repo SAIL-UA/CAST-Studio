@@ -29,6 +29,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - .env
     expose:
@@ -88,6 +90,28 @@ services:
       - /home/aii03admin/CAST_ext:/app
       - /data/CAST_ext:/data/CAST_ext
       - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - cast-network
+
+  celery:
+    build:
+      context: ./backend
+    container_name: cast-celery
+    restart: unless-stopped
+    volumes:
+      - /data/CAST_ext:/data/CAST_ext
+    env_file:
+      - .env
+    networks:
+      - cast-network
+    command: celery -A config worker --loglevel=info
+  
+  redis:
+    image: redis:7-alpine
+    container_name: cast-redis
+    ports:
+      - "6379:6379"
     restart: unless-stopped
     networks:
       - cast-network

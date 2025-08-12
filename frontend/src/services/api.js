@@ -134,10 +134,13 @@ export const logout = async () => {
   return response.data;
 };
 
+export const getImageData = async(image_id) => {
+  const response = await API.get(`/image_data/?image_id=${encodeURIComponent(image_id)}`)
+  return response.data.images;
+};
 
-
-export const getUserData = async() => {
-  const response = await API.get('/get_user_data/')
+export const getImageDataAll = async() => {
+  const response = await API.get('/image_data/')
   return response;
 };
 
@@ -153,7 +156,7 @@ export const deleteFigure = async(filename) => {
 
 export const serveImage = async(filename) => {
   try {
-    const response = await API.get(`/serve_image/${filename}/`, {
+    const response = await API.get(`/serve_image/${encodeURIComponent(filename)}/`, {
       responseType: 'blob',
     })
     
@@ -194,23 +197,17 @@ export const clearNarrativeCache = async() => {
   return response.data;
 };
 
-export const generateLongDescriptions = async() => {
-  const response = await API.post('/generate_long_descriptions/')
+export const generateDescription = async(image_id) => {
+  const response = await API.post(`/generate_descriptions/?image_id=${encodeURIComponent(image_id)}`)
   return response.data;
 };
 
-export const generateSingleLongDescription = async(imageId) => {
-  const response = await API.post('/generate_single_long_description/', { image_id: imageId })
+export const generateDescriptionAll = async() => {
+  const response = await API.post('/generate_descriptions/')
   return response.data;
 };
-
 
 export const logAction = async(data) => {
   const response = await API.post('/log_action/', data)
-  return response.data;
-};
-
-export const generateLongDescriptionForImage = async(imageId) => {
-  const response = await API.post('/generate_single_long_description/', { image_id: imageId })
   return response.data;
 };

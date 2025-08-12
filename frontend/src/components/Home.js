@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Bin from './Bin';
-import { getUserData, uploadFigure, getNarrativeCache, updateNarrativeCache, clearNarrativeCache, updateImageData, runScript, generateLongDescriptions } from '../services/api';
+import { getImageDataAll, uploadFigure, getNarrativeCache, updateNarrativeCache, clearNarrativeCache, updateImageData, runScript, generateDescriptionAll } from '../services/api';
 import { Container, Row, Col, Button, Spinner} from 'react-bootstrap';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -14,6 +14,7 @@ function Home() {
   const [uploading, setUploading] = useState(false);
   const [categorizeOutput, setCategorizeOutput] = useState('');
   const [themeOutput, setThemeOutput] = useState('');
+  const [imagesGeneratingIds, setImagesGeneratingIds] = useState(new Set());
 
   
   const [sequenceOutput, setSequenceOutput] = useState('');
@@ -25,8 +26,12 @@ function Home() {
 
   // Reusable function to fetch user data
   const fetchUserData = () => {
-    getUserData()
+    getImageDataAll()
       .then((response) => {
+        if (response.data.images.length === 0) {
+          setImages([]);
+          return;
+        } 
         const fetchedImages = response.data.images.map((img) => ({
           ...img,
           x: img.in_storyboard ? img.x : 0,
@@ -188,24 +193,16 @@ function Home() {
       });
   };
 
-  const generateDescriptionsLocal = () => {
+  const generateDescriptionsLocal = async () => {
     setLoadingDescriptions(true);
-    generateLongDescriptions()
-      .then(() => getUserData())
-      .then((response) => {
-        const updatedImages = response.data.images.map((img) => ({
-          ...img,
-          x: img.in_storyboard ? img.x : 0,
-          y: img.in_storyboard ? img.y : 0,
-        }));
-        setImages(updatedImages);
-        setLoadingDescriptions(false);
-      })
-      .catch((error) => {
-        console.error('Error generating descriptions:', error);
-        setLoadingDescriptions(false);
-        alert('Failed to generate descriptions. Please try again.');
-      });
+    const response = await generateDescriptionAll();
+    if (response.status === 'success') {
+      setImagesGeneratingIds(new Set(response.data.map((img) => img.id)));
+    } else {
+      console.error('Error generating descriptions:', response.message);
+      alert('Failed to generate descriptions. Please try again.');
+    }
+    setLoadingDescriptions(false);
   };
 
   // onDelete callback: re-fetch data after deletion
@@ -244,10 +241,15 @@ function Home() {
           {uploading ? 'Uploading...' : 'Upload Figure'}
         </Button>
 
-        <Button variant="secondary" className="generate-desc-header" onClick={generateDescriptionsLocal}>
-          Generate Descriptions
-        </Button>
-        {loadingDescriptions && <Spinner animation="border" size="sm" />}
+        {imagesGeneratingIds.size > 0 ? (
+          <Button variant="secondary" className="generate-desc-header" disabled>
+            Generating Descriptions...
+          </Button>
+        ) : (
+          <Button variant="secondary" className="generate-desc-header" onClick={generateDescriptionsLocal}>
+            Generate Descriptions
+          </Button>
+        )}
 
         <Button variant="primary" className="generate-story-header" onClick={runScriptLocal}>
           Generate Story
