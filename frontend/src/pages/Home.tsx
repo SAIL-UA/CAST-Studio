@@ -10,7 +10,7 @@ import Header from '../components/Header';
 import NavDropdown from '../components/NavDropdown';
 import StoryBoard from '../components/StoryBoard';
 import DataStories from '../components/DataStories';
-import Trash from '../components/Trash';
+import Trash from '../components/Recycle';
 import RecommendedNarratives from '../components/RecommendedNarratives';
 import Footer from '../components/Footer';
 
@@ -19,7 +19,6 @@ import Footer from '../components/Footer';
 
 // Import utils
 import { handleAuthRequired } from '../utils/utils';
-import UploadButton from '../components/UploadButton';
 
 // Login page component
 const Home = () => {
@@ -83,7 +82,7 @@ const Home = () => {
                                 <button id="story-button"
                                 className={`underline-animate ${trashSelected ? 'active' : ''} mx-3`}
                                 onClick={handleTrash}>
-                                Trash
+                                Recycle Bin
                                 </button>
                             </div>
                         </div>

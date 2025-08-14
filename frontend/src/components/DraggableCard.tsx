@@ -100,7 +100,7 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, onTrash, onUnTra
         document.body.style.overflow = 'auto';
       });
   };
-
+/**
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this figure?')) {
       return;
@@ -124,7 +124,7 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, onTrash, onUnTra
       alert('An error occurred while deleting the figure');
     }
   };
-
+*/
   const handleGenerateDescription = () => {
     setLoadingGenDesc(true);
     axios

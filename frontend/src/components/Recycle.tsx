@@ -3,8 +3,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 // Import components
-import UploadButton from './UploadButton';
-import GenerateStoryButton from './GenerateStoryButton';
 import Bin from './Bin';
 
 // Import types
@@ -97,7 +95,7 @@ const Trash = () => {
         return (
             <div id="trash-container" className="flex flex-col w-full h-full mt-4 bg-white">
                 <div className="flex items-center justify-center h-full">
-                    <div className="text-lg text-grey-darkest">Loading trash...</div>
+                    <div className="text-lg text-grey-darkest">Loading Recycle Bin...</div>
                 </div>
             </div>
         );
