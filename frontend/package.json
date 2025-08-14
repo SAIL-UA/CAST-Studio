@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "proxy": "http://172.16.22.6:8055",
   "dependencies": {
+    "@fontsource/roboto": "^5.2.6",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^16.3.0",
