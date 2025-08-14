@@ -29,9 +29,9 @@ const NavDropdown = () => {
 
     // Visible component
     return (
-        <div id="nav-dropdown-container" className="flex flex-col mt-10 mx-8">
+        <div id="nav-dropdown-container" className="flex flex-col mt-10 mx-8 font-roboto-regular text-indigo-darkest">
             <ul className="space-y-2">
-                <li className="cursor-pointer hover:font-semibold"
+                <li className="cursor-pointer hover:text-indigo"
                 onClick={() => navigate(`/`)}>
                     <span className="flex items-center justify-start">
                         <img src={home} alt="Home" className="w-4 h-4 mr-2" />
@@ -40,7 +40,7 @@ const NavDropdown = () => {
                 </li>
 
                 <li
-                className="cursor-pointer hover:font-semibold flex justify-between items-center"
+                className="cursor-pointer flex justify-between items-center hover:text-indigo"
                 onClick={toggleDropdown}
                 >
                 <span className="flex items-center justify-start">
@@ -57,40 +57,39 @@ const NavDropdown = () => {
                 </li>
 
                     <ul
-                    className={`
-                        ml-4 border-l border-gray-300 pl-4 space-y-1 text-sm text-gray-500
-                        dropdown-open
-                        ${tutorialsOpen ? 'dropdown-open-active' : ''}
+                    className={` ml-4 pl-4 border-l border-grey space-y-1
+                        dropdown-open text-grey-dark
+                        ${tutorialsOpen ? 'dropdown-open-active' : 'hidden'}
                     `}
                     >
-                        <li className="cursor-pointer hover:font-semibold"
+                        <li className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>
                         Gather Data Source
                         </li>
-                        <li className="cursor-pointer hover:font-semibold"
+                        <li className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>
                         Create Data Insights
                         </li>
-                        <li className="cursor-pointer hover:font-semibold"
+                        <li className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>
                         Create Data
                         </li>
-                        <li className="cursor-pointer hover:font-semibold"
+                        <li className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>
                         Generate Narrative Structure
                         </li>
-                        <li className="cursor-pointer hover:font-semibold"
+                        <li className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>Generate Data Story</li>
                     </ul>
 
-                <li className="cursor-pointer hover:font-semibold"
+                <li className="cursor-pointer hover:text-indigo"
                 onClick={handleDropdownSelection}>
                     <span className="flex items-center justify-start">
                         <img src={browse} alt="Browse" className="w-4 h-4 mr-2" />
                         Browse Narrative Patterns
                     </span>
                 </li>
-                <li className="cursor-pointer hover:font-semibold"
+                <li className="cursor-pointer hover:text-indigo"
                 onClick={handleDropdownSelection}>
                     <span className="flex items-center justify-start">
                         <img src={home} alt="JupyterHub" className="w-4 h-4 mr-2" />

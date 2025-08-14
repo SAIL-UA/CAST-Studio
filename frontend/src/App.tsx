@@ -1,10 +1,8 @@
 // Import dependencies
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import axios from 'axios';
 
-// Import components
-import Header from './components/Header';
+// Import providers
+import { useAuth } from './contexts/Auth';
 
 // Import pages
 import Home from './pages/Home';
@@ -13,42 +11,21 @@ import Construction from './pages/construction';
 
 // Main App component
 function App() {
-  // Helpers
-
-  // States
-  const [userAuthenticated, setUserAuthenticated] = useState(false);
-
   // Don't worry about logging for now, however I would like to put that in a separate Logging file so the frontend code is cleaner
-
-  // Check authentication on load
-  useEffect(() => {
-    // Check authentication on load
-    axios
-      .get('/check_auth', { withCredentials: true })
-      .then((response) => {
-        setUserAuthenticated(response.data.authenticated);
-      })
-      .catch((error) => {
-        console.error('Error checking authentication:', error);
-        setUserAuthenticated(false); // Default to unauthenticated on error
-      });
-  }, []);
+  
+  // Contexts
+  const { userAuthenticated } = useAuth();
 
   //  Visible component
   return (
     <Router>
-      <div id="app-container" className="bg-gray-light">
-        <div id="header-container" className="h-[min(8vh,8vw)]">
-          <Header userAuthenticated={userAuthenticated} setUserAuthenticated={setUserAuthenticated} />
-        </div>
-        <div id="content-container" className="min-h-[calc(100vh-min(8vh,8vw))]">
+      <div id="app-container" className="bg-grey-lighter font-roboto-regular">
             <Routes>
                 <Route path='/' element={userAuthenticated ? <Navigate to="/home" /> : <Navigate to="/login" />} />
-                <Route path='/home' element={<Home userAuthenticated={userAuthenticated} />} />
-                <Route path='/login' element={<Login userAuthenticated={userAuthenticated} setUserAuthenticated={setUserAuthenticated} />} />
+                <Route path='/home' element={<Home />} />
+                <Route path='/login' element={<Login />} />
                 <Route path='/construction' element={<Construction />} />
             </Routes>
-        </div>
       </div>
     </Router>
   );

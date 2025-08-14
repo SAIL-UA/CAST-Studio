@@ -3,14 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Import context
+import { useAuth } from '../contexts/Auth';
+
 // Import components
 
 // Import pages
 
 // Login page component
-const Login = ({ userAuthenticated, setUserAuthenticated }: { userAuthenticated: boolean, setUserAuthenticated: (authenticated: boolean) => void }) => {
+const Login = () => {
     // Helpers
     const navigate = useNavigate();
+    const { userAuthenticated, setUserAuthenticated } = useAuth();
     
     // States
     const [username, setUsername] = useState('');
@@ -47,7 +51,7 @@ const Login = ({ userAuthenticated, setUserAuthenticated }: { userAuthenticated:
         <div className="flex w-full h-screen text-white">
             {/* Left: Logo + Title */}
             <div id="left-login" className="w-1/2 flex items-center justify-center">
-                <div className="flex flex-col items-center justify-center bg-gradient-to-br from-bama-crimson via-bama-teal to-gray-light h-full w-full">
+                <div className="flex flex-col items-center justify-center bg-gradient-to-br from-bama-crimson via-bama-teal to-grey-light h-full w-full">
                 <svg
                     className="w-1/4 h-1/4 mx-auto mb-2 text-white"
                     xmlns="http://www.w3.org/2000/svg"
@@ -69,7 +73,7 @@ const Login = ({ userAuthenticated, setUserAuthenticated }: { userAuthenticated:
             </div>
 
             {/* Right: Login Form */}
-            <div id="right-login" className="w-1/2 flex items-center justify-center bg-gradient-to-bl from-bama-crimson via-bama-teal to-gray-light">
+            <div id="right-login" className="w-1/2 flex items-center justify-center bg-gradient-to-bl from-bama-crimson via-bama-teal to-grey-light">
                 <div className="w-3/4 max-w-sm">
                 <h1 className="text-2xl font-bold mb-2 text-white">Welcome Back!</h1>
                 <h3 className="text-lg font-semibold mb-6 text-white">Log in to get building stories!</h3>
@@ -90,7 +94,7 @@ const Login = ({ userAuthenticated, setUserAuthenticated }: { userAuthenticated:
                     />
                     <button
                     type="submit"
-                    className="mt-2 bg-gray-light text-bama-crimson font-semibold py-2 rounded-md hover:bg-gray-100 transition"
+                    className="mt-2 bg-grey-light text-bama-crimson font-semibold py-2 rounded-md hover:bg-grey-lightest transition"
                     >
                     Login
                     </button>

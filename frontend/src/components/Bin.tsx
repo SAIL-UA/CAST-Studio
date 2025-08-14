@@ -5,7 +5,7 @@ import { useDrop } from 'react-dnd';
 import { BinProps, DragItem } from '../types/types';
 import DraggableCard from './DraggableCard';
 
-function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSuggestedOrderBin = false }: BinProps) {
+function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, isSuggestedOrderBin = false }: BinProps) {
   const binRef = useRef<HTMLDivElement>(null);
 
   // React DnD hook for drop functionality
@@ -59,13 +59,13 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSu
     let baseClasses = "relative w-full h-full rounded-sm transition-colors duration-200";
     
     if (isSuggestedOrderBin) {
-      baseClasses += " bg-gray-50 border-gray-300";
+      baseClasses += " bg-grey-lightest border-grey-lightest";
     } else if (isOver && canDrop) {
       baseClasses += " bg-blue-50 border-blue-400 border-dashed";
     } else if (canDrop) {
-      baseClasses += " bg-gray-100 border-gray-400 border-dashed";
+      baseClasses += " bg-grey-lightest border-grey-lightest border-dashed";
     } else {
-      baseClasses += " bg-white border-gray-300";
+      baseClasses += " bg-white border-grey-lightest";
     }
     
     return baseClasses;
@@ -105,6 +105,8 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSu
             image={image}
             onDescriptionsUpdate={onDescriptionsUpdate}
             onDelete={onDelete}
+            onTrash={onTrash}
+            onUnTrash={onUnTrash}
             draggable={!isSuggestedOrderBin} 
           />
         ))}
@@ -112,12 +114,12 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, isSu
 
       {/* Empty state */}
       {images.length === 0 && !isOver && (
-        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+        <div className="absolute inset-0 flex items-center justify-center text-grey-dark">
           <div className="text-center">
             {isSuggestedOrderBin ? (
               <p>No suggested order available</p>
             ) : (
-              <p>Drag images here</p>
+              <p>No Data Stories</p>
             )}
           </div>
         </div>

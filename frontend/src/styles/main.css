@@ -1,23 +1,39 @@
+/* Tailwind imports */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Imports */
+@import "@fontsource/roboto/300.css"; /* Light */
+@import "@fontsource/roboto/400.css"; /* Regular */
+@import "@fontsource/roboto/500.css"; /* Medium */
+@import "@fontsource/roboto/600.css"; /* Semi-bold */
+@import "@fontsource/roboto/700.css"; /* Bold */
 
-
-.bg-bama-crimson {
-  background-color: theme('colors.bama-crimson');
+/* Custom font weight utilities */
+.font-roboto-light {
+  font-family: theme('fontFamily.roboto');
+  font-weight: 300;
 }
 
-.bg-bama-burgundy {
-  background-color: theme('colors.bama-burgundy');
+.font-roboto-regular {
+  font-family: theme('fontFamily.roboto');
+  font-weight: 400;
 }
 
-.bg-gray {
-  background-color: theme('colors.gray');
+.font-roboto-medium {
+  font-family: theme('fontFamily.roboto');
+  font-weight: 500;
 }
 
-.bg-gray-light {
-  background-color: theme('colors.gray-light');
+.font-roboto-semibold {
+  font-family: theme('fontFamily.roboto');
+  font-weight: 600;
+}
+
+.font-roboto-bold {
+  font-family: theme('fontFamily.roboto');
+  font-weight: 700;
 }
 
 /* Underline button animation */
@@ -31,7 +47,7 @@
   .underline-animate::after {
     content: "";
     position: absolute;
-    bottom: 0;
+    bottom: -0.5rem;
     left: 50%;
     width: 0%;
     height: 2px;

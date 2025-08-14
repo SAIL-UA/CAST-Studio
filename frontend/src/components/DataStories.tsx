@@ -57,7 +57,7 @@ const DataStories = () => {
         <div id="data-stories-container" className="flex flex-col w-full h-full">
             
             {/* Header */}
-            <div id="data-stories-header" className="flex h-1/5 w-full">
+            <div id="data-stories-header" className="flex mt-6 w-full">
                 <div id="data-stories-header-left" className="flex w-full h-full items-end justify-start">
                     <h2 className="text-3xl">Data Stories</h2>
                 </div>
@@ -83,15 +83,15 @@ const DataStories = () => {
                 {narrativeSelected ? (
                     // Narrative Structuring Content
                     <div className="w-full space-y-6">
-                        <h3 className="text-xl font-semibold text-gray-700 mb-4">Narrative Structuring</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structuring</h3>
                         
                         {storyData ? (
                             <>
                                 {/* Theme and Objective */}
                                 {storyData.theme_response && (
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                        <h4 className="font-semibold text-gray-700 mb-2">Theme & Objective</h4>
-                                        <div className="text-gray-600 whitespace-pre-wrap">
+                                    <div className="bg-grey-lightest p-4 rounded-lg">
+                                        <h4 className="font-semibold text-grey-darkest mb-2">Theme & Objective</h4>
+                                        <div className="text-grey-darkest whitespace-pre-wrap">
                                             {storyData.theme_response}
                                         </div>
                                     </div>
@@ -99,9 +99,9 @@ const DataStories = () => {
 
                                 {/* Figure Categories */}
                                 {storyData.categorize_figures_response && (
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                        <h4 className="font-semibold text-gray-700 mb-2">Figure Categories</h4>
-                                        <div className="text-gray-600 whitespace-pre-wrap">
+                                    <div className="bg-grey-lightest p-4 rounded-lg">
+                                        <h4 className="font-semibold text-grey-darkest mb-2">Figure Categories</h4>
+                                        <div className="text-grey-darkest whitespace-pre-wrap">
                                             {storyData.categorize_figures_response}
                                         </div>
                                     </div>
@@ -109,9 +109,9 @@ const DataStories = () => {
 
                                 {/* Sequence Justification */}
                                 {storyData.sequence_response && (
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                        <h4 className="font-semibold text-gray-700 mb-2">Sequence Justification</h4>
-                                        <div className="text-gray-600 whitespace-pre-wrap">
+                                    <div className="bg-grey-lightest p-4 rounded-lg">
+                                        <h4 className="font-semibold text-grey-darkest mb-2">Sequence Justification</h4>
+                                        <div className="text-grey-darkest whitespace-pre-wrap">
                                             {storyData.sequence_response}
                                         </div>
                                     </div>
@@ -119,9 +119,9 @@ const DataStories = () => {
 
                                 {/* Recommended Order */}
                                 {storyData.recommended_order && storyData.recommended_order.length > 0 && (
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                        <h4 className="font-semibold text-gray-700 mb-2">Recommended Figure Order</h4>
-                                        <ol className="list-decimal list-inside text-gray-600">
+                                    <div className="bg-grey-lightest p-4 rounded-lg">
+                                        <h4 className="font-semibold text-grey-darkest mb-2">Recommended Figure Order</h4>
+                                        <ol className="list-decimal list-inside text-grey-darkest">
                                             {storyData.recommended_order.map((filename, index) => (
                                                 <li key={index} className="mb-1">{filename}</li>
                                             ))}
@@ -130,7 +130,7 @@ const DataStories = () => {
                                 )}
                             </>
                         ) : (
-                            <div className="text-center text-gray-500 mt-8">
+                            <div className="text-center text-grey-darkest mt-8">
                                 <p>No narrative structuring data available.</p>
                                 <p className="text-sm mt-2">Click "Generate Story" to create narrative insights.</p>
                             </div>
@@ -139,16 +139,16 @@ const DataStories = () => {
                 ) : (
                     // Generated Story Content (when storySelected is true)
                     <div className="w-full">
-                        <h3 className="text-xl font-semibold text-gray-700 mb-4">Generated Story</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story</h3>
                         
                         {storyData?.narrative ? (
-                            <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed text-base">
+                            <div className="bg-white p-4 rounded-lg border border-grey-lightest">
+                                <div className="prose max-w-none text-grey-darkest whitespace-pre-wrap leading-relaxed text-base">
                                     {storyData.narrative}
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-center text-gray-500 mt-8">
+                            <div className="text-center text-grey-darkest mt-8">
                                 <p>No story generated yet.</p>
                                 <p className="text-sm mt-2">Click "Generate Story" to create your data story.</p>
                             </div>

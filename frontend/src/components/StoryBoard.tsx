@@ -10,8 +10,8 @@ import Bin from './Bin';
 // Import types
 import { ImageData } from '../types/types';
 
-// Workspace component
-const Workspace = () => {
+// StoryBoard component
+const StoryBoard = () => {
     // State management for images
     const [images, setImages] = useState<ImageData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -22,8 +22,8 @@ const Workspace = () => {
             const response = await axios.get('/get_user_data', { withCredentials: true });
             const fetchedImages = response.data.images.map((img: any, index: number) => ({
                 ...img,
-                // Set all images as in_storyboard: true for story generation
-                in_storyboard: true,
+                // Keep the in_storyboard value from the backend
+                in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : true,
                 // Initialize positions for new images that don't have coordinates
                 x: img.x !== undefined ? img.x : (index % 4) * 160,
                 y: img.y !== undefined ? img.y : Math.floor(index / 4) * 120,
@@ -39,7 +39,7 @@ const Workspace = () => {
                         '/update_image_data',
                         { 
                             id: img.id, 
-                            in_storyboard: true,
+                            in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : true,
                             x: img.x,
                             y: img.y
                         },
@@ -116,15 +116,25 @@ const Workspace = () => {
         fetchUserData(); // Refresh data after deletion
     };
 
-    // Show all images in the story bin for now
-    const allImages = images;
+    // Handle image trash
+    const handleTrash = (imageId: string) => {
+        updateImageData(imageId, { in_storyboard: false });
+    };
+
+    // Handle image untrash
+    const handleUnTrash = (imageId: string) => {
+        updateImageData(imageId, { in_storyboard: true });
+    };
+
+    // Show only images that are in the storyboard (in_storyboard === true)
+    const workspaceImages = images.filter(img => img.in_storyboard === true);
 
     // Loading state
     if (loading) {
         return (
-            <div id="workspace-container" className="flex flex-col w-full h-full">
-                <div className="flex items-center justify-center h-full">
-                    <div className="text-lg text-gray-600">Loading workspace...</div>
+            <div id="story-board-container" className="flex flex-col w-full h-full mt-4 bg-white">
+                <div className="flex items-center justify-center h-full bg-white">
+                    <div className="text-lg text-grey-darkest">Loading Story Board...</div>
                 </div>
             </div>
         );
@@ -132,41 +142,32 @@ const Workspace = () => {
 
     // Visible component
     return (
-        <div id="workspace-container" className="flex flex-col w-full h-full">
-            
-            {/* Header */}
-            <div id="workspace-header" className="flex h-1/5 w-full">
-                <div id="workspace-header-left" className="flex w-full h-full items-end justify-start">
-                    <h3 className="text-3xl">Workspace</h3>
-                </div>
-                <div id="workspace-header-right" className="flex w-1/2 h-full items-end justify-end gap-2">
-                    <UploadButton />
-                    <GenerateStoryButton images={images} />
-                </div>
-            </div>
+        <div id="story-board-container" className="flex flex-col w-full h-full">
 
-            {/* Workspace Content - Single Data Story Bin */}
-            <div id="workspace-content" className="flex flex-col w-full h-4/5 mt-4">
-                
-                {/* Data Story Bin */}
+            {/* Story Board Content - Single Data Story Bin */}
+            <div id="story-board-content" className="flex flex-col w-full h-full mt-4">
                 <div className="flex flex-col h-full">
-                    <div className="mb-2">
-                        <p className="font-semibold text-gray-700">
-                            ({allImages.length} images)
-                        </p>
+                    {/* Data Story Bin */}
+                    <div id="story-bin-container" className="flex flex-col h-full w-full bg-white">
+                        <div id="story-bin-header" className="flex w-full items-center justify-start p-2">
+                            <UploadButton />
+                            <GenerateStoryButton images={workspaceImages} />
+                        </div>
+                        <Bin
+                            id="story-bin"
+                            images={workspaceImages}
+                            updateImageData={updateImageData}
+                            onDescriptionsUpdate={handleDescriptionsUpdate}
+                            onDelete={handleDelete}
+                            onTrash={handleTrash}
+                            onUnTrash={handleUnTrash}
+                            isSuggestedOrderBin={false}
+                        />
                     </div>
-                    <Bin
-                        id="story-bin"
-                        images={allImages}
-                        updateImageData={updateImageData}
-                        onDescriptionsUpdate={handleDescriptionsUpdate}
-                        onDelete={handleDelete}
-                        isSuggestedOrderBin={false}
-                    />
                 </div>
             </div>
         </div>
     )
 }
 
-export default Workspace;
+export default StoryBoard;
