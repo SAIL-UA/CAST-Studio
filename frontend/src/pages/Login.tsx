@@ -66,9 +66,9 @@ const Login = () => {
                     />
                 </svg>
                 <h1 className="text-4xl font-bold mb-2 text-white">Story Studio</h1>
-                <h3 className="text-lg font-semibold mb-2 text-white">University of Alabama</h3>
-                <h3 className="text-lg font-semibold mb-2 text-white">University of Maryland, Baltimore County</h3>
-                <h3 className="text-lg font-semibold mb-2 text-white">SRI International</h3>
+                <h3 className="text-sm font-semibold mb-2 text-white">University of Alabama</h3>
+                <h3 className="text-sm font-semibold mb-2 text-white">University of Maryland, Baltimore County</h3>
+                <h3 className="text-sm font-semibold mb-2 text-white">SRI International</h3>
                 </div>
             </div>
 

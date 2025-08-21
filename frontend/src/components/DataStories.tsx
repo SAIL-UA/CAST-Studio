@@ -59,9 +59,9 @@ const DataStories = () => {
             {/* Header */}
             <div id="data-stories-header" className="flex mt-6 w-full">
                 <div id="data-stories-header-left" className="flex w-full h-full items-end justify-start">
-                    <h2 className="text-3xl">Data Stories</h2>
+                    <h3 className="text-2xl">Data Stories</h3>
                 </div>
-                <div id="data-stories-header-right" className="flex w-1/2 h-full items-end justify-end">
+                <div id="data-stories-header-right" className="flex w-1/2 h-full items-end justify-end text-sm">
                     
                     <button id="narrative-button"
                     className={`underline-animate ${narrativeSelected ? 'active' : ''} mx-3`}

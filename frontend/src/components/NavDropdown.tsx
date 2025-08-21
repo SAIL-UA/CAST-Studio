@@ -30,7 +30,7 @@ const NavDropdown = () => {
     // Visible component
     return (
         <div id="nav-dropdown-container" className="flex flex-col mt-10 mx-8 font-roboto-regular text-indigo-darkest">
-            <ul className="space-y-2">
+            <ul className="space-y-4 text-sm font-sans">
                 <li className="cursor-pointer hover:text-indigo"
                 onClick={() => navigate(`/`)}>
                     <span className="flex items-center justify-start">

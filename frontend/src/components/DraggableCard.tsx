@@ -179,9 +179,9 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, onTrash, onUnTra
             image.long_desc?.trim() ? 'border border-grey-lightest' : 'border-2 border-red-500'
           }`}
         >
-          <div id="card-header" className="flex p-2 bg-bama-crimson">
+          <div id="card-header" className="flex p-1 bg-bama-crimson">
             <div id="card-header-left" className="flex justify-start w-1/2">
-              <p className="text-xs text-white font-roboto-medium">
+              <p className="text-xs text-white font-sans">
                 Visual {(image.id).charAt(image.id.length - 1)}
               </p>
             </div>
@@ -290,13 +290,13 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, onTrash, onUnTra
                   onClick={handleTrash}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Trash Figure
+                  Delete Figure
                 </button>
                 <button
                   onClick={handleUnTrash}
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  UnTrash Figure
+                  Restore to Workspace
                 </button>
                 <button
                   onClick={handleClose}
