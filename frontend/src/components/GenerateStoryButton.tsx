@@ -155,8 +155,8 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
         if (AIRef.current) {
             const rect = AIRef.current.getBoundingClientRect();
             setAIPosition({
-                top: rect.bottom + window.scrollY,
-                left: rect.left + window.scrollX,
+                top: rect.bottom,
+                left: rect.left,
                 width: rect.width
             });
         }
@@ -167,8 +167,8 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
         if (manualNarrativeRef.current) {
             const rect = manualNarrativeRef.current.getBoundingClientRect();
             setNarrativePosition({
-                top: rect.top + window.scrollY,
-                left: rect.right + window.scrollX,
+                top: rect.top,
+                left: rect.right,
                 width: rect.width
             });
         }

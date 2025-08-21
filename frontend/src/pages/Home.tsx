@@ -177,7 +177,7 @@ const Home = () => {
                                         </svg>
                                     </div>
                                     <div id="right-top-top-text" className="flex flex-col justify-center w-2/3 m-l-1">
-                                        <h3 className="text-2xl">Data Storytelling</h3>
+                                        <h3 className="text-2xl">Username.</h3>
                                         <p className="text-sm">Since 2025</p>
                                     </div>
                                 </div>
