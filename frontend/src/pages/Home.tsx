@@ -124,7 +124,7 @@ const Home = () => {
                     <>
                         {/* Background for sidebar open on small screens */}
                         {!screenLarge && (
-                            <div id="right-sidebar-background" className="absolute top-0 right-0 h-screen w-screen bg-indigo-darkest opacity-50 z-5"></div>
+                            <div id="right-sidebar-background" className="fixed top-0 right-0 h-screen w-screen bg-indigo-darkest opacity-50 z-10"></div>
                         )}
                         
                         {/* Right home */}

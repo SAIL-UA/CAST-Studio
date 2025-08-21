@@ -232,7 +232,7 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
             onMouseLeave={handleAILeave}
         >
             <button 
-                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white rounded-tr-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white text-sm rounded-tr-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleAIStoryGeneration}
                 disabled={loading}
             >
@@ -241,7 +241,7 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
 
             <button 
                 ref={manualNarrativeRef}
-                className="block w-full bg-bama-crimson text-white rounded-b-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="block w-full bg-bama-crimson text-white text-sm rounded-b-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onMouseEnter={handleNarrativeEnter}
                 onMouseLeave={handleNarrativeLeave}
             >
@@ -271,35 +271,35 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
             onMouseLeave={handleNarrativeLeave}
         >
             <button 
-                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white rounded-tr-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white text-sm rounded-tr-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => handleNarrativeSelection('overview_to_detail')}
                 disabled={loading}
             >
                 Overview to Detail
             </button>
             <button 
-                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white text-sm px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => handleNarrativeSelection('cause_and_effect')}
                 disabled={loading}
             >
                 Cause and Effect
             </button>
             <button 
-                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white text-sm px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => handleNarrativeSelection('problem_and_solution')}
                 disabled={loading}
             >
                 Problem and Solution
             </button>
             <button 
-                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white text-sm px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => handleNarrativeSelection('time_based_progression')}
                 disabled={loading}
             >
                 Time-Based Progression
             </button>
             <button 
-                className="block w-full bg-bama-crimson text-white rounded-b-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="block w-full bg-bama-crimson text-white text-sm rounded-b-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => handleNarrativeSelection('shock_and_lead')}
                 disabled={loading}
             >
@@ -315,7 +315,7 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
                 <button 
                     ref={AIRef}
                     id="generate-story-button"
-                    className={`flex items-center bg-bama-crimson text-white rounded-t-2xl ${AIOpen ? 'border-grey-lightest border-b-2' : 'rounded-b-2xl'} px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={`flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl ${AIOpen ? 'border-grey-lightest border-b-2' : 'rounded-b-2xl'} px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
                     onMouseEnter={handleAIEnter}
                     onMouseLeave={handleAILeave}
                     disabled={loading}
