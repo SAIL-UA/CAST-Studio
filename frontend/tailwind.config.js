@@ -34,6 +34,19 @@ module.exports = {
         'roboto': ['Roboto', 'sans-serif'],
       },
     },
+    screens: {
+      // Minimum width breakpoints
+      'min-sm': {'min': '576px'},
+      'min-md': {'min': '768px'},
+      'min-lg': {'min': '992px'},
+      'min-xl': {'min': '1200px'},
+
+      // Maximum width breakpoints
+      'max-sm': {'max': '575px'},
+      'max-md': {'max': '767px'},
+      'max-lg': {'max': '991px'},
+      'max-xl': {'max': '1199px'},
+    }
   },
   plugins: [],
 }
