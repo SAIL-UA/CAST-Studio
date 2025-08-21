@@ -37,6 +37,7 @@ services:
       - "8051"
     volumes:
       - /data/CAST_ext:/data/CAST_ext
+      - static:/app/staticfiles
     networks:
       - cast-network
     command: >
@@ -68,14 +69,25 @@ services:
       - "443:443"
     volumes:
       - ./nginx/project.conf:/etc/nginx/conf.d/default.conf
-      - frontend_build:/var/www/html 
+      - frontend_build:/var/www/html
+      - static:/staticfiles:ro
       - nginx-logs:/var/log/nginx
+      - ./nginx/ssl:/etc/letsencrypt  # certs live here
+      - ./nginx/www:/var/www/certbot  # webroot for ACME challenge
     depends_on:
       - backend
       - frontend
     networks:
       - cast-network
     restart: always
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - ./nginx/ssl:/etc/letsencrypt
+      - ./nginx/www:/var/www/certbot
+    networks:
+      - "cast-network"
 
   jupyterhub:
     build:
@@ -124,3 +136,4 @@ volumes:
   db_data:
   nginx-logs:
   frontend_build:
+  static:

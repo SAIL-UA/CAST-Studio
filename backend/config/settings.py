@@ -29,11 +29,12 @@ LOGGING = {
 # Set the project base directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent  # Adjusted to point to root
 
-DATA_PATH = env('DATA_PATH')
+
 
 # Read the .env file located at the root directory
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
+DATA_PATH = env('DATA_PATH')#, default="/data/CAST_ext/users")
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_ACCEPT_CONTENT = ['json']
@@ -154,7 +155,7 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model
-AUTH_USER_MODEL = 'users.Users'
+AUTH_USER_MODEL = 'users.User'
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Stores sessions in the database
 SESSION_COOKIE_AGE = 900  # 15 minutes (adjust as needed)

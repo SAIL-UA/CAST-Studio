@@ -27,7 +27,7 @@ class CustomUserManager(BaseUserManager):
       raise ValueError("Superuser must have is_superuser=True.")
     return self.create_user(email, password, **extra_fields)
 
-class Users(AbstractUser):
+class User(AbstractUser):
   """
   Custom user model that uses email as the unique identifier.
   Each user is linked to one Faculty profile.

@@ -135,28 +135,28 @@ export const logout = async () => {
 };
 
 export const getImageData = async(image_id) => {
-  const response = await API.get(`/image_data/?image_id=${encodeURIComponent(image_id)}`)
+  const response = await API.get(`/images/?image_id=${encodeURIComponent(image_id)}`)
   return response.data.images;
 };
 
 export const getImageDataAll = async() => {
-  const response = await API.get('/image_data/')
+  const response = await API.get('/images/')
   return response;
 };
 
 export const uploadFigure = async(formData) => {
-  const response = await API.post('/upload_figure/', formData)
+  const response = await API.post('/images/upload/', formData)
   return response.data;
 };
 
 export const deleteFigure = async(filename) => {
-  const response = await API.post('/delete_figure/', { filename: filename })
+  const response = await API.post(`/images/${encodeURIComponent(filename)}/delete/`, {})
   return response.data;
 };
 
 export const serveImage = async(filename) => {
   try {
-    const response = await API.get(`/serve_image/${encodeURIComponent(filename)}/`, {
+    const response = await API.get(`/images/${encodeURIComponent(filename)}/serve/`, {
       responseType: 'blob',
     })
     
@@ -173,41 +173,52 @@ export const serveImage = async(filename) => {
 };
 
 export const updateImageData = async(imageId, data) => {
-  const response = await API.post('/update_image_data/', { image_id: imageId, data })
+  const response = await API.post(`/images/${imageId}/update/`, { data })
   return response;
 };
 
+export const generateNarrativeAsync = async() => {
+  const response = await API.post('/narrative/generate/async/')
+  return response.data;
+};
+
+export const generateNarrative = async() => {
+  const response = await API.post('/narrative/generate/')
+  return response.data;
+};
+
+// Deprecated: Use generateNarrative or generateNarrativeAsync instead
 export const runScript = async() => {
-  const response = await API.post('/run_script/')
+  const response = await API.post('/narrative/generate/')
   return response.data;
 };
 
 export const getNarrativeCache = async() => {
-  const response = await API.get('/get_narrative_cache/');
+  const response = await API.get('/narrative/cache/');
   return response;
 };
 
 export const updateNarrativeCache = async(data) => {
-  const response = await API.post('/update_narrative_cache/', { data })
+  const response = await API.post('/narrative/cache/update/', { data })
   return response.data; 
 };
 
 export const clearNarrativeCache = async() => {
-  const response = await API.post('/clear_narrative_cache/')
+  const response = await API.post('/narrative/cache/clear/')
   return response.data;
 };
 
 export const generateDescription = async(image_id) => {
-  const response = await API.post(`/generate_descriptions/?image_id=${encodeURIComponent(image_id)}`)
+  const response = await API.post(`/descriptions/generate/?image_id=${encodeURIComponent(image_id)}`)
   return response.data;
 };
 
 export const generateDescriptionAll = async() => {
-  const response = await API.post('/generate_descriptions/')
+  const response = await API.post('/descriptions/generate/')
   return response.data;
 };
 
 export const logAction = async(data) => {
-  const response = await API.post('/log_action/', data)
+  const response = await API.post('/actions/log/', data)
   return response.data;
 };

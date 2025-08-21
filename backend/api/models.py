@@ -1,5 +1,5 @@
 from django.db import models
-from users.models import Users
+from users.models import User
 import uuid
 
 class UserAction(models.Model):
@@ -7,8 +7,9 @@ class UserAction(models.Model):
   User actions.
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-  user = models.ForeignKey(Users, on_delete=models.CASCADE, db_column='user_id', related_name='user_actions')
+  user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='user_actions')
   action = models.JSONField(default=dict)
+  request_headers = models.JSONField(default=dict)
   timestamp = models.DateTimeField(auto_now_add=True)
   
   def __str__(self):
@@ -18,16 +19,16 @@ class UserAction(models.Model):
     db_table = 'user_actions'
     managed = True
     
-class JupyterLogs(models.Model):
+class JupyterLog(models.Model):
   """
   User-code execution logs from the JupyterHub server.
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-  user = models.ForeignKey(Users, on_delete=models.CASCADE, db_column='user_id', related_name='jupyter_logs')
+  user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='jupyter_logs')
   cell_type = models.TextField(default="")
   source = models.TextField(default="")
   metadata = models.JSONField(default=dict)
-  output = models.JSONField(default=dict)
+  outputs = models.JSONField(default=list)
   execution_count = models.IntegerField(default=0)
   timestamp = models.DateTimeField(auto_now_add=True)
   request_headers = models.JSONField(default=dict)
@@ -46,7 +47,7 @@ class ImageData(models.Model):
   Image data.
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-  user = models.ForeignKey(Users, on_delete=models.CASCADE, db_column='user_id', related_name='image_data')
+  user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='image_data')
   filepath = models.CharField(max_length=255)
   short_desc = models.TextField(default="")
   long_desc = models.TextField(default="")
@@ -72,7 +73,7 @@ class NarrativeCache(models.Model):
   """
   Narrative cache.
   """
-  user = models.OneToOneField(Users, on_delete=models.CASCADE, db_column='user_id', unique=True, related_name='narrative_cache')
+  user = models.OneToOneField(User, on_delete=models.CASCADE, db_column='user_id', unique=True, related_name='narrative_cache')
   narrative = models.TextField(default="")
   order = models.JSONField(default=list)
   theme = models.TextField(default="")

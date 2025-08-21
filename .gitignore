@@ -7,11 +7,10 @@ node_modules
 backend/jupyterhub_cookie_secret
 backend/jupyterhub.sqlite
 
+# Markdown files
+*.md
+!README.md
+
 # Django migrations
 **/migrations/*.py
 !**/migrations/__init__.py
-
-# Helper scripts for docker launch/takedown
-docker-down.sh
-docker-up.sh
-run.sh

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ImageData, NarrativeCache, JupyterLogs
+from .models import ImageData, NarrativeCache, JupyterLog
 
 class ImageDataSerializer(serializers.ModelSerializer):
   class Meta:
@@ -13,5 +13,5 @@ class NarrativeCacheSerializer(serializers.ModelSerializer):
     
 class JupyterLogsSerializer(serializers.ModelSerializer):
   class Meta:
-    model = JupyterLogs
+    model = JupyterLog
     fields = '__all__'

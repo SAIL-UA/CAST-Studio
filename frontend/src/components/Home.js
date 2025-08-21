@@ -8,7 +8,7 @@ import remarkGfm from 'remark-gfm';
 function Home() {
   const [images, setImages] = useState([]);
   const [output, setOutput] = useState('');
-  const [recommendedOrder, setRecommendedOrder] = useState([]);
+  const [order, setOrder] = useState([]);
   const [loadingNarrative, setLoadingNarrative] = useState(false);
   const [loadingDescriptions, setLoadingDescriptions] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -51,30 +51,42 @@ function Home() {
 
     getNarrativeCache()
     .then((response) => {
-      if (response.status === 200 && response.data) {
-        const {
-          suggested_order = [],
-          generated_narrative = '',
-          theme = '',
-          categories = '',
-          sequence_justification = ''
-        } = response.data;
-        setRecommendedOrder(suggested_order);
-        setOutput(generated_narrative);
+      // axios response expected here; if you're using fetch, parse json() first
+      if (response && (response.status === 200 || response.status === 204)) {
+        // unwrap if server returns { status, data: {...} }, else use data directly
+        const payload = response?.data?.data ?? response?.data ?? {};
+
+        const order =
+          Array.isArray(payload.order) ? payload.order : [];
+
+        const narrative =
+          typeof payload.narrative === "string" ? payload.narrative : "";
+
+        const theme =
+          typeof payload.theme === "string" ? payload.theme : "";
+
+        // categories is an array of { filename, category } objects
+        const categories =
+          Array.isArray(payload.categories) ? payload.categories : [];
+
+        const sequenceJustification =
+          typeof payload.sequence_justification === "string"
+            ? payload.sequence_justification
+            : "";
+
+        setOrder(order);
+        setOutput(narrative);
         setThemeOutput(theme);
         setCategorizeOutput(categories);
-        setSequenceOutput(sequence_justification);
-      } else if (response.status === 204) {
-        console.log('Cache not found');
+        setSequenceOutput(sequenceJustification);
       } else {
-        console.error('Error fetching narrative cache:', response);
+        console.log('No narrative cache found');
       }
     })
     .catch((error) => {
       console.error('Error fetching narrative cache:', error);
-      // Silent fail for cache - not critical
     });
-}, []);
+  }, []);
 
   const updateNarrativeCacheLocal = (data) => {
     updateNarrativeCache({ data })
@@ -88,7 +100,7 @@ function Home() {
   const clearNarrativeCacheLocal = () => {
     clearNarrativeCache()
       .then(() => {
-        setRecommendedOrder([]);
+        setOrder([]);
         setOutput('');
         setCategorizeOutput('');
         setThemeOutput('');
@@ -159,27 +171,27 @@ function Home() {
         if (response.status === 'success') {
           const { 
             narrative, 
-            recommended_order, 
-            categorize_figures_response, 
-            theme_response, 
-            sequence_response 
+            order, 
+            categories, 
+            theme, 
+            sequence_justification 
           } = response;
           // Set final outputs
           setOutput(narrative);
-          setRecommendedOrder(recommended_order);
+          setOrder(order);
 
           // Set intermediate outputs
-          setCategorizeOutput(categorize_figures_response);
-          setThemeOutput(theme_response);
-          setSequenceOutput(sequence_response);
+          setCategorizeOutput(categories);
+          setThemeOutput(theme);
+          setSequenceOutput(sequence_justification);
 
           // Update the narrative cache if needed
           updateNarrativeCacheLocal({
-            suggested_order: recommended_order,
-            generated_narrative: narrative,
-            theme: theme_response,
-            categories: categorize_figures_response,
-            sequence_justification: sequence_response
+            order: order,
+            narrative: narrative,
+            theme: theme,
+            categories: categories,
+            sequence_justification: sequence_justification
           });
         } else {
           console.error('Error in script:', response.message);
@@ -357,8 +369,8 @@ function Home() {
           ) : (
             <Bin
               id="suggested-order-bin"
-              images={recommendedOrder
-                .map((filename) => images.find((img) => img.filename === filename))
+              images={order
+                .map((filename) => images.find((img) => img.filepath === filename))
                 .filter((img) => img)}
               updateImageData={() => {}}
               onDescriptionsUpdate={() => {}}

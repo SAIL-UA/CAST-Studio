@@ -8,6 +8,8 @@ import './App.css';
 function Register({ setUserAuthenticated }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [first_name, setFirst_name] = useState('');
+  const [last_name, setLast_name] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +27,7 @@ function Register({ setUserAuthenticated }) {
       return;
     }
 
-    register({ username, email, password })
+    register({ username, email, first_name, last_name, password })
       .then(response => {
         if (response.status === 201) {
           alert('Registration successful! Please log in.');
@@ -59,6 +61,26 @@ function Register({ setUserAuthenticated }) {
                     placeholder="Enter your username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </Form.Group>
+                <Form.Group controlId="formFirstName">
+                  <Form.Label>First Name</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Enter your first name"
+                    value={first_name}
+                    onChange={(e) => setFirst_name(e.target.value)}
+                    required
+                  />
+                </Form.Group>
+                <Form.Group controlId="formLastName">
+                  <Form.Label>Last Name</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Enter your last name"
+                    value={last_name}
+                    onChange={(e) => setLast_name(e.target.value)}
                     required
                   />
                 </Form.Group>

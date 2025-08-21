@@ -25,11 +25,12 @@ COPY . /app/
 RUN mkdir -p /data/CAST_ext/users
 RUN chmod -R 755 /data/CAST_ext/users
 
+# Set permissions for STATIC_ROOT
+RUN mkdir -p /app/staticfiles
+RUN chmod 755 /app/staticfiles
+
 # Expose port
 EXPOSE 8051
 
 # Command to run Gunicorn
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8051", "--workers", "3"]
-
-
-# YOU NEED TO ./DOCKER-DOWN.SH, REBUILD THE NOTEBOOK IMAGE, AND THEN ./DOCKER-UP.SH TO TEST EVERYTHING.
