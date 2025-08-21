@@ -36,10 +36,10 @@ const Header = () => {
 
     // Visible component
     return (
-        <div id="header-container" className='h-[6vh] font-roboto-regular'>
+        <div id="header-container" className='bg-bama-crimson text-center p-4 px-6 flex items-center'>
             <header className="h-full w-full sticky top-0 bg-bama-crimson flex items-center px-6">
                 {/* Left: Logo + Title */}
-                <div className="w-1/5 pl-10">
+                <div className="w-1/5">
                     <div onClick={() => navigate('/')}
                     className="flex items-center w-min cursor-pointer">
                         <svg
@@ -54,7 +54,7 @@ const Header = () => {
                             clipRule="evenodd"
                             />
                         </svg>
-                        <p className="text-white font-bold ml-2">StoryStudio</p>
+                        <p className="text-white font-roboto-semibold ml-2 mt-1 text-lg">StoryStudio</p>
                     </div>
                 </div>
 
@@ -66,10 +66,10 @@ const Header = () => {
                             <input
                                 type="search"
                                 placeholder="Search"
-                                className="w-full pl-8 pr-4 h-full rounded-md bg-bama-burgundy text-white placeholder-white/60 focus:outline-none"
+                                className="w-full font-sans text-sm text-white transition border-0 focus:outline-none focus:border-white placeholder-blue-200 rounded bg-bama-burgundy py-1 px-2 pl-10 appearance-none leading-normal ds-input"
                             />
                         </form>
-                        <div className="absolute top-2 left-2">
+                        <div className="absolute search-icon top-2 left-2">
                             <svg
                             className="w-4 h-4 text-white pointer-events-none"
                             xmlns="http://www.w3.org/2000/svg"
@@ -86,9 +86,9 @@ const Header = () => {
                 <div className="flex justify-end w-1/5">
                     {/* If user is logged in, show logout button */}
                     {userAuthenticated ? (
-                        <span className="text-white cursor-pointer" onClick={handleLogout}>Logout</span>
+                        <span className="text-white cursor-pointer text-sm" onClick={handleLogout}>Logout</span>
                     ) : (
-                        <span className="text-white cursor-pointer" onClick={() => navigate('/login')}>Login</span>
+                        <span className="text-white cursor-pointer text-sm" onClick={() => navigate('/login')}>Login</span>
                     )}
                 </div>
             </header>

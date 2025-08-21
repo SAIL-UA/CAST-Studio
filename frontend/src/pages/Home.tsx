@@ -33,7 +33,7 @@ const Home = () => {
     const [trashSelected, setTrashSelected] = useState(false);
     const [screenLarge, setScreenLarge] = useState(true);
     const [rightOpen, setRightOpen] = useState(false);
-    const [leftOpen, setLeftOpen] = useState(false);
+    // const [leftOpen, setLeftOpen] = useState(false);
 
     // Check authentication
     handleAuthRequired(userAuthenticated, navigate);
@@ -63,10 +63,10 @@ const Home = () => {
     useEffect(() => {
         if (screenLarge) {
             setRightOpen(true);
-            setLeftOpen(true);
+            // setLeftOpen(true);
         } else {
             setRightOpen(false);
-            setLeftOpen(false);
+            //setLeftOpen(false);
         }
     }, [screenLarge]);
 
@@ -74,7 +74,7 @@ const Home = () => {
     return (
         <>
             <Header />
-            <div id="home-container" className="flex w-full">
+            <div id="home-container" className="flex w-full font-roboto-light">
         
                 {/* Left Home */}
                 <div id="left-home" className="w-1/5 px-3 border-r border-1 border-grey-light max-xl:hidden">
@@ -90,13 +90,13 @@ const Home = () => {
                 </div>
 
                 {/* Middle Home */}
-                <div id="middle-home" className="w-3/5 max-xl:w-full px-3 flex flex-col border-l border-1 border-grey-light">
+                <div id="middle-home" className="w-3/5 max-xl:w-full px-4 flex flex-col border-l border-1 border-grey-light">
                     <div id="workspace" className="h-[65vh] flex flex-col justify-center">
                         <div id="workspace-header" className="flex mt-6 w-full">
                             <div id="workspace-header-left" className="flex w-full h-full items-end justify-start">
-                                <h3 className="text-3xl">Workspace</h3>
+                                <br /><br /><h3 className="text-2xl">Workspace</h3>
                             </div>
-                            <div id="workspace-header-right" className="flex w-1/2 h-full items-end justify-end gap-2">
+                            <div id="workspace-header-right" className="flex w-1/2 h-full items-end justify-end gap-2 text-sm">
                             <button id="narrative-button"
                                 className={`underline-animate ${storyboardSelected ? 'active' : ''} mx-3`}
                                 onClick={handleStoryboard}
@@ -112,9 +112,9 @@ const Home = () => {
                             </div>
                         </div>
                         {storyboardSelected ? <StoryBoard /> : <Trash />}
-                    </div>
+                    </div><br />
 
-                    <div id="data-stories" className="h-[75vh] pb-10 flex flex-col justify-center">
+                    <div id="data-stories" className="h-[75vh] pl-4 pr-4 pb-10 flex flex-col justify-center">
                         <DataStories />
                     </div>
                 </div>
@@ -148,7 +148,7 @@ const Home = () => {
                             )}
                             {/* Right top */}
                             <div id="right-top" className="h-[46vh]">
-                                <div id="right-top-top" className="flex w-full h-1/2">
+                                <div id="right-top-top" className="flex w-full h-1/4">
                                     <div className="flex w-1/3 justify-center items-center">
                                         <svg
                                             width="60"
