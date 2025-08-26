@@ -77,7 +77,7 @@ const Home = () => {
             <div id="home-container" className="flex w-full font-roboto-light">
         
                 {/* Left Home */}
-                <div id="left-home" className="w-1/5 px-3 border-r border-1 border-grey-light max-xl:hidden">
+                <div id="left-home" className="w-1/5 px-3 max-xl:hidden">
                     <div id="nav-dropdown" className="h-[46vh]">
                         <NavDropdown />
                     </div>
@@ -91,7 +91,7 @@ const Home = () => {
 
                 {/* Middle Home */}
                 <div id="middle-home" className="w-3/5 max-xl:w-full px-4 flex flex-col border-l border-1 border-grey-light">
-                    <div id="workspace" className="h-[65vh] flex flex-col justify-center">
+                    <div id="workspace" className="h-[75vh] flex flex-col justify-center pr-4 pl-4">
                         <div id="workspace-header" className="flex mt-6 w-full">
                             <div id="workspace-header-left" className="flex w-full h-full items-end justify-start">
                                 <br /><br /><h3 className="text-2xl">Workspace</h3>
@@ -147,7 +147,7 @@ const Home = () => {
                             </div>
                             )}
                             {/* Right top */}
-                            <div id="right-top" className="h-[46vh]">
+                            <div id="right-top" className="h-[46vh] mt-8">
                                 <div id="right-top-top" className="flex w-full h-1/4">
                                     <div className="flex w-1/3 justify-center items-center">
                                         <svg
@@ -177,7 +177,7 @@ const Home = () => {
                                         </svg>
                                     </div>
                                     <div id="right-top-top-text" className="flex flex-col justify-center w-2/3 m-l-1">
-                                        <h3 className="text-2xl">Username.</h3>
+                                        <h3 className="text-xl">Username.</h3>
                                         <p className="text-sm">Since 2025</p>
                                     </div>
                                 </div>
