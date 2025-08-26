@@ -13,9 +13,9 @@ import DataStories from '../components/DataStories';
 import Trash from '../components/Recycle';
 import RecommendedNarratives from '../components/RecommendedNarratives';
 import Footer from '../components/Footer';
+import NarrativePatterns from '../components/NarrativePatterns'
 
 // Import images
-
 
 // Import utils
 import { handleAuthRequired } from '../utils/utils';
@@ -34,6 +34,8 @@ const Home = () => {
     const [screenLarge, setScreenLarge] = useState(true);
     const [rightOpen, setRightOpen] = useState(false);
     // const [leftOpen, setLeftOpen] = useState(false);
+    const [narrativePatternsOpen, setNarrativePatternsOpen] = useState(false);
+    const [selectedPattern, setSelectedPattern] = useState('');
 
     // Check authentication
     handleAuthRequired(userAuthenticated, navigate);
@@ -79,7 +81,7 @@ const Home = () => {
                 {/* Left Home */}
                 <div id="left-home" className="w-1/5 px-3 max-xl:hidden">
                     <div id="nav-dropdown" className="h-[46vh]">
-                        <NavDropdown />
+                        <NavDropdown setNarrativePatternsOpen={setNarrativePatternsOpen} />
                     </div>
 
                     <div id="footer" className="h-[46vh] flex flex-col justify-start items-start">
@@ -91,32 +93,45 @@ const Home = () => {
 
                 {/* Middle Home */}
                 <div id="middle-home" className="w-3/5 max-xl:w-full px-4 flex flex-col border-l border-1 border-grey-light">
-                    <div id="workspace" className="h-[75vh] flex flex-col justify-center pr-4 pl-4">
-                        <div id="workspace-header" className="flex mt-6 w-full">
-                            <div id="workspace-header-left" className="flex w-full h-full items-end justify-start">
-                                <br /><br /><h3 className="text-2xl">Workspace</h3>
-                            </div>
-                            <div id="workspace-header-right" className="flex w-1/2 h-full items-end justify-end gap-2 text-sm">
-                            <button id="narrative-button"
-                                className={`underline-animate ${storyboardSelected ? 'active' : ''} mx-3`}
-                                onClick={handleStoryboard}
-                                >
-                                Storyboard
-                                </button>
-
-                                <button id="story-button"
-                                className={`underline-animate ${trashSelected ? 'active' : ''} mx-3`}
-                                onClick={handleTrash}>
-                                Recycle Bin
-                                </button>
-                            </div>
+                    
+                    {narrativePatternsOpen ? (
+                        <div id="narrative-patterns" className="h-[75vh] flex flex-col mt-6 pr-4 pl-4">
+                            <NarrativePatterns setSelectedPattern={setSelectedPattern} />
+                            {selectedPattern && <div id="selected-pattern" className="h-[75vh] flex flex-col mt-6 pr-4 pl-4">
+                                <h3 className="text-2xl">Selected Pattern</h3>
+                                <p>{selectedPattern}</p>
+                            </div>}
                         </div>
-                        {storyboardSelected ? <StoryBoard /> : <Trash />}
-                    </div><br />
+                    ) : (
+                        <>
+                            <div id="workspace" className="h-[75vh] flex flex-col justify-center pr-4 pl-4">
+                                <div id="workspace-header" className="flex mt-6 w-full">
+                                    <div id="workspace-header-left" className="flex w-full h-full items-end justify-start">
+                                        <br /><br /><h3 className="text-2xl">Workspace</h3>
+                                    </div>
+                                    <div id="workspace-header-right" className="flex w-1/2 h-full items-end justify-end gap-2 text-sm">
+                                    <button id="narrative-button"
+                                        className={`underline-animate ${storyboardSelected ? 'active' : ''} mx-3`}
+                                        onClick={handleStoryboard}
+                                        >
+                                        Storyboard
+                                        </button>
 
-                    <div id="data-stories" className="h-[75vh] pl-4 pr-4 pb-10 flex flex-col justify-center">
-                        <DataStories />
-                    </div>
+                                        <button id="story-button"
+                                        className={`underline-animate ${trashSelected ? 'active' : ''} mx-3`}
+                                        onClick={handleTrash}>
+                                        Recycle Bin
+                                        </button>
+                                    </div>
+                                </div>
+                                {storyboardSelected ? <StoryBoard /> : <Trash />}
+                            </div><br />
+
+                            <div id="data-stories" className="h-[75vh] pl-4 pr-4 pb-10 flex flex-col justify-center">
+                                <DataStories />
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Right Home */}
@@ -131,6 +146,7 @@ const Home = () => {
                         <div id="right-home" className={`${screenLarge ? 'w-1/5' : 'w-1/2'} px-3 bg-grey-lighter-2 z-20`}>
                             {!screenLarge && (
                             <div id="right-home-collapsed" className="w-[5%] bg-grey-lighter-2 items-start">
+                                {/* Right Open */}
                                 {rightOpen && (
                                     <button 
                                         id="toggle-right-home"

@@ -9,7 +9,7 @@ import browse from '../assets/images/browse.svg';
 
 
 // Nav dropdown component
-const NavDropdown = () => {
+const NavDropdown = ({ setNarrativePatternsOpen }: { setNarrativePatternsOpen: (open: boolean) => void }) => {
 
     // Navigation
     const navigate = useNavigate();
@@ -32,7 +32,10 @@ const NavDropdown = () => {
         <div id="nav-dropdown-container" className="flex flex-col mt-10 mx-8 font-roboto-regular text-indigo-darkest">
             <ul className="space-y-4 text-sm font-sans">
                 <li className="cursor-pointer hover:text-indigo"
-                onClick={() => navigate(`/`)}>
+                onClick={() => {
+                    setNarrativePatternsOpen(false);
+                    navigate(`/`);
+                }}>
                     <span className="flex items-center justify-start">
                         <img src={home} alt="Home" className="w-4 h-4 mr-2" />
                         Home
@@ -83,7 +86,7 @@ const NavDropdown = () => {
                     </ul>
 
                 <li className="cursor-pointer hover:text-indigo"
-                onClick={handleDropdownSelection}>
+                onClick={() => setNarrativePatternsOpen(true)}>
                     <span className="flex items-center justify-start">
                         <img src={browse} alt="Browse" className="w-4 h-4 mr-2" />
                         Browse Narrative Patterns

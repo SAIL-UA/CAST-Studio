@@ -1,7 +1,6 @@
 // Import dependencies
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 // Helpers
@@ -15,21 +14,14 @@ interface GenerateStoryButtonProps {
 // Generate story button component
 const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
 
-    // Helpers
-    const navigate = useNavigate();
-
     // States
     const [loading, setLoading] = useState(false);
     const [AIOpen, setAIOpen] = useState(false);
     const [AIPosition, setAIPosition] = useState({ top: 0, left: 0, width: 0 });
-    const [narrativeOpen, setNarrativeOpen] = useState(false);
-    const [narrativePosition, setNarrativePosition] = useState({ top: 0, left: 0, width: 0 });
 
     // Refs
     const AIRef = useRef<HTMLButtonElement>(null);
-    const manualNarrativeRef = useRef<HTMLButtonElement>(null);
     const AITimeoutRef = useRef<NodeJS.Timeout | null>(null); // Get direct access to an HTML element from the DOM
-    const narrativeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Generate descriptions for images that don't have them
     const generateMissingDescriptions = async () => {
@@ -145,11 +137,6 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
         }
     }
 
-    // Handle manual narrative selection
-    const handleNarrativeSelection = (narrative: string) => {
-        navigate('/construction');
-    }
-
     // Calculate dropdown position relative to viewport
     const updateAIPosition = () => {
         if (AIRef.current) {
@@ -157,18 +144,6 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
             setAIPosition({
                 top: rect.bottom,
                 left: rect.left,
-                width: rect.width
-            });
-        }
-    };
-
-    // Calculate second dropdown position relative to first dropdown
-    const updateNarrativePosition = () => {
-        if (manualNarrativeRef.current) {
-            const rect = manualNarrativeRef.current.getBoundingClientRect();
-            setNarrativePosition({
-                top: rect.top,
-                left: rect.right,
                 width: rect.width
             });
         }
@@ -189,39 +164,13 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
     const handleAILeave = () => {
         AITimeoutRef.current = setTimeout(() => {
             setAIOpen(false);
-            setNarrativeOpen(false);
-        }, 150); // 150ms delay
-    };
-
-    // Handle hover for manual narrative button
-    const handleNarrativeEnter = () => {
-        // Clear any pending close timeout for narrative dropdown
-        if (narrativeTimeoutRef.current) {
-            clearTimeout(narrativeTimeoutRef.current);
-            narrativeTimeoutRef.current = null;
-        }
-        // Clear any pending close timeout for AI dropdown
-        if (AITimeoutRef.current) {
-            clearTimeout(AITimeoutRef.current);
-            AITimeoutRef.current = null;
-        }  
-        setAIOpen(true);
-        setNarrativeOpen(true);
-        updateNarrativePosition();
-    };
-
-    // Handle narrative leave
-    const handleNarrativeLeave = () => {
-        narrativeTimeoutRef.current = setTimeout(() => {
-            setNarrativeOpen(false);
-            setAIOpen(false);
         }, 150); // 150ms delay
     };
 
     // Dropdown content to be portaled
     const AIDropdownContent = AIOpen && (
         <div 
-            className={`fixed shadow-lg overflow-hidden m-0`}
+            className={`fixed shadow-lg bg-transparent overflow-hidden m-1`}
             style={{ 
                 zIndex: 99999,
                 top: AIPosition.top,
@@ -232,7 +181,7 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
             onMouseLeave={handleAILeave}
         >
             <button 
-                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white text-sm rounded-tr-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleAIStoryGeneration}
                 disabled={loading}
             >
@@ -240,70 +189,9 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
             </button>
 
             <button 
-                ref={manualNarrativeRef}
-                className="block w-full bg-bama-crimson text-white text-sm rounded-b-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onMouseEnter={handleNarrativeEnter}
-                onMouseLeave={handleNarrativeLeave}
+                className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                <span className={`flex items-center justify-center gap-2`}> 
                     Manually Select Narrative
-                    <svg className={`fill-current h-4 w-4 transition-transform duration-300 ease-in ${narrativeOpen ? 'rotate-180' : 'rotate-0'}`}
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20">
-                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
-                    </svg>
-                </span>
-            </button>
-        </div>
-    );
-
-    // Manual narrative selection dropdown content
-    const narrativeDropdownContent = narrativeOpen && (
-        <div 
-            className="fixed shadow-lg overflow-hidden m-0"
-            style={{ 
-                zIndex: 100000, // Higher than first dropdown
-                top: narrativePosition.top,
-                left: narrativePosition.left,
-                width: narrativePosition.width
-            }}
-            onMouseEnter={handleNarrativeEnter}
-            onMouseLeave={handleNarrativeLeave}
-        >
-            <button 
-                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white text-sm rounded-tr-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => handleNarrativeSelection('overview_to_detail')}
-                disabled={loading}
-            >
-                Overview to Detail
-            </button>
-            <button 
-                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white text-sm px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => handleNarrativeSelection('cause_and_effect')}
-                disabled={loading}
-            >
-                Cause and Effect
-            </button>
-            <button 
-                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white text-sm px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => handleNarrativeSelection('problem_and_solution')}
-                disabled={loading}
-            >
-                Problem and Solution
-            </button>
-            <button 
-                className="block w-full bg-bama-crimson border-grey-lightest border-b-2 text-white text-sm px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => handleNarrativeSelection('time_based_progression')}
-                disabled={loading}
-            >
-                Time-Based Progression
-            </button>
-            <button 
-                className="block w-full bg-bama-crimson text-white text-sm rounded-b-2xl px-3 py-1 m-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => handleNarrativeSelection('shock_and_lead')}
-                disabled={loading}
-            >
-                Shock and Lead
             </button>
         </div>
     );
@@ -315,7 +203,7 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
                 <button 
                     ref={AIRef}
                     id="generate-story-button"
-                    className={`flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl ${AIOpen ? 'border-grey-lightest border-b-2' : 'rounded-b-2xl'} px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={`flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
                     onMouseEnter={handleAIEnter}
                     onMouseLeave={handleAILeave}
                     disabled={loading}
@@ -336,9 +224,6 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
             {/* Portal the dropdowns to document.body */}
             {typeof document !== 'undefined' && AIDropdownContent && 
                 createPortal(AIDropdownContent, document.body)
-            }
-            {typeof document !== 'undefined' && narrativeDropdownContent && 
-                createPortal(narrativeDropdownContent, document.body)
             }
         </>
     )

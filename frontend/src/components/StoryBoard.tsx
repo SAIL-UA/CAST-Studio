@@ -5,6 +5,7 @@ import axios from 'axios';
 // Import components
 import UploadButton from './UploadButton';
 import GenerateStoryButton from './GenerateStoryButton';
+import GroupButton from './GroupButton';
 import Bin from './Bin';
 
 // Import types
@@ -151,6 +152,7 @@ const StoryBoard = () => {
                     <div id="story-bin-container" className="flex flex-col h-full w-full bg-white">
                         <div id="story-bin-header" className="flex w-full items-center justify-start p-2">
                             <UploadButton />
+                            <GroupButton />
                             <GenerateStoryButton images={workspaceImages} />
                         </div>
                         <Bin
