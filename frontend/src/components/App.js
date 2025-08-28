@@ -7,6 +7,8 @@ import { checkAuth, logout, logAction } from '../services/api';
 import Home from './Home';
 import Login from './Login';
 import Register from './Register';
+import ForgotPassword from './ForgotPassword';
+import ResetPassword from './ResetPassword';
 import Sidebar from './Sidebar';
 import './App.css';
 // In App.js
@@ -107,6 +109,8 @@ function App() {
 
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
+  const isForgotPasswordPage = location.pathname === '/forgot-password';
+  const isResetPasswordPage = location.pathname.includes('/reset-password');
 
   // While authentication status is being determined, show a loading state
   if (userAuthenticated === null) {
@@ -114,8 +118,8 @@ function App() {
   }
 
   return (
-    <div className={`App ${isLoginPage || isRegisterPage ? 'no-sidebar' : ''}`}>
-      {userAuthenticated && !isLoginPage && !isRegisterPage && <Sidebar handleLogout={handleLogout} />}
+    <div className={`App ${isLoginPage || isRegisterPage || isForgotPasswordPage || isResetPasswordPage ? 'no-sidebar' : ''}`}>
+      {userAuthenticated && !isLoginPage && !isRegisterPage && !isForgotPasswordPage && !isResetPasswordPage && <Sidebar handleLogout={handleLogout} />}
       <div className="content">
         <Routes>
           <Route
@@ -125,6 +129,14 @@ function App() {
           <Route
             path="/register"
             element={userAuthenticated ? <Navigate to="/home" /> : <Register setUserAuthenticated={setUserAuthenticated} />}
+          />
+          <Route
+            path="/forgot-password"
+            element={userAuthenticated ? <Navigate to="/home" /> : <ForgotPassword />}
+          />
+          <Route
+            path="/reset-password/:uid/:token"
+            element={userAuthenticated ? <Navigate to="/home" /> : <ResetPassword />}
           />
           <Route
             path="/home"

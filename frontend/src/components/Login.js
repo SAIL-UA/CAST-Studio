@@ -74,6 +74,17 @@ function Login({ setUserAuthenticated }) {
                 <Button variant="primary" className="w-100" onClick={handleLogin}>
                   Login
                 </Button>
+                
+                <div className="d-flex justify-content-between mt-2">
+                  <Button 
+                    variant="primary" 
+                    className="w-100" 
+                    onClick={() => navigate('/forgot-password')}
+                  >
+                    Forgot Password?
+                  </Button>
+                </div>
+                
                 <Button variant="primary" className="w-100" onClick={() => {
                   navigate('/register');
                 }}>

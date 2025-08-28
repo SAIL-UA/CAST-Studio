@@ -222,3 +222,17 @@ export const logAction = async(data) => {
   const response = await API.post('/actions/log/', data)
   return response.data;
 };
+
+// Password reset endpoints
+export const requestPasswordReset = async(email) => {
+  const response = await USER_API.post('/password-reset/', { email });
+  return response;
+};
+
+export const confirmPasswordReset = async(uid, token, newPassword, confirmPassword) => {
+  const response = await USER_API.post(`/password-reset-confirm/${uid}/${token}/`, {
+    new_password: newPassword,
+    confirm_password: confirmPassword
+  });
+  return response;
+};
