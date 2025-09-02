@@ -104,7 +104,7 @@ const Home = () => {
                         </div>
                     ) : (
                         <>
-                            <div id="workspace" className="h-[75vh] flex flex-col justify-center pr-4 pl-4">
+                            <div id="workspace" className="h-[65vh] flex flex-col justify-center pr-4 pl-4">
                                 <div id="workspace-header" className="flex mt-6 w-full">
                                     <div id="workspace-header-left" className="flex w-full h-full items-end justify-start">
                                         <br /><br /><h3 className="text-2xl">Workspace</h3>

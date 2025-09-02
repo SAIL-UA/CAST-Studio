@@ -36,6 +36,32 @@
   font-weight: 700;
 }
 
+.text-tiny {
+  font-size: 0.5rem;
+}
+
+.text-somewhat-tiny {
+  font-size: 0.6rem;
+}
+
+.text-somewhat-tiny-bold {
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+.text-tiny-bold {
+  font-size: 0.5rem;
+  font-weight: 500;
+}
+
+.card-width {
+  width: 100px;
+}
+
+.image-height{
+  height: 75px;
+}
+
 /* Underline button animation */
 @layer utilities {
 
@@ -54,6 +80,23 @@
     background-color: currentColor;
     transition: width 0.3s ease, left 0.3s ease;
     transform: translateX(-50%);
+  }
+
+  #story-bin-header{
+    background-color: #fff;
+    border-bottom-width: 0px;
+  }
+
+  #home-search-bar{
+    padding-top: 6px;
+  }
+
+  #home-search-icon{
+    padding-left: 5px;
+  }
+
+  #workspace{
+    height: 600px;
   }
   
   .underline-animate:hover::after,

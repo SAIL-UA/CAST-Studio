@@ -175,18 +175,18 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, onTrash, onUnTra
       >
         <div id="card-container"
           ref={cardRef}
-          className={`w-36 overflow-hidden rounded-sm shadow-md bg-grey-lighter-2 border-bama-crimson border-1 ${
+          className={`card-width overflow-hidden rounded-sm shadow-md bg-grey-lighter-2 border-bama-crimson border-1 ${
             image.long_desc?.trim() ? 'border border-grey-lightest' : 'border-2 border-red-500'
           }`}
         >
-          <div id="card-header" className="flex p-1 bg-bama-crimson">
+          <div id="card-header" className="flex p-1 bg-bama-crimson text-tiny-bold">
             <div id="card-header-left" className="flex justify-start w-1/2">
-              <p className="text-xs text-white font-sans">
+              <p className="text-white font-sans">
                 Visual {(image.id).charAt(image.id.length - 1)}
               </p>
             </div>
             <div id="card-header-right" className="flex justify-end w-1/2">
-              <button className="border-b border-white border-1 text-xs text-white font-roboto-medium hover:font-roboto-bold"
+              <button className="border-b border-white border-1 text-white font-roboto-medium hover:font-roboto-bold"
               onClick={handleShow}>
                 <p>
                   Edit
@@ -198,13 +198,13 @@ function DraggableCard({ image, onDescriptionsUpdate, onDelete, onTrash, onUnTra
             <img
               src={`/images/${image.filename}`}
               alt={image.id}
-              className="w-full h-24 object-cover"
+              className="w-full image-height object-cover"
             />
           </div>
           
           <div id="card-footer" 
           className="p-2">
-            <p className="text-xs text-grey-darkest overflow-hidden text-ellipsis line-clamp-4">
+            <p className="text-somewhat-tiny text-grey-darkest overflow-hidden text-ellipsis line-clamp-4">
               {image.short_desc}
             </p>
           </div>

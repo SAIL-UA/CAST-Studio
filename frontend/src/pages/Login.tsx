@@ -49,6 +49,7 @@ const Login = () => {
     // Visible component
     return (
         <div className="flex w-full h-screen text-white">
+            <div className="w-full absolute mt-4 ml-4 font-roboto-medium text-sm"><h1>NSF CAST: Coaching Data Storytelling at Scale</h1></div>
             {/* Left: Logo + Title */}
             <div id="left-login" className="w-1/2 flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center bg-gradient-to-br from-bama-crimson via-bama-teal to-grey-light h-full w-full">
@@ -65,18 +66,17 @@ const Login = () => {
                     clipRule="evenodd"
                     />
                 </svg>
-                <h1 className="text-4xl font-bold mb-2 text-white">Story Studio</h1>
-                <h3 className="text-sm font-semibold mb-2 text-white">University of Alabama</h3>
-                <h3 className="text-sm font-semibold mb-2 text-white">University of Maryland, Baltimore County</h3>
-                <h3 className="text-sm font-semibold mb-2 text-white">SRI International</h3>
+                <h1 className="text-7xl font-semibold mb-2 text-white">StoryStudio</h1>
+                <h3 className="text-2xl font-light mb-2 text-white">Create compelling data-driven stories.</h3>
+                <p className="text-xs font-light mb-2 text-white">Collaborators: UA, UMBC, SRI International. <u>Learn more</u> about CAST and NSF RITEL.</p>
+
                 </div>
             </div>
 
             {/* Right: Login Form */}
             <div id="right-login" className="w-1/2 flex items-center justify-center bg-gradient-to-bl from-bama-crimson via-bama-teal to-grey-light">
                 <div className="w-3/4 max-w-sm">
-                <h1 className="text-2xl font-bold mb-2 text-white">Welcome Back!</h1>
-                <h3 className="text-lg font-semibold mb-6 text-white">Log in to get building stories!</h3>
+                <h1 className="text-3xl font-semibold mb-2 text-white">Welcome!</h1><br/>
 
                 <form className="flex flex-col gap-4"
                 onSubmit={(e: React.FormEvent<HTMLFormElement>) => handleLogin(e)}>

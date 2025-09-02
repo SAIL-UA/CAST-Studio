@@ -63,13 +63,13 @@ const Header = () => {
                     <div className="relative w-full h-[55%]">
                         <form className="w-full h-full" 
                         onSubmit={(e: React.FormEvent<HTMLFormElement>) => handleSearch(e)}>
-                            <input
+                            <input id="home-search-bar"
                                 type="search"
                                 placeholder="Search"
-                                className="w-full font-sans text-sm text-white transition border-0 focus:outline-none focus:border-white placeholder-blue-200 rounded bg-bama-burgundy py-1 px-2 pl-10 appearance-none leading-normal ds-input"
+                                className="w-full font-roboto-light text-sm text-white transition border-0 focus:outline-none focus:border-white placeholder-blue-200 rounded bg-bama-burgundy py-1 px-2 pl-10 appearance-none leading-normal ds-input"
                             />
                         </form>
-                        <div className="absolute search-icon top-2 left-2">
+                        <div id="home-search-icon" className="absolute search-icon top-2 left-2">
                             <svg
                             className="w-4 h-4 text-white pointer-events-none"
                             xmlns="http://www.w3.org/2000/svg"

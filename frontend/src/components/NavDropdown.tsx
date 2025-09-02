@@ -75,10 +75,6 @@ const NavDropdown = ({ setNarrativePatternsOpen }: { setNarrativePatternsOpen: (
                         </li>
                         <li className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>
-                        Create Data
-                        </li>
-                        <li className="cursor-pointer hover:text-indigo-dark"
-                        onClick={handleDropdownSelection}>
                         Generate Narrative Structure
                         </li>
                         <li className="cursor-pointer hover:text-indigo-dark"
