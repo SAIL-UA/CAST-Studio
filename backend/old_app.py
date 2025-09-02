@@ -538,5 +538,4 @@ def health_check():
     return jsonify({"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()})
 
 if __name__ == '__main__':
-    backend_port = int(os.environ.get('BACKEND_PORT', 8051))
-    app.run(debug=True, host='0.0.0.0', port=backend_port)
+    app.run(debug=True, host='0.0.0.0', port=8053)

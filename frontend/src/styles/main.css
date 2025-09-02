@@ -1,0 +1,123 @@
+/* Tailwind imports */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Imports */
+@import "@fontsource/roboto/300.css"; /* Light */
+@import "@fontsource/roboto/400.css"; /* Regular */
+@import "@fontsource/roboto/500.css"; /* Medium */
+@import "@fontsource/roboto/600.css"; /* Semi-bold */
+@import "@fontsource/roboto/700.css"; /* Bold */
+
+/* Custom font weight utilities */
+.font-roboto-light {
+  font-family: theme('fontFamily.roboto');
+  font-weight: 300;
+}
+
+.font-roboto-regular {
+  font-family: theme('fontFamily.roboto');
+  font-weight: 400;
+}
+
+.font-roboto-medium {
+  font-family: theme('fontFamily.roboto');
+  font-weight: 500;
+}
+
+.font-roboto-semibold {
+  font-family: theme('fontFamily.roboto');
+  font-weight: 600;
+}
+
+.font-roboto-bold {
+  font-family: theme('fontFamily.roboto');
+  font-weight: 700;
+}
+
+.text-tiny {
+  font-size: 0.5rem;
+}
+
+.text-somewhat-tiny {
+  font-size: 0.6rem;
+}
+
+.text-somewhat-tiny-bold {
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+.text-tiny-bold {
+  font-size: 0.5rem;
+  font-weight: 500;
+}
+
+.card-width {
+  width: 100px;
+}
+
+.image-height{
+  height: 75px;
+}
+
+/* Underline button animation */
+@layer utilities {
+
+  .underline-animate {
+    position: relative;
+    display: inline-block;
+  }
+
+  .underline-animate::after {
+    content: "";
+    position: absolute;
+    bottom: -0.5rem;
+    left: 50%;
+    width: 0%;
+    height: 2px;
+    background-color: currentColor;
+    transition: width 0.3s ease, left 0.3s ease;
+    transform: translateX(-50%);
+  }
+
+  #story-bin-header{
+    background-color: #fff;
+    border-bottom-width: 0px;
+  }
+
+  #home-search-bar{
+    padding-top: 6px;
+  }
+
+  #home-search-icon{
+    padding-left: 5px;
+  }
+
+  #workspace{
+    height: 600px;
+  }
+  
+  .underline-animate:hover::after,
+  .underline-animate:focus::after,
+  .underline-animate.active::after {
+    width: 100%;
+    left: 50%;
+  }
+}
+
+/* Dropdown animation */
+@layer utilities {
+  .dropdown-open {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 1.0s ease, opacity 1.0s ease;
+  }
+
+  .dropdown-open-active {
+    max-height: 500px; /* adjust based on content */
+    opacity: 1;
+  }
+}
