@@ -7,12 +7,14 @@ import axios from 'axios';
 import { ImageData } from '../types/types';
 
 // Props interface
-interface GenerateStoryButtonProps {
+type GenerateStoryButtonProps = {
     images?: ImageData[];
+    setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    selectedPattern: string;
 }
 
 // Generate story button component
-const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
+const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, selectedPattern }: GenerateStoryButtonProps) => {
 
     // States
     const [loading, setLoading] = useState(false);
@@ -190,6 +192,7 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
 
             <button 
                 className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setRightNarrativePatternsOpen(true)}
             >
                     Manually Select Narrative
             </button>

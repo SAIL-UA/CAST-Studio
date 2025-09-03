@@ -10,9 +10,17 @@ import Bin from './Bin';
 
 // Import types
 import { ImageData } from '../types/types';
+import FeedbackButton from './FeedbackButton';
+import SubmitButton from './SubmitButton';
+
+// Define props interface
+type StoryBoardProps = {
+    setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    selectedPattern: string;
+}
 
 // StoryBoard component
-const StoryBoard = () => {
+const StoryBoard = ({ setRightNarrativePatternsOpen, selectedPattern }: StoryBoardProps) => {
     // State management for images
     const [images, setImages] = useState<ImageData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -143,30 +151,25 @@ const StoryBoard = () => {
 
     // Visible component
     return (
-        <div id="story-board-container" className="flex flex-col w-full h-full">
-
-            {/* Story Board Content - Single Data Story Bin */}
-            <div id="story-board-content" className="flex flex-col w-full h-full mt-4">
-                <div className="flex flex-col h-full">
-                    {/* Data Story Bin */}
-                    <div id="story-bin-container" className="flex flex-col h-full w-full bg-white">
-                        <div id="story-bin-header" className="flex w-full items-center justify-start p-2">
-                            <UploadButton />
-                            <GroupButton />
-                            <GenerateStoryButton images={workspaceImages} />
-                        </div>
-                        <Bin
-                            id="story-bin"
-                            images={workspaceImages}
-                            updateImageData={updateImageData}
-                            onDescriptionsUpdate={handleDescriptionsUpdate}
-                            onDelete={handleDelete}
-                            onTrash={handleTrash}
-                            onUnTrash={handleUnTrash}
-                            isSuggestedOrderBin={false}
-                        />
-                    </div>
-                </div>
+        <div id="story-board-container" className="flex flex-col h-full w-full bg-white">
+            <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start p-2 flex-shrink-0">
+                <UploadButton />
+                <GroupButton />
+                <GenerateStoryButton images={workspaceImages} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} selectedPattern={selectedPattern} />
+                <FeedbackButton />
+                <SubmitButton />
+            </div>
+            <div className="flex-1 min-h-0">
+                <Bin
+                    id="story-bin"
+                    images={workspaceImages}
+                    updateImageData={updateImageData}
+                    onDescriptionsUpdate={handleDescriptionsUpdate}
+                    onDelete={handleDelete}
+                    onTrash={handleTrash}
+                    onUnTrash={handleUnTrash}
+                    isSuggestedOrderBin={false}
+                />
             </div>
         </div>
     )

@@ -94,10 +94,6 @@
   #home-search-icon{
     padding-left: 5px;
   }
-
-  #workspace{
-    height: 600px;
-  }
   
   .underline-animate:hover::after,
   .underline-animate:focus::after,

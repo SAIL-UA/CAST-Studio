@@ -5,8 +5,14 @@ import { useState } from 'react';
 import StoryBoard from './StoryBoard';
 import RecycleBoard from './Recycle';
 
+// Define props interface
+type WorkspaceProps = {
+    setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    selectedPattern: string;
+}
+
 // Workspace component
-const Workspace = () => {
+const Workspace = ({ setRightNarrativePatternsOpen, selectedPattern }: WorkspaceProps) => {
 
     // States
     const [recycleBinSelected, setRecycleBinSelected] = useState(false);
@@ -24,13 +30,13 @@ const Workspace = () => {
     // Visible component
     return (
         <div id="workspace" className="flex flex-col h-full w-full">
-            <div id="workspace-header" className="flex w-full">
+            <div id="workspace-header" className="flex w-full h-auto">
                 <div id="workspace-header-left" className="flex w-full h-full items-end justify-start">
                     <h3 className="text-2xl">Workspace</h3>
                 </div>
                 <div id="workspace-header-right" className="flex w-1/2 h-full items-end justify-end gap-2 text-sm">
                 <button id="narrative-button"
-                    className={`underline-animate ${recycleBinSelected ? 'active' : ''} mx-3`}
+                    className={`underline-animate ${recycleBinSelected ? '' : 'active'} mx-3`}
                     onClick={handleStoryboard}
                     >
                     Storyboard
@@ -43,11 +49,11 @@ const Workspace = () => {
                     </button>
                 </div>
             </div>
-            <div className='w-full h-full mt-4'>
+            <div className='w-full flex-1 mt-4'>
                 {recycleBinSelected ? 
                     <RecycleBoard />
                 : 
-                    <StoryBoard />}
+                    <StoryBoard setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} selectedPattern={selectedPattern} />}
             </div>
         </div>
     )

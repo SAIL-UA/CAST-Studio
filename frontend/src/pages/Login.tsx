@@ -66,10 +66,9 @@ const Login = () => {
                     clipRule="evenodd"
                     />
                 </svg>
-                <h1 className="text-7xl font-semibold mb-2 text-white">StoryStudio</h1>
-                <h3 className="text-2xl font-light mb-2 text-white">Create compelling data-driven stories.</h3>
-                <p className="text-xs font-light mb-2 text-white">Collaborators: UA, UMBC, SRI International. <u>Learn more</u> about CAST and NSF RITEL.</p>
-
+                <h1 className="text-7xl font-semibold mb-2 text-white font-roboto-bold">StoryStudio</h1>
+                <h3 className="text-2xl font-light mb-2 text-white font-roboto-semibold">Create compelling data-driven stories.</h3>
+                <p className="text-sm font-light mb-2 text-white font-roboto-semibold">Collaborators: UA, UMBC, SRI International. <a href='https://www.nsf.gov/funding/opportunities/ritel-research-innovative-technologies-enhanced-learning' target='_blank' rel='noreferrer' className='underline'>Learn more</a> about CAST and NSF RITEL.</p>
                 </div>
             </div>
 

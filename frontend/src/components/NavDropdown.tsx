@@ -7,9 +7,13 @@ import home from '../assets/images/home.svg';
 import categories from '../assets/images/categories.svg';
 import browse from '../assets/images/browse.svg';
 
+// Define props interface
+type NavDropdownProps = {
+    setCenterNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
 
 // Nav dropdown component
-const NavDropdown = ({ setNarrativePatternsOpen }: { setNarrativePatternsOpen: (open: boolean) => void }) => {
+const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
 
     // Navigation
     const navigate = useNavigate();
@@ -33,7 +37,7 @@ const NavDropdown = ({ setNarrativePatternsOpen }: { setNarrativePatternsOpen: (
             <ul className="space-y-4 text-sm font-sans">
                 <li className="cursor-pointer hover:text-indigo"
                 onClick={() => {
-                    setNarrativePatternsOpen(false);
+                    setCenterNarrativePatternsOpen(false);
                     navigate(`/`);
                 }}>
                     <span className="flex items-center justify-start">
@@ -82,7 +86,7 @@ const NavDropdown = ({ setNarrativePatternsOpen }: { setNarrativePatternsOpen: (
                     </ul>
 
                 <li className="cursor-pointer hover:text-indigo"
-                onClick={() => setNarrativePatternsOpen(true)}>
+                onClick={() => setCenterNarrativePatternsOpen(true)}>
                     <span className="flex items-center justify-start">
                         <img src={browse} alt="Browse" className="w-4 h-4 mr-2" />
                         Browse Narrative Patterns
