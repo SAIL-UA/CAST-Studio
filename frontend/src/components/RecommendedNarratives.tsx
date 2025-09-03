@@ -15,7 +15,7 @@ const RecommendedNarratives = () => {
     return (
         <div id="recommended-narratives-container" className="flex flex-col w-full h-full ml-4">
             <div id="recommended-narratives-header" className="flex w-full h-1/5">
-                <p className="font-regular text-gray-500">Recommended Narratives</p>
+                <p className="text-sm font-regular text-gray-500">Recommended Narratives</p>
             </div>
             <div id="recommended-narratives-content" className="flex w-full h-4/5 mt-4">
                 <img src={recommendedNarrative} alt="Recommended Narrative" className="w-1/3 max-h-[10vh] object-contain" />

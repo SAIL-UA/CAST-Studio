@@ -87,12 +87,48 @@
     border-bottom-width: 0px;
   }
 
+  #story-bin-wrapper{
+    height: 500px;
+  }
+
   #home-search-bar{
     padding-top: 6px;
   }
 
+  #upload-button{
+    font-size: 0.75rem;
+  }
+
+  #group-button{
+    font-size: 0.75rem;
+  }
+
+  #generate-story-button{
+    font-size: 0.75rem;
+  }
+
+  #feedback-button{
+    font-size: 0.75rem;
+  }
+
+  #submit-button{
+    font-size: 0.75rem;
+  }
+
   #home-search-icon{
     padding-left: 5px;
+  }
+
+  #right-top{
+    padding-top: 20px;
+  }
+
+  #submit-button{
+    background-color: rgb(63, 157, 97);
+  }
+
+  #feedback-button{
+    background-color: rgb(226, 109, 109);
   }
   
   .underline-animate:hover::after,

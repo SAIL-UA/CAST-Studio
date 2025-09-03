@@ -24,7 +24,7 @@ const SelectNarrativeButton = ({ setSelectedPattern, value }: SelectNarrativeBut
         className='bg-white rounded-full mt-2 px-2 py-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200'
         onClick={() => setSelectedPattern(value)}
         onDoubleClick={() => navigate(`/construction`)}>
-            <p className='text-xs font-roboto-semibold'>Select</p>
+            <p className='text-sm font-roboto-light'>Select</p>
         </button>
     )
 }

@@ -68,7 +68,7 @@ const Home = () => {
         
                 {/* Left Home */}
                 <div id="left-home" className="w-1/5 px-3 max-xl:hidden">
-                    <div id="nav-dropdown" className="h-[46vh]">
+                    <div id="nav-dropdown" className="h-[46vh] ml-2">
                         <NavDropdown setCenterNarrativePatternsOpen={setCenterNarrativePatternsOpen} />
                     </div>
 
@@ -88,7 +88,7 @@ const Home = () => {
                         </div>
                     ) : (
                         <>
-                            <div className="h-[85vh] mt-6 mb-6 pr-4 pl-4">
+                            <div className="h-[75vh] mt-10 mb-6 pr-4 pl-4">
                                 <Workspace setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} selectedPattern={selectedPattern} />
                             </div>
                             <div className="h-[75vh] mt-6 mb-6 pl-4 pr-4">
@@ -157,8 +157,8 @@ const Home = () => {
                                         </svg>
                                     </div>
                                     <div id="right-top-top-text" className="flex flex-col justify-center w-2/3 m-l-1">
-                                        <h3 className="text-xl">Username.</h3>
-                                        <p className="text-sm">Since 2025</p>
+                                        <h3 className="text-lg">Username.</h3>
+                                        <p className="text-xs">Since 2025</p>
                                     </div>
                                 </div>
 

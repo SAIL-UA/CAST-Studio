@@ -16,7 +16,7 @@ const SubmitButton = () => {
     // Visible component
     return (
         <button id="submit-button"
-        className="bg-green-400 text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+        className="text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
         onClick={handleSubmit}>
         Submit
         </button>

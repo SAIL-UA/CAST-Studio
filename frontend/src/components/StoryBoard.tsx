@@ -159,7 +159,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, selectedPattern }: StoryBoa
                 <FeedbackButton />
                 <SubmitButton />
             </div>
-            <div className="flex-1 min-h-0">
+            <div id = "story-bin-wrapper" className="flex-1 min-h-0">
                 <Bin
                     id="story-bin"
                     images={workspaceImages}
