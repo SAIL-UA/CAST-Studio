@@ -77,6 +77,10 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSe
         setSelectedPattern('AI Assistance');
         setStoryLoading(true);
         
+        // Dispatch event to indicate story generation has started
+        const startEvent = new CustomEvent('storyGenerationStarted');
+        window.dispatchEvent(startEvent);
+        
         try {
             // Debug: Log current image state
             console.log('Current images state:', images);
@@ -113,6 +117,17 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSe
             if (taskResponse.status === 'success' && taskResponse.task_id) {
                 console.log('Story generation task started, task_id:', taskResponse.task_id);
                 
+                // Store initial narrative to detect when new one is generated
+                let initialNarrative = '';
+                try {
+                    const initialResponse = await getNarrativeCache();
+                    if (initialResponse.data && initialResponse.data.data) {
+                        initialNarrative = initialResponse.data.data.narrative || '';
+                    }
+                } catch (error) {
+                    console.log('No initial narrative found');
+                }
+
                 // Poll for task completion
                 const pollForCompletion = async () => {
                     const maxAttempts = 60; // 5 minutes with 5-second intervals
@@ -127,8 +142,9 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSe
                             const cacheResponse = await getNarrativeCache();
                             const cacheData = cacheResponse.data.data;
                             
-                            if (cacheData.narrative) {
-                                // Story generation complete
+                            // Only consider story complete if narrative exists AND is different from initial
+                            if (cacheData.narrative && cacheData.narrative !== initialNarrative) {
+                                // Story generation complete with new content
                                 const storyEvent = new CustomEvent('storyGenerated', {
                                     detail: {
                                         narrative: cacheData.narrative,
@@ -140,7 +156,8 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSe
                                 });
                                 window.dispatchEvent(storyEvent);
                                 
-                                console.log('Story generated successfully');
+                                console.log('New story generated successfully');
+                                setStoryLoading(false);
                                 return;
                             }
                         } catch (error) {
@@ -166,8 +183,6 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSe
         } catch (error) {
             console.error('Error generating story:', error);
             alert('An error occurred while generating the story. Please try again.');
-        } finally {
-            setStoryLoading(false);
         }
     }
 

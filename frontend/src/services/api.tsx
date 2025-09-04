@@ -118,11 +118,6 @@ export const register = async(userData: { username: string; email: string; passw
   return response;
 };
 
-export const getDashboard = async() => {
-  const response = await USER_API.get('/dashboard/');
-  return response.data;
-};
-
 export const logout = async () => {
   localStorage.removeItem('access');
   localStorage.removeItem('refresh');

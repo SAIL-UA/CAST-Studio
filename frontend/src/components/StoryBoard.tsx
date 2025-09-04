@@ -59,14 +59,18 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
     // Update image data (position, status, etc.)
     const updateImageData = async (imageId: string, data: Partial<ImageData>) => {
         try {
-            await updateImageDataAPI(imageId, data);
-            
-            // Update local state
-            setImages((prevImages) =>
-                prevImages.map((img) => 
-                    img.id === imageId ? { ...img, ...data } : img
-                )
-            );
+            const response = await updateImageDataAPI(imageId, data);
+            if (response.status === 200) {
+                console.log('Image data updated successfully');
+                // Update local state
+                setImages((prevImages) =>
+                    prevImages.map((img) => 
+                        img.id === imageId ? { ...img, ...data } : img
+                    )
+                );
+            } else {
+                console.error('Error updating image data:', response.data.errors);
+            }
         } catch (error) {
             console.error('Error updating image data:', error);
         }

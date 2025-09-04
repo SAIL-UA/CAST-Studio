@@ -1,58 +1,161 @@
 # CAST Story Studio
 
-This project has two main components:  
-1. A **Flask** backend  
-2. A **React** frontend  
+CAST Story Studio is a full-stack application for story generation and management. The project uses a modern Django REST API backend with a React TypeScript frontend.
 
-The two components must be started separately, and **the backend must be started first**.
+## Architecture
 
+- **Backend**: Django REST Framework with PostgreSQL database
+- **Frontend**: React with TypeScript
+- **Authentication**: JWT tokens with HTTP-only cookies
+- **Task Queue**: Celery with Redis broker for async operations
+- **AI Integration**: OpenAI API for story and description generation
 
+## Prerequisites
 
-## Running the Backend
+- Python 3.8+ with conda
+- Node.js 16+ with npm
+- PostgreSQL database
+- Redis server (for Celery tasks)
 
-1. **Navigate to the backend directory and activate conda env**:
+## Development Setup
+
+### Backend (Django)
+
+1. **Navigate to backend directory and activate environment**:
    ```bash
    cd backend
    conda activate cast
+   ```
 
-2. **Run the backend**:
-    ```bash
-    sudo env "PATH=$PATH" python app.py
-    ```
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-    - `sudo` is used so the program can access the necessary files from other user accounts.
-    - `PATH=$PATH` ensures the user’s conda paths are recognized during execution.
+3. **Set up environment variables**:
+   Create a `.env` file in the project root with:
+   ```env
+   DJANGO_SECRET_KEY=your-secret-key
+   DJANGO_DEBUG=True
+   POSTGRES_DB=cast_db
+   POSTGRES_USER=cast_user
+   POSTGRES_PASSWORD=your-password
+   POSTGRES_HOST=localhost
+   POSTGRES_PORT=5432
+   DATA_PATH=/path/to/user/data
+   OPENAI_API_KEY=your-openai-key
+   FRONTEND_URL=http://localhost:8050
+   ```
 
+4. **Run database migrations**:
+   ```bash
+   python manage.py migrate
+   ```
 
+5. **Create superuser** (optional):
+   ```bash
+   python manage.py createsuperuser
+   ```
 
-## Running the Frontend
+6. **Start the backend server**:
+   ```bash
+   python manage.py runserver 8076
+   ```
 
-1. **Open a new terminal** (while the backend is still running).
-2. **Navigate to the frontend directory and activate conda env**:
-    ```bash
-    cd frontend/
-    conda activate cast
-    ```
-3. **Install the dependencies**:
-    ```bash
-    npm install
-    ```
-4. **Start the frontend**:
-    ```bash
-    npm run start
-    ```
+7. **Start Celery worker** (in separate terminal):
+   ```bash
+   celery -A config worker --loglevel=info
+   ```
+
+### Frontend (React)
+
+1. **Navigate to frontend directory**:
+   ```bash
+   cd frontend
+   conda activate cast
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Start the frontend server**:
+   ```bash
+   npm start
+   ```
+
 ## Port Configuration
-- In the development version (and what's uploaded to GitHub) the backend runs on **port 8076** and the frontend runs on **port 8075** by default.
-- For the live version:
-    - Change **app.py** to run on port **8051**.
-    - In **package.json** set the proxy to match **8051**.
-    - Also in **package.json**, set the frontend's port to **8050**.
 
-## Running in Tmux
-For the live environment, we run both processes in tmux so they keep running after we exit the virtual machine. Common tmux usage:
+### Development
+- **Backend**: Port 8076
+- **Frontend**: Port 8050 (configured in package.json)
 
+### Production
+- **Backend**: Port 8051
+- **Frontend**: Port 8050 (proxies to backend at port 8051)
+- Frontend proxy configured in `package.json` points to `http://172.16.22.6:8051`
+
+## Key Features
+
+- **Image Upload & Management**: Upload and organize visual data stories
+- **AI-Powered Descriptions**: Generate descriptions for images using OpenAI
+- **Story Generation**: Create narratives from visual data with AI assistance
+- **Drag & Drop Interface**: Interactive storyboard for organizing content
+- **User Authentication**: Secure JWT-based authentication system
+- **Async Task Processing**: Long-running tasks handled via Celery
+
+## Development Commands
+
+### Backend
 ```bash
-tmux attach -t <session_number>
+# Run tests
+python manage.py test
+
+# Run linting
+ruff check .
+ruff format .
+
+# Create migrations
+python manage.py makemigrations
+
+# Django shell
+python manage.py shell
 ```
 
-This attaches to the specified tmux session where the backend (2) and frontend (3) are running.
+### Frontend
+```bash
+# Run tests
+npm test
+
+# Build for production
+npm run build
+
+# Type checking
+npx tsc --noEmit
+```
+
+## Database
+
+The application uses PostgreSQL with custom models:
+- **User**: Custom user authentication
+- **ImageData**: Visual content metadata
+- **NarrativeCache**: Generated stories and analysis
+- **UserAction**: Activity logging
+- **JupyterLog**: Code execution logs
+
+## Deployment
+
+For production deployment, ensure:
+1. Set `DJANGO_DEBUG=False` in environment
+2. Configure proper PostgreSQL database
+3. Set up Redis for Celery tasks
+4. Use a process manager like tmux or systemd
+5. Configure reverse proxy (nginx) for static files
+
+## Troubleshooting
+
+- Check that PostgreSQL and Redis services are running
+- Verify environment variables are set correctly
+- Ensure ports 8076 (backend) and 8050 (frontend) are available
+- Check Celery worker is running for AI generation tasks

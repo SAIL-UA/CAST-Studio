@@ -299,6 +299,20 @@ class GetNarrativeCacheView(APIView):
       return Response(status=status.HTTP_204_NO_CONTENT)
 
     data = NarrativeCacheSerializer(cache).data
+    
+    # Convert JSON fields to strings for frontend compatibility
+    if 'order' in data and isinstance(data['order'], list):
+      data['order'] = [str(item) for item in data['order']]
+    
+    if 'categories' in data and isinstance(data['categories'], list):
+      # Convert array of objects to string representation
+      categories_str = "\n".join([
+        f"{item['filename']}: {item['category']}" 
+        for item in data['categories']
+        if isinstance(item, dict) and 'filename' in item and 'category' in item
+      ])
+      data['categories'] = categories_str
+    
     return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
 
   

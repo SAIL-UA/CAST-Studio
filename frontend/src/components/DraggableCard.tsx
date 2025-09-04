@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { DraggableCardProps, DragItem } from '../types/types';
 import { updateImageData, generateDescription, deleteFigure, serveImage, getImageData } from '../services/api';
+import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 
 function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, draggable = true }: DraggableCardProps) {
   const [showModal, setShowModal] = useState(false);
@@ -304,6 +305,7 @@ const handleDelete = async () => {
                   <label htmlFor="longDesc" className="block text-sm font-medium text-grey-darkest mb-2">
                     Long Description
                   </label>
+                  {loadingGenDesc ? <GeneratingPlaceholder contentName="description" lines={5} /> : (
                   <textarea
                     id="longDesc"
                     rows={5}
@@ -311,6 +313,7 @@ const handleDelete = async () => {
                     onChange={(e) => setTempLongDesc(e.target.value)}
                     className="w-full px-3 py-2 border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  )}
                 </div>
               </div>
 
@@ -327,23 +330,23 @@ const handleDelete = async () => {
 
               {/* Modal Footer */}
               <div className="flex justify-between mt-6">
+                {image.in_storyboard ? (
                 <button
                   onClick={handleTrash}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Delete Figure
-                </button>
+                  Move to Recycle Bin
+                </button>) : (<button
+                  onClick={handleUnTrash}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Restore to Workspace
+                </button>)}
                 <button
                   onClick={handleDelete}
                   className="px-4 py-2 bg-red-800 text-white rounded-md hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Permanently Delete
-                </button>
-                <button
-                  onClick={handleUnTrash}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Restore to Workspace
                 </button>
                 <button
                   onClick={handleClose}

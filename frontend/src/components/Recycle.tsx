@@ -1,6 +1,6 @@
 // Import dependencies
 import React, { useState, useEffect } from 'react';
-import { getDashboard, updateImageData as updateImageDataAPI } from '../services/api';
+import { getImageDataAll, updateImageData as updateImageDataAPI } from '../services/api';
 
 // Import components
 import Bin from './Bin';
@@ -17,8 +17,12 @@ const Trash = () => {
     // Fetch user data from backend
     const fetchUserData = async () => {
         try {
-            const response = await getDashboard();
-            const fetchedImages = response.images.map((img: any, index: number) => ({
+            const response = await getImageDataAll();
+            if (response.data.images.length === 0) {
+                setImages([]);
+                return;
+            }
+            const fetchedImages = response.data.images.map((img: any, index: number) => ({
                 ...img,
                 // Keep original in_storyboard status for trash (don't override)
                 in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : false,
@@ -44,14 +48,19 @@ const Trash = () => {
     // Update image data (position, status, etc.)
     const updateImageData = async (imageId: string, data: Partial<ImageData>) => {
         try {
-            await updateImageDataAPI(imageId, data);
-            
-            // Update local state
-            setImages((prevImages) =>
-                prevImages.map((img) => 
-                    img.id === imageId ? { ...img, ...data } : img
-                )
-            );
+            const response = await updateImageDataAPI(imageId, data);
+
+            if (response.status === 200) {
+                console.log('Image data updated successfully');
+                // Update local state
+                setImages((prevImages) =>
+                    prevImages.map((img) => 
+                        img.id === imageId ? { ...img, ...data } : img
+                    )
+                );
+            } else {
+                console.error('Error updating image data:', response.data.errors);
+            }
         } catch (error) {
             console.error('Error updating image data:', error);
         }

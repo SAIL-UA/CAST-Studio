@@ -1,12 +1,14 @@
 // Import dependencies
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { getNarrativeCache } from '../services/api';
+import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 
 // Story data interface
 interface StoryData {
     narrative?: string;
-    recommended_order?: (string | {filename: string, category: string})[];
-    categorize_figures_response?: string | {filename: string, category: string}[];
+    recommended_order?: string[];
+    categorize_figures_response?: string;
     theme_response?: string;
     sequence_response?: string;
 }
@@ -22,25 +24,60 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
     const [narrativeSelected, setNarrativeSelected] = useState(true);
     const [storySelected, setStorySelected] = useState(false);
     const [storyData, setStoryData] = useState<StoryData | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    
+    // Check for existing cached narrative on component mount
+    const loadCachedNarrative = async () => {
+        try {
+            const response = await getNarrativeCache();
+            if (response.data && response.data.data) {
+                const cacheData = response.data.data;
+                setStoryData({
+                    narrative: cacheData.narrative,
+                    recommended_order: cacheData.order,
+                    categorize_figures_response: cacheData.categories,
+                    theme_response: cacheData.theme,
+                    sequence_response: cacheData.sequence_justification
+                });
+                console.log('Loaded cached narrative data:', cacheData);
+            }
+        } catch (error) {
+            console.log('No cached narrative found or error loading:', error);
+        }
+    };
 
+    
     // Effect
     useEffect(() => {
         setNarrativeSelected(true)
         setStorySelected(false)
 
+        // Check for cached narrative and load it (if it exists) on mount
+        loadCachedNarrative();
+
         // Listen for story generation events
         const handleStoryGenerated = (event: CustomEvent) => {
             setStoryData(event.detail);
+            setIsGenerating(false);
             console.log('Story data received:', event.detail);
         };
 
+        // Listen for story generation start events
+        const handleStoryGenerationStarted = () => {
+            setIsGenerating(true);
+            console.log('Story generation started');
+        };
+
         window.addEventListener('storyGenerated', handleStoryGenerated as EventListener);
+        window.addEventListener('storyGenerationStarted', handleStoryGenerationStarted as EventListener);
 
         // Cleanup
         return () => {
             window.removeEventListener('storyGenerated', handleStoryGenerated as EventListener);
+            window.removeEventListener('storyGenerationStarted', handleStoryGenerationStarted as EventListener);
         };
     }, [])
+
 
     // Handle narrative button
     const handleNarrative = () => {
@@ -89,7 +126,9 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                     <div className="w-full space-y-6">
                         <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structuring{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
                         
-                        {storyData ? (
+                        {isGenerating ? (
+                            <GeneratingPlaceholder contentName="narrative analysis" lines={6} />
+                        ) : storyData ? (
                             <>
                                 {/* Theme and Objective */}
                                 {storyData.theme_response && (
@@ -106,20 +145,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Figure Categories</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
-<<<<<<< HEAD
-                                            {typeof storyData.categorize_figures_response === 'string' ? 
-                                                storyData.categorize_figures_response :
-                                                Array.isArray(storyData.categorize_figures_response) ?
-                                                    storyData.categorize_figures_response.map((item, index) => (
-                                                        <div key={index} className="mb-2">
-                                                            <strong>{item.filename}:</strong> {item.category}
-                                                        </div>
-                                                    )) :
-                                                    JSON.stringify(storyData.categorize_figures_response, null, 2)
-                                            }
-=======
                                             <ReactMarkdown>{storyData.categorize_figures_response}</ReactMarkdown>
->>>>>>> origin/main
                                         </div>
                                     </div>
                                 )}
@@ -139,17 +165,8 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Recommended Figure Order</h4>
                                         <ol className="list-decimal list-inside text-grey-darkest">
-<<<<<<< HEAD
-                                            {storyData.recommended_order.map((item, index) => (
-                                                <li key={index} className="mb-1">
-                                                    {typeof item === 'string' ? item : 
-                                                     typeof item === 'object' && item.filename ? item.filename : 
-                                                     JSON.stringify(item)}
-                                                </li>
-=======
                                             {storyData.recommended_order.map((filename, index) => (
                                                 <li key={index} className="mb-1"><ReactMarkdown>{filename}</ReactMarkdown></li>
->>>>>>> origin/main
                                             ))}
                                         </ol>
                                     </div>
@@ -167,7 +184,9 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                     <div className="w-full">
                         <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
                         
-                        {storyData?.narrative ? (
+                        {isGenerating ? (
+                            <GeneratingPlaceholder contentName="data story" lines={8} />
+                        ) : storyData?.narrative ? (
                             <div className="bg-white p-4 rounded-lg border border-grey-lightest">
                                 <div className="prose max-w-none text-grey-darkest whitespace-pre-wrap leading-relaxed text-base">
                                     <ReactMarkdown>{storyData.narrative}</ReactMarkdown>
