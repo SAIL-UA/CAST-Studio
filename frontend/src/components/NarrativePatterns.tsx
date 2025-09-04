@@ -24,7 +24,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
         <div id="narrative-patterns" className="p-0 m-0">
             <div className="flex flex-row w-full">
 
-                <h3 className={`${center ? 'text-2xl mb-4 mt-2' : 'text-lg mb-2 mt-4 w-3/4'}`}>Narrative Patterns</h3>
+                <h3 className={`${center ? 'text-2xl mb-4 mt-2' : 'text-lg mb-2 mt-4 w-3/4 ml-2'}`}>Narrative Patterns</h3>
                 {!center && (
                     <div
                     className="flex items-center justify-end w-1/4"
@@ -44,7 +44,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
             <div className={`grid grid-cols-1 ${center ? 'min-lg:grid-cols-2' : ''} auto-rows-min gap-2 grid-rows-5 items-center`}>
                 
                 {/* Grid item 1 - Casa - Cause and Effect*/}
-                <div className='flex flex-row h-full bg-sky-lighter p-2 items-center'>
+                <div className='flex flex-row h-full bg-sky-lighter p-2 items-center hover:bg-grey-light'>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={Casa} alt="Casa" className="w-full h-full object-cover ml-2" />
                     </div>
@@ -56,7 +56,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 2 - Fresas - Question and Answer*/}
-                <div className='flex flex-row bg-sky-lighter h-full p-2 items-center'>
+                <div className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={Fresas} alt="Fresas" className="w-full h-full object-cover ml-2" />
                     </div>
@@ -71,7 +71,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 3 - Super - Time Series Progression*/}
-                <div className={`${center ? 'bg-grey' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center` }>
+                <div className={`${center ? 'bg-grey' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={Super} alt="Super" className="w-full h-full object-cover ml-2" />
                     </div>
@@ -83,7 +83,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 4 - Popeye - Factor Analysis*/}
-                <div className={`${center ? 'bg-indigo-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center` }>
+                <div className={`${center ? 'bg-indigo-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={Popeye} alt="Popeye" className="w-full h-full object-cover ml-2" />
                     </div>
@@ -95,7 +95,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 5 - Popeye - Overview To Detail*/}
-                <div className='flex flex-row h-full bg-sky-lighter p-2 items-center'>
+                <div className='flex flex-row h-full bg-sky-lighter p-2 items-center hover:bg-grey-light'>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={Popeye} alt="Popeye" className="w-full h-full object-cover ml-2" />
                     </div>
@@ -107,7 +107,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 6 - Brutus - Problem and Solution*/}
-                <div className='flex flex-row bg-sky-lighter h-full p-2 items-center'>
+                <div className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'>
                     <div className="w-1/4 h-3/4 object-cover p-2">
                         <img src={Brutus} alt="Brutus" className="w-full h-full object-cover ml-2" />
                     </div>
@@ -119,7 +119,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 7 - Brutus - Comparative Analysis*/}
-                <div className={`${center ? 'bg-grey' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center` }>
+                <div className={`${center ? 'bg-grey' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={Brutus} alt="Brutus" className="w-full h-full object-cover ml-2" />
                     </div>
@@ -131,7 +131,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 8 - Brutus - Workflow or Process*/}
-                <div className={`${center ? 'bg-indigo-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center` }>
+                <div className={`${center ? 'bg-indigo-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center  hover:bg-grey-light` }>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={Brutus} alt="Brutus" className="w-full h-full object-cover ml-2" />
                     </div>
@@ -143,7 +143,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 9 - Brutus - Shock and Lead*/}
-                <div className='flex flex-row bg-sky-lighter h-full p-2 items-center'>
+                <div className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={Brutus} alt="Brutus" className="w-full h-full object-cover ml-2" />
                     </div>
