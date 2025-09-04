@@ -491,5 +491,4 @@ def log_click():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8051)
-
     # sudo env "PATH=$PATH" python app.py
