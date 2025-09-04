@@ -15,10 +15,11 @@ type NarrativePatternsProps = {
     setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;
     setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
     center: boolean;
+    setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // Narrative patterns component
-const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, center }: NarrativePatternsProps) => {
+const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, center, setStoryLoading }: NarrativePatternsProps) => {
 
     return (
         <div id="narrative-patterns" className="p-0 m-0">
@@ -51,7 +52,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Cause and Effect</h3>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}>Explains how one variable or event influences another, highlighting correlations or causal relationships to show why outcomes occur.</p>}
-                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="causeAndEffect" />
+                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="Cause-and-Effect" setStoryLoading={setStoryLoading} />
                     </div>
                 </div>
 
@@ -65,7 +66,8 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}>Structures the narrative around a central question, guiding the reader through data-driven evidence that resolves the inquiry.</p>}
                         <SelectNarrativeButton
                         setSelectedPattern={setSelectedPattern}
-                        value="questionAndAnswer"
+                        setStoryLoading={setStoryLoading}
+                        value="Question-and-Answer"
                         />
                     </div>
                 </div>
@@ -78,7 +80,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Timeline</h3>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}>Uses chronological sequencing to reveal trends, patterns, or shifts in data across time, often showing evolution or change.</p>}
-                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="timeline" />
+                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="Time-Based Progression" setStoryLoading={setStoryLoading} />
                     </div>
                 </div>
 
@@ -90,7 +92,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Factor Analysis</h3>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}>Breaks down a phenomenon into its contributing factors, discussing variables to show their relative influence or importance.</p>}
-                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="factorAnalysis" />
+                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="TODO Factor Analysis" setStoryLoading={setStoryLoading} />
                     </div>
                 </div>
 
@@ -102,7 +104,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Overview To Detail</h3>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}>Begins with a broad snapshot of the data, then progressively drills into finer details or sub-stories for deeper insight.</p>}
-                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="overviewToDetail" />
+                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="Overview to Detail" setStoryLoading={setStoryLoading} />
                     </div>
                 </div>
 
@@ -114,7 +116,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Problem and Solution</h3>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}>Frames data around a challenge or issue and uses evidence to explore possible interventions, strategies, or resolutions.</p>}
-                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="problemAndSolution" />
+                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="Problem-Solution Framework" setStoryLoading={setStoryLoading} />
                     </div>
                 </div>
 
@@ -126,7 +128,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Comparative Analysis</h3>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}>Places datasets side by side to reveal similarities, contrasts, or trade-offs, helping audiences evaluate differences.</p>}
-                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="comparativeAnalysis" />
+                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="Comparative Analysis" setStoryLoading={setStoryLoading} />
                     </div>
                 </div>
 
@@ -138,7 +140,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Workflow or Process</h3>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}>Maps data along the stages of a system, journey, or pipeline, emphasizing sequence, dependencies, and outcomes.</p>}
-                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="workflowOrProcess" />
+                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="Workflow/Process" setStoryLoading={setStoryLoading} />
                     </div>
                 </div>
 
@@ -150,7 +152,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Shock and Lead</h3>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}>Opens with a striking or unexpected data point that grabs attention, then unpacks context and analysis to explain its meaning.</p>}
-                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="shockAndLead" />
+                        <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="shockAndLead" setStoryLoading={setStoryLoading} />
                     </div>
                 </div>
                 

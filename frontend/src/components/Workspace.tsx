@@ -9,10 +9,12 @@ import RecycleBoard from './Recycle';
 type WorkspaceProps = {
     setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
     selectedPattern: string;
+    storyLoading: boolean;
+    setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // Workspace component
-const Workspace = ({ setRightNarrativePatternsOpen, selectedPattern }: WorkspaceProps) => {
+const Workspace = ({ setRightNarrativePatternsOpen, selectedPattern, storyLoading, setStoryLoading }: WorkspaceProps) => {
 
     // States
     const [recycleBinSelected, setRecycleBinSelected] = useState(false);
@@ -53,7 +55,8 @@ const Workspace = ({ setRightNarrativePatternsOpen, selectedPattern }: Workspace
                 {recycleBinSelected ? 
                     <RecycleBoard />
                 : 
-                    <StoryBoard setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} selectedPattern={selectedPattern} />}
+                    <StoryBoard setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} selectedPattern={selectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
+                }
             </div>
         </div>
     )

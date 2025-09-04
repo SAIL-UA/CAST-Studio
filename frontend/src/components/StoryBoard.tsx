@@ -17,10 +17,12 @@ import SubmitButton from './SubmitButton';
 type StoryBoardProps = {
     setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
     selectedPattern: string;
+    storyLoading: boolean;
+    setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // StoryBoard component
-const StoryBoard = ({ setRightNarrativePatternsOpen, selectedPattern }: StoryBoardProps) => {
+const StoryBoard = ({ setRightNarrativePatternsOpen, selectedPattern, storyLoading, setStoryLoading }: StoryBoardProps) => {
     // State management for images
     const [images, setImages] = useState<ImageData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -155,7 +157,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, selectedPattern }: StoryBoa
             <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start p-2 flex-shrink-0">
                 <UploadButton />
                 <GroupButton />
-                <GenerateStoryButton images={workspaceImages} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} selectedPattern={selectedPattern} />
+                <GenerateStoryButton images={workspaceImages} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} selectedPattern={selectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
                 <FeedbackButton />
                 <SubmitButton />
             </div>

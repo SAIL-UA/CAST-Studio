@@ -11,13 +11,14 @@ type GenerateStoryButtonProps = {
     images?: ImageData[];
     setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
     selectedPattern: string;
+    storyLoading: boolean;
+    setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // Generate story button component
-const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, selectedPattern }: GenerateStoryButtonProps) => {
+const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, selectedPattern, storyLoading, setStoryLoading }: GenerateStoryButtonProps) => {
 
     // States
-    const [loading, setLoading] = useState(false);
     const [AIOpen, setAIOpen] = useState(false);
     const [AIPosition, setAIPosition] = useState({ top: 0, left: 0, width: 0 });
 
@@ -77,7 +78,7 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, selec
 
     // Handle generate story
     const handleAIStoryGeneration = async (e: React.MouseEvent<HTMLButtonElement>) => {
-        setLoading(true);
+        setStoryLoading(true);
         
         try {
             // Debug: Log current image state
@@ -135,7 +136,7 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, selec
             console.error('Error generating story:', error);
             alert('An error occurred while generating the story. Please try again.');
         } finally {
-            setLoading(false);
+            setStoryLoading(false);
         }
     }
 
@@ -185,7 +186,7 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, selec
             <button 
                 className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleAIStoryGeneration}
-                disabled={loading}
+                disabled={storyLoading}
             >
                 Use AI to Select Narrative
             </button>
@@ -209,10 +210,10 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, selec
                     className={`flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
                     onMouseEnter={handleAIEnter}
                     onMouseLeave={handleAILeave}
-                    disabled={loading}
+                    disabled={storyLoading}
                 >
                     <span className={`flex items-center justify-center gap-2`}> 
-                        {loading ? 'Generating...' : 'Generate Story'}
+                        {storyLoading ? 'Generating...' : 'Generate Story'}
                         
                         <svg className={`fill-current h-4 w-4 transition-transform duration-300 ease-in ${AIOpen ? 'rotate-180' : 'rotate-0'}`}
                         xmlns="http://www.w3.org/2000/svg"
