@@ -259,6 +259,8 @@ def run_script():
         ## Get story structure ID from request if provided
         data = request.get_json()
         story_structure_id = data.get('story_structure_id') if data else None
+
+        print(f"Story structure ID: {story_structure_id}")
         
         prompts_dir = os.path.join(os.path.dirname(__file__), 'prompts')
         prompt_files = {

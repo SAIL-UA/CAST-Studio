@@ -10,13 +10,13 @@ import { ImageData } from '../types/types';
 type GenerateStoryButtonProps = {
     images?: ImageData[];
     setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    selectedPattern: string;
+    setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;
     storyLoading: boolean;
     setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // Generate story button component
-const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, selectedPattern, storyLoading, setStoryLoading }: GenerateStoryButtonProps) => {
+const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSelectedPattern, storyLoading, setStoryLoading }: GenerateStoryButtonProps) => {
 
     // States
     const [AIOpen, setAIOpen] = useState(false);
@@ -78,6 +78,7 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, selec
 
     // Handle generate story
     const handleAIStoryGeneration = async (e: React.MouseEvent<HTMLButtonElement>) => {
+        setSelectedPattern('AI Assistance');
         setStoryLoading(true);
         
         try {

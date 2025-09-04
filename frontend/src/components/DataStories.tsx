@@ -11,8 +11,12 @@ interface StoryData {
     sequence_response?: string;
 }
 
+interface DataStoriesProps {
+    selectedPattern: string;
+}
+
 // DataStories component
-const DataStories = () => {
+const DataStories = ({ selectedPattern }: DataStoriesProps) => {
 
     // State
     const [narrativeSelected, setNarrativeSelected] = useState(true);
@@ -83,7 +87,7 @@ const DataStories = () => {
                 {narrativeSelected ? (
                     // Narrative Structuring Content
                     <div className="w-full space-y-6">
-                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structuring</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structuring{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
                         
                         {storyData ? (
                             <>
@@ -139,7 +143,7 @@ const DataStories = () => {
                 ) : (
                     // Generated Story Content (when storySelected is true)
                     <div className="w-full">
-                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
                         
                         {storyData?.narrative ? (
                             <div className="bg-white p-4 rounded-lg border border-grey-lightest">

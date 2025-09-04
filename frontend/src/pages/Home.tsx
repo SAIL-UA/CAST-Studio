@@ -85,15 +85,15 @@ const Home = () => {
                     
                     {centerNarrativePatternsOpen ? (
                         <div id="narrative-patterns" className="min-h-[75vh] flex flex-col mt-6 pr-4 pl-4">
-                            <NarrativePatterns setSelectedPattern={setSelectedPattern} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} center={true} setStoryLoading={setStoryLoading} />
+                            <NarrativePatterns setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} center={true} setStoryLoading={setStoryLoading} />
                         </div>
                     ) : (
                         <>
                             <div className="h-[75vh] mt-10 mb-6 pr-4 pl-4">
-                                <Workspace setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} selectedPattern={selectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
+                                <Workspace setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
                             </div>
                             <div className="h-[75vh] mt-6 mb-6 pl-4 pr-4">
-                                <DataStories />
+                                <DataStories selectedPattern={selectedPattern} />
                             </div>
                         </>
                     )}
@@ -166,7 +166,7 @@ const Home = () => {
                                 {/* Right bottom */}
                                 <div id="right-top-bottom" className="flex w-full min-h-1/2 mt-4">
                                     {rightNarrativePatternsOpen ? (
-                                        <NarrativePatterns setSelectedPattern={setSelectedPattern} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} center={false} setStoryLoading={setStoryLoading} />
+                                        <NarrativePatterns setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} center={false} setStoryLoading={setStoryLoading} />
                                     ) : (
                                         <RecommendedNarratives />
                                     )}
