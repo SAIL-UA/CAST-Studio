@@ -11,7 +11,7 @@ import uuid
 
 # Import your script functions
 from scripts.generate_description import update_json_files, update_single_json_file
-from scripts.generate_narrative import generate_story  # Adjusted import
+from scripts.generate_narrative import generate_story, get_available_structures  # Adjusted import
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a strong secret key
@@ -260,15 +260,32 @@ def update_image_data():
     else:
         return jsonify({'status': 'error', 'message': 'JSON file not found'}), 404
 
+@app.route('/get_story_structures', methods=['GET'])  ## add it to fetch story structure  
+@login_required
+def get_story_structures():
+    """
+    Get available story structures for the user to choose from.
+    """
+    structures = get_available_structures()
+    return jsonify({"status": "success", "structures": structures})
+
 @app.route('/run_script', methods=['POST'])
 @login_required
 def run_script():
     """
     Generate a narrative story, recommended order, and return intermediate GPT outputs.
     Also automatically update the narrative cache with theme, categories, etc.
+    Optionally accepts a story_structure_id to use a specific story structure.
     """
     try:
         username = session['_user_id']
+        
+        ## Get story structure ID from request if provided
+        data = request.get_json()
+        story_structure_id = data.get('story_structure_id') if data else None
+
+        print(f"Story structure ID: {story_structure_id}")
+        
         prompts_dir = os.path.join(os.path.dirname(__file__), 'prompts')
         prompt_files = {
             "categorize_figures": "categorize_figures.txt",
@@ -285,38 +302,43 @@ def run_script():
             with open(prompt_path, 'r') as file:
                 prompts[key] = file.read()
 
-        # Generate story & intermediate outputs
-        narrative, recommended_order, categorize_response, theme_response, sequence_response = generate_story(
+        ## Generate story & intermediate outputs with optional story structure
+        narrative, recommended_order, categorize_response, theme_response, sequence_response, selected_structure_name = generate_story(
             username,
             prompts["categorize_figures"],
             prompts["understand_theme_objective"],
             prompts["sequence_figures"],
-            prompts["build_story"]
+            prompts["build_story"],
+            story_structure_id
         )
 
         app.logger.info(f"The recommended order is {recommended_order}")
+        app.logger.info(f"Selected story structure: {selected_structure_name}")
         print(f"The recommended order is {recommended_order}")
+        print(f"Selected story structure: {selected_structure_name}")
 
-        # Build new cache fields
+        ## Build new cache fields
         new_cache_data = {
             "generated_narrative": narrative,
             "suggested_order": recommended_order,
             "theme": theme_response,
             "categories": categorize_response,
-            "sequence_justification": sequence_response
+            "sequence_justification": sequence_response,
+            "story_structure_used": selected_structure_name
         }
 
         # Merge into narrative_cache.json
         _merge_narrative_cache(username, new_cache_data)
 
-        # Return final results to frontend
+        ## Return final results to frontend
         return jsonify({
             "status": "success",
             "narrative": narrative,
             "recommended_order": recommended_order,
             "categorize_figures_response": categorize_response,
             "theme_response": theme_response,
-            "sequence_response": sequence_response
+            "sequence_response": sequence_response,
+            "story_structure_used": selected_structure_name
         })
 
     except Exception as e:
@@ -406,42 +428,11 @@ def generate_long_descriptions():
 @login_required
 def generate_narrative_route():
     """
-    Endpoint to generate the comprehensive narrative story and recommended order.
+    Deprecated: Use /run_script instead which provides more features including story structure selection.
+    This endpoint is kept for backward compatibility.
     """
-    username = session['_user_id']
-    app.logger.info("Generating narrative for figures")
-    
-    # Load prompts
-    prompts_dir = os.path.join(os.path.dirname(__file__), 'prompts')
-    prompt_files = {
-        "categorize_figures": "categorize_figures.txt",
-        "understand_theme_objective": "understand_theme_objective.txt",
-        "sequence_figures": "sequence_figures.txt",
-        "build_story": "build_story.txt",
-    }
-
-    prompts = {}
-    for key, filename in prompt_files.items():
-        prompt_path = os.path.join(prompts_dir, filename)
-        if os.path.exists(prompt_path):
-            with open(prompt_path, 'r') as file:
-                prompts[key] = file.read()
-        else:
-            prompts[key] = ""
-
-    narrative, recommended_order, _, _, _ = generate_story(
-        username,
-        prompts["categorize_figures"],
-        prompts["understand_theme_objective"],
-        prompts["sequence_figures"],
-        prompts["build_story"]
-    )
-    app.logger.info(f"The recommended order is {recommended_order}")
-    return jsonify({
-        'status': 'success',
-        'narrative': narrative,
-        'recommended_order': recommended_order
-    })
+    # Redirect to the new endpoint internally
+    return run_script()
 
 @app.route('/generate_long_description_for_image', methods=['POST'])
 @login_required
@@ -538,4 +529,5 @@ def health_check():
     return jsonify({"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()})
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8053)
+    app.run(debug=True, host='0.0.0.0', port=8051)
+    # sudo env "PATH=$PATH" python app.py

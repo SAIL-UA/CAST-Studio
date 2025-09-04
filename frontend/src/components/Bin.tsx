@@ -76,10 +76,8 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
       id={id}
       ref={dropRef}
       className={getBinClasses()}
-      style={{ 
-        minHeight: '200px',
-        maxHeight: '500px',
-        overflowY: 'auto'
+      style={{
+        overflow: 'auto'
       }}
     >
       {/* Drop zone indicator */}

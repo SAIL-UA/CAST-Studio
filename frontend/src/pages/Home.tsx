@@ -8,12 +8,11 @@ import { useAuth } from '../contexts/Auth';
 // Import components
 import Header from '../components/Header';
 import NavDropdown from '../components/NavDropdown';
-import StoryBoard from '../components/StoryBoard';
 import DataStories from '../components/DataStories';
-import Trash from '../components/Recycle';
 import RecommendedNarratives from '../components/RecommendedNarratives';
 import Footer from '../components/Footer';
 import NarrativePatterns from '../components/NarrativePatterns'
+import Workspace from '../components/Workspace'
 
 // Import images
 
@@ -29,26 +28,16 @@ const Home = () => {
     const { userAuthenticated } = useAuth();
 
     // State
-    const [storyboardSelected, setStoryboardSelected] = useState(true);
-    const [trashSelected, setTrashSelected] = useState(false);
     const [screenLarge, setScreenLarge] = useState(true);
     const [rightOpen, setRightOpen] = useState(false);
     // const [leftOpen, setLeftOpen] = useState(false);
-    const [narrativePatternsOpen, setNarrativePatternsOpen] = useState(false);
+    const [centerNarrativePatternsOpen, setCenterNarrativePatternsOpen] = useState(false);
+    const [rightNarrativePatternsOpen, setRightNarrativePatternsOpen] = useState(false);
     const [selectedPattern, setSelectedPattern] = useState('');
+    const [storyLoading, setStoryLoading] = useState(false);
 
     // Check authentication
     handleAuthRequired(userAuthenticated, navigate);
-
-    const handleStoryboard = () => {
-        setStoryboardSelected(true)
-        setTrashSelected(false)
-    }
-
-    const handleTrash = () => {
-        setStoryboardSelected(false)
-        setTrashSelected(true)
-    }
 
     // Check screen size
     useEffect(() => {
@@ -68,7 +57,7 @@ const Home = () => {
             // setLeftOpen(true);
         } else {
             setRightOpen(false);
-            //setLeftOpen(false);
+            // setLeftOpen(false);
         }
     }, [screenLarge]);
 
@@ -80,8 +69,8 @@ const Home = () => {
         
                 {/* Left Home */}
                 <div id="left-home" className="w-1/5 px-3 max-xl:hidden">
-                    <div id="nav-dropdown" className="h-[46vh]">
-                        <NavDropdown setNarrativePatternsOpen={setNarrativePatternsOpen} />
+                    <div id="nav-dropdown" className="h-[46vh] ml-2">
+                        <NavDropdown setCenterNarrativePatternsOpen={setCenterNarrativePatternsOpen} />
                     </div>
 
                     <div id="footer" className="h-[46vh] flex flex-col justify-start items-start">
@@ -94,41 +83,17 @@ const Home = () => {
                 {/* Middle Home */}
                 <div id="middle-home" className="w-3/5 max-xl:w-full px-4 flex flex-col border-l border-1 border-grey-light">
                     
-                    {narrativePatternsOpen ? (
-                        <div id="narrative-patterns" className="h-[75vh] flex flex-col mt-6 pr-4 pl-4">
-                            <NarrativePatterns setSelectedPattern={setSelectedPattern} />
-                            {selectedPattern && <div id="selected-pattern" className="h-[75vh] flex flex-col mt-6 pr-4 pl-4">
-                                <h3 className="text-2xl">Selected Pattern</h3>
-                                <p>{selectedPattern}</p>
-                            </div>}
+                    {centerNarrativePatternsOpen ? (
+                        <div id="narrative-patterns" className="min-h-[75vh] flex flex-col mt-6 pr-4 pl-4">
+                            <NarrativePatterns setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} center={true} setStoryLoading={setStoryLoading} />
                         </div>
                     ) : (
                         <>
-                            <div id="workspace" className="h-[65vh] flex flex-col justify-center pr-4 pl-4">
-                                <div id="workspace-header" className="flex mt-6 w-full">
-                                    <div id="workspace-header-left" className="flex w-full h-full items-end justify-start">
-                                        <br /><br /><h3 className="text-2xl">Workspace</h3>
-                                    </div>
-                                    <div id="workspace-header-right" className="flex w-1/2 h-full items-end justify-end gap-2 text-sm">
-                                    <button id="narrative-button"
-                                        className={`underline-animate ${storyboardSelected ? 'active' : ''} mx-3`}
-                                        onClick={handleStoryboard}
-                                        >
-                                        Storyboard
-                                        </button>
-
-                                        <button id="story-button"
-                                        className={`underline-animate ${trashSelected ? 'active' : ''} mx-3`}
-                                        onClick={handleTrash}>
-                                        Recycle Bin
-                                        </button>
-                                    </div>
-                                </div>
-                                {storyboardSelected ? <StoryBoard /> : <Trash />}
-                            </div><br />
-
-                            <div id="data-stories" className="h-[75vh] pl-4 pr-4 pb-10 flex flex-col justify-center">
-                                <DataStories />
+                            <div className="h-[75vh] mt-10 mb-6 pr-4 pl-4">
+                                <Workspace setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
+                            </div>
+                            <div className="h-[75vh] mt-6 mb-6 pl-4 pr-4">
+                                <DataStories selectedPattern={selectedPattern} />
                             </div>
                         </>
                     )}
@@ -163,7 +128,7 @@ const Home = () => {
                             </div>
                             )}
                             {/* Right top */}
-                            <div id="right-top" className="h-[46vh] mt-8">
+                            <div id="right-top" className="min-h-[46vh] mt-8">
                                 <div id="right-top-top" className="flex w-full h-1/4">
                                     <div className="flex w-1/3 justify-center items-center">
                                         <svg
@@ -193,14 +158,18 @@ const Home = () => {
                                         </svg>
                                     </div>
                                     <div id="right-top-top-text" className="flex flex-col justify-center w-2/3 m-l-1">
-                                        <h3 className="text-xl">Username.</h3>
-                                        <p className="text-sm">Since 2025</p>
+                                        <h3 className="text-lg">Username.</h3>
+                                        <p className="text-xs">Since 2025</p>
                                     </div>
                                 </div>
 
                                 {/* Right bottom */}
-                                <div id="right-top-bottom" className="flex w-full h-1/2">
-                                    <RecommendedNarratives />
+                                <div id="right-top-bottom" className="flex w-full min-h-1/2 mt-4">
+                                    {rightNarrativePatternsOpen ? (
+                                        <NarrativePatterns setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} center={false} setStoryLoading={setStoryLoading} />
+                                    ) : (
+                                        <RecommendedNarratives />
+                                    )}
                                 </div>
                             </div>
                         </div>

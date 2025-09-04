@@ -1,5 +1,6 @@
 // Import dependencies
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 // Story data interface
 interface StoryData {
@@ -10,8 +11,12 @@ interface StoryData {
     sequence_response?: string;
 }
 
+interface DataStoriesProps {
+    selectedPattern: string;
+}
+
 // DataStories component
-const DataStories = () => {
+const DataStories = ({ selectedPattern }: DataStoriesProps) => {
 
     // State
     const [narrativeSelected, setNarrativeSelected] = useState(true);
@@ -55,9 +60,8 @@ const DataStories = () => {
     // Visible component
     return (
         <div id="data-stories-container" className="flex flex-col w-full h-full">
-            
             {/* Header */}
-            <div id="data-stories-header" className="flex mt-6 w-full">
+            <div id="data-stories-header" className="flex w-full">
                 <div id="data-stories-header-left" className="flex w-full h-full items-end justify-start">
                     <h3 className="text-2xl">Data Stories</h3>
                 </div>
@@ -83,7 +87,7 @@ const DataStories = () => {
                 {narrativeSelected ? (
                     // Narrative Structuring Content
                     <div className="w-full space-y-6">
-                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structuring</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structuring{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
                         
                         {storyData ? (
                             <>
@@ -92,7 +96,7 @@ const DataStories = () => {
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Theme & Objective</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
-                                            {storyData.theme_response}
+                                            <ReactMarkdown>{storyData.theme_response}</ReactMarkdown>
                                         </div>
                                     </div>
                                 )}
@@ -102,6 +106,7 @@ const DataStories = () => {
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Figure Categories</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
+<<<<<<< HEAD
                                             {typeof storyData.categorize_figures_response === 'string' ? 
                                                 storyData.categorize_figures_response :
                                                 Array.isArray(storyData.categorize_figures_response) ?
@@ -112,6 +117,9 @@ const DataStories = () => {
                                                     )) :
                                                     JSON.stringify(storyData.categorize_figures_response, null, 2)
                                             }
+=======
+                                            <ReactMarkdown>{storyData.categorize_figures_response}</ReactMarkdown>
+>>>>>>> origin/main
                                         </div>
                                     </div>
                                 )}
@@ -121,7 +129,7 @@ const DataStories = () => {
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Sequence Justification</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
-                                            {storyData.sequence_response}
+                                            <ReactMarkdown>{storyData.sequence_response}</ReactMarkdown>
                                         </div>
                                     </div>
                                 )}
@@ -131,12 +139,17 @@ const DataStories = () => {
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Recommended Figure Order</h4>
                                         <ol className="list-decimal list-inside text-grey-darkest">
+<<<<<<< HEAD
                                             {storyData.recommended_order.map((item, index) => (
                                                 <li key={index} className="mb-1">
                                                     {typeof item === 'string' ? item : 
                                                      typeof item === 'object' && item.filename ? item.filename : 
                                                      JSON.stringify(item)}
                                                 </li>
+=======
+                                            {storyData.recommended_order.map((filename, index) => (
+                                                <li key={index} className="mb-1"><ReactMarkdown>{filename}</ReactMarkdown></li>
+>>>>>>> origin/main
                                             ))}
                                         </ol>
                                     </div>
@@ -152,12 +165,12 @@ const DataStories = () => {
                 ) : (
                     // Generated Story Content (when storySelected is true)
                     <div className="w-full">
-                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
                         
                         {storyData?.narrative ? (
                             <div className="bg-white p-4 rounded-lg border border-grey-lightest">
                                 <div className="prose max-w-none text-grey-darkest whitespace-pre-wrap leading-relaxed text-base">
-                                    {storyData.narrative}
+                                    <ReactMarkdown>{storyData.narrative}</ReactMarkdown>
                                 </div>
                             </div>
                         ) : (

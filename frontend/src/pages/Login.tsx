@@ -112,7 +112,6 @@ const Login = () => {
     // Visible component
     return (
         <div className="flex w-full h-screen text-white">
-            <div className="w-full absolute mt-4 ml-4 font-roboto-medium text-sm"><h1>NSF CAST: Coaching Data Storytelling at Scale</h1></div>
             {/* Left: Logo + Title */}
             <div id="left-login" className="w-1/2 flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center bg-gradient-to-br from-bama-crimson via-bama-teal to-grey-light h-full w-full">
@@ -129,10 +128,9 @@ const Login = () => {
                     clipRule="evenodd"
                     />
                 </svg>
-                <h1 className="text-7xl font-semibold mb-2 text-white">StoryStudio</h1>
+                <h1 className="text-7xl font-semibold mb-2 text-white font-roboto-bold">StoryStudio</h1>
                 <h3 className="text-2xl font-light mb-2 text-white">Create compelling data-driven stories.</h3>
-                <p className="text-xs font-light mb-2 text-white">Collaborators: UA, UMBC, SRI International. <u>Learn more</u> about CAST and NSF RITEL.</p>
-
+                <p className="text-sm font-light mb-2 text-white">Collaborators: UA, UMBC, SRI International. <a href='https://www.nsf.gov/funding/opportunities/ritel-research-innovative-technologies-enhanced-learning' target='_blank' rel='noreferrer' className='underline'>Learn more</a> about CAST and NSF RITEL.</p>
                 </div>
             </div>
 

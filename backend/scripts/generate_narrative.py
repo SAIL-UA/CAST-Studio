@@ -19,6 +19,146 @@ client = Client(api_key=API_KEY)
 
 DATA_PATH = '/data/CAST_ext/users/'
 
+def load_story_structures():
+    """
+    Load story structures from the story_definition.txt file.
+    Parses the markdown format and extracts structure information.
+    
+    Returns:
+        dict: Dictionary of story structures with their details
+    """
+    
+    structures = {}
+    prompts_dir = os.path.join(os.path.dirname(__file__), '..', 'prompts')
+    story_def_path = os.path.join(prompts_dir, 'story_definition.txt')
+    
+    # Mapping of full names to IDs
+    name_to_id = {
+        "Time-Based Progression": "time_based",
+        "Overview to Detail": "overview_to_detail", 
+        "Cause-and-Effect": "cause_and_effect",
+        "Workflow/Process": "workflow_process",
+        "Comparative Analysis": "comparative",
+        "Thematic Clustering": "thematic_clustering",
+        "Problem-Solution Framework": "problem_solution",
+        "Question-and-Answer": "question_answer"
+    }
+    
+    # Sequence approach patterns for each structure
+    sequence_approaches = {
+        "time_based": "Arrange figures chronologically to show evolution: Start with initial conditions → intermediate stages → current outcomes.",
+        "overview_to_detail": "Start with high-level summaries and then zoom into specific details: Total overview → breakdown by category → specific details.",
+        "cause_and_effect": "Order figures to illustrate causal relationships: Show the cause → show the effect → demonstrate the relationship.",
+        "workflow_process": "Arrange figures to reflect analytical process steps: Raw data → processing steps → final results.",
+        "comparative": "Start with comparisons, then move to insights: Direct comparison → detailed differences → conclusions or trade-offs.",
+        "thematic_clustering": "Group figures by theme: Theme 1 figures → Theme 2 figures → Theme 3 figures → synthesis.",
+        "problem_solution": "Follow problem-solving arc: Define the problem → diagnose root causes → present solution and impact.",
+        "question_answer": "Build investigative narrative: Pose the question → explore drivers/evidence → provide the answer."
+    }
+    
+    try:
+        with open(story_def_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Split by ### headers to get each structure section
+        sections = re.split(r'^###\s+\d+\.\s+', content, flags=re.MULTILINE)[1:]
+        
+        for section in sections:
+            lines = section.strip().split('\n')
+            if not lines:
+                continue
+            
+            # Extract name from the first line (header)
+            header_match = re.match(r'^(.+?)\s*(?:\([^)]+\))?\s*$', lines[0])
+            if not header_match:
+                continue
+                
+            full_name = header_match.group(1).strip()
+            
+            # Get the ID from our mapping
+            structure_id = name_to_id.get(full_name)
+            if not structure_id:
+                continue
+            
+            # Extract description - look for the line starting with **Description**:
+            description = ""
+            for i, line in enumerate(lines):
+                if line.startswith('**Description**:'):
+                    # Get the description text after the label
+                    desc_text = line[len('**Description**:'):].strip()
+                    # Remove markdown formatting
+                    desc_text = re.sub(r'\*\*(.+?)\*\*', r'\1', desc_text)  # Remove bold
+                    desc_text = re.sub(r'\*(.+?)\*', r'\1', desc_text)  # Remove italics
+                    description = desc_text
+                    break
+            
+            # If no description found in the expected format, try to extract from content
+            if not description and len(lines) > 1:
+                for line in lines[1:]:
+                    if line.strip() and not line.startswith('**Trend Example'):
+                        description = re.sub(r'\*\*(.+?)\*\*', r'\1', line.strip())
+                        description = re.sub(r'\*(.+?)\*', r'\1', description)
+                        break
+            
+            structures[structure_id] = {
+                "name": full_name,
+                "description": description,
+                "sequence_approach": sequence_approaches.get(structure_id, "")
+            }
+    
+    except Exception as e:
+        print(f"Warning: Could not load story structures from file: {e}")
+        print("Falling back to default structures...")
+        # Fallback to a basic set of structures if file loading fails
+        return {
+            "time_based": {
+                "name": "Time-Based Progression",
+                "description": "Arranges visualizations chronologically to show change, growth, or evolution over time.",
+                "sequence_approach": "Arrange figures chronologically to show evolution."
+            },
+            "overview_to_detail": {
+                "name": "Overview to Detail",
+                "description": "Begins with high-level summary and progressively drills down into specific details.",
+                "sequence_approach": "Start with high-level summaries and then zoom into details."
+            }
+        }
+    
+    return structures
+
+# Load story structures from file at module initialization
+STORY_STRUCTURES = load_story_structures()
+
+def select_story_structure(structure_id=None):
+    """
+    Select a story structure based on user preference or return default.
+    
+    Args:
+        structure_id (str, optional): The ID of the desired story structure.
+                                     If None, returns None to use automatic selection.
+    
+    Returns:
+        dict: The selected story structure with its details, or None for automatic selection.
+    """
+    if structure_id is None:
+        return None
+    
+    if structure_id in STORY_STRUCTURES:
+        return STORY_STRUCTURES[structure_id]
+    else:
+        # If invalid structure_id, return None for automatic selection
+        print(f"Warning: Invalid story structure ID '{structure_id}'. Using automatic selection.")
+        return None
+
+def get_available_structures():
+    """
+    Get a list of available story structures for user selection.
+    
+    Returns:
+        list: List of dictionaries containing structure IDs and names.
+    """
+    return [{"id": key, "name": value["name"], "description": value["description"]} 
+            for key, value in STORY_STRUCTURES.items()]
+
 def categorize_figure(description, prompt_cf):
     """
     Categorize a single figure based on its description using the OpenAI API.
@@ -83,16 +223,47 @@ def understand_theme_objective(fig_descriptions, prompt_uto):
         print(f"Error understanding theme and objective: {e}")
         return ""
 
-def sequence_figures(fig_descriptions_category, theme, prompt_sf):
+def sequence_figures(fig_descriptions_category, theme, prompt_sf, selected_structure=None):
     """
     Sequence figures based on their descriptions and the identified theme using OpenAI API.
+    If a structure is selected, use only that structure for sequencing.
     """
-    prompt = f"""
-    ### Input
-    Descriptions and categories of figures: {fig_descriptions_category}
-    Topic theme and objective: {theme}
-    {prompt_sf}
-    """
+    if selected_structure:
+        # Modify the prompt to use only the selected structure
+        structure_prompt = f"""
+        ### Selected Story Structure: {selected_structure['name']}
+        
+        {selected_structure['description']}
+        
+        Sequencing Approach: {selected_structure['sequence_approach']}
+        
+        Please sequence the figures according to this specific storytelling structure.
+        """
+        prompt = f"""
+        ### Input
+        Descriptions and categories of figures: {fig_descriptions_category}
+        Topic theme and objective: {theme}
+        
+        {structure_prompt}
+        
+        ### Output Format:
+        1. **Chosen Storytelling Structure**: {selected_structure['name']}
+        2. **Sequence of Figures**:
+           - Step 1: [Figure Name]
+           - Step 2: [Figure Name]
+           - Step 3: [Figure Name]
+           (...continue as needed)
+        3. **Justification**:
+           - Explain how this sequence follows the {selected_structure['name']} structure and effectively communicates the intended story.
+        """
+    else:
+        # Use the original prompt for automatic selection
+        prompt = f"""
+        ### Input
+        Descriptions and categories of figures: {fig_descriptions_category}
+        Topic theme and objective: {theme}
+        {prompt_sf}
+        """
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -107,14 +278,31 @@ def sequence_figures(fig_descriptions_category, theme, prompt_sf):
         print(f"Error sequencing figures: {e}")
         return ""
 
-def build_story(fig_descriptions_category, sequence, prompt_bs):
+def build_story(fig_descriptions_category, sequence, prompt_bs, selected_structure=None):
     """
     Build a comprehensive story based on figure descriptions and their sequence using OpenAI API.
+    If a structure was selected, explain how the story follows that structure.
     """
+    if selected_structure:
+        structure_context = f"""
+        ### Story Structure Context:
+        This story follows the **{selected_structure['name']}** structure.
+        
+        Structure Description: {selected_structure['description']}
+        
+        Please build the comprehensive story following this structure, and explicitly mention in the introduction 
+        how the narrative follows the {selected_structure['name']} approach.
+        """
+    else:
+        structure_context = ""
+    
     prompt = f"""
     ### Input
     Descriptions and categories of figures: {fig_descriptions_category}
     Sequence: {sequence}
+    
+    {structure_context}
+    
     {prompt_bs}
     """
     try:
@@ -131,16 +319,26 @@ def build_story(fig_descriptions_category, sequence, prompt_bs):
         print(f"Error building story: {e}")
         return ""
 
-def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs):
+def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs, story_structure_id=None):
     """
     Generate a comprehensive narrative story based on the user's storyboard images and descriptions.
     Additionally, provide a recommended order of figures.
+    
+    Args:
+        username (str): The username for identifying the user's workspace
+        prompt_cf (str): Prompt for categorizing figures
+        prompt_uto (str): Prompt for understanding theme/objective
+        prompt_sf (str): Prompt for sequencing figures
+        prompt_bs (str): Prompt for building story
+        story_structure_id (str, optional): ID of the story structure to use. If None, automatic selection.
+    
     Returns:
        story (str): The final narrative story.
        recommended_order (list): List of filenames in recommended order.
        categories_string (str): Figure categories as a single formatted string.
        theme (str): The theme text.
        sequence (str): The sequence justification.
+       selected_structure_name (str): Name of the structure used (or "Automatic" if none selected).
     """
     try:
         base_cache_dir = DATA_PATH
@@ -180,7 +378,11 @@ def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs):
                             }
 
         if not fig_descriptions_category:
-            return "No storyboard images with long descriptions found.", [], "", "", ""
+            return "No storyboard images with long descriptions found.", [], "", "", "", "None"
+        
+        # Select story structure if specified
+        selected_structure = select_story_structure(story_structure_id)
+        selected_structure_name = selected_structure['name'] if selected_structure else "Automatic Selection"
         
         # Categorize each figure and build a single string of categories.
         for file, info in fig_descriptions_category.items():
@@ -196,19 +398,19 @@ def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs):
             [f"{file}: {info['description']}" for file, info in fig_descriptions_category.items()]
         )
 
-        # Get theme and sequence justification
+        # Get theme and sequence justification with selected structure
         theme = understand_theme_objective(all_descriptions, prompt_uto)
-        sequence = sequence_figures(fig_descriptions_category, theme, prompt_sf)
-        story = build_story(fig_descriptions_category, sequence, prompt_bs)
+        sequence = sequence_figures(fig_descriptions_category, theme, prompt_sf, selected_structure)
+        story = build_story(fig_descriptions_category, sequence, prompt_bs, selected_structure)
 
         # Extract recommended order
         recommended_order = extract_figure_filenames(sequence)
 
-        return story, recommended_order, categories_string, theme, sequence
+        return story, recommended_order, categories_string, theme, sequence, selected_structure_name
 
     except Exception as e:
         print(f"Error generating narrative: {e}")
-        return "An error occurred while generating the narrative.", [], "", "", ""
+        return "An error occurred while generating the narrative.", [], "", "", "", "None"
     
 def merge_narrative_cache(user_folder, new_cache_data):
     """
@@ -265,11 +467,11 @@ def main():
         with open(prompt_path, 'r') as file:
             prompts[key] = file.read()
 
-    # Generate narrative and recommended order
-    story, recommended_order = generate_story(username, prompts["categorize_figures"],
-                                              prompts["understand_theme_objective"],
-                                              prompts["sequence_figures"],
-                                              prompts["build_story"])
+    # Generate narrative and recommended order (with automatic structure selection)
+    story, recommended_order, _, _, _, _ = generate_story(username, prompts["categorize_figures"],
+                                                           prompts["understand_theme_objective"],
+                                                           prompts["sequence_figures"],
+                                                           prompts["build_story"])
 
     # Save the narrative to a JSON file
     story_path = os.path.join(user_folder, 'narrative_story.json')
