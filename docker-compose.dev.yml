@@ -1,0 +1,114 @@
+services:
+  db:
+    image: postgres:17
+    container_name: cast-db-dev
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    # ports:
+    #   - "5432:5432"  # Only expose if needed for external DB tools
+    networks:
+      - cast-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: cast-redis-dev
+    ports:
+      - "6379:6379"  # Expose for local development
+    restart: unless-stopped
+    networks:
+      - cast-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.arm
+    container_name: cast-backend-dev
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    # ports:
+    #   - "8076:8076"  # Now accessed via nginx proxy
+    volumes:
+      - ./data:/data/CAST_ext  # Use local data directory
+      - static:/app/staticfiles
+    networks:
+      - cast-network
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8076"
+
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.arm
+    container_name: cast-celery-dev
+    restart: unless-stopped
+    volumes:
+      - ./data:/data/CAST_ext  # Use local data directory
+    env_file:
+      - .env
+    networks:
+      - cast-network
+    depends_on:
+      - db
+      - redis
+    command: celery -A config worker --loglevel=info
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://localhost
+    container_name: cast-frontend-dev
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - frontend_build:/shared-build  # Share build with nginx
+    depends_on:
+      - backend
+    networks:
+      - cast-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: cast-nginx-dev
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/project.dev.conf:/etc/nginx/conf.d/default.conf
+      - frontend_build:/var/www/html
+      - static:/staticfiles:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - cast-network
+    restart: unless-stopped
+
+networks:
+  cast-network:
+    driver: bridge
+
+volumes:
+  db_data:
+  static:
+  frontend_build:

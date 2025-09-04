@@ -1,7 +1,7 @@
 // Import dependencies
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import axios from 'axios';
+import { generateDescription, generateNarrativeAsync, getImageDataAll, getNarrativeCache } from '../services/api';
 
 // Helpers
 import { ImageData } from '../types/types';
@@ -43,18 +43,14 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
 
             for (const image of imagesNeedingDescriptions) {
                 try {
-                    const response = await axios.post(
-                        '/generate_long_description_for_image',
-                        { id: image.id },
-                        { withCredentials: true }
-                    );
+                    const response = await generateDescription(image.id);
                     
-                    if (response.data.status === 'success') {
+                    if (response.status === 'success') {
                         successful++;
                         console.log(`Description generated for image ${image.id}`);
                     } else {
                         failed++;
-                        console.error(`Failed to generate description for image ${image.id}:`, response.data.message);
+                        console.error(`Failed to generate description for image ${image.id}:`, response.message);
                     }
                 } catch (error) {
                     failed++;
@@ -94,8 +90,8 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
             // Step 2: Verify backend state before story generation
             console.log('Step 2: Verifying backend state...');
             try {
-                const verifyResponse = await axios.get('/get_user_data', { withCredentials: true });
-                const backendImages = verifyResponse.data.images;
+                const response = await getImageDataAll();
+                const backendImages = response.data.images;
                 console.log('Backend images state:', backendImages);
                 console.log('Backend images with in_storyboard=true:', backendImages.filter((img: any) => img.in_storyboard));
                 console.log('Backend images with long_desc:', backendImages.filter((img: any) => img.long_desc && img.long_desc.trim()));
@@ -106,28 +102,62 @@ const GenerateStoryButton = ({ images = [] }: GenerateStoryButtonProps) => {
                 console.error('Error verifying backend state:', error);
             }
 
-            // Step 3: Generate the story
+            // Step 3: Generate the story (async with polling)
             console.log('Step 3: Generating story...');
-            const response = await axios.post('/run_script', {}, { withCredentials: true });
+            const taskResponse = await generateNarrativeAsync();
             
-            if (response.data.status === 'success') {
-                // Emit custom event with story data
-                const storyEvent = new CustomEvent('storyGenerated', {
-                    detail: {
-                        narrative: response.data.narrative,
-                        recommended_order: response.data.recommended_order,
-                        categorize_figures_response: response.data.categorize_figures_response,
-                        theme_response: response.data.theme_response,
-                        sequence_response: response.data.sequence_response
-                    }
-                });
-                window.dispatchEvent(storyEvent);
+            if (taskResponse.status === 'success' && taskResponse.task_id) {
+                console.log('Story generation task started, task_id:', taskResponse.task_id);
                 
-                console.log('Story generated successfully');
+                // Poll for task completion
+                const pollForCompletion = async () => {
+                    const maxAttempts = 60; // 5 minutes with 5-second intervals
+                    let attempts = 0;
+                    
+                    while (attempts < maxAttempts) {
+                        attempts++;
+                        console.log(`Polling attempt ${attempts}/${maxAttempts}`);
+                        
+                        try {
+                            // Check narrative cache for completion
+                            const cacheResponse = await getNarrativeCache();
+                            const cacheData = cacheResponse.data.data;
+                            
+                            if (cacheData.narrative) {
+                                // Story generation complete
+                                const storyEvent = new CustomEvent('storyGenerated', {
+                                    detail: {
+                                        narrative: cacheData.narrative,
+                                        recommended_order: cacheData.order,
+                                        categorize_figures_response: cacheData.categories,
+                                        theme_response: cacheData.theme,
+                                        sequence_response: cacheData.sequence_justification
+                                    }
+                                });
+                                window.dispatchEvent(storyEvent);
+                                
+                                console.log('Story generated successfully');
+                                return;
+                            }
+                        } catch (error) {
+                            console.error('Error polling for story completion:', error);
+                        }
+                        
+                        // Wait 5 seconds before next poll
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                    }
+                    
+                    // Timeout reached
+                    console.error('Story generation timed out');
+                    alert('Story generation is taking longer than expected. Please check back in a few minutes.');
+                };
+                
+                // Start polling (don't await to allow UI updates)
+                pollForCompletion();
+                
             } else {
-                console.error('Error generating story:', response.data.message);
-                console.error('Full response:', response.data);
-                alert(`Error generating story: ${response.data.message}`);
+                console.error('Error starting story generation:', taskResponse.message);
+                alert(`Error starting story generation: ${taskResponse.message}`);
             }
         } catch (error) {
             console.error('Error generating story:', error);

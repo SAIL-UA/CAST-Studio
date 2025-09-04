@@ -22,6 +22,11 @@ from rest_framework.throttling import UserRateThrottle
 from .tasks import generate_description_task, generate_narrative_task
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .models import NarrativeCache
+from .serializers import NarrativeCacheSerializer
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
@@ -284,12 +289,6 @@ class GenerateNarrativeAsyncView(APIView):
       return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .models import NarrativeCache
-from .serializers import NarrativeCacheSerializer
 
 class GetNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]

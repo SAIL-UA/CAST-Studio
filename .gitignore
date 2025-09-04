@@ -3,7 +3,7 @@ __pycache__/
 .DS_Store
 node_modules
 .vscode
-
+data/*
 backend/jupyterhub_cookie_secret
 backend/jupyterhub.sqlite
 

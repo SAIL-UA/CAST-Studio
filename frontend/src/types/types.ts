@@ -2,12 +2,19 @@
 
 export interface ImageData {
   id: string;
-  filename: string;
-  short_desc?: string;
-  long_desc?: string;
+  user: number;
+  filepath: string;
+  short_desc: string;
+  long_desc: string;
+  long_desc_generating: boolean;
+  source: string;
   in_storyboard: boolean;
   x: number;
   y: number;
+  has_order: boolean;
+  order_num: number;
+  last_saved: string;
+  created_at: string;
 }
 
 export interface DragItem {
@@ -32,6 +39,7 @@ export interface BinProps {
 
 export interface DraggableCardProps {
   image: ImageData;
+  index: number;
   onDescriptionsUpdate: (id: string, newShortDesc: string, newLongDesc: string) => void;
   onDelete: (id: string) => void;
   onTrash: (id: string) => void;

@@ -20,13 +20,13 @@ if (accessToken) {
 
 // === Token Refresh Helper ===
 let isRefreshing = false;
-let failedQueue = [];
+let failedQueue: Array<{resolve: (token: string) => void, reject: (error: any) => void}> = [];
 
-const processQueue = (error, token = null) => {
+const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach(prom => {
     if (error) {
       prom.reject(error);
-    } else {
+    } else if (token) {
       prom.resolve(token);
     }
   });
@@ -98,7 +98,7 @@ export const checkAuth = async() => {
   return response.data;
 };
 
-export const login = async (credentials) => {
+export const login = async (credentials: { username: string; password: string }) => {
   const response = await USER_API.post('/login/', credentials);
 
   if (response.data.access && response.data.refresh) {
@@ -113,7 +113,7 @@ export const login = async (credentials) => {
 };
 
 
-export const register = async(userData) => {
+export const register = async(userData: { username: string; email: string; password: string }) => {
   const response = await USER_API.post('/register/', userData)
   return response;
 };
@@ -134,7 +134,7 @@ export const logout = async () => {
   return response.data;
 };
 
-export const getImageData = async(image_id) => {
+export const getImageData = async(image_id: string) => {
   const response = await API.get(`/images/?image_id=${encodeURIComponent(image_id)}`)
   return response.data.images;
 };
@@ -144,17 +144,17 @@ export const getImageDataAll = async() => {
   return response;
 };
 
-export const uploadFigure = async(formData) => {
+export const uploadFigure = async(formData: FormData) => {
   const response = await API.post('/images/upload/', formData)
   return response.data;
 };
 
-export const deleteFigure = async(filename) => {
+export const deleteFigure = async(filename: string) => {
   const response = await API.post(`/images/${encodeURIComponent(filename)}/delete/`, {})
   return response.data;
 };
 
-export const serveImage = async(filename) => {
+export const serveImage = async(filename: string) => {
   try {
     const response = await API.get(`/images/${encodeURIComponent(filename)}/serve/`, {
       responseType: 'blob',
@@ -172,7 +172,7 @@ export const serveImage = async(filename) => {
   }
 };
 
-export const updateImageData = async(imageId, data) => {
+export const updateImageData = async(imageId: string, data: any) => {
   const response = await API.post(`/images/${imageId}/update/`, { data })
   return response;
 };
@@ -198,7 +198,7 @@ export const getNarrativeCache = async() => {
   return response;
 };
 
-export const updateNarrativeCache = async(data) => {
+export const updateNarrativeCache = async(data: any) => {
   const response = await API.post('/narrative/cache/update/', { data })
   return response.data; 
 };
@@ -208,7 +208,7 @@ export const clearNarrativeCache = async() => {
   return response.data;
 };
 
-export const generateDescription = async(image_id) => {
+export const generateDescription = async(image_id: string) => {
   const response = await API.post(`/descriptions/generate/?image_id=${encodeURIComponent(image_id)}`)
   return response.data;
 };
@@ -218,18 +218,18 @@ export const generateDescriptionAll = async() => {
   return response.data;
 };
 
-export const logAction = async(data) => {
+export const logAction = async(data: any) => {
   const response = await API.post('/actions/log/', data)
   return response.data;
 };
 
 // Password reset endpoints
-export const requestPasswordReset = async(email) => {
+export const requestPasswordReset = async(email: string) => {
   const response = await USER_API.post('/password-reset/', { email });
   return response;
 };
 
-export const confirmPasswordReset = async(uid, token, newPassword, confirmPassword) => {
+export const confirmPasswordReset = async(uid: string, token: string, newPassword: string, confirmPassword: string) => {
   const response = await USER_API.post(`/password-reset-confirm/${uid}/${token}/`, {
     new_password: newPassword,
     confirm_password: confirmPassword

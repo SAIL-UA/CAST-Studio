@@ -1,6 +1,6 @@
 // Import dependencies
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { getDashboard, updateImageData as updateImageDataAPI } from '../services/api';
 
 // Import components
 import Bin from './Bin';
@@ -17,8 +17,8 @@ const Trash = () => {
     // Fetch user data from backend
     const fetchUserData = async () => {
         try {
-            const response = await axios.get('/get_user_data', { withCredentials: true });
-            const fetchedImages = response.data.images.map((img: any, index: number) => ({
+            const response = await getDashboard();
+            const fetchedImages = response.images.map((img: any, index: number) => ({
                 ...img,
                 // Keep original in_storyboard status for trash (don't override)
                 in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : false,
@@ -44,11 +44,7 @@ const Trash = () => {
     // Update image data (position, status, etc.)
     const updateImageData = async (imageId: string, data: Partial<ImageData>) => {
         try {
-            await axios.post(
-                '/update_image_data', 
-                { id: imageId, ...data }, 
-                { withCredentials: true }
-            );
+            await updateImageDataAPI(imageId, data);
             
             // Update local state
             setImages((prevImages) =>

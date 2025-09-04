@@ -1,9 +1,9 @@
 // Import dependencies
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 // Import contexts
 import { useAuth } from '../contexts/Auth';
+import { logout } from '../services/api';
 
 // Header component
 const Header = () => {
@@ -22,8 +22,7 @@ const Header = () => {
 
     // Logout functionality
     const handleLogout = () => {
-        axios
-            .post('/logout', {}, { withCredentials: true })
+        logout()
             .then(() => {
                 setUserAuthenticated(false);
                 navigate('/login');

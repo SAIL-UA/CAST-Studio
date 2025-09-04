@@ -1,5 +1,5 @@
-import axios from "axios";
 import { createContext, useContext, useState, useEffect } from "react";
+import { checkAuth } from "../services/api";
 
 // Create context instance
 type AuthContextType = {
@@ -16,10 +16,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Global auth check on load
     useEffect(() => {
         // Check authentication on load
-        axios
-        .get('/check_auth', { withCredentials: true })
-        .then((response) => {
-            setUserAuthenticated(response.data.authenticated);
+        checkAuth()
+        .then((data) => {
+            setUserAuthenticated(data.authenticated);
         })
         .catch((error) => {
             console.error('Error checking authentication:', error);

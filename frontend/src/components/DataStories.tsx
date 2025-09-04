@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 // Story data interface
 interface StoryData {
     narrative?: string;
-    recommended_order?: string[];
-    categorize_figures_response?: string;
+    recommended_order?: (string | {filename: string, category: string})[];
+    categorize_figures_response?: string | {filename: string, category: string}[];
     theme_response?: string;
     sequence_response?: string;
 }
@@ -102,7 +102,16 @@ const DataStories = () => {
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Figure Categories</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
-                                            {storyData.categorize_figures_response}
+                                            {typeof storyData.categorize_figures_response === 'string' ? 
+                                                storyData.categorize_figures_response :
+                                                Array.isArray(storyData.categorize_figures_response) ?
+                                                    storyData.categorize_figures_response.map((item, index) => (
+                                                        <div key={index} className="mb-2">
+                                                            <strong>{item.filename}:</strong> {item.category}
+                                                        </div>
+                                                    )) :
+                                                    JSON.stringify(storyData.categorize_figures_response, null, 2)
+                                            }
                                         </div>
                                     </div>
                                 )}
@@ -122,8 +131,12 @@ const DataStories = () => {
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Recommended Figure Order</h4>
                                         <ol className="list-decimal list-inside text-grey-darkest">
-                                            {storyData.recommended_order.map((filename, index) => (
-                                                <li key={index} className="mb-1">{filename}</li>
+                                            {storyData.recommended_order.map((item, index) => (
+                                                <li key={index} className="mb-1">
+                                                    {typeof item === 'string' ? item : 
+                                                     typeof item === 'object' && item.filename ? item.filename : 
+                                                     JSON.stringify(item)}
+                                                </li>
                                             ))}
                                         </ol>
                                     </div>

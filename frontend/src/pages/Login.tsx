@@ -1,10 +1,10 @@
 // Import dependencies
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 
 // Import context
 import { useAuth } from '../contexts/Auth';
+import { login, register } from '../services/api';
 
 // Import components
 
@@ -17,8 +17,13 @@ const Login = () => {
     const { userAuthenticated, setUserAuthenticated } = useAuth();
     
     // States
+    const [isRegisterMode, setIsRegisterMode] = useState(false);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [email, setEmail] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
 
     // Check authentication
     useEffect(() => {
@@ -30,10 +35,9 @@ const Login = () => {
     // Login functionality
     const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        axios
-          .post('/login', { username, password }, { withCredentials: true })
+        login({ username, password })
           .then(response => {
-            if (response.data.status === 'success') {
+            if (response.status === 200) {
               setUserAuthenticated(true);
               navigate('/home');
             } else {
@@ -44,6 +48,65 @@ const Login = () => {
             console.error('Login error:', error);
             alert('An error occurred during login.');
           });
+    };
+
+    // Registration functionality
+    const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        
+        // Validation
+        if (password !== confirmPassword) {
+            alert('Passwords do not match.');
+            return;
+        }
+        
+        if (!username || !password || !email || !firstName || !lastName) {
+            alert('Please fill in all fields.');
+            return;
+        }
+
+        const userData = {
+            username,
+            password,
+            email,
+            first_name: firstName,
+            last_name: lastName
+        };
+
+        register(userData)
+          .then(response => {
+            if (response.status === 201) {
+              alert('Registration successful! Please log in.');
+              setIsRegisterMode(false);
+              // Clear registration fields
+              setConfirmPassword('');
+              setEmail('');
+              setFirstName('');
+              setLastName('');
+            } else {
+              alert('Registration failed. Please try again.');
+            }
+          })
+          .catch(error => {
+            console.error('Registration error:', error);
+            if (error.response?.data?.message) {
+              alert(error.response.data.message);
+            } else {
+              alert('An error occurred during registration.');
+            }
+          });
+    };
+
+    // Toggle between login and register modes
+    const toggleMode = () => {
+        setIsRegisterMode(!isRegisterMode);
+        // Clear all fields when switching modes
+        setUsername('');
+        setPassword('');
+        setConfirmPassword('');
+        setEmail('');
+        setFirstName('');
+        setLastName('');
     };
 
     // Visible component
@@ -73,32 +136,97 @@ const Login = () => {
                 </div>
             </div>
 
-            {/* Right: Login Form */}
+            {/* Right: Login/Register Form */}
             <div id="right-login" className="w-1/2 flex items-center justify-center bg-gradient-to-bl from-bama-crimson via-bama-teal to-grey-light">
                 <div className="w-3/4 max-w-sm">
-                <h1 className="text-3xl font-semibold mb-2 text-white">Welcome!</h1><br/>
+                    <h1 className="text-3xl font-semibold mb-2 text-white">
+                        {isRegisterMode ? 'Create Account' : 'Welcome!'}
+                    </h1><br/>
 
-                <form className="flex flex-col gap-4"
-                onSubmit={(e: React.FormEvent<HTMLFormElement>) => handleLogin(e)}>
-                    <input
-                    type="text"
-                    placeholder="Username"
-                    className="px-4 py-2 rounded-md text-black"
-                    onChange={(e) => setUsername(e.target.value)}
-                    />
-                    <input
-                    type="password"
-                    placeholder="Password"
-                    className="px-4 py-2 rounded-md text-black"
-                    onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <button
-                    type="submit"
-                    className="mt-2 bg-grey-light text-bama-crimson font-semibold py-2 rounded-md hover:bg-grey-lightest transition"
-                    >
-                    Login
-                    </button>
-                </form>
+                    <form className="flex flex-col gap-4" 
+                    onSubmit={isRegisterMode ? handleRegister : handleLogin}>
+                        {/* Registration-only fields */}
+                        {isRegisterMode && (
+                            <>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="First Name"
+                                        value={firstName}
+                                        className="px-4 py-2 rounded-md text-black flex-1"
+                                        onChange={(e) => setFirstName(e.target.value)}
+                                        required
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Last Name"
+                                        value={lastName}
+                                        className="px-4 py-2 rounded-md text-black flex-1"
+                                        onChange={(e) => setLastName(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <input
+                                    type="email"
+                                    placeholder="Email"
+                                    value={email}
+                                    className="px-4 py-2 rounded-md text-black"
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
+                            </>
+                        )}
+
+                        {/* Common fields */}
+                        <input
+                            type="text"
+                            placeholder="Username"
+                            value={username}
+                            className="px-4 py-2 rounded-md text-black"
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                        />
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            value={password}
+                            className="px-4 py-2 rounded-md text-black"
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+
+                        {/* Registration-only confirm password */}
+                        {isRegisterMode && (
+                            <input
+                                type="password"
+                                placeholder="Confirm Password"
+                                value={confirmPassword}
+                                className="px-4 py-2 rounded-md text-black"
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
+                            />
+                        )}
+
+                        <button
+                            type="submit"
+                            className="mt-2 bg-grey-light text-bama-crimson font-semibold py-2 rounded-md hover:bg-grey-lightest transition"
+                        >
+                            {isRegisterMode ? 'Register' : 'Login'}
+                        </button>
+                    </form>
+
+                    {/* Toggle between login and register */}
+                    <div className="text-center mt-4">
+                        <button
+                            type="button"
+                            onClick={toggleMode}
+                            className="text-white underline hover:text-grey-lightest transition"
+                        >
+                            {isRegisterMode 
+                                ? 'Already have an account? Login' 
+                                : 'Need an account? Register'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
