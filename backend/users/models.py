@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils import timezone
 import uuid
+import random
 
 class CustomUserManager(BaseUserManager):
   """
@@ -47,3 +48,48 @@ class User(AbstractUser):
   class Meta:
     db_table = 'users'
     managed = True
+
+
+class PasswordResetCode(models.Model):
+  """
+  Model to store password reset codes for users
+  """
+  user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reset_codes')
+  code = models.CharField(max_length=6)
+  created_at = models.DateTimeField(auto_now_add=True)
+  
+  @classmethod
+  def generate_code(cls, user):
+    """Generate a new 6-digit code for the user and delete old ones"""
+    # Delete any existing codes for this user
+    cls.objects.filter(user=user).delete()
+    
+    # Generate new 6-digit code
+    code = str(random.randint(100000, 999999))
+    
+    # Create new reset code
+    reset_code = cls.objects.create(user=user, code=code)
+    return reset_code
+  
+  def is_valid(self):
+    """Check if code is still valid (within 15 minutes)"""
+    # Code expires after 15 minutes
+    expiry_time = self.created_at + timezone.timedelta(minutes=15)
+    return timezone.now() < expiry_time
+  
+  def use_code(self):
+    """Delete code after use"""
+    self.delete()
+  
+  @classmethod
+  def cleanup_expired(cls):
+    """Delete all expired codes"""
+    expiry_threshold = timezone.now() - timezone.timedelta(minutes=15)
+    expired_codes = cls.objects.filter(created_at__lt=expiry_threshold)
+    count = expired_codes.count()
+    expired_codes.delete()
+    return count
+  
+  class Meta:
+    db_table = 'password_reset_codes'
+    ordering = ['-created_at']

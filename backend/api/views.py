@@ -276,13 +276,17 @@ class GenerateNarrativeAsyncView(APIView):
   def post(self, request):
     """Generate narrative asynchronously using Celery task"""
     try:
+      # Get story structure ID from request if provided
+      story_structure_id = request.data.get('story_structure_id') if request.data else None
+      
       # Start the narrative generation task
-      task = generate_narrative_task.delay(request.user.id)
+      task = generate_narrative_task.delay(request.user.id, story_structure_id)
       
       return Response({
         "status": "success",
         "message": "Narrative generation started",
-        "task_id": task.id
+        "task_id": task.id,
+        "story_structure_id": story_structure_id
       }, status=status.HTTP_202_ACCEPTED)
 
     except Exception as e:

@@ -54,7 +54,13 @@ const refreshToken = async () => {
     async error => {
       const originalRequest = error.config;
 
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      // Don't try to refresh tokens for login, register, or password reset endpoints
+      const excludedEndpoints = ['/login/', '/register/', '/password-reset/', '/token/refresh/'];
+      const isExcludedEndpoint = excludedEndpoints.some(endpoint => 
+        originalRequest.url?.includes(endpoint)
+      );
+
+      if (error.response?.status === 401 && !originalRequest._retry && !isExcludedEndpoint) {
         if (isRefreshing) {
           return new Promise(function (resolve, reject) {
             failedQueue.push({ resolve, reject });
@@ -172,8 +178,10 @@ export const updateImageData = async(imageId: string, data: any) => {
   return response;
 };
 
-export const generateNarrativeAsync = async() => {
-  const response = await API.post('/narrative/generate/async/')
+export const generateNarrativeAsync = async(story_structure_id?: string) => {
+  const response = await API.post('/narrative/generate/async/', {
+    story_structure_id: story_structure_id || null
+  })
   return response.data;
 };
 
@@ -224,8 +232,18 @@ export const requestPasswordReset = async(email: string) => {
   return response;
 };
 
-export const confirmPasswordReset = async(uid: string, token: string, newPassword: string, confirmPassword: string) => {
-  const response = await USER_API.post(`/password-reset-confirm/${uid}/${token}/`, {
+export const verifyResetCode = async(email: string, code: string) => {
+  const response = await USER_API.post('/password-reset-verify/', { 
+    email, 
+    code 
+  });
+  return response;
+};
+
+export const confirmPasswordReset = async(email: string, code: string, newPassword: string, confirmPassword: string) => {
+  const response = await USER_API.post('/password-reset-confirm/', {
+    email,
+    code,
     new_password: newPassword,
     confirm_password: confirmPassword
   });

@@ -48,6 +48,7 @@ const Trash = () => {
     // Update image data (position, status, etc.)
     const updateImageData = async (imageId: string, data: Partial<ImageData>) => {
         try {
+            console.log('Updating image data:', imageId, data);
             const response = await updateImageDataAPI(imageId, data);
 
             if (response.status === 200) {

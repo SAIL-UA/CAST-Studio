@@ -44,7 +44,6 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
         })
         .catch((error) => {
             console.error('Error fetching user data:', error);
-            alert('Failed to load user data. Please refresh the page.');
         })
         .finally(() => {
             setLoading(false);

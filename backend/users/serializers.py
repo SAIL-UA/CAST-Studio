@@ -1,11 +1,10 @@
 # backend\users\serializers.py
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
 from django.core.mail import send_mail
 from django.conf import settings
+import time
+from .models import PasswordResetCode
 
 
 
@@ -46,24 +45,22 @@ class PasswordResetRequestSerializer(serializers.Serializer):
       print(f"Unexpected error during password reset: {e}")
       return None
     
-    # Generate token and UID
-    token = default_token_generator.make_token(user)
-    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    # Clean up expired codes before generating new one
+    PasswordResetCode.cleanup_expired()
     
-    # Create reset URL
-    reset_url = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
+    # Generate new reset code
+    reset_code_obj = PasswordResetCode.generate_code(user)
     
-    # Send email
-    subject = "Password Reset - CAST Story Studio"
+    # Send email with code
+    subject = "Password Reset Code - CAST Story Studio"
     message = f"""
 Hello {user.first_name or user.username},
 
 You requested a password reset for your CAST Story Studio account.
 
-Click the link below to reset your password:
-{reset_url}
+Your password reset code is: {reset_code_obj.code}
 
-If you didn't request this, you can safely ignore this email.
+This code will expire in 15 minutes. If you didn't request this, you can safely ignore this email.
 
 Best regards,
 CAST Story Studio Team
@@ -79,11 +76,61 @@ CAST Story Studio Team
     
     return user
 
+class PasswordResetCodeVerifySerializer(serializers.Serializer):
+  email = serializers.EmailField()
+  code = serializers.CharField(max_length=6, min_length=6)
+
+  def validate(self, data):
+    # Clean up expired codes first
+    PasswordResetCode.cleanup_expired()
+    
+    email = data['email']
+    code = data['code']
+    
+    try:
+      user = User.objects.get(email=email)
+      reset_code = PasswordResetCode.objects.get(user=user, code=code)
+      
+      if not reset_code.is_valid():
+        raise serializers.ValidationError("Reset code has expired.")
+        
+      data['reset_code'] = reset_code
+      data['user'] = user
+      return data
+      
+    except User.DoesNotExist:
+      raise serializers.ValidationError("Invalid or expired code.")
+    except PasswordResetCode.DoesNotExist:
+      raise serializers.ValidationError("Invalid or expired code.")
+
 class PasswordResetConfirmSerializer(serializers.Serializer):
+  email = serializers.EmailField()
+  code = serializers.CharField(max_length=6, min_length=6)
   new_password = serializers.CharField(min_length=8, write_only=True)
   confirm_password = serializers.CharField(write_only=True)
 
   def validate(self, data):
     if data['new_password'] != data['confirm_password']:
       raise serializers.ValidationError("Passwords do not match.")
-    return data
+    
+    # Clean up expired codes first
+    PasswordResetCode.cleanup_expired()
+    
+    email = data['email']
+    code = data['code']
+    
+    try:
+      user = User.objects.get(email=email)
+      reset_code = PasswordResetCode.objects.get(user=user, code=code)
+      
+      if not reset_code.is_valid():
+        raise serializers.ValidationError("Reset code has expired.")
+        
+      data['reset_code'] = reset_code
+      data['user'] = user
+      return data
+      
+    except User.DoesNotExist:
+      raise serializers.ValidationError("Invalid or expired code.")
+    except PasswordResetCode.DoesNotExist:
+      raise serializers.ValidationError("Invalid or expired code.")

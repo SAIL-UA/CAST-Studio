@@ -8,6 +8,9 @@ import { useAuth } from './contexts/Auth';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Construction from './pages/construction';
+import ForgotPassword from './pages/ForgotPassword';
+import VerifyResetCode from './pages/VerifyResetCode';
+import ResetPassword from './pages/ResetPassword';
 
 // Main App component
 function App() {
@@ -24,6 +27,9 @@ function App() {
                 <Route path='/' element={userAuthenticated ? <Navigate to="/home" /> : <Navigate to="/login" />} />
                 <Route path='/home' element={<Home />} />
                 <Route path='/login' element={<Login />} />
+                <Route path='/forgot-password' element={<ForgotPassword />} />
+                <Route path='/verify-reset-code' element={<VerifyResetCode />} />
+                <Route path='/reset-password' element={<ResetPassword />} />
                 <Route path='/construction' element={<Construction />} />
             </Routes>
       </div>

@@ -1,5 +1,5 @@
 // Import dependencies
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 // Import context
@@ -14,16 +14,19 @@ import { login, register } from '../services/api';
 const Login = () => {
     // Helpers
     const navigate = useNavigate();
-    const { userAuthenticated, setUserAuthenticated } = useAuth();
+    const { userAuthenticated, setUserAuthenticated, setUsername } = useAuth();
     
     // States
     const [isRegisterMode, setIsRegisterMode] = useState(false);
-    const [username, setUsername] = useState('');
+    const [usernameInput, setUsernameInput] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [email, setEmail] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [loading, setLoading] = useState(false);
 
     // Check authentication
     useEffect(() => {
@@ -35,38 +38,55 @@ const Login = () => {
     // Login functionality
     const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        login({ username, password })
+        setLoading(true);
+        setError('');
+        setSuccess('');
+        
+        login({ username: usernameInput, password })
           .then(response => {
             if (response.status === 200) {
               setUserAuthenticated(true);
+              setUsername(response.data.user.username);
               navigate('/home');
             } else {
-              alert('Login failed.');
+              setError('Login failed. Please check your credentials.');
             }
           })
           .catch(error => {
             console.error('Login error:', error);
-            alert('An error occurred during login.');
+            if (error.response?.status === 401) {
+              setError('Invalid username or password.');
+            } else {
+              setError('An error occurred during login. Please try again.');
+            }
+          })
+          .finally(() => {
+            setLoading(false);
           });
     };
 
     // Registration functionality
     const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        setLoading(true);
+        setError('');
+        setSuccess('');
         
         // Validation
         if (password !== confirmPassword) {
-            alert('Passwords do not match.');
+            setError('Passwords do not match.');
+            setLoading(false);
             return;
         }
         
-        if (!username || !password || !email || !firstName || !lastName) {
-            alert('Please fill in all fields.');
+        if (!usernameInput || !password || !email || !firstName || !lastName) {
+            setError('Please fill in all fields.');
+            setLoading(false);
             return;
         }
 
         const userData = {
-            username,
+            username: usernameInput,
             password,
             email,
             first_name: firstName,
@@ -76,7 +96,7 @@ const Login = () => {
         register(userData)
           .then(response => {
             if (response.status === 201) {
-              alert('Registration successful! Please log in.');
+              setSuccess('Registration successful! Please log in.');
               setIsRegisterMode(false);
               // Clear registration fields
               setConfirmPassword('');
@@ -84,16 +104,23 @@ const Login = () => {
               setFirstName('');
               setLastName('');
             } else {
-              alert('Registration failed. Please try again.');
+              setError('Registration failed. Please try again.');
             }
           })
           .catch(error => {
             console.error('Registration error:', error);
-            if (error.response?.data?.message) {
-              alert(error.response.data.message);
+            if (error.response?.data?.username) {
+              setError('Username already exists. Please choose a different username.');
+            } else if (error.response?.data?.email) {
+              setError('Email already exists. Please use a different email address.');
+            } else if (error.response?.data?.message) {
+              setError(error.response.data.message);
             } else {
-              alert('An error occurred during registration.');
+              setError('An error occurred during registration. Please try again.');
             }
+          })
+          .finally(() => {
+            setLoading(false);
           });
     };
 
@@ -101,12 +128,14 @@ const Login = () => {
     const toggleMode = () => {
         setIsRegisterMode(!isRegisterMode);
         // Clear all fields when switching modes
-        setUsername('');
+        setUsernameInput('');
         setPassword('');
         setConfirmPassword('');
         setEmail('');
         setFirstName('');
         setLastName('');
+        setError('');
+        setSuccess('');
     };
 
     // Visible component
@@ -179,9 +208,9 @@ const Login = () => {
                         <input
                             type="text"
                             placeholder="Username"
-                            value={username}
+                            value={usernameInput}
                             className="px-4 py-2 rounded-md text-black"
-                            onChange={(e) => setUsername(e.target.value)}
+                            onChange={(e) => setUsernameInput(e.target.value)}
                             required
                         />
                         <input
@@ -207,11 +236,36 @@ const Login = () => {
 
                         <button
                             type="submit"
-                            className="mt-2 bg-grey-light text-bama-crimson font-semibold py-2 rounded-md hover:bg-grey-lightest transition"
+                            disabled={loading}
+                            className="mt-2 bg-grey-light text-bama-crimson font-semibold py-2 rounded-md hover:bg-grey-lightest transition disabled:opacity-50"
                         >
-                            {isRegisterMode ? 'Register' : 'Login'}
+                            {loading ? (isRegisterMode ? 'Creating Account...' : 'Logging in...') : (isRegisterMode ? 'Register' : 'Login')}
                         </button>
                     </form>
+
+                    {/* Success/Error Messages */}
+                    {error && (
+                        <div className="mt-4 p-3 bg-red-600 text-white rounded-md text-sm">
+                            {error}
+                        </div>
+                    )}
+                    {success && (
+                        <div className="mt-4 p-3 bg-green-600 text-white rounded-md text-sm">
+                            {success}
+                        </div>
+                    )}
+
+                    {/* Forgot password link - only show in login mode */}
+                    {!isRegisterMode && (
+                        <div className="text-center mt-3">
+                            <Link
+                                to="/forgot-password"
+                                className="text-white text-sm underline hover:text-grey-lightest transition"
+                            >
+                                Forgot your password?
+                            </Link>
+                        </div>
+                    )}
 
                     {/* Toggle between login and register */}
                     <div className="text-center mt-4">

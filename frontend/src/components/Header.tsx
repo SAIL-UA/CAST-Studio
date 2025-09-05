@@ -12,7 +12,7 @@ const Header = () => {
     const navigate = useNavigate();
     
     // Contexts
-    const { userAuthenticated, setUserAuthenticated } = useAuth();
+    const { userAuthenticated, setUserAuthenticated, username, setUsername } = useAuth();
 
     // Search functionality
     const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -25,6 +25,7 @@ const Header = () => {
         logout()
             .then(() => {
                 setUserAuthenticated(false);
+                setUsername(null);
                 navigate('/login');
             })
             .catch((error) => {
@@ -82,10 +83,18 @@ const Header = () => {
                 </div>
 
                 {/* Right: Login */}
-                <div className="flex justify-end w-1/5">
-                    {/* If user is logged in, show logout button */}
+                <div className="flex justify-end items-center w-1/5 space-x-3">
+                    {/* If user is logged in, show username and logout button */}
                     {userAuthenticated ? (
-                        <span className="text-white cursor-pointer text-sm" onClick={handleLogout}>Logout</span>
+                        <>
+                            <div className="flex items-center space-x-1 bg-bama-burgundy px-2 py-1 rounded">
+                                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-white text-sm">{username}</span>
+                            </div>
+                            <span className="text-white cursor-pointer text-sm" onClick={handleLogout}>Logout</span>
+                        </>
                     ) : (
                         <span className="text-white cursor-pointer text-sm" onClick={() => navigate('/login')}>Login</span>
                     )}

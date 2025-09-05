@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
-import { DraggableCardProps, DragItem } from '../types/types';
+import { DraggableCardProps, DragItem, ImageData } from '../types/types';
 import { updateImageData, generateDescription, deleteFigure, serveImage, getImageData } from '../services/api';
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 
@@ -99,10 +99,11 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     document.body.style.overflow = 'hidden';
   };
 
-  const handleClose = () => {
+  const handleClose = (additionalData?: Partial<ImageData>) => {
     updateImageData(image.id, {
       short_desc: tempShortDesc,
       long_desc: tempLongDesc,
+      ...additionalData
     })
       .then(() => {
         onDescriptionsUpdate(image.id, tempShortDesc, tempLongDesc);
@@ -193,12 +194,12 @@ const handleDelete = async () => {
 
   const handleTrash = () => {
     if (onTrash) onTrash(image.id);
-    handleClose();
+    handleClose({ in_storyboard: false });
   };
 
   const handleUnTrash = () => {
     if (onUnTrash) onUnTrash(image.id);
-    handleClose();
+    handleClose({ in_storyboard: true });
   };
 
   // Combine refs for draggable functionality
@@ -228,11 +229,11 @@ const handleDelete = async () => {
               </p>
             </div>
             <div id="card-header-right" className="flex justify-end w-1/2">
-              <button className="border-b border-white border-1 text-white font-roboto-medium hover:font-roboto-bold"
-              onClick={handleShow}>
-                <p>
-                  Edit
-                </p>
+              <button 
+                onClick={handleShow}
+                className="text-white font-roboto-medium hover:font-roboto-bold hover:underline transition-all duration-150"
+              >
+                Edit
               </button>
             </div>
           </div>
@@ -269,9 +270,9 @@ const handleDelete = async () => {
                     setShowModal(false);
                     document.body.style.overflow = 'auto';
                   }}
-                  className="text-grey-darkest hover:text-grey-darkest disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full p-2 transition-all duration-150"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -322,38 +323,48 @@ const handleDelete = async () => {
                 <button
                   onClick={handleGenerateDescription}
                   disabled={loadingGenDesc}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
                 >
                   {loadingGenDesc ? 'Generating...' : 'Generate Description'}
                 </button>
               </div>
 
               {/* Modal Footer */}
-              <div className="flex justify-between mt-6">
-                {image.in_storyboard ? (
-                <button
-                  onClick={handleTrash}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Move to Recycle Bin
-                </button>) : (<button
-                  onClick={handleUnTrash}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Restore to Workspace
-                </button>)}
-                <button
-                  onClick={handleDelete}
-                  className="px-4 py-2 bg-red-800 text-white rounded-md hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Permanently Delete
-                </button>
-                <button
-                  onClick={handleClose}
-                  className="px-4 py-2 bg-grey-darkest text-white rounded-md hover:bg-grey-darkest disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Save &amp; Close
-                </button>
+              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-8 gap-4">
+                {/* Left side - Storyboard action */}
+                <div className="flex justify-start">
+                  {image.in_storyboard ? (
+                    <button
+                      onClick={handleTrash}
+                      className="px-4 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-150"
+                    >
+                      Move to Recycle Bin
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleUnTrash}
+                      className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-150"
+                    >
+                      Restore to Storyboard
+                    </button>
+                  )}
+                </div>
+                
+                {/* Right side - Delete and Save actions */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={handleDelete}
+                    className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-150 order-2 sm:order-1"
+                  >
+                    Permanently Delete
+                  </button>
+                  <button
+                    onClick={() => handleClose()}
+                    className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-150 order-1 sm:order-2"
+                  >
+                    Save & Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -93,9 +93,9 @@ Descriptions of figures:
         return f"Error understanding theme and objective: {e}"
 
 
-def _sequence_figures(fig_descriptions_category: dict, theme: str) -> str:
+def _sequence_figures(fig_descriptions_category: dict, theme: str, story_structure_id: str = None) -> str:
     """Generate a recommended figure sequence given per-figure categories and the theme."""
-    prompt = f"""
+    base_prompt = f"""
 ### Input
 Descriptions and categories of figures:
 {fig_descriptions_category}
@@ -106,13 +106,27 @@ Topic theme and objective:
 {_load_prompt('sequence_figures.txt')}
 """.strip()
 
+    # Add story structure guidance if provided
+    if story_structure_id:
+        story_structures = _load_prompt('story_definition.txt')
+        structure_prompt = f"""
+
+### Story Structure to Follow
+Use the following narrative structure as guidance:
+{story_structure_id}
+
+Reference from available structures:
+{story_structures}
+"""
+        base_prompt += structure_prompt
+
     try:
         client = _openai_client()
         resp = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt},
+                {"role": "user", "content": base_prompt},
             ],
             temperature=0.1,
             timeout=30,
@@ -240,7 +254,7 @@ def generate_description_task(image_id):
         return f"Error generating description for image {image_id}: {e}"
 
 @shared_task
-def generate_narrative_task(user_id):
+def generate_narrative_task(user_id, story_structure_id=None):
     User = get_user_model()                               # <— late import
     ImageData = _get_model('api', 'ImageData')
     NarrativeCache = _get_model('api', 'NarrativeCache')
@@ -261,10 +275,13 @@ def generate_narrative_task(user_id):
         all_descriptions_text = "\n".join(all_descriptions)
 
         theme = _understand_theme_objective(all_descriptions_text)
-        sequence = _sequence_figures(fig_descriptions_category, theme)
+        sequence = _sequence_figures(fig_descriptions_category, theme, story_structure_id)
         story = _build_story(fig_descriptions_category, sequence)
         recommended_order = extract_figure_filenames(sequence)
 
+        # Get story structure name for logging/caching
+        story_structure_name = story_structure_id or "default"
+        
         with transaction.atomic():
             cache, created = NarrativeCache.objects.get_or_create(
                 user=user,
@@ -290,7 +307,8 @@ def generate_narrative_task(user_id):
                 cache.sequence_justification = sequence
                 cache.save()
 
-        return f"Successfully generated narrative for user {user.username}"
+        logger.info(f"Successfully generated narrative for user {user.username} using structure: {story_structure_name}")
+        return f"Successfully generated narrative for user {user.username} using structure: {story_structure_name}"
     except User.DoesNotExist:
         logger.error(f"User with id {user_id} not found")
         return f"User with id {user_id} not found"
