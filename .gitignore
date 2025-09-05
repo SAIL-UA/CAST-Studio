@@ -1,7 +1,16 @@
-multi_agent/
-old/
 __pycache__/
 .env
+.DS_Store
 node_modules
+.vscode
+data/*
 backend/jupyterhub_cookie_secret
 backend/jupyterhub.sqlite
+
+# Markdown files
+*.md
+!README.md
+
+# Django migrations
+**/migrations/*.py
+!**/migrations/__init__.py

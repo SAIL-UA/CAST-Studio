@@ -1,6 +1,6 @@
 // Import dependencies
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { getImageDataAll, serveImage, updateImageData as updateImageDataAPI } from '../services/api';
 
 // Import components
 import UploadButton from './UploadButton';
@@ -29,61 +29,25 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
 
     // Fetch user data from backend
     const fetchUserData = async () => {
-        try {
-            const response = await axios.get('/get_user_data', { withCredentials: true });
-            const fetchedImages = response.data.images.map((img: any, index: number) => ({
+        await getImageDataAll()
+        .then((response: any) => {
+            if (response.data.images.length === 0) {
+                setImages([]);
+                return;
+            } 
+            const fetchedImages = response.data.images.map((img: any) => ({
                 ...img,
-                // Keep the in_storyboard value from the backend
-                in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : true,
-                // Initialize positions for new images that don't have coordinates
-                x: img.x !== undefined ? img.x : (index % 4) * 160,
-                y: img.y !== undefined ? img.y : Math.floor(index / 4) * 120,
+                x: img.in_storyboard ? img.x : 0,
+                y: img.in_storyboard ? img.y : 0,
             }));
             setImages(fetchedImages);
-            
-            // Update backend with in_storyboard status for all images (sequential to avoid race conditions)
-            console.log(`Updating ${fetchedImages.length} images with in_storyboard=true...`);
-            for (const img of fetchedImages) {
-                try {
-                    console.log(`Updating image ${img.id} with in_storyboard=true`);
-                    const updateResponse = await axios.post(
-                        '/update_image_data',
-                        { 
-                            id: img.id, 
-                            in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : true,
-                            x: img.x,
-                            y: img.y
-                        },
-                        { withCredentials: true }
-                    );
-                    console.log(`Successfully updated image ${img.id}:`, updateResponse.data);
-                } catch (err) {
-                    console.error(`Error updating image ${img.id}:`, err);
-                }
-            }
-            console.log('Finished updating all images with in_storyboard=true');
-            
-            // Verify the updates worked by fetching data again
-            console.log('Verifying backend updates...');
-            try {
-                const verifyResponse = await axios.get('/get_user_data', { withCredentials: true });
-                const verifiedImages = verifyResponse.data.images;
-                const storyboardImages = verifiedImages.filter((img: any) => img.in_storyboard);
-                console.log(`Verification: ${storyboardImages.length}/${verifiedImages.length} images have in_storyboard=true`);
-                
-                if (storyboardImages.length === 0) {
-                    console.error('WARNING: No images have in_storyboard=true after updates!');
-                } else {
-                    console.log('✓ Backend updates successful');
-                }
-            } catch (error) {
-                console.error('Error verifying backend updates:', error);
-            }
-        } catch (error) {
+        })
+        .catch((error) => {
             console.error('Error fetching user data:', error);
-        } finally {
+        })
+        .finally(() => {
             setLoading(false);
-        }
+        });
     };
 
     // Fetch data on component mount
@@ -94,18 +58,18 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
     // Update image data (position, status, etc.)
     const updateImageData = async (imageId: string, data: Partial<ImageData>) => {
         try {
-            await axios.post(
-                '/update_image_data', 
-                { id: imageId, ...data }, 
-                { withCredentials: true }
-            );
-            
-            // Update local state
-            setImages((prevImages) =>
-                prevImages.map((img) => 
-                    img.id === imageId ? { ...img, ...data } : img
-                )
-            );
+            const response = await updateImageDataAPI(imageId, data);
+            if (response.status === 200) {
+                console.log('Image data updated successfully');
+                // Update local state
+                setImages((prevImages) =>
+                    prevImages.map((img) => 
+                        img.id === imageId ? { ...img, ...data } : img
+                    )
+                );
+            } else {
+                console.error('Error updating image data:', response.data.errors);
+            }
         } catch (error) {
             console.error('Error updating image data:', error);
         }
@@ -138,7 +102,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
     };
 
     // Show only images that are in the storyboard (in_storyboard === true)
-    const workspaceImages = images.filter(img => img.in_storyboard === true);
+    const workspaceImages = images.filter(img => img.in_storyboard === true).map(img => ({
+        ...img,
+        image: serveImage(img.filepath)
+    }));
 
     // Loading state
     if (loading) {

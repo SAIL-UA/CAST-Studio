@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:17
+    container_name: cast-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # - ./backend/${BACKUP_FILE}:/docker-entrypoint-initdb.d/${BACKUP_FILE}
+    networks:
+      - cast-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cast-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    expose:
+      - "8051"
+    volumes:
+      - /data/CAST_ext:/data/CAST_ext
+      - static:/app/staticfiles
+    networks:
+      - cast-network
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8051 --workers 3"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cast-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=http://localhost:8050
+    volumes:
+      - frontend_build:/shared-build  # Volume to share build with nginx
+    depends_on:
+      - backend
+    networks:
+      - cast-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: cast-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/project.conf:/etc/nginx/conf.d/default.conf
+      - frontend_build:/var/www/html
+      - static:/staticfiles:ro
+      - nginx-logs:/var/log/nginx
+      - ./nginx/ssl:/etc/letsencrypt  # certs live here
+      - ./nginx/www:/var/www/certbot  # webroot for ACME challenge
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - cast-network
+    restart: always
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - ./nginx/ssl:/etc/letsencrypt
+      - ./nginx/www:/var/www/certbot
+    networks:
+      - "cast-network"
+
+  jupyterhub:
+    build:
+      context: /home/aii03admin/CAST_ext
+      dockerfile: Dockerfile
+    container_name: cast-jupyterhub
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - /home/aii03admin/CAST_ext:/app
+      - /data/CAST_ext:/data/CAST_ext
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - cast-network
+
+  celery:
+    build:
+      context: ./backend
+    container_name: cast-celery
+    restart: unless-stopped
+    volumes:
+      - /data/CAST_ext:/data/CAST_ext
+    env_file:
+      - .env
+    networks:
+      - cast-network
+    command: celery -A config worker --loglevel=info
+  
+  redis:
+    image: redis:7-alpine
+    container_name: cast-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - cast-network
+
+networks:
+  cast-network:
+    external: true
+
+volumes:
+  db_data:
+  nginx-logs:
+  frontend_build:
+  static:

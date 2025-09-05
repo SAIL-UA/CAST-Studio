@@ -1,4 +1,5 @@
 // assets/clickstream.js
+import { getEasternISO } from '../frontend/src/utils/datetimeUtils';
 
 if (!window.dash_clientside) {
     window.dash_clientside = {};
@@ -22,7 +23,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
         const target = event.target.id || event.target.className || event.target.tagName;
         const downPosition = { x: event.clientX, y: event.clientY };
-        const timestamp = new Date().toISOString();
+        const timestamp = getEasternISO();
 
         document.addEventListener('mouseup', function(e) {
             console.log('mouseup event captured:', e.target.id);

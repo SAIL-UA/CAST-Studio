@@ -6,13 +6,12 @@ import base64  # Needed for encoding images
 from openai import Client
 from dotenv import load_dotenv
 from datetime import datetime, timezone
-import cv2
-import pytesseract
 import sys
+from prompts.load_prompts import generate_desc_prompt
 
 # Load environment variables
 load_dotenv()
-API_KEY = os.getenv("API_KEY")
+API_KEY = os.getenv("OPENAI_API_KEY")
 
 if not API_KEY:
     raise ValueError("API_KEY not found in environment. Make sure .env is set correctly.")
@@ -157,25 +156,11 @@ def process_json_file(json_file, user_folder, prompt_gd):
     print(f"Updated '{json_file}' with generated description.")
     return description
 
-def update_json_files(username):
+def update_json_files(user_folder):
     """
     Batch process all figure JSON files for a user.
     """
     print("Batch updating JSON files with generated descriptions...")
-    user_folder = os.path.join(DATA_PATH, username, 'workspace/cache')
-    if not os.path.exists(user_folder):
-        print(f"No cache folder found for user '{username}'.")
-        return
-
-    # Load the prompt once for efficiency
-    prompts_dir = os.path.join(os.path.dirname(__file__), '..', 'prompts')
-    prompt_path = os.path.join(prompts_dir, 'generate_description.txt')
-    if not os.path.exists(prompt_path):
-        print(f"Prompt file not found: {prompt_path}")
-        return
-
-    with open(prompt_path, 'r') as prompt_file:
-        prompt_gd = prompt_file.read()
 
     # Process all JSON files in the cache directory
     json_files = [f for f in os.listdir(user_folder) if f.endswith('.json')]
@@ -188,19 +173,15 @@ def update_json_files(username):
         print(f"{json_file} contents: ")
         # Check if 'longdesc' exists and is not empty
         if 'long_desc' in data and not data['long_desc'].strip():
-            process_json_file(json_file, user_folder, prompt_gd)
+            process_json_file(json_file, user_folder, generate_desc_prompt)
         else:
             print(f"Skipping {json_file} as 'long_desc' is not empty.")
 
-def update_single_json_file(username, image_id):
+def update_single_json_file(user_folder, image_id):
     """
     Generate a long description for a single image JSON file identified by image_id.
     """
     print(f"Updating JSON for image_id='{image_id}'")
-    user_folder = os.path.join(DATA_PATH, username, 'workspace/cache')
-    if not os.path.exists(user_folder):
-        print(f"No cache folder found for user '{username}'.")
-        return None
 
     json_file = image_id + '.json'
     json_path = os.path.join(user_folder, json_file)
@@ -208,18 +189,8 @@ def update_single_json_file(username, image_id):
         print(f"File does not exist for image_id='{image_id}'")
         return None
 
-    # Load the prompt for description generation
-    prompts_dir = os.path.join(os.path.dirname(__file__), '..', 'prompts')
-    prompt_path = os.path.join(prompts_dir, 'generate_description.txt')
-    if not os.path.exists(prompt_path):
-        print(f"Prompt file not found: {prompt_path}")
-        return None
-
-    with open(prompt_path, 'r') as prompt_file:
-        prompt_gd = prompt_file.read()
-
     # Process the JSON file using the common function
-    return process_json_file(json_file, user_folder, prompt_gd)
+    return process_json_file(json_file, user_folder, generate_desc_prompt)
 
 def main():
     """

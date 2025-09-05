@@ -129,42 +129,8 @@ const Home = () => {
                             )}
                             {/* Right top */}
                             <div id="right-top" className="min-h-[46vh] mt-8">
-                                <div id="right-top-top" className="flex w-full h-1/4">
-                                    <div className="flex w-1/3 justify-center items-center">
-                                        <svg
-                                            width="60"
-                                            height="60"
-                                            viewBox="0 0 60 60"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                        >
-                                            <g stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">
-                                                <g transform="translate(-1178, -87)">
-                                                    <g transform="translate(1159, 0)">
-                                                        <g transform="translate(0, 87)">
-                                                            <g transform="translate(19, 0)">
-                                                                <circle id="small-circle" fill="#05648d" cx="30" cy="30" r="30" />
-                                                                    <path
-                                                                    id="moon"
-                                                                    d="M30.5,49.7304688 C40.7172679,49.7304688 30.5,43.266096 30.5,33.0488281 C30.5,22.8315603 40.7172679,12 30.5,12 C20.2827321,12 11.0390625,20.6479665 11.0390625,30.8652344 C11.0390625,41.0825022 20.2827321,49.7304688 30.5,49.7304688 Z"
-                                                                    fill="#fff"
-                                                                    style={{ transformOrigin: "center center", transform: "rotate(1turn)" }}
-                                                                    />
-                                                                <circle id="big-circle" fill="#222" cx="31" cy="31" r="11" />
-                                                            </g>
-                                                        </g>
-                                                    </g>
-                                                </g>
-                                            </g>  
-                                        </svg>
-                                    </div>
-                                    <div id="right-top-top-text" className="flex flex-col justify-center w-2/3 m-l-1">
-                                        <h3 className="text-lg">Username.</h3>
-                                        <p className="text-xs">Since 2025</p>
-                                    </div>
-                                </div>
-
                                 {/* Right bottom */}
-                                <div id="right-top-bottom" className="flex w-full min-h-1/2 mt-4">
+                                <div id="right-top-bottom" className="flex w-full min-h-1/2">
                                     {rightNarrativePatternsOpen ? (
                                         <NarrativePatterns setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} center={false} setStoryLoading={setStoryLoading} />
                                     ) : (

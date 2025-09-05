@@ -1,6 +1,8 @@
 // Import dependencies
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { getNarrativeCache } from '../services/api';
+import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 
 // Story data interface
 interface StoryData {
@@ -22,25 +24,60 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
     const [narrativeSelected, setNarrativeSelected] = useState(true);
     const [storySelected, setStorySelected] = useState(false);
     const [storyData, setStoryData] = useState<StoryData | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    
+    // Check for existing cached narrative on component mount
+    const loadCachedNarrative = async () => {
+        try {
+            const response = await getNarrativeCache();
+            if (response.data && response.data.data) {
+                const cacheData = response.data.data;
+                setStoryData({
+                    narrative: cacheData.narrative,
+                    recommended_order: cacheData.order,
+                    categorize_figures_response: cacheData.categories,
+                    theme_response: cacheData.theme,
+                    sequence_response: cacheData.sequence_justification
+                });
+                console.log('Loaded cached narrative data:', cacheData);
+            }
+        } catch (error) {
+            console.log('No cached narrative found or error loading:', error);
+        }
+    };
 
+    
     // Effect
     useEffect(() => {
         setNarrativeSelected(true)
         setStorySelected(false)
 
+        // Check for cached narrative and load it (if it exists) on mount
+        loadCachedNarrative();
+
         // Listen for story generation events
         const handleStoryGenerated = (event: CustomEvent) => {
             setStoryData(event.detail);
+            setIsGenerating(false);
             console.log('Story data received:', event.detail);
         };
 
+        // Listen for story generation start events
+        const handleStoryGenerationStarted = () => {
+            setIsGenerating(true);
+            console.log('Story generation started');
+        };
+
         window.addEventListener('storyGenerated', handleStoryGenerated as EventListener);
+        window.addEventListener('storyGenerationStarted', handleStoryGenerationStarted as EventListener);
 
         // Cleanup
         return () => {
             window.removeEventListener('storyGenerated', handleStoryGenerated as EventListener);
+            window.removeEventListener('storyGenerationStarted', handleStoryGenerationStarted as EventListener);
         };
     }, [])
+
 
     // Handle narrative button
     const handleNarrative = () => {
@@ -89,7 +126,9 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                     <div className="w-full space-y-6">
                         <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structuring{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
                         
-                        {storyData ? (
+                        {isGenerating ? (
+                            <GeneratingPlaceholder contentName="narrative analysis" lines={6} />
+                        ) : storyData ? (
                             <>
                                 {/* Theme and Objective */}
                                 {storyData.theme_response && (
@@ -145,7 +184,9 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                     <div className="w-full">
                         <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
                         
-                        {storyData?.narrative ? (
+                        {isGenerating ? (
+                            <GeneratingPlaceholder contentName="data story" lines={8} />
+                        ) : storyData?.narrative ? (
                             <div className="bg-white p-4 rounded-lg border border-grey-lightest">
                                 <div className="prose max-w-none text-grey-darkest whitespace-pre-wrap leading-relaxed text-base">
                                     <ReactMarkdown>{storyData.narrative}</ReactMarkdown>

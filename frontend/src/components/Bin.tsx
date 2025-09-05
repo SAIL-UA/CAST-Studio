@@ -97,10 +97,11 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
             ? "flex flex-wrap gap-2 p-2" 
             : "relative w-full h-full"
       }>
-        {images.map((image) => (
+        {images.map((image, index) => (
           <DraggableCard
             key={image.id}
             image={image}
+            index={index}
             onDescriptionsUpdate={onDescriptionsUpdate}
             onDelete={onDelete}
             onTrash={onTrash}

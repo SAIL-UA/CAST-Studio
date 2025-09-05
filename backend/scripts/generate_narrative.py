@@ -10,7 +10,7 @@ import re
 
 # Load environment variables
 load_dotenv()
-API_KEY = os.getenv("API_KEY")
+API_KEY = os.getenv("OPENAI_API_KEY")
 
 if not API_KEY:
     raise ValueError("API_KEY not found in environment. Make sure .env is set correctly.")
@@ -411,6 +411,29 @@ def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs, story_
     except Exception as e:
         print(f"Error generating narrative: {e}")
         return "An error occurred while generating the narrative.", [], "", "", "", "None"
+    
+def merge_narrative_cache(user_folder, new_cache_data):
+    """
+    Merge new cache data into the existing narrative cache.
+    """
+    cache_file = os.path.join(user_folder, 'narrative_cache.json')
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, 'r') as f:
+                existing_data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            existing_data = {}
+    else:
+        existing_data = {}
+
+    # Merge new data into the existing data
+    existing_data.update(new_cache_data)
+
+    # Write it back
+    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+    with open(cache_file, 'w') as f:
+        json.dump(existing_data, f, indent=2)
+    
 
 
 
