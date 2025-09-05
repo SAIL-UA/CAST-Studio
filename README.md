@@ -12,89 +12,58 @@ CAST Story Studio is a full-stack application for story generation and managemen
 
 ## Prerequisites
 
-- Python 3.8+ with conda
-- Node.js 16+ with npm
+- Python 3.12.3 with conda
+- Node.js 20.12.2 with npm
 - PostgreSQL database
 - Redis server (for Celery tasks)
 
 ## Development Setup
 
-### Backend (Django)
+### Quick Start with Docker Compose
 
-1. **Navigate to backend directory and activate environment**:
-   ```bash
-   cd backend
-   conda activate cast
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set up environment variables**:
+1. **Set up environment variables**:
    Create a `.env` file in the project root with:
    ```env
    DJANGO_SECRET_KEY=your-secret-key
    DJANGO_DEBUG=True
-   POSTGRES_DB=cast_db
-   POSTGRES_USER=cast_user
-   POSTGRES_PASSWORD=your-password
-   POSTGRES_HOST=localhost
-   POSTGRES_PORT=5432
-   DATA_PATH=/path/to/user/data
-   OPENAI_API_KEY=your-openai-key
-   FRONTEND_URL=http://localhost:8050
+   POSTGRES_DB=cast-db
+   POSTGRES_USER=your_postgres_user
+   POSTGRES_PASSWORD=your_postgres_password
+   POSTGRES_HOST=your_postgres_host
+   POSTGRES_PORT=your_postgres_port
+   DATA_PATH=/data/CAST_ext/users
+   OPENAI_API_KEY=your-openai-api-key
+   FRONTEND_URL=http://localhost
+   EMAIL_HOST_USER=your-email@gmail.com
+   EMAIL_HOST_PASSWORD=your-app-password
    ```
 
-4. **Run database migrations**:
+2. **First-time setup** (run migrations before starting services):
    ```bash
-   python manage.py migrate
+   # Start only the database and redis first
+   docker-compose -f docker-compose.dev.yml up -d db redis
+   
+   # Run migrations (backend will start temporarily just for this)
+   docker-compose -f docker-compose.dev.yml run --rm backend sh -c "python manage.py makemigrations && python manage.py migrate"
+   
+   # Now start all services
+   docker-compose -f docker-compose.dev.yml up --build
+   ```
+
+3. **Subsequent startups** (after initial setup):
+   ```bash
+   docker-compose -f docker-compose.dev.yml up
+   ```
+
+4. **Run additional migrations** (when needed, with services running):
+   ```bash
+   docker exec backend sh -c "python manage.py makemigrations && python manage.py migrate"
    ```
 
 5. **Create superuser** (optional):
    ```bash
-   python manage.py createsuperuser
+   docker exec -it backend python manage.py createsuperuser
    ```
-
-6. **Start the backend server**:
-   ```bash
-   python manage.py runserver 8076
-   ```
-
-7. **Start Celery worker** (in separate terminal):
-   ```bash
-   celery -A config worker --loglevel=info
-   ```
-
-### Frontend (React)
-
-1. **Navigate to frontend directory**:
-   ```bash
-   cd frontend
-   conda activate cast
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Start the frontend server**:
-   ```bash
-   npm start
-   ```
-
-## Port Configuration
-
-### Development
-- **Backend**: Port 8076
-- **Frontend**: Port 8050 (configured in package.json)
-
-### Production
-- **Backend**: Port 8051
-- **Frontend**: Port 8050 (proxies to backend at port 8051)
-- Frontend proxy configured in `package.json` points to `http://172.16.22.6:8051`
 
 ## Key Features
 
@@ -104,45 +73,6 @@ CAST Story Studio is a full-stack application for story generation and managemen
 - **Drag & Drop Interface**: Interactive storyboard for organizing content
 - **User Authentication**: Secure JWT-based authentication system
 - **Async Task Processing**: Long-running tasks handled via Celery
-
-## Development Commands
-
-### Backend
-```bash
-# Run tests
-python manage.py test
-
-# Run linting
-ruff check .
-ruff format .
-
-# Create migrations
-python manage.py makemigrations
-
-# Django shell
-python manage.py shell
-```
-
-### Frontend
-```bash
-# Run tests
-npm test
-
-# Build for production
-npm run build
-
-# Type checking
-npx tsc --noEmit
-```
-
-## Database
-
-The application uses PostgreSQL with custom models:
-- **User**: Custom user authentication
-- **ImageData**: Visual content metadata
-- **NarrativeCache**: Generated stories and analysis
-- **UserAction**: Activity logging
-- **JupyterLog**: Code execution logs
 
 ## Deployment
 
@@ -155,7 +85,15 @@ For production deployment, ensure:
 
 ## Troubleshooting
 
-- Check that PostgreSQL and Redis services are running
-- Verify environment variables are set correctly
+### Docker Compose Issues
+- Run `docker-compose -f docker-compose.dev.yml down` and `docker-compose -f docker-compose.dev.yml up --build` to rebuild containers
+- Check container logs: `docker-compose -f docker-compose.dev.yml logs [service-name]`
+- Ensure Docker daemon is running
+- Verify `.env` file exists in project root
+
+### General Issues
+- Check that PostgreSQL and Redis services are running (handled by Docker Compose)
+- Verify environment variables are set correctly in `.env` file
 - Ensure ports 8076 (backend) and 8050 (frontend) are available
 - Check Celery worker is running for AI generation tasks
+- For email functionality, ensure EMAIL_HOST_USER and EMAIL_HOST_PASSWORD are configured
