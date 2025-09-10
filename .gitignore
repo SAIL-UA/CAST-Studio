@@ -14,3 +14,6 @@ backend/jupyterhub.sqlite
 # Django migrations
 **/migrations/*.py
 !**/migrations/__init__.py
+
+# .sql files
+*.sql
