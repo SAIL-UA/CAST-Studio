@@ -34,6 +34,5 @@ EXPOSE 8051
 
 CMD ["python", "manage.py", "makemigrations"]
 CMD ["python", "manage.py", "migrate"]
-
 # Command to run Gunicorn
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8051", "--workers", "3"]
