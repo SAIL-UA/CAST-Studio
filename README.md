@@ -22,6 +22,11 @@ CAST Story Studio is a full-stack application for story generation and managemen
 ### Quick Start with Docker Compose
 
 1. **Set up environment variables**:
+   
+   **It will probably be much easier to just reach out to me (Emily) for the dev .env file, so feel free to do that.**
+
+   Otherwise, 
+
    Create a `.env` file in the project root with:
    ```env
    DJANGO_SECRET_KEY=your-secret-key
@@ -39,6 +44,16 @@ CAST Story Studio is a full-stack application for story generation and managemen
    ```
 
 2. **First-time setup** (run migrations before starting services):
+  
+   First, examine the services in the `docker-compose.dev.yml` file. Some services like `backend` and `celery` have `dockerfile: Dockerfile.arm`. If you don't have an ARM-based processor, you can change this to `dockerfile: Dockerfile`.
+   
+   Next, we'll want to generate the migrations locally, so that they can be copied to the backend container at runtime:
+   ```bash
+   cd backend
+   python manage.py makemigrations
+   cd ..
+   ```
+   Now we can push the migrations to the postgres database in the docker container:
    ```bash
    # Start only the database and redis first
    docker-compose -f docker-compose.dev.yml up -d db redis
@@ -50,18 +65,24 @@ CAST Story Studio is a full-stack application for story generation and managemen
    docker-compose -f docker-compose.dev.yml up --build
    ```
 
-3. **Subsequent startups** (after initial setup):
+3. **Subsequent takedown/startups** (after initial setup):
    ```bash
+   # To take all services down
+   docker-compose -f docker-compose.dev.yml down
+
+   # To bring all services up
    docker-compose -f docker-compose.dev.yml up
    ```
 
-4. **Run additional migrations** (when needed, with services running):
+4. **Run additional migrations** (only needed when changes are made to a `models.py` file):
    ```bash
-   docker exec backend sh -c "python manage.py makemigrations && python manage.py migrate"
+   # Ensure services are running before executing this command
+   docker exec cast-backend-dev sh -c "python manage.py makemigrations && python manage.py migrate"
    ```
 
 5. **Create superuser** (optional):
    ```bash
+   # Being a super-user will allow you to access the admin page at localhost/admin
    docker exec -it backend python manage.py createsuperuser
    ```
 
