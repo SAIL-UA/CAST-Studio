@@ -185,6 +185,90 @@ def categorize_figure(description, prompt_cf):
         print(f"Error categorizing figure: {e}")
         return ""
 
+def categorize_all_figures_batch(fig_descriptions_dict, prompt_cf):
+    """
+    Categorize all figures in a single API call to reduce latency.
+    Returns a dictionary mapping filenames to categories.
+    """
+    if not fig_descriptions_dict:
+        return {}
+    
+    # Build a single prompt for all figures
+    figures_text = "\n\n".join([
+        f"[Figure {i+1}] Filename: {file}\nDescription: {info['description']}"
+        for i, (file, info) in enumerate(fig_descriptions_dict.items())
+    ])
+    
+    prompt = f"""
+    Please categorize each of the following figures based on their descriptions.
+    
+    For each figure, provide a category following this exact format:
+    [Figure X] Filename: category_here
+    
+    Figures to categorize:
+    {figures_text}
+    
+    {prompt_cf}
+    
+    Please provide the categories in the format specified above, one per line.
+    """
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that categorizes figures. Follow the exact format requested."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1
+        )
+        
+        response_text = response.choices[0].message.content.strip()
+        
+        # Parse the response to extract categories
+        categories = {}
+        lines = response_text.split('\n')
+        
+        # Create a mapping of figure numbers to filenames
+        file_list = list(fig_descriptions_dict.keys())
+        
+        for line in lines:
+            # Try to parse lines like "[Figure X] Filename: category"
+            if '[Figure' in line and ']' in line:
+                try:
+                    # Extract figure number
+                    fig_num_match = re.search(r'\[Figure (\d+)\]', line)
+                    if fig_num_match:
+                        fig_num = int(fig_num_match.group(1)) - 1  # Convert to 0-based index
+                        if 0 <= fig_num < len(file_list):
+                            # Extract category (everything after the last colon)
+                            if ':' in line:
+                                parts = line.split(':', 1)
+                                if len(parts) > 1:
+                                    category = parts[-1].strip()
+                                    filename = file_list[fig_num]
+                                    categories[filename] = category
+                except Exception as e:
+                    print(f"Error parsing line '{line}': {e}")
+                    continue
+        
+        # Ensure all files have a category (fallback to "Uncategorized" if missing)
+        for file in fig_descriptions_dict.keys():
+            if file not in categories:
+                print(f"Warning: No category found for {file}, using 'Uncategorized'")
+                categories[file] = "Uncategorized"
+        
+        return categories
+        
+    except Exception as e:
+        print(f"Error in batch categorization: {e}")
+        # Fallback to individual categorization if batch fails
+        print("Falling back to individual categorization...")
+        categories = {}
+        for file, info in fig_descriptions_dict.items():
+            categories[file] = categorize_figure(info["description"], prompt_cf)
+        return categories
+
 def extract_figure_filenames(sequence_response):
     """
     Extracts figure filenames from the GPT response based on 'Step #' patterns.
@@ -319,6 +403,50 @@ def build_story(fig_descriptions_category, sequence, prompt_bs, selected_structu
         print(f"Error building story: {e}")
         return ""
 
+def embed_figures_in_story(story_text, cache_dir, output_format="markdown"):
+    """
+    Process the story text to convert figure placeholders to appropriate format.
+    
+    Args:
+        story_text (str): Story text with [FIGURE: filename] placeholders
+        cache_dir (str): Directory containing the figure files
+        output_format (str): Format for figure embedding ("markdown" or "html")
+    
+    Returns:
+        tuple: (story_with_figures, figure_paths)
+            - story_with_figures: Story with properly formatted figure references
+            - figure_paths: Dictionary mapping filenames to full paths
+    """
+    import re
+    
+    # Find all figure placeholders in the story
+    figure_pattern = r'\[FIGURE:\s*([^\]]+)\]'
+    figure_matches = re.findall(figure_pattern, story_text)
+    
+    figure_paths = {}
+    story_with_figures = story_text
+    
+    for filename in figure_matches:
+        filename = filename.strip()
+        full_path = os.path.join(cache_dir, filename)
+        
+        # Store the path for reference
+        figure_paths[filename] = full_path
+        
+        # Replace placeholder with appropriate format
+        if output_format == "html":
+            # HTML format with image tag
+            replacement = f'<figure><img src="/api/images/{filename}" alt="{filename}" style="max-width: 100%; height: auto;"><figcaption>{filename}</figcaption></figure>'
+        else:
+            # Markdown format
+            replacement = f'\n\n![{filename}]({filename})\n\n'
+        
+        # Replace the placeholder with the formatted figure reference
+        placeholder = f'[FIGURE: {filename}]'
+        story_with_figures = story_with_figures.replace(placeholder, replacement)
+    
+    return story_with_figures, figure_paths
+
 def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs, story_structure_id=None):
     """
     Generate a comprehensive narrative story based on the user's storyboard images and descriptions.
@@ -333,12 +461,14 @@ def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs, story_
         story_structure_id (str, optional): ID of the story structure to use. If None, automatic selection.
     
     Returns:
-       story (str): The final narrative story.
+       story (str): The final narrative story with embedded figures.
+       story_text_only (str): The narrative story without figure embedding.
        recommended_order (list): List of filenames in recommended order.
        categories_string (str): Figure categories as a single formatted string.
        theme (str): The theme text.
        sequence (str): The sequence justification.
        selected_structure_name (str): Name of the structure used (or "Automatic" if none selected).
+       figure_paths (dict): Dictionary mapping figure filenames to their full paths.
     """
     try:
         base_cache_dir = DATA_PATH
@@ -384,11 +514,14 @@ def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs, story_
         selected_structure = select_story_structure(story_structure_id)
         selected_structure_name = selected_structure['name'] if selected_structure else "Automatic Selection"
         
-        # Categorize each figure and build a single string of categories.
-        for file, info in fig_descriptions_category.items():
-            category = categorize_figure(info["description"], prompt_cf)
-            fig_descriptions_category[file]["category"] = category
-
+        # OPTIMIZED: Batch categorize all figures at once to reduce API calls
+        print(f"Categorizing {len(fig_descriptions_category)} figures in a single batch...")
+        categories = categorize_all_figures_batch(fig_descriptions_category, prompt_cf)
+        
+        # Apply the categories to each figure
+        for file in fig_descriptions_category.keys():
+            fig_descriptions_category[file]["category"] = categories.get(file, "Uncategorized")
+        
         categories_string = "\n".join(
             [f"- **{file}**: {info['category']}" for file, info in fig_descriptions_category.items()]
         )
@@ -401,16 +534,19 @@ def generate_story(username, prompt_cf, prompt_uto, prompt_sf, prompt_bs, story_
         # Get theme and sequence justification with selected structure
         theme = understand_theme_objective(all_descriptions, prompt_uto)
         sequence = sequence_figures(fig_descriptions_category, theme, prompt_sf, selected_structure)
-        story = build_story(fig_descriptions_category, sequence, prompt_bs, selected_structure)
+        story_text_only = build_story(fig_descriptions_category, sequence, prompt_bs, selected_structure)
 
         # Extract recommended order
         recommended_order = extract_figure_filenames(sequence)
+        
+        # Embed figures in the story
+        story_with_figures, figure_paths = embed_figures_in_story(story_text_only, cache_dir, "markdown")
 
-        return story, recommended_order, categories_string, theme, sequence, selected_structure_name
+        return story_with_figures, story_text_only, recommended_order, categories_string, theme, sequence, selected_structure_name, figure_paths
 
     except Exception as e:
         print(f"Error generating narrative: {e}")
-        return "An error occurred while generating the narrative.", [], "", "", "", "None"
+        return "An error occurred while generating the narrative.", "An error occurred while generating the narrative.", [], "", "", "", "None", {}
     
 def merge_narrative_cache(user_folder, new_cache_data):
     """
@@ -468,19 +604,21 @@ def main():
             prompts[key] = file.read()
 
     # Generate narrative and recommended order (with automatic structure selection)
-    story, recommended_order, _, _, _, _ = generate_story(username, prompts["categorize_figures"],
-                                                           prompts["understand_theme_objective"],
-                                                           prompts["sequence_figures"],
-                                                           prompts["build_story"])
+    story, story_text_only, recommended_order, _, _, _, _, figure_paths = generate_story(username, prompts["categorize_figures"],
+                                                                                         prompts["understand_theme_objective"],
+                                                                                         prompts["sequence_figures"],
+                                                                                         prompts["build_story"])
 
     # Save the narrative to a JSON file
     story_path = os.path.join(user_folder, 'narrative_story.json')
     with open(story_path, 'w') as f:
         json.dump({
             "narrative_story": story,
-            "recommended_order": recommended_order
+            "narrative_story_text_only": story_text_only,
+            "recommended_order": recommended_order,
+            "figure_paths": figure_paths
         }, f, indent=2)
-    print(f"Narrative story and recommended order generated and saved to '{story_path}'.")
+    print(f"Narrative story (with embedded figures) and recommended order generated and saved to '{story_path}'.")
 
 if __name__ == "__main__":
     main()
