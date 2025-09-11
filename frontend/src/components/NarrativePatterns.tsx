@@ -62,10 +62,10 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Cause and Effect</h3>
                         <p className="text-xs">How a variable or event influences another.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
-                        
+
                         <SelectNarrativeButton
                         setSelectedPattern={setSelectedPattern}
-                        value="cause_and_effect" 
+                        value="cause_and_effect"
                         setStoryLoading={setStoryLoading} />
                         {!center && (
                                 <NarrativeExamplesButton
@@ -92,13 +92,13 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         value="question_answer"
                         />
                         {!center && (
-                            
+
                             <NarrativeExamplesButton
                             setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                             setSelectedPattern={setSelectedPattern}
                             value="question_answer"
                             />
-                            
+
                         )}
                     </div>
                 </div>
