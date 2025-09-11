@@ -13,6 +13,7 @@ import RecommendedNarratives from '../components/RecommendedNarratives';
 import Footer from '../components/Footer';
 import NarrativePatterns from '../components/NarrativePatterns'
 import Workspace from '../components/Workspace'
+import NarrativeExamples from '../components/NarrativeExamples'
 
 // Import images
 
@@ -33,6 +34,7 @@ const Home = () => {
     // const [leftOpen, setLeftOpen] = useState(false);
     const [centerNarrativePatternsOpen, setCenterNarrativePatternsOpen] = useState(false);
     const [rightNarrativePatternsOpen, setRightNarrativePatternsOpen] = useState(false);
+    const [rightNarrativeExamplesOpen, setRightNarrativeExamplesOpen] = useState(false);
     const [selectedPattern, setSelectedPattern] = useState('');
     const [storyLoading, setStoryLoading] = useState(false);
 
@@ -85,7 +87,12 @@ const Home = () => {
                     
                     {centerNarrativePatternsOpen ? (
                         <div id="narrative-patterns" className="min-h-[75vh] flex flex-col mt-6 pr-4 pl-4">
-                            <NarrativePatterns setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} center={true} setStoryLoading={setStoryLoading} />
+                            <NarrativePatterns
+                            setSelectedPattern={setSelectedPattern}
+                            setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                            center={true}
+                            setStoryLoading={setStoryLoading}
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} />
                         </div>
                     ) : (
                         <>
@@ -132,7 +139,19 @@ const Home = () => {
                                 {/* Right bottom */}
                                 <div id="right-top-bottom" className="flex w-full min-h-1/2">
                                     {rightNarrativePatternsOpen ? (
-                                        <NarrativePatterns setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} center={false} setStoryLoading={setStoryLoading} />
+                                        rightNarrativeExamplesOpen ? (
+                                            <NarrativeExamples
+                                            selectedPattern={selectedPattern}
+                                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                                            />
+                                        ) : (
+                                        <NarrativePatterns
+                                        center={false}
+                                        setSelectedPattern={setSelectedPattern}
+                                        setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                                        setStoryLoading={setStoryLoading}
+                                        setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} />
+                                        )
                                     ) : (
                                         <RecommendedNarratives />
                                     )}
