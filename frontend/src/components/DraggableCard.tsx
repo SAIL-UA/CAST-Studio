@@ -330,41 +330,39 @@ const handleDelete = async () => {
               </div>
 
               {/* Modal Footer */}
-              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-8 gap-4">
-                {/* Left side - Storyboard action */}
-                <div className="flex justify-start">
-                  {image.in_storyboard ? (
-                    <button
-                      onClick={handleTrash}
-                      className="px-4 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-150"
-                    >
-                      Move to Recycle Bin
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleUnTrash}
-                      className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-150"
-                    >
-                      Restore to Storyboard
-                    </button>
-                  )}
-                </div>
+              <div className="flex flex-col min-lg:flex-row items-center justify-center min-lg:justify-between mt-6 gap-4">
+                {/* Storyboard action button */}
+                {image.in_storyboard ? (
+                  <button
+                    onClick={handleTrash}
+                    className="w-full min-lg:w-1/3 px-4 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-150"
+                  >
+                    Move to Recycle Bin
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleUnTrash}
+                    className="w-full min-lg:w-1/3 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-150"
+                  >
+                    Restore to Storyboard
+                  </button>
+                )}
                 
-                {/* Right side - Delete and Save actions */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={handleDelete}
-                    className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-150 order-2 sm:order-1"
-                  >
-                    Permanently Delete
-                  </button>
-                  <button
-                    onClick={() => handleClose()}
-                    className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-150 order-1 sm:order-2"
-                  >
-                    Save & Close
-                  </button>
-                </div>
+                {/* Delete button */}
+                <button
+                  onClick={handleDelete}
+                  className="w-full min-lg:w-1/3 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-150"
+                >
+                  Permanently Delete
+                </button>
+
+                {/* Save & Close button */}
+                <button
+                  onClick={() => handleClose()}
+                  className="w-full min-lg:w-1/3 px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-150"
+                >
+                  Save & Close
+                </button>
               </div>
             </div>
           </div>

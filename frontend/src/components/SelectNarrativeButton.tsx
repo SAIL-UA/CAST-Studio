@@ -8,13 +8,12 @@ import { getImageDataAll, generateNarrativeAsync, getNarrativeCache } from '../s
 // Define props interface
 type SelectNarrativeButtonProps = {
     setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;
-    selectedPattern: string;
     value: string;
     setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // Select narrative button component
-const SelectNarrativeButton = ({ setSelectedPattern, selectedPattern, value, setStoryLoading }: SelectNarrativeButtonProps) => {
+const SelectNarrativeButton = ({ setSelectedPattern, value, setStoryLoading }: SelectNarrativeButtonProps) => {
 
     // Handle button click
     const handleSelectNarrative = async (value: string) => {
