@@ -83,7 +83,7 @@ CAST Story Studio is a full-stack application for story generation and managemen
 5. **Create superuser** (optional):
    ```bash
    # Being a super-user will allow you to access the admin page at localhost/admin
-   docker exec -it backend python manage.py createsuperuser
+   docker exec -it cast-backend-dev python manage.py createsuperuser
    ```
 
 ## Key Features
