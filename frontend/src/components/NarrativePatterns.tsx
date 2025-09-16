@@ -61,13 +61,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         value="cause_and_effect" 
                         setStoryLoading={setStoryLoading} />
                         {!center && (
-                            <div>
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                 setSelectedPattern={setSelectedPattern}
                                 value="cause_and_effect"
                                 />
-                            </div>
                         )}
                     </div>
                 </div>
@@ -87,13 +85,13 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         value="question_answer"
                         />
                         {!center && (
-                            <div>
-                                <NarrativeExamplesButton
-                                setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
-                                setSelectedPattern={setSelectedPattern}
-                                value="question_answer"
-                                />
-                            </div>
+                            
+                            <NarrativeExamplesButton
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                            setSelectedPattern={setSelectedPattern}
+                            value="question_answer"
+                            />
+                            
                         )}
                     </div>
                 </div>
@@ -112,13 +110,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         value="time_based"
                         setStoryLoading={setStoryLoading} />
                         {!center && (
-                            <div>
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                 setSelectedPattern={setSelectedPattern}
                                 value="time_based"
                                 />
-                            </div>
                         )}
                     </div>
                 </div>
@@ -137,13 +133,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         value="IN_PROGRESS_factor_analysis"
                         setStoryLoading={setStoryLoading} />
                         {!center && (
-                            <div>
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                 setSelectedPattern={setSelectedPattern}
                                 value="IN_PROGRESS_factor_analysis"
                                 />
-                            </div>
                         )}
                     </div>
                 </div>
@@ -162,13 +156,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         value="overview_to_detail"
                         setStoryLoading={setStoryLoading} />
                         {!center && (
-                            <div>
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                 setSelectedPattern={setSelectedPattern}
                                 value="overview_to_detail"
                                 />
-                            </div>
                         )}
                     </div>
                 </div>
@@ -187,13 +179,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         value="problem_solution"
                         setStoryLoading={setStoryLoading} />
                         {!center && (
-                            <div>
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                 setSelectedPattern={setSelectedPattern}
                                 value="problem_solution"
                                 />
-                            </div>
                         )}
                     </div>
                 </div>
@@ -212,13 +202,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         value="comparative"
                         setStoryLoading={setStoryLoading} />
                         {!center && (
-                            <div>
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                 setSelectedPattern={setSelectedPattern}
                                 value="comparative"
                                 />
-                            </div>
                         )}
                     </div>
                 </div>
@@ -237,13 +225,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         value="workflow_process"
                         setStoryLoading={setStoryLoading} />
                         {!center && (
-                            <div>
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                 setSelectedPattern={setSelectedPattern}
                                 value="workflow_process"
                                 />
-                            </div>
                         )}
                     </div>
                 </div>
@@ -262,13 +248,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         value="IN_PROGRESS_shock_lead"
                         setStoryLoading={setStoryLoading} />
                         {!center && (
-                            <div>
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                 setSelectedPattern={setSelectedPattern}
                                 value="IN_PROGRESS_shock_lead"
                                 />
-                            </div>
                         )}
                     </div>
                 </div>
