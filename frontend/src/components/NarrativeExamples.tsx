@@ -244,7 +244,7 @@ const NarrativeExamples = ({ selectedPattern, setRightNarrativeExamplesOpen }: N
                     <div className="flex flex-shrink-0 p-0 m-0">
                         <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="w-6 h-6"
+                        className="w-4 h-4"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -254,12 +254,11 @@ const NarrativeExamples = ({ selectedPattern, setRightNarrativeExamplesOpen }: N
                         </svg>
                     </div>
                     <div className="flex flex-1 p-2 m-0">
-                        <h4 className="text-md roboto-medium text-indigo-dark">Back to Narrative Patterns</h4>
+                        <h4 className="text-sm roboto-medium text-indigo-dark">Back to Narrative Selection</h4>
                     </div>
                 </div>
 
-                <h3 className={`text-lg font-roboto-light w-full p-2 text-grey-darkest`}>Narrative Examples:</h3>
-                <h3 className={`text-lg font-roboto-light w-full p-2 text-grey-darkest`}>{selectedPattern ? `${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
+                <h3 className={`text-lg font-roboto-light w-full p-2 text-grey-darkest`}>Examples: {selectedPattern ? `${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
             </div>
 
             {/* Narrative Examples Content */}
@@ -273,14 +272,14 @@ const NarrativeExamples = ({ selectedPattern, setRightNarrativeExamplesOpen }: N
                             </div>
                             {/* Right Content */}
                             <div className="w-3/4 h-auto pl-4">
-                                <h4 className="text-md roboto-medium text-grey-darkest">{item.title}</h4>
+                                <h4 className="text-sm font-bold text-grey-darkest">{item.title}</h4>
                                 <div className="flex flex-col items-start justify-start w-full">
-                                    <h4 className="text-sm roboto-medium text-grey-darkest px-2 py-1">{item.domain}</h4>
+                                    <h4 className="text-xs roboto-medium text-grey-darkest py-1">{item.domain}</h4>
                                     <button
-                                    className="bg-indigo-lighter rounded-full px-2 py-1 mx-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                                    className="bg-indigo-lighter rounded-full px-2 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
                                     onClick={() => window.open(item.link, '_blank')}
                                     >
-                                        <p className="text-sm font-roboto-light">Visit</p>
+                                        <p className="text-xs font-roboto-light">Visit</p>
                                     </button>
                                 </div>
                             </div>
@@ -288,7 +287,7 @@ const NarrativeExamples = ({ selectedPattern, setRightNarrativeExamplesOpen }: N
                     ))
                 ) : (
                     <div className="flex justify-center items-center p-8">
-                        <p className="text-md roboto-light text-grey-dark">No examples to show currently</p>
+                        <p className="text-xs roboto-light text-grey-dark">No examples to show currently</p>
                     </div>
                 )}
             </div>
