@@ -276,7 +276,7 @@ const NarrativeExamples = ({ selectedPattern, setRightNarrativeExamplesOpen }: N
                                 <div className="flex flex-col items-start justify-start w-full">
                                     <h4 className="text-xs roboto-medium text-grey-darkest py-1">{item.domain}</h4>
                                     <button
-                                    className="bg-indigo-lighter rounded-full px-2 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                                    className="bg-indigo-lighter rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
                                     onClick={() => window.open(item.link, '_blank')}
                                     >
                                         <p className="text-xs font-roboto-light">Visit</p>
