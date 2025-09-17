@@ -30,7 +30,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.arm # Change to Dockerfile for non-ARM devices
+      dockerfile: Dockerfile.arm # Change to Dockerfile.dev for non-ARM devices
     container_name: cast-backend-dev
     restart: unless-stopped
     depends_on:
@@ -55,7 +55,7 @@ services:
   celery:
     build:
       context: ./backend
-      dockerfile: Dockerfile.arm # Change to Dockerfile for non-ARM devices
+      dockerfile: Dockerfile.arm # Change to Dockerfile.dev for non-ARM devices
     container_name: cast-celery-dev
     restart: unless-stopped
     volumes:

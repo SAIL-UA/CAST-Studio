@@ -65,7 +65,13 @@ CAST Story Studio is a full-stack application for story generation and managemen
    docker-compose -f docker-compose.dev.yml up --build
    ```
 
-3. **Subsequent takedown/startups** (after initial setup):
+3. **Create superuser** (optional):
+   ```bash
+   # Being a super-user will allow you to access the admin page at localhost/admin
+   docker exec -it cast-backend-dev python manage.py createsuperuser
+   ```
+
+4. **Subsequent takedown/startups** (after initial setup):
    ```bash
    # To take all services down
    docker-compose -f docker-compose.dev.yml down
@@ -74,17 +80,12 @@ CAST Story Studio is a full-stack application for story generation and managemen
    docker-compose -f docker-compose.dev.yml up
    ```
 
-4. **Run additional migrations** (only needed when changes are made to a `models.py` file):
+5. **Run additional migrations** (only needed when changes are made to `/backend/api/models.py` or `/backend/users/models.py`):
    ```bash
    # Ensure services are running before executing this command
    docker exec cast-backend-dev sh -c "python manage.py makemigrations && python manage.py migrate"
    ```
 
-5. **Create superuser** (optional):
-   ```bash
-   # Being a super-user will allow you to access the admin page at localhost/admin
-   docker exec -it cast-backend-dev python manage.py createsuperuser
-   ```
 
 ## Key Features
 
@@ -115,6 +116,6 @@ For production deployment, ensure:
 ### General Issues
 - Check that PostgreSQL and Redis services are running (handled by Docker Compose)
 - Verify environment variables are set correctly in `.env` file
-- Ensure ports 8076 (backend) and 8050 (frontend) are available
+- Ensure ports 8051 (backend) and 8050 (frontend) are available
 - Check Celery worker is running for AI generation tasks
 - For email functionality, ensure EMAIL_HOST_USER and EMAIL_HOST_PASSWORD are configured
