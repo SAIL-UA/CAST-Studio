@@ -8,8 +8,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - db_data:/var/lib/postgresql/data
-    # ports:
-      # - "5432:5432"  # Only expose if needed for external DB tools
     networks:
       - cast-network
     restart: always
@@ -42,8 +40,6 @@ services:
         condition: service_started
     env_file:
       - .env
-    # ports:
-    #   - "8076:8076"  # Now accessed via nginx proxy
     volumes:
       - ./data:/data/CAST_ext  # Use local data directory
       - static:/app/staticfiles
@@ -76,7 +72,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
       args:
         - REACT_APP_API_URL=http://localhost
     container_name: cast-frontend-dev

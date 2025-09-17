@@ -32,6 +32,3 @@ RUN chmod 755 /app/staticfiles
 
 # Expose port
 EXPOSE 8051
-
-# Command to run Django development server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8051"]
