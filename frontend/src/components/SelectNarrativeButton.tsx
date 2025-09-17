@@ -121,7 +121,7 @@ const SelectNarrativeButton = ({ setSelectedPattern, value, setStoryLoading }: S
 
     return (
         <button
-        className='bg-white rounded-full mt-2 px-2 mr-2 py-0 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200'
+        className='bg-white rounded-full mt-2 px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200'
         onClick={() => handleSelectNarrative(value)}
         >
             <p className='text-sm font-roboto-light'>Select</p>
