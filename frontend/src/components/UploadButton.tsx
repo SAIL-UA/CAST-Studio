@@ -1,6 +1,6 @@
 // Import dependencies
 import { useNavigate } from 'react-router-dom';
-
+import { logAction } from '../services/api';
 
 
 // Upload button component
@@ -12,6 +12,8 @@ const UploadButton = () => {
     // Handle upload
     const handleUpload = (e: React.MouseEvent<HTMLButtonElement>) => {
         // Send request to backend here
+        logAction("handleUpload", "click");
+        alert("logged")
         navigate('/construction');
     }
 

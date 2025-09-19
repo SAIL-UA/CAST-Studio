@@ -92,7 +92,7 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                         Browse Narrative Structures
                     </span>
                 </li>
-                <li className="cursor-pointer hover:text-indigo"
+                <li id="lol" className="cursor-pointer hover:text-indigo"
                 onClick={handleDropdownSelection}>
                     <span className="flex items-center justify-start">
                         <img src={home} alt="JupyterHub" className="w-4 h-4 mr-2" />

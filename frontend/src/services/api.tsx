@@ -222,8 +222,21 @@ export const generateDescriptionAll = async() => {
   return response.data;
 };
 
-export const logAction = async(data: any) => {
-  const response = await API.post('/actions/log/', data)
+export const logAction = async(elementId: string, actionType: string) => {
+  const response = await API.post('/actions/log/', {
+    window_size: { 
+      x: window.innerWidth,
+      y: window.innerHeight
+    },
+    dpr: window.devicePixelRatio,
+    mouse_pos: {
+      x: 0,
+      y: 0
+    },
+    action_type: actionType,
+    element_id: elementId,
+    timestamp: new Date().toISOString()
+  })
   return response.data;
 };
 
