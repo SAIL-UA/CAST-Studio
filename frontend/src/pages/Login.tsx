@@ -263,22 +263,21 @@ const Login = () => {
                                 className="text-white text-sm underline hover:text-grey-lightest transition"
                             >
                                 Forgot your password?
-                            </Link>
-                        </div>
-                    )}
-
-                    {/* Toggle between login and register */}
-                    <div className="text-center mt-4">
+                            </Link><br/>
                         <button
                             type="button"
                             onClick={toggleMode}
-                            className="text-white underline hover:text-grey-lightest transition"
+                            className="text-white text-sm underline hover:text-grey-lightest transition"
                         >
                             {isRegisterMode 
                                 ? 'Already have an account? Login' 
                                 : 'Need an account? Register'}
                         </button>
-                    </div>
+                        </div>
+                    )}
+
+                    {/* Toggle between login and register */}
+
                 </div>
             </div>
         </div>
