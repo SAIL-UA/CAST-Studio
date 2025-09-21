@@ -1,7 +1,11 @@
 /* Tailwind imports */
-@tailwind base;
+/*@tailwind base;
 @tailwind components;
-@tailwind utilities;
+@tailwind utilities;*/
+
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 
 /* Imports */
 @import "@fontsource/roboto/300.css"; /* Light */
@@ -232,3 +236,11 @@
 @keyframes blink {
   50% { opacity: 1; }
 }
+
+#right-home{margin-top:55px;}
+
+#left-home{margin-top:65px;}
+
+#middle-home{margin-top:65px;}
+
+#header-container{z-index:100;}

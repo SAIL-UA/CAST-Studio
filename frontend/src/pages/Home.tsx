@@ -115,7 +115,7 @@ const Home = () => {
                         )}
                         
                         {/* Right home */}
-                        <div id="right-home" className={`${screenLarge ? 'w-1/5' : 'w-1/2'} px-3 bg-grey-lighter-2 z-20`}>
+                        <div id="right-home" className={`${screenLarge ? 'w-1/5' : 'w-1/2'} px-3 bg-grey-lighter-2 z-5`}>
                             {!screenLarge && (
                             <div id="right-home-collapsed" className="w-[5%] bg-grey-lighter-2 items-start">
                                 {/* Right Open */}
