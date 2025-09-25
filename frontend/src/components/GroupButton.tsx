@@ -1,16 +1,16 @@
-// Import dependencies
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 
+interface GroupButtonProps {
+    onClick?: () => void;
+}
 
-const GroupButton = () => {
-
-    // Navigation helper
-    const navigate = useNavigate();
+const GroupButton = ({ onClick }: GroupButtonProps) => {
 
     // Handle group
     const handleGroup = (e: React.MouseEvent<HTMLButtonElement>) => {
-        // Send request to backend here
-        navigate('/construction');
+        if (onClick) {
+            onClick();
+        }
     }
 
     // Visible component

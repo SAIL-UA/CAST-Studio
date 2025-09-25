@@ -56,6 +56,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
             oldY,
             offsetX,
             offsetY,
+            groupId: image.groupId,
           };
         }
         return {
@@ -64,6 +65,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
           oldY: image.y || 0,
           offsetX: 0,
           offsetY: 0,
+          groupId: image.groupId,
         };
       },
       collect: (monitor) => ({
@@ -75,16 +77,25 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
 
   // Calculate card styling based on state
   const getCardStyle = (): React.CSSProperties => {
-
+    // Check if we're in a group (CSS grid layout) - only groups should use relative positioning
+    // Cards in the regular story bin should use absolute positioning for drag-and-drop
+    const isInGroup = !!image.groupId;
+    
     // Base style
     const baseStyle: React.CSSProperties = draggable
-        ? {
-            left: `${image.x}px`,
-            top: `${image.y}px`,
-            opacity: isDragging ? 0.5 : 1,
-            position: 'absolute',
-            cursor: 'move',
-          }
+        ? isInGroup
+          ? {
+              opacity: isDragging ? 0.5 : 1,
+              position: 'relative',
+              cursor: 'move',
+            }
+          : {
+              left: `${image.x}px`,
+              top: `${image.y}px`,
+              opacity: isDragging ? 0.5 : 1,
+              position: 'absolute',
+              cursor: 'move',
+            }
         : {
             opacity: isDragging ? 0.5 : 1,
             position: 'relative',
