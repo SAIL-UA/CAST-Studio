@@ -10,11 +10,34 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
 
   // React DnD hook for drop functionality
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
-    accept: 'image',
+    accept: ['image', 'group'],
     drop: (item: DragItem, monitor) => {
       if (isSuggestedOrderBin) return;
 
       const clientOffset = monitor.getClientOffset();
+
+      // Handle group drops - calculate and return new position for the group
+      if (item.type === 'group') {
+        if (!binRef.current || !clientOffset) return;
+        
+        const dropTargetRect = binRef.current.getBoundingClientRect();
+        const binPageLeft = dropTargetRect.left + window.pageXOffset;
+        const binPageTop = dropTargetRect.top + window.pageYOffset;
+
+        let x_bin = clientOffset.x + window.pageXOffset - binPageLeft - item.offsetX;
+        let y_bin = clientOffset.y + window.pageYOffset - binPageTop - item.offsetY;
+
+            // Constrain position within bin boundaries for groups
+            const groupWidth = 320; // GroupDiv width
+            const groupHeight = 256; // GroupDiv height
+        x_bin = Math.max(0, Math.min(x_bin, dropTargetRect.width - groupWidth));
+        y_bin = Math.max(0, Math.min(y_bin, dropTargetRect.height - groupHeight));
+
+        console.log(`Group ${item.id} dropped on ${id} at (${x_bin}, ${y_bin})`);
+        
+        // Return the calculated position so the drag end handler can use it
+        return { x: x_bin, y: y_bin };
+      }
       if (!clientOffset || !binRef.current) return;
 
       const dropTargetRect = binRef.current.getBoundingClientRect();
