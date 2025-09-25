@@ -268,7 +268,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
                 <FeedbackButton />
                 <SubmitButton />
             </div>
-            <div id = "story-bin-wrapper" className="flex-1 min-h-0" ref={storyBinRef}>
+            <div id = "story-bin-wrapper" className="flex-1 min-h-0 relative" ref={storyBinRef}>
                 <Bin
                     id="story-bin"
                     images={workspaceImages}
@@ -279,10 +279,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
                     onUnTrash={handleUnTrash}
                     isSuggestedOrderBin={false}
                 />
-            </div>
-            {/* Render all active group divs using portals to escape layout constraints */}
-            {groupDivs.map(group => 
-                ReactDOM.createPortal(
+                {/* Render groups directly in the scrollable container so they scroll with content */}
+                {groupDivs.map(group => (
                     <GroupDiv 
                         key={group.id}
                         id={group.id}
@@ -302,10 +300,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
                         onNameChange={handleGroupNameChange}
                         onDescriptionChange={handleGroupDescriptionChange}
                         storyBinRef={storyBinRef}
-                    />,
-                    document.body
-                )
-            )}
+                    />
+                ))}
+            </div>
         </div>
     )
 }

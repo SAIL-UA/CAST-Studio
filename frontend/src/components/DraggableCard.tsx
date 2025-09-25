@@ -1,6 +1,7 @@
 // DraggableCard component for drag and drop functionality -> cursor generated based off the previous draggable card
 
 import React, { useState, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useDrag } from 'react-dnd';
 import { DraggableCardProps, DragItem, ImageData } from '../types/types';
 import { updateImageData, generateDescription, deleteFigure, serveImage, getImageData } from '../services/api';
@@ -265,13 +266,9 @@ const handleDelete = async () => {
         </div>
       </div>
 
-      {/* Modal for editing */}
-      {showModal && (
-        <>
-          <div id="modal-backdrop"
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 pointer-events-auto"></div>
-
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {/* Modal for editing - rendered as portal to escape container constraints */}
+      {showModal && ReactDOM.createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
               <div className="flex justify-between items-center mb-4">
@@ -376,8 +373,8 @@ const handleDelete = async () => {
                 </button>
               </div>
             </div>
-          </div>
-        </>
+          </div>,
+        document.body
       )}
     </>
   );
