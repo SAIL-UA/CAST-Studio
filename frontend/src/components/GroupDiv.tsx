@@ -56,8 +56,6 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       if (groupRef.current && storyBinRef.current) {
         const groupRect = groupRef.current.getBoundingClientRect();
         const binRect = storyBinRef.current.getBoundingClientRect();
-        const binPageLeft = binRect.left + window.pageXOffset;
-        const binPageTop = binRect.top + window.pageYOffset;
         
         const event = window.event as MouseEvent;
         const offsetX = event.clientX - groupRect.left;
@@ -97,16 +95,14 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       // Otherwise calculate position (for drops outside valid targets)
       if (clientOffset && storyBinRef.current) {
         const binRect = storyBinRef.current.getBoundingClientRect();
-        const binPageLeft = binRect.left + window.pageXOffset;
-        const binPageTop = binRect.top + window.pageYOffset;
         
-        // Calculate new position relative to storyboard
-        let newX = clientOffset.x + window.pageXOffset - binPageLeft - item.offsetX;
-        let newY = clientOffset.y + window.pageYOffset - binPageTop - item.offsetY;
+        // Calculate new position relative to container
+        let newX = clientOffset.x - binRect.left - item.offsetX;
+        let newY = clientOffset.y - binRect.top - item.offsetY;
         
-            // Constrain within storyboard boundaries
-            const groupWidth = 320; // 20rem = 320px
-            const groupHeight = 256; // 16rem = 256px
+        // Constrain within container boundaries
+        const groupWidth = 320; // 20rem = 320px
+        const groupHeight = 256; // 16rem = 256px
         newX = Math.max(0, Math.min(newX, binRect.width - groupWidth));
         newY = Math.max(0, Math.min(newY, binRect.height - groupHeight));
         
@@ -126,13 +122,11 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     if (!storyBinRef.current) return;
     
     const binRect = storyBinRef.current.getBoundingClientRect();
-    const binPageLeft = binRect.left + window.pageXOffset;
-    const binPageTop = binRect.top + window.pageYOffset;
     
     setIsDragging(true);
     setDragOffset({
-      x: e.clientX - (binPageLeft + position.x),
-      y: e.clientY - (binPageTop + position.y)
+      x: e.clientX - binRect.left - position.x,
+      y: e.clientY - binRect.top - position.y
     });
   };
 
@@ -145,16 +139,14 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       }
 
       const binRect = storyBinRef.current.getBoundingClientRect();
-      const binPageLeft = binRect.left + window.pageXOffset;
-      const binPageTop = binRect.top + window.pageYOffset;
       
-      // Calculate new position relative to storyboard
-      let newX = e.clientX - binPageLeft - dragOffset.x;
-      let newY = e.clientY - binPageTop - dragOffset.y;
+      // Calculate new position relative to container
+      let newX = e.clientX - binRect.left - dragOffset.x;
+      let newY = e.clientY - binRect.top - dragOffset.y;
       
-          // Constrain within storyboard boundaries (similar to card constraints)
-          const groupWidth = 320; // GroupDiv width
-          const groupHeight = 256; // GroupDiv height
+      // Constrain within container boundaries (similar to card constraints)
+      const groupWidth = 320; // GroupDiv width
+      const groupHeight = 256; // GroupDiv height
       newX = Math.max(0, Math.min(newX, binRect.width - groupWidth));
       newY = Math.max(0, Math.min(newY, binRect.height - groupHeight));
 
@@ -191,21 +183,15 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     onClose(id);
   };
 
-  // Calculate absolute position relative to storyboard
-  const getAbsolutePosition = () => {
-    if (!storyBinRef.current) return { left: 0, top: 0 };
-    
-    const binRect = storyBinRef.current.getBoundingClientRect();
-    const binPageLeft = binRect.left + window.pageXOffset;
-    const binPageTop = binRect.top + window.pageYOffset;
-    
+  // Position relative to the container (like draggable cards)
+  const getContainerPosition = () => {
     return {
-      left: binPageLeft + position.x,
-      top: binPageTop + position.y
+      left: position.x,
+      top: position.y
     };
   };
 
-  const absolutePos = getAbsolutePosition();
+  const containerPos = getContainerPosition();
 
   // Handle name editing
   const handleNameSave = () => {
@@ -254,7 +240,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
   return (
     <div 
       ref={combinedRef}
-      className={`fixed w-80 h-64 bg-grey-lighter-2 select-none rounded-sm shadow-md border transition-all duration-200 ${
+      className={`absolute w-80 h-64 bg-grey-lighter-2 select-none rounded-sm shadow-md border transition-all duration-200 ${
         isOverCard && canDropCard 
           ? 'border-blue-400 border-2 bg-blue-50' 
           : isOverCard && !canDropCard
@@ -264,11 +250,11 @@ const GroupDiv: React.FC<GroupDivProps> = ({
           : 'border-grey-lightest'
       }`}
       style={{
-        left: absolutePos.left,
-        top: absolutePos.top,
+        left: containerPos.left,
+        top: containerPos.top,
         cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
         opacity: isDraggingDnd ? 0.5 : 1,
-        zIndex: 9999,
+        zIndex: 50,
         pointerEvents: 'auto'
       }}
       onMouseDown={handleMouseDown}
