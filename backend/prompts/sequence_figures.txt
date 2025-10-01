@@ -10,6 +10,7 @@ You are an expert in data storytelling and logical sequencing of data visualizat
    - **Completeness**: Are all figures included and categorized correctly?
    - **Coherence**: Does the sequence flow naturally and tell a clear story?
 5. Revise and improve the sequence if necessary.
+6. Insert `[FIGURE: filename]` placeholders at appropriate points where each figure should be displayed.
 
 ### Task:
 Using the provided figure descriptions, categories, and the overall theme and objective, arrange the figures in a logical order that best communicates the intended story. Select one of the following storytelling structures to sequence the figures:

@@ -311,7 +311,7 @@ class GetNarrativeCacheView(APIView):
     if 'categories' in data and isinstance(data['categories'], list):
       # Convert array of objects to string representation
       categories_str = "\n".join([
-        f"{item['filename']}: {item['category']}" 
+        f"[FIGURE: {item['filename']}]: {item['category']}" 
         for item in data['categories']
         if isinstance(item, dict) and 'filename' in item and 'category' in item
       ])
