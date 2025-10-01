@@ -1,7 +1,7 @@
 // Import dependencies
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { getNarrativeCache } from '../services/api';
+import { getNarrativeCache, serveImage } from '../services/api';
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 
 // Story data interface
@@ -25,7 +25,13 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
     const [storySelected, setStorySelected] = useState(false);
     const [storyData, setStoryData] = useState<StoryData | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
-    
+    const [processedNarrative, setProcessedNarrative] = useState<string>('');
+    const [processedTheme, setProcessedTheme] = useState<string>('');
+    const [processedCategories, setProcessedCategories] = useState<string>('');
+    const [processedSequence, setProcessedSequence] = useState<string>('');
+    const [isProcessingImages, setIsProcessingImages] = useState(false);
+    const [processedRecommended, setProcessedRecommended] = useState<string[]>([]);
+
     // Check for existing cached narrative on component mount
     const loadCachedNarrative = async () => {
         try {
@@ -56,10 +62,14 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
         loadCachedNarrative();
 
         // Listen for story generation events
-        const handleStoryGenerated = (event: CustomEvent) => {
-            setStoryData(event.detail);
+        const handleStoryGenerated = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const data = customEvent.detail;
             setIsGenerating(false);
-            console.log('Story data received:', event.detail);
+            console.log('Story data received:', data);
+            
+            // Story data already has processed figures from GenerateStoryButton
+            setStoryData(data);
         };
 
         // Listen for story generation start events
@@ -79,19 +89,145 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
     }, [])
 
 
+    // Process narrative text to replace [FIGURE: filename] with blob URLs
+    const processNarrativeWithImages = async (text: string): Promise<string> => {
+        if (!text) return text;
+        
+        // Find all figure placeholders
+        const figurePattern = /\[FIGURE:\s*([^\]]+)\]/g;
+        const matches: RegExpExecArray[] = [];
+        let match;
+        while ((match = figurePattern.exec(text)) !== null) {
+            matches.push(match);
+        }
+        
+        if (matches.length === 0) return text;
+        
+        let processedText = text;
+        
+        // Process each figure placeholder
+        for (const match of matches) {
+            const fullMatch = match[0];
+            const filename = match[1].trim();
+            
+            try {
+                // Get blob URL for the image
+                const blobUrl = await serveImage(filename);
+                if (blobUrl) {
+                    // Replace with markdown image syntax using blob URL
+                    const replacement = `![Figure](${blobUrl})`;
+                    processedText = processedText.replace(fullMatch, replacement);
+                } else {
+                    // If image fails to load, show a placeholder
+                    const replacement = `*[Image not available: ${filename}]*`;
+                    processedText = processedText.replace(fullMatch, replacement);
+                }
+            } catch (error) {
+                console.error(`Error loading image ${filename}:`, error);
+                // Replace with error placeholder
+                const replacement = `*[Image not available: ${filename}]*`;
+                processedText = processedText.replace(fullMatch, replacement);
+            }
+        }
+        
+        return processedText;
+    };
+
+    // Process all narrative content when storyData changes
+    useEffect(() => {
+        const processAllContent = async () => {
+            if (!storyData) {
+                setProcessedNarrative('');
+                setProcessedTheme('');
+                setProcessedCategories('');
+                setProcessedSequence('');
+                setProcessedRecommended([]);
+                return;
+            }
+
+            setIsProcessingImages(true);
+            
+            try {
+                const processedNarrativeTextPromise = processNarrativeWithImages(storyData.narrative || '');
+                const processedThemeTextPromise = processNarrativeWithImages(storyData.theme_response || '');
+                const processedCategoriesTextPromise = processNarrativeWithImages(storyData.categorize_figures_response || '');
+                const processedSequenceTextPromise = processNarrativeWithImages(storyData.sequence_response || '');
+
+                const recommendedList = storyData.recommended_order || [];
+                const processedRecommendedPromises = recommendedList.map((filename) =>
+                    processNarrativeWithImages(`[FIGURE: ${filename}]`)
+                );
+
+                const [
+                    processedNarrativeText,
+                    processedThemeText,
+                    processedCategoriesText,
+                    processedSequenceText,
+                    processedRecommendedList
+                ] = await Promise.all([
+                    processedNarrativeTextPromise,
+                    processedThemeTextPromise,
+                    processedCategoriesTextPromise,
+                    processedSequenceTextPromise,
+                    Promise.all(processedRecommendedPromises)
+                ]);
+
+                setProcessedNarrative(processedNarrativeText);
+                setProcessedTheme(processedThemeText);
+                setProcessedCategories(processedCategoriesText);
+                setProcessedSequence(processedSequenceText);
+                setProcessedRecommended(processedRecommendedList);
+            } catch (error) {
+                console.error('Error processing images:', error);
+            } finally {
+                setIsProcessingImages(false);
+            }
+        };
+
+        processAllContent();
+    }, [storyData]);
+
+    // Unified image components for all ReactMarkdown sections
+    const imageComponents = {
+        img: ({node, ...props}: any) => {
+            console.log('ReactMarkdown img component received props:', props);
+            console.log('Image src:', props.src);
+            
+            return (
+                <div className="my-6 flex flex-col items-center justify-center w-full h-[35dvh]">
+                    <img
+                        {...props}
+                        className="w-auto h-full object-contain rounded-md shadow-sm m-0 p-0"
+                        onLoad={() => console.log('Image loaded successfully:', props.src)}
+                        onError={(e) => {
+                            console.error('Image failed to load:', props.src, e);
+                            console.log('Image error target:', e.target);
+                        }}
+                    />
+                    <p className="text-sm text-grey-dark mt-2 italic">
+                        {props.alt || 'Figure'}
+                    </p>
+                </div>
+            );
+        }
+    };
+
+    // URL transform function for all sections
+    const urlTransform = (url: string) => {
+        console.log('URL transform called with:', url);
+        return url;
+    };
+
     // Handle narrative button
     const handleNarrative = () => {
         setNarrativeSelected(true)
         setStorySelected(false)
-
-        // Send request to backend here
     }
 
     const handleStory = () => {
         setNarrativeSelected(false)
         setStorySelected(true)
 
-        // Send request to backend here
     }
 
     // Visible component
@@ -128,6 +264,8 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                         
                         {isGenerating ? (
                             <GeneratingPlaceholder contentName="narrative analysis" lines={6} />
+                        ) : isProcessingImages ? (
+                            <GeneratingPlaceholder contentName="processing images" lines={4} />
                         ) : storyData ? (
                             <>
                                 {/* Theme and Objective */}
@@ -135,7 +273,13 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Theme & Objective</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
-                                            <ReactMarkdown>{storyData.theme_response}</ReactMarkdown>
+                                            <ReactMarkdown 
+                                                components={imageComponents}
+                                                urlTransform={urlTransform}
+                                                skipHtml={false}
+                                            >
+                                                {processedTheme}
+                                            </ReactMarkdown>
                                         </div>
                                     </div>
                                 )}
@@ -145,7 +289,13 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Figure Categories</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
-                                            <ReactMarkdown>{storyData.categorize_figures_response}</ReactMarkdown>
+                                            <ReactMarkdown 
+                                                components={imageComponents}
+                                                urlTransform={urlTransform}
+                                                skipHtml={false}
+                                            >
+                                                {processedCategories}
+                                            </ReactMarkdown>
                                         </div>
                                     </div>
                                 )}
@@ -155,18 +305,32 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Sequence Justification</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
-                                            <ReactMarkdown>{storyData.sequence_response}</ReactMarkdown>
+                                            <ReactMarkdown 
+                                                components={imageComponents}
+                                                urlTransform={urlTransform}
+                                                skipHtml={false}
+                                            >
+                                                {processedSequence}
+                                            </ReactMarkdown>
                                         </div>
                                     </div>
                                 )}
 
                                 {/* Recommended Order */}
-                                {storyData.recommended_order && storyData.recommended_order.length > 0 && (
+                                {processedRecommended && processedRecommended.length > 0 && (
                                     <div className="bg-grey-lightest p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Recommended Figure Order</h4>
                                         <ol className="list-decimal list-inside text-grey-darkest">
-                                            {storyData.recommended_order.map((filename, index) => (
-                                                <li key={index} className="mb-1"><ReactMarkdown>{filename}</ReactMarkdown></li>
+                                            {processedRecommended.map((md, index) => (
+                                                <li key={index} className="mb-4">
+                                                    <ReactMarkdown 
+                                                        components={imageComponents}
+                                                        urlTransform={urlTransform}
+                                                        skipHtml={false}
+                                                    >
+                                                        {md}
+                                                    </ReactMarkdown>
+                                                </li>
                                             ))}
                                         </ol>
                                     </div>
@@ -186,10 +350,18 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                         
                         {isGenerating ? (
                             <GeneratingPlaceholder contentName="data story" lines={8} />
+                        ) : isProcessingImages ? (
+                            <GeneratingPlaceholder contentName="processing images" lines={4} />
                         ) : storyData?.narrative ? (
                             <div className="bg-white p-4 rounded-lg border border-grey-lightest">
-                                <div className="prose max-w-none text-grey-darkest whitespace-pre-wrap leading-relaxed text-base">
-                                    <ReactMarkdown>{storyData.narrative}</ReactMarkdown>
+                                <div className="prose max-w-none text-grey-darkest leading-relaxed text-base">
+                                    <ReactMarkdown
+                                        components={imageComponents}
+                                        urlTransform={urlTransform}
+                                        skipHtml={false}
+                                    >
+                                        {processedNarrative}
+                                    </ReactMarkdown>
                                 </div>
                             </div>
                         ) : (

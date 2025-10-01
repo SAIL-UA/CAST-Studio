@@ -1,5 +1,4 @@
 // TypeScript interfaces for drag and drop functionality
-
 export interface ImageData {
   id: string;
   user: number;
@@ -50,7 +49,7 @@ export interface DraggableCardProps {
   draggable?: boolean;
 }
 
-// NEW: Group data structure
+// Group data structure
 export interface GroupData {
   id: string;
   number: number;

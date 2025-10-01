@@ -209,7 +209,7 @@ def extract_figure_filenames(sequence_response: str) -> list[str]:
         for m in pat.finditer(text):
             fname = m.group(1).strip()
             # normalize any accidental trailing punctuation around filenames
-            fname = fname.rstrip(".,);:]").lstrip("([")
+            fname = "[FIGURE:" + fname.rstrip(".,);:]").lstrip("([") + "]"
             if fname not in seen:
                 seen.add(fname)
                 found.append(fname)
