@@ -1,7 +1,7 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { getImageDataAll, serveImage, updateImageData as updateImageDataAPI } from '../services/api';
+import { getImageDataAll, serveImage, updateImageData as updateImageDataAPI, createGroup, getGroups, updateGroup as updateGroupAPI, deleteGroup as deleteGroupAPI, addImageToGroup as addImageToGroupAPI, removeImageFromGroup as removeImageFromGroupAPI } from '../services/api';
 
 // Import components
 import UploadButton from './UploadButton';
@@ -62,9 +62,39 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
         });
     };
 
+    // Fetch groups from backend
+    const fetchGroupsData = async () => {
+        try {
+            const response = await getGroups();
+            if (response.status === 'success' && response.groups) {
+                const backendGroups = response.groups.map((g: any) => ({
+                    id: g.id,
+                    number: g.number,
+                    name: g.name,
+                    description: g.description,
+                    x: g.x,
+                    y: g.y,
+                    cards: g.images || [],
+                    created_at: g.created_at,
+                    last_modified: g.last_modified
+                }));
+                setGroupDivs(backendGroups);
+
+                // Update next group number
+                if (backendGroups.length > 0) {
+                    const maxNumber = Math.max(...backendGroups.map((g: any) => g.number));
+                    setNextGroupNumber(maxNumber + 1);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching groups:', error);
+        }
+    };
+
     // Fetch data on component mount
     useEffect(() => {
         fetchUserData();
+        fetchGroupsData();
     }, []);
 
     // Update image data (position, status, etc.)
@@ -114,129 +144,180 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
     };
 
     // Handle creating new group div
-    const handleCreateGroup = () => {
+    const handleCreateGroup = async () => {
         // Calculate initial position at top-right of storyboard
         let initialX = 0;
         let initialY = 0;
-        
+
         if (storyBinRef.current) {
             const rect = storyBinRef.current.getBoundingClientRect();
             // Position at top-right of storyboard, accounting for group size (320px width)
             initialX = rect.width - 320 - 10; // 10px margin from right edge
             initialY = 10; // 10px margin from top
         }
-        
-        const newGroup: GroupData = {
-            id: `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            number: nextGroupNumber,
-            name: `Group ${nextGroupNumber}`,
-            description: '',
-            x: initialX,
-            y: initialY,
-            cards: [],
-            created_at: new Date().toISOString(),
-            last_modified: new Date().toISOString()
-        };
-        setGroupDivs(prev => [...prev, newGroup]);
-        setNextGroupNumber(prev => prev + 1);
+
+        try {
+            // Create group in backend
+            const response = await createGroup({
+                number: nextGroupNumber,
+                name: `Group ${nextGroupNumber}`,
+                description: '',
+                x: initialX,
+                y: initialY
+            });
+
+            if (response.status === 'success') {
+                const backendGroup = response.group;
+                const newGroup: GroupData = {
+                    id: backendGroup.id,
+                    number: backendGroup.number,
+                    name: backendGroup.name,
+                    description: backendGroup.description,
+                    x: backendGroup.x,
+                    y: backendGroup.y,
+                    cards: [],
+                    created_at: backendGroup.created_at,
+                    last_modified: backendGroup.last_modified
+                };
+                setGroupDivs(prev => [...prev, newGroup]);
+                setNextGroupNumber(prev => prev + 1);
+            }
+        } catch (error) {
+            console.error('Error creating group:', error);
+        }
     };
 
     // Handle closing a specific group div
-    const handleCloseGroup = (groupId: string) => {
-        // First, return all cards from this group to the workspace
-        setImages(prev => prev.map(img => 
-            img.groupId === groupId 
-                ? { ...img, groupId: undefined, in_storyboard: true }
-                : img
-        ));
-        
-        setGroupDivs(prev => {
-            // Filter out the group to be removed
-            const remainingGroups = prev.filter(group => group.id !== groupId);
-            
-            // Renumber the remaining groups sequentially (1, 2, 3, ...)
-            const renumberedGroups = remainingGroups.map((group, index) => ({
-                ...group,
-                number: index + 1
-            }));
-            
-            return renumberedGroups;
-        });
-        
-        // Update nextGroupNumber to be the count of remaining groups + 1
-        setNextGroupNumber(prev => {
-            const remainingCount = groupDivs.filter(group => group.id !== groupId).length;
-            return remainingCount + 1;
-        });
+    const handleCloseGroup = async (groupId: string) => {
+        try {
+            // Delete group from backend (automatically returns images to workspace)
+            await deleteGroupAPI(groupId);
+
+            // Update local state: return all cards from this group to the workspace
+            setImages(prev => prev.map(img =>
+                img.groupId === groupId
+                    ? { ...img, groupId: undefined, in_storyboard: true }
+                    : img
+            ));
+
+            setGroupDivs(prev => {
+                // Filter out the group to be removed
+                const remainingGroups = prev.filter(group => group.id !== groupId);
+
+                // Renumber the remaining groups sequentially (1, 2, 3, ...)
+                const renumberedGroups = remainingGroups.map((group, index) => ({
+                    ...group,
+                    number: index + 1
+                }));
+
+                return renumberedGroups;
+            });
+
+            // Update nextGroupNumber to be the count of remaining groups + 1
+            setNextGroupNumber(prev => {
+                const remainingCount = groupDivs.filter(group => group.id !== groupId).length;
+                return remainingCount + 1;
+            });
+        } catch (error) {
+            console.error('Error deleting group:', error);
+        }
     };
 
     // Handle adding card to group
-    const handleCardAddToGroup = (cardId: string, groupId: string) => {
-        // Find the card with complete image data
-        const cardToAdd = images.find(img => img.id === cardId);
-        if (!cardToAdd) return;
+    const handleCardAddToGroup = async (cardId: string, groupId: string) => {
+        try {
+            // Add image to group in backend
+            await addImageToGroupAPI(cardId, groupId);
 
-        // Create card with served image URL
-        const cardWithImage = {
-            ...cardToAdd,
-            image: serveImage(cardToAdd.filepath),
-            groupId: groupId
-        };
+            // Find the card with complete image data
+            const cardToAdd = images.find(img => img.id === cardId);
+            if (!cardToAdd) return;
 
-        // Update the card's groupId
-        setImages(prev => prev.map(img => 
-            img.id === cardId ? { ...img, groupId: groupId } : img
-        ));
-        
-        // Add card to group's cards array
-        setGroupDivs(prev => prev.map(group => 
-            group.id === groupId 
-                ? { 
-                    ...group, 
-                    cards: [...group.cards, cardWithImage],
-                    last_modified: new Date().toISOString()
-                  }
-                : group
-        ));
+            // Create card with served image URL
+            const cardWithImage = {
+                ...cardToAdd,
+                image: serveImage(cardToAdd.filepath),
+                groupId: groupId
+            };
+
+            // Update the card's groupId
+            setImages(prev => prev.map(img =>
+                img.id === cardId ? { ...img, groupId: groupId } : img
+            ));
+
+            // Add card to group's cards array
+            setGroupDivs(prev => prev.map(group =>
+                group.id === groupId
+                    ? {
+                        ...group,
+                        cards: [...group.cards, cardWithImage],
+                        last_modified: new Date().toISOString()
+                      }
+                    : group
+            ));
+        } catch (error) {
+            console.error('Error adding image to group:', error);
+        }
     };
 
     // Handle removing card from group
-    const handleCardRemoveFromGroup = (cardId: string, groupId: string) => {
-        // Update the card's groupId to null and ensure it's in the storyboard
-        setImages(prev => prev.map(img => 
-            img.id === cardId 
-                ? { ...img, groupId: undefined, in_storyboard: true } 
-                : img
-        ));
-        
-        // Remove card from group's cards array
-        setGroupDivs(prev => prev.map(group => 
-            group.id === groupId 
-                ? { 
-                    ...group, 
-                    cards: group.cards.filter(card => card.id !== cardId),
-                    last_modified: new Date().toISOString()
-                  }
-                : group
-        ));
+    const handleCardRemoveFromGroup = async (cardId: string, groupId: string) => {
+        try {
+            // Remove image from group in backend
+            await removeImageFromGroupAPI(cardId);
+
+            // Update the card's groupId to null and ensure it's in the storyboard
+            setImages(prev => prev.map(img =>
+                img.id === cardId
+                    ? { ...img, groupId: undefined, in_storyboard: true }
+                    : img
+            ));
+
+            // Remove card from group's cards array
+            setGroupDivs(prev => prev.map(group =>
+                group.id === groupId
+                    ? {
+                        ...group,
+                        cards: group.cards.filter(card => card.id !== cardId),
+                        last_modified: new Date().toISOString()
+                      }
+                    : group
+            ));
+        } catch (error) {
+            console.error('Error removing image from group:', error);
+        }
     };
 
     // Handle group name change
-    const handleGroupNameChange = (groupId: string, newName: string) => {
-        setGroupDivs(prev => prev.map(group => 
-            group.id === groupId 
-                ? { ...group, name: newName, last_modified: new Date().toISOString() }
-                : group
-        ));
+    const handleGroupNameChange = async (groupId: string, newName: string) => {
+        try {
+            // Update group name in backend
+            await updateGroupAPI(groupId, { name: newName });
+
+            setGroupDivs(prev => prev.map(group =>
+                group.id === groupId
+                    ? { ...group, name: newName, last_modified: new Date().toISOString() }
+                    : group
+            ));
+        } catch (error) {
+            console.error('Error updating group name:', error);
+        }
     };
 
     // Handle group description change
-    const handleGroupDescriptionChange = (groupId: string, newDescription: string) => {
-        setGroupDivs(prev => prev.map(group => 
-            group.id === groupId 
-                ? { ...group, description: newDescription, last_modified: new Date().toISOString() }
-                : group
-        ));
+    const handleGroupDescriptionChange = async (groupId: string, newDescription: string) => {
+        try {
+            // Update group description in backend
+            await updateGroupAPI(groupId, { description: newDescription });
+
+            setGroupDivs(prev => prev.map(group =>
+                group.id === groupId
+                    ? { ...group, description: newDescription, last_modified: new Date().toISOString() }
+                    : group
+            ));
+        } catch (error) {
+            console.error('Error updating group description:', error);
+        }
     };
 
     // Show only images that are in the storyboard (in_storyboard === true) and NOT in any group
@@ -264,7 +345,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
             <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start p-2 flex-shrink-0">
                 <UploadButton />
                 <GroupButton onClick={handleCreateGroup} />
-                <GenerateStoryButton images={workspaceImages} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
+                <GenerateStoryButton images={workspaceImages} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} hasGroups={groupDivs.length > 0} />
                 <FeedbackButton />
                 <SubmitButton />
             </div>

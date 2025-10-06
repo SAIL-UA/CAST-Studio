@@ -4,8 +4,8 @@ from openai import OpenAI
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import UserAction, ImageData, NarrativeCache, JupyterLog
-from .serializers import ImageDataSerializer, NarrativeCacheSerializer, JupyterLogsSerializer
+from .models import UserAction, ImageData, NarrativeCache, JupyterLog, Group
+from .serializers import ImageDataSerializer, NarrativeCacheSerializer, JupyterLogsSerializer, GroupSerializer
 from users.models import User
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .tasks import generate_narrative_task
@@ -276,17 +276,19 @@ class GenerateNarrativeAsyncView(APIView):
   def post(self, request):
     """Generate narrative asynchronously using Celery task"""
     try:
-      # Get story structure ID from request if provided
+      # Get story structure ID and use_groups from request
       story_structure_id = request.data.get('story_structure_id') if request.data else None
-      
+      use_groups = request.data.get('use_groups', False) if request.data else False
+
       # Start the narrative generation task
-      task = generate_narrative_task.delay(request.user.id, story_structure_id)
-      
+      task = generate_narrative_task.delay(request.user.id, story_structure_id, use_groups)
+
       return Response({
         "status": "success",
         "message": "Narrative generation started",
         "task_id": task.id,
-        "story_structure_id": story_structure_id
+        "story_structure_id": story_structure_id,
+        "use_groups": use_groups
       }, status=status.HTTP_202_ACCEPTED)
 
     except Exception as e:
@@ -381,13 +383,13 @@ class GenerateDescriptionsView(APIView):
 class GenerateNarrativeView(APIView):
   permission_classes = [IsAuthenticated]
   throttle_classes = [BurstRateThrottle]
-  
+
   def post(self, request):
     """Generate narrative synchronously (blocking) using Celery task"""
     try:
       # Run the narrative generation task synchronously
       result = generate_narrative_task(request.user.id)
-      
+
       # Get the updated narrative cache
       try:
         narrative_cache = NarrativeCache.objects.get(user=request.user)
@@ -404,6 +406,127 @@ class GenerateNarrativeView(APIView):
           "status": "error",
           "message": "Narrative generation completed but cache not found"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-      
+
     except Exception as e:
       return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Group Management Views
+class CreateGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    """Create a new group"""
+    try:
+      group_data = {
+        'user': request.user.id,
+        'number': request.data.get('number'),
+        'name': request.data.get('name'),
+        'description': request.data.get('description', ''),
+        'x': request.data.get('x', 0.0),
+        'y': request.data.get('y', 0.0)
+      }
+
+      serializer = GroupSerializer(data=group_data)
+      if serializer.is_valid():
+        serializer.save()
+        return Response({"status": "success", "group": serializer.data}, status=status.HTTP_201_CREATED)
+      else:
+        return Response({"status": "error", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+      return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class GetGroupsView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    """Get all groups for the authenticated user with nested images"""
+    try:
+      groups = Group.objects.filter(user=request.user).prefetch_related('images')
+      serializer = GroupSerializer(groups, many=True)
+      return Response({"status": "success", "groups": serializer.data}, status=status.HTTP_200_OK)
+    except Exception as e:
+      return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class UpdateGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def patch(self, request, group_id):
+    """Update group details (name, description, position)"""
+    try:
+      group = Group.objects.get(id=group_id, user=request.user)
+      serializer = GroupSerializer(group, data=request.data, partial=True)
+      if serializer.is_valid():
+        serializer.save()
+        return Response({"status": "success", "group": serializer.data}, status=status.HTTP_200_OK)
+      else:
+        return Response({"status": "error", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except Group.DoesNotExist:
+      return Response({"status": "error", "message": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+      return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class DeleteGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def delete(self, request, group_id):
+    """Delete a group and return its images to workspace"""
+    try:
+      group = Group.objects.get(id=group_id, user=request.user)
+
+      # Return all images in this group to workspace (set group to None)
+      ImageData.objects.filter(group=group).update(group=None, in_storyboard=True)
+
+      group.delete()
+      return Response({"status": "success", "message": "Group deleted successfully"}, status=status.HTTP_200_OK)
+    except Group.DoesNotExist:
+      return Response({"status": "error", "message": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+      return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AddImageToGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    """Add an image to a group"""
+    try:
+      image_id = request.data.get('image_id')
+      group_id = request.data.get('group_id')
+
+      if not image_id or not group_id:
+        return Response({"status": "error", "message": "Both image_id and group_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+      image = ImageData.objects.get(id=image_id, user=request.user)
+      group = Group.objects.get(id=group_id, user=request.user)
+
+      image.group = group
+      image.save()
+
+      return Response({"status": "success", "message": "Image added to group"}, status=status.HTTP_200_OK)
+    except ImageData.DoesNotExist:
+      return Response({"status": "error", "message": "Image not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Group.DoesNotExist:
+      return Response({"status": "error", "message": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+      return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RemoveImageFromGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    """Remove an image from a group"""
+    try:
+      image_id = request.data.get('image_id')
+
+      if not image_id:
+        return Response({"status": "error", "message": "image_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+      image = ImageData.objects.get(id=image_id, user=request.user)
+      image.group = None
+      image.in_storyboard = True  # Ensure it returns to storyboard
+      image.save()
+
+      return Response({"status": "success", "message": "Image removed from group"}, status=status.HTTP_200_OK)
+    except ImageData.DoesNotExist:
+      return Response({"status": "error", "message": "Image not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+      return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

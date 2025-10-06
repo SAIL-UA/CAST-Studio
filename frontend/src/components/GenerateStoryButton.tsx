@@ -13,10 +13,11 @@ type GenerateStoryButtonProps = {
     setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;
     storyLoading: boolean;
     setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    hasGroups?: boolean;  // New prop to indicate if groups exist
 }
 
 // Generate story button component
-const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSelectedPattern, storyLoading, setStoryLoading }: GenerateStoryButtonProps) => {
+const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSelectedPattern, storyLoading, setStoryLoading, hasGroups = false }: GenerateStoryButtonProps) => {
 
     // States
     const [AIOpen, setAIOpen] = useState(false);
@@ -112,7 +113,8 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSe
 
             // Step 3: Generate the story (async with polling)
             console.log('Step 3: Generating story...');
-            const taskResponse = await generateNarrativeAsync();
+            console.log('Using groups:', hasGroups);
+            const taskResponse = await generateNarrativeAsync(undefined, hasGroups);
             
             if (taskResponse.status === 'success' && taskResponse.task_id) {
                 console.log('Story generation task started, task_id:', taskResponse.task_id);
