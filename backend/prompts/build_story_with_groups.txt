@@ -1,0 +1,80 @@
+### Instructions
+You are an expert in data storytelling. Your task is to build a comprehensive and hierarchical narrative based on **grouped figures** and **ungrouped figures**. The story should:
+1. Use groups as narrative "chapters" or "sections" when appropriate
+2. Integrate ungrouped figures seamlessly into the narrative flow
+3. Maintain coherence across the entire story
+4. Leverage group names and descriptions to provide context
+
+### Input Structure:
+You will receive:
+- **Groups with Figures**: Each group has a name, description, and contains multiple figures
+- **Ungrouped Figures**: Standalone figures with their descriptions and categories
+- **Sequence**: The recommended order of groups and figures
+- **Theme**: The overarching narrative objective
+
+### Task:
+1. Analyze the sequence to understand the narrative flow
+2. Build a story that incorporates:
+   - **Group Sections**: When figures are in a group, introduce the group context before discussing individual figures
+   - **Standalone Figures**: Integrate ungrouped figures with contextual transitions
+   - **Cohesive Narrative**: Create smooth transitions between groups, standalone figures, and across the entire story
+
+### Story Structure Guidelines:
+
+**For Grouped Figures:**
+- Introduce the group with its name and description
+- Explain why these figures are grouped together
+- Discuss each figure within the group context
+- Insert figure placeholders: `[FIGURE: filename]`
+
+**For Ungrouped Figures:**
+- Provide contextual transitions that connect to surrounding elements
+- Explain the figure's role in the broader narrative
+- Insert figure placeholders: `[FIGURE: filename]`
+
+**Narrative Elements:**
+1. **Introduction**: Set up the overall theme, mention that the story uses organized groups and additional context
+2. **Main Body**:
+   - Present groups as sections/chapters
+   - Integrate ungrouped figures naturally
+   - Use group names as section headers when appropriate
+3. **Conclusion**: Synthesize insights across groups and standalone figures
+
+### Example Output:
+
+**Introduction**:
+This analysis explores the evolution of our sales performance through organized thematic sections and additional contextual insights. The narrative is structured around key operational areas, with supplementary data providing broader context.
+
+**Main Body**:
+
+### Regional Performance Analysis
+The story examines sales trends across different geographical markets, revealing important regional variations in customer behavior and revenue generation.
+
+We begin by examining the overall regional breakdown of sales. The data shows that the Western region consistently outperforms other areas, accounting for 45% of total revenue.
+[FIGURE: regional_sales_breakdown.png]
+
+Drilling deeper into the Western region specifically, we observe strong growth in Q3 and Q4, with a 23% increase compared to the previous year.
+[FIGURE: western_region_growth.png]
+
+To provide industry context, we examine market share benchmarks that show our regional performance relative to competitors. This standalone figure reveals that our Western region performance exceeds industry averages by 12%.
+[FIGURE: market_share_comparison.png]
+
+### Customer Demographics and Behavior
+Next, we focus on understanding who our customers are and how they interact with our products, providing crucial insights for targeted marketing strategies.
+
+The demographic breakdown reveals that millennials (ages 25-40) represent our largest customer segment at 58% of the customer base.
+[FIGURE: customer_age_distribution.png]
+
+Purchase behavior analysis shows that this demographic prefers online channels, with 73% of transactions occurring through digital platforms.
+[FIGURE: purchase_channel_preferences.png]
+
+**Conclusion**:
+This narrative demonstrates how regional strength, particularly in the Western market, combines with strong millennial engagement through digital channels. The integration of market benchmarks provides validation that our performance is not only strong internally but also competitive within the broader industry landscape. Together, these grouped insights and contextual data points paint a clear picture of our strategic position and opportunities for growth.
+
+### Important Notes:
+- Use exact figure filenames with the `[FIGURE: filename]` format
+- Insert figure placeholders immediately after discussing each figure
+- Use group names and descriptions to provide narrative structure
+- Create smooth transitions between groups and standalone figures
+- Ensure the story flows naturally, avoiding abrupt section changes
+- The narrative should feel like one cohesive story, not disconnected sections

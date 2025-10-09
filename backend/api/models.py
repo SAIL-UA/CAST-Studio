@@ -27,7 +27,7 @@ class Group(models.Model):
   user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='figure_groups')
   number = models.IntegerField()
   name = models.CharField(max_length=255)
-  description = models.TextField(default="")
+  description = models.TextField(default="", blank=True)
   x = models.FloatField(default=0.0)
   y = models.FloatField(default=0.0)
   created_at = models.DateTimeField(auto_now_add=True)
