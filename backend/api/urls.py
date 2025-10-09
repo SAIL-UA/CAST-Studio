@@ -5,7 +5,9 @@ from .views import (
     UpdateNarrativeCacheView, ClearNarrativeCacheView,
     GenerateDescriptionsView, GenerateNarrativeView,
     LogActionView, RefreshTokenView, UploadJupyterLogView,
-    ExportJupyterLogsView
+    ExportJupyterLogsView,
+    CreateGroupView, GetGroupsView, UpdateGroupView, DeleteGroupView,
+    AddImageToGroupView, RemoveImageFromGroupView
 )
 
 urlpatterns = [
@@ -21,6 +23,14 @@ urlpatterns = [
     path("images/<str:filename>/serve/", ServeImageView.as_view(), name="image-serve"),
     path("images/<uuid:image_id>/update/", UpdateImageDataView.as_view(), name="image-update"),
     path("images/<str:filename>/delete/", DeleteFigureView.as_view(), name="image-delete"),
+
+    # Groups
+    path("groups/", GetGroupsView.as_view(), name="group-list"),
+    path("groups/create/", CreateGroupView.as_view(), name="group-create"),
+    path("groups/<uuid:group_id>/update/", UpdateGroupView.as_view(), name="group-update"),
+    path("groups/<uuid:group_id>/delete/", DeleteGroupView.as_view(), name="group-delete"),
+    path("groups/images/add/", AddImageToGroupView.as_view(), name="group-image-add"),
+    path("groups/images/remove/", RemoveImageFromGroupView.as_view(), name="group-image-remove"),
 
     # Narrative
     path("narrative/generate/async/", GenerateNarrativeAsyncView.as_view(), name="narrative-generate-async"),

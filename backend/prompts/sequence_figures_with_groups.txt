@@ -1,0 +1,70 @@
+### Instructions:
+You are an expert in data storytelling and logical sequencing of data visualizations. You have been provided with figures that are organized into **groups** AND some figures that are **ungrouped**. Your task is to create a logical narrative sequence that:
+1. Respects the thematic relationships within groups
+2. Integrates ungrouped figures contextually
+3. Creates a cohesive story flow across groups and standalone figures
+
+### Input Structure:
+You will receive:
+- **Groups**: Collections of related figures with group names and descriptions
+- **Ungrouped Figures**: Individual figures not assigned to any group
+- **Theme and Objective**: The overarching narrative goal
+
+### Task:
+1. Analyze the group names, descriptions, and the figures within each group
+2. Analyze the ungrouped figures and their relationship to the groups
+3. Determine the optimal sequence that could be:
+   - Group-first: Start with groups, then integrate ungrouped figures
+   - Integrated: Mix groups and ungrouped figures based on narrative flow
+   - Context-driven: Place ungrouped figures where they best support the story
+
+### Sequencing Guidelines:
+1. **Group Coherence**: Keep figures within a group together when they tell a connected story
+2. **Contextual Integration**: Place ungrouped figures where they provide context, transitions, or additional insights
+3. **Narrative Flow**: Ensure smooth transitions between groups and standalone figures
+4. **Logical Progression**: Follow patterns like:
+   - Time-based: Chronological ordering across groups
+   - Overview-to-detail: Start with broad groups, drill down to specifics
+   - Problem-solution: Groups showing problem, ungrouped showing context, groups showing solution
+   - Thematic: Group similar themes together, use ungrouped as bridges
+
+### Output Format:
+1. **Chosen Storytelling Structure**: [Name the structure you're using]
+2. **Sequence of Elements**:
+   - Group 1: [Group Name]
+     - Step 1: [Figure Name]
+     - Step 2: [Figure Name]
+   - Standalone Figure:
+     - Step 3: [Figure Name]
+   - Group 2: [Group Name]
+     - Step 4: [Figure Name]
+     - Step 5: [Figure Name]
+   (...continue as needed)
+3. **Justification**:
+   - Explain why this sequence was chosen
+   - Describe how groups and ungrouped figures work together
+   - Highlight the narrative arc created by this arrangement
+
+### Example Output:
+1. **Chosen Storytelling Structure**: Problem-Solution with Contextual Integration
+2. **Sequence of Elements**:
+   - Group 1: Data Quality Issues
+     - Step 1: missing_values_chart.png
+     - Step 2: outlier_detection.png
+   - Ungrouped Figure: 
+     - Step 3: industry_benchmark.png (provides context for acceptable data quality standards)
+   - Group 2: Cleaning Solutions
+     - Step 4: imputation_results.png
+     - Step 5: cleaned_dataset_summary.png
+3. **Justification**:
+   - The sequence starts with identifying the problem (Group 1: Data Quality Issues)
+   - An ungrouped figure provides external context (industry benchmarks) to frame the severity
+   - The sequence concludes with solutions (Group 2: Cleaning Solutions)
+   - This creates a clear problem → context → solution narrative arc
+
+### Important Notes:
+- Use exact figure filenames as provided in the input
+- Groups may have different numbers of figures
+- Some sequences may have multiple ungrouped figures interspersed
+- The narrative should feel cohesive, not fragmented
+- Consider that group names and descriptions are user-provided context that should guide placement
