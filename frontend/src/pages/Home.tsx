@@ -10,6 +10,7 @@ import Header from '../components/Header';
 import NavDropdown from '../components/NavDropdown';
 import DataStories from '../components/DataStories';
 import RecommendedNarratives from '../components/RecommendedNarratives';
+import FeedbackPanel, { FeedbackCardData } from '../components/FeedbackPanel';
 import Footer from '../components/Footer';
 import NarrativePatterns from '../components/NarrativePatterns'
 import Workspace from '../components/Workspace'
@@ -37,6 +38,7 @@ const Home = () => {
     const [rightNarrativeExamplesOpen, setRightNarrativeExamplesOpen] = useState(false);
     const [selectedPattern, setSelectedPattern] = useState('');
     const [storyLoading, setStoryLoading] = useState(false);
+    const [feedbackItems, setFeedbackItems] = useState<FeedbackCardData[] | null>(null);
 
     // Check authentication
     handleAuthRequired(userAuthenticated, navigate);
@@ -51,6 +53,45 @@ const Home = () => {
         width.addEventListener('change', handler); // Event listener for all screen size changes
         return () => width.removeEventListener('change', handler); // Cleanup
     }, []);
+
+    // Listen for a feedback request event to show the feedback panel with placeholders
+    useEffect(() => {
+        const onShowFeedback = () => {
+            // two placeholder cards similar to screenshot
+            const placeholders: FeedbackCardData[] = [
+                {
+                    title: 'Demographics of Titanic Passengers',
+                    entries: [
+                        {
+                            text:
+                                'Group description is not specific. What about these distributions helps you answer your research questions? Is it that there were more young people (18-34) among Titanic passengers compared to middle-aged or beyond (35+)? More men or women? Add a reference to project RQs.',
+                            source: 'Instructor',
+                        },
+                        {
+                            text:
+                                'The pie chart uses available space inefficiently. Consider revising Visual 2 to a bar chart.',
+                            source: 'Story Studio AI',
+                        },
+                    ],
+                },
+                {
+                    title: 'Demographics of Titanic Survivors',
+                    entries: [
+                        {
+                            text:
+                                'This can support a comparison of the demographics of Titanic passengers overall vs. the ones who survived, which could be an effective narrative.',
+                            source: 'Story Studio AI',
+                        },
+                    ],
+                },
+            ];
+            setFeedbackItems(placeholders);
+            setRightOpen(true); // ensure right sidebar visible on small screens
+        };
+
+        window.addEventListener('showFeedbackPanel', onShowFeedback as EventListener);
+        return () => window.removeEventListener('showFeedbackPanel', onShowFeedback as EventListener);
+    }, [setRightOpen]);
 
     // Collapse sidebars when screen size changes
     useEffect(() => {
@@ -67,7 +108,7 @@ const Home = () => {
     return (
         <>
             <Header />
-            <div id="home-container" className="flex w-full font-roboto-light">
+            <div id="home-container" className="flex w-full font-roboto-light pt-20 min-h-screen">
         
                 {/* Left Home */}
                 <div id="left-home" className="w-1/5 px-3 max-xl:hidden">
@@ -115,7 +156,7 @@ const Home = () => {
                         )}
                         
                         {/* Right home */}
-                        <div id="right-home" className={`${screenLarge ? 'w-1/5' : 'w-1/2'} px-3 bg-grey-lighter-2 z-5`}>
+                        <div id="right-home" className={`${screenLarge ? 'w-1/4' : 'w-1/2'} px-3 bg-grey-lighter-2 z-5 flex flex-col`}>                        
                             {!screenLarge && (
                             <div id="right-home-collapsed" className="w-[5%] bg-grey-lighter-2 items-start">
                                 {/* Right Open */}
@@ -135,25 +176,30 @@ const Home = () => {
                             </div>
                             )}
                             {/* Right top */}
-                            <div id="right-top" className="min-h-[46vh] mt-8">
-                                {/* Right bottom */}
-                                <div id="right-top-bottom" className="flex w-full min-h-1/2">
-                                    {rightNarrativePatternsOpen ? (
+                            <div id="right-top" className="flex flex-col">
+                                {/* Right content wrapper fills available space */}
+                                <div id="right-top-bottom" className="flex w-full">
+                                    {feedbackItems ? (
+                                        <FeedbackPanel items={feedbackItems} onClose={() => setFeedbackItems(null)} />
+                                    ) : rightNarrativePatternsOpen ? (
                                         rightNarrativeExamplesOpen ? (
                                             <NarrativeExamples
-                                            selectedPattern={selectedPattern}
-                                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                                                selectedPattern={selectedPattern}
+                                                setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                             />
                                         ) : (
-                                        <NarrativePatterns
-                                        center={false}
-                                        setSelectedPattern={setSelectedPattern}
-                                        setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
-                                        setStoryLoading={setStoryLoading}
-                                        setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} />
+                                            <NarrativePatterns
+                                                center={false}
+                                                setSelectedPattern={setSelectedPattern}
+                                                setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                                                setStoryLoading={setStoryLoading}
+                                                setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                                            />
                                         )
                                     ) : (
-                                        <RecommendedNarratives />
+                                        <div className="w-full h-full pr-1">
+                                            <RecommendedNarratives />
+                                        </div>
                                     )}
                                 </div>
                             </div>

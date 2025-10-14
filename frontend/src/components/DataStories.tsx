@@ -1,7 +1,8 @@
 // Import dependencies
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { getNarrativeCache, serveImage } from '../services/api';
+import { getNarrativeCache, serveImage, getImageDataAll, getGroups } from '../services/api';
+import { ImageData, GroupData } from '../types/types';
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 
 // Import components
@@ -37,6 +38,10 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
     const [processedSequence, setProcessedSequence] = useState<string>('');
     const [isProcessingImages, setIsProcessingImages] = useState(false);
     const [processedRecommended, setProcessedRecommended] = useState<string[]>([]);
+    // Workspace images and groups (for FeedbackButton)
+    const [images, setImages] = useState<ImageData[]>([]);
+    const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
+    const [loadingWorkspace, setLoadingWorkspace] = useState(true);
 
     // Check for existing cached narrative on component mount
     const loadCachedNarrative = async () => {
@@ -58,6 +63,41 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
         }
     };
 
+    // Fetch workspace images and groups (lightweight, similar to StoryBoard)
+    const fetchWorkspaceData = async () => {
+        try {
+            const imagesResp: any = await getImageDataAll();
+            if (imagesResp && imagesResp.data && Array.isArray(imagesResp.data.images)) {
+                const fetchedImages = imagesResp.data.images.map((img: any) => ({
+                    ...img,
+                    x: img.in_storyboard ? img.x : 0,
+                    y: img.in_storyboard ? img.y : 0,
+                }));
+                setImages(fetchedImages);
+            }
+
+            const groupsResp: any = await getGroups();
+            if (groupsResp && groupsResp.status === 'success' && Array.isArray(groupsResp.groups)) {
+                const backendGroups = groupsResp.groups.map((g: any) => ({
+                    id: g.id,
+                    number: g.number,
+                    name: g.name,
+                    description: g.description,
+                    x: g.x,
+                    y: g.y,
+                    cards: g.images || [],
+                    created_at: g.created_at,
+                    last_modified: g.last_modified
+                }));
+                setGroupDivs(backendGroups);
+            }
+        } catch (error) {
+            console.error('Error fetching workspace data:', error);
+        } finally {
+            setLoadingWorkspace(false);
+        }
+    };
+
     
     // Effect
     useEffect(() => {
@@ -66,6 +106,8 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
 
         // Check for cached narrative and load it (if it exists) on mount
         loadCachedNarrative();
+        // Also fetch workspace data for FeedbackButton
+        fetchWorkspaceData();
 
         // Listen for story generation events
         const handleStoryGenerated = (event: Event) => {
@@ -160,7 +202,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 const processedSequenceTextPromise = processNarrativeWithImages(storyData.sequence_response || '');
 
                 const recommendedList = storyData.recommended_order || [];
-                const processedRecommendedPromises = recommendedList.map((filename) =>
+                const processedRecommendedPromises = recommendedList.map((filename: string) =>
                     processNarrativeWithImages(`[FIGURE: ${filename}]`)
                 );
 
@@ -193,9 +235,17 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
         processAllContent();
     }, [storyData]);
 
+    // Derived workspace images for FeedbackButton (images in storyboard and not in groups)
+    const workspaceImages = images
+        .filter((img: ImageData) => img.in_storyboard === true && !img.groupId)
+        .map((img: ImageData) => ({
+            ...img,
+            image: serveImage(img.filepath)
+        }));
+
     // Unified image components for all ReactMarkdown sections
     const imageComponents = {
-        img: ({node, ...props}: any) => {
+    img: ({node, ...props}: any) => {
             console.log('ReactMarkdown img component received props:', props);
             console.log('Image src:', props.src);
             
@@ -205,7 +255,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                         {...props}
                         className="w-auto h-full object-contain rounded-md shadow-sm m-0 p-0"
                         onLoad={() => console.log('Image loaded successfully:', props.src)}
-                        onError={(e) => {
+                        onError={(e: any) => {
                             console.error('Image failed to load:', props.src, e);
                             console.log('Image error target:', e.target);
                         }}
@@ -265,7 +315,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
             <div id="data-stories-content" className="flex flex-col w-full flex-1 mt-4 bg-white rounded-sm p-4 overflow-y-auto min-h-0">
             <div className="w-full mb-4">
                     <ExportButton />
-                    <FeedbackButton />
+                    <FeedbackButton groups={groupDivs} workspaceImages={workspaceImages} />
                     <SubmitButton />
             </div>
 
