@@ -4,6 +4,12 @@ import ReactMarkdown from 'react-markdown';
 import { getNarrativeCache, serveImage } from '../services/api';
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 
+// Import components
+import ExportButton from './ExportButton';
+import FeedbackButton from './FeedbackButton';
+import SubmitButton from './SubmitButton';
+
+
 // Story data interface
 interface StoryData {
     narrative?: string;
@@ -236,7 +242,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
             {/* Header */}
             <div id="data-stories-header" className="flex w-full">
                 <div id="data-stories-header-left" className="flex w-full h-full items-end justify-start">
-                    <h3 className="text-2xl">Data Stories</h3>
+                    <h3 className="text-2xl">Data Stories&nbsp;</h3>
                 </div>
                 <div id="data-stories-header-right" className="flex w-1/2 h-full items-end justify-end text-sm">
                     
@@ -256,7 +262,13 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
             </div>
 
             {/* Content */}
-            <div id="data-stories-content" className="flex w-full flex-1 mt-4 bg-white rounded-sm p-4 overflow-y-auto min-h-0">
+            <div id="data-stories-content" className="flex flex-col w-full flex-1 mt-4 bg-white rounded-sm p-4 overflow-y-auto min-h-0">
+            <div className="w-full mb-4">
+                    <ExportButton />
+                    <FeedbackButton />
+                    <SubmitButton />
+            </div>
+
                 {narrativeSelected ? (
                     // Narrative Structuring Content
                     <div className="w-full space-y-6">

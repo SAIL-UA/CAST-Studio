@@ -6,14 +6,16 @@ import { getImageDataAll, serveImage, updateImageData as updateImageDataAPI } fr
 // Import components
 import UploadButton from './UploadButton';
 import GenerateStoryButton from './GenerateStoryButton';
+import CraftStoryButton from './CraftStoryButton';
 import GroupButton from './GroupButton';
+import FeedbackButton from './FeedbackButton';
+import SubmitButton from './SubmitButton';
 import GroupDiv from './GroupDiv';
 import Bin from './Bin';
 
 // Import types
 import { ImageData, GroupData } from '../types/types';
-import FeedbackButton from './FeedbackButton';
-import SubmitButton from './SubmitButton';
+
 
 // Define props interface
 type StoryBoardProps = {
@@ -265,8 +267,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
                 <UploadButton />
                 <GroupButton onClick={handleCreateGroup} />
                 <GenerateStoryButton images={workspaceImages} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
+                <CraftStoryButton />
                 <FeedbackButton />
                 <SubmitButton />
+
             </div>
             <div id = "story-bin-wrapper" className="flex-1 min-h-0 relative" ref={storyBinRef}>
                 <Bin

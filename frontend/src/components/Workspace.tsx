@@ -1,9 +1,20 @@
 // Import dependencies
 import { useState } from 'react';
+import { getImageDataAll, serveImage, updateImageData as updateImageDataAPI } from '../services/api';
+
 
 // Import components
 import StoryBoard from './StoryBoard';
 import RecycleBoard from './Recycle';
+import UploadButton from './UploadButton';
+import GroupButton from './GroupButton';
+import GenerateStoryButton from './GenerateStoryButton';
+import CraftStoryButton from './CraftStoryButton';
+import FeedbackButton from './FeedbackButton';
+import SubmitButton from './SubmitButton';
+
+// Import types
+import { ImageData, GroupData } from '../types/types';
 
 // Define props interface
 type WorkspaceProps = {
@@ -34,7 +45,7 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLoa
         <div id="workspace" className="flex flex-col h-full w-full">
             <div id="workspace-header" className="flex w-full h-auto">
                 <div id="workspace-header-left" className="flex w-full h-full items-end justify-start">
-                    <h3 className="text-2xl">Workspace</h3>
+                    <h3 className="text-2xl">Workspace&nbsp;</h3>
                 </div>
                 <div id="workspace-header-right" className="flex w-1/2 h-full items-end justify-end gap-2 text-sm">
                 <button id="narrative-button"

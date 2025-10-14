@@ -24,13 +24,11 @@ You are an expert in data storytelling. Your task is to build a comprehensive an
 Only provide the final, improved story after self-evaluation and revision.
 
 ### Output Format:
-1. **Comprehensive Story**:  
    - **Introduction**: [Write the introduction here]  
    - **Main Body**: [Write the main body here, explaining the sequence of figures and their insights]  
    - **Conclusion**: [Write the conclusion here, summarizing key takeaways and final insights]  
 
 ### Example Output:
-1. **Comprehensive Story**:  
    - **Introduction**:  
      The figures in this analysis provide a detailed overview of sales performance over the past decade, revealing critical trends, regional insights, and areas of improvement. This story aims to synthesize these insights into a cohesive narrative for decision-making.  
 
