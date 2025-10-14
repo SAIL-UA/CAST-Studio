@@ -234,14 +234,14 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSe
                 onClick={handleAIStoryGeneration}
                 disabled={storyLoading}
             >
-                Use AI to Select Narrative
+                Select With AI
             </button>
 
             <button 
                 className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => setRightNarrativePatternsOpen(true)}
             >
-                    Manually Select Narrative
+                    Select Manually
             </button>
         </div>
     );
@@ -259,7 +259,7 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSe
                     disabled={storyLoading}
                 >
                     <span className={`flex items-center justify-center gap-2`}> 
-                        {storyLoading ? 'Generating...' : 'Generate Story'}
+                        {storyLoading ? 'Generating...' : 'Select Narrative'}
                         
                         <svg className={`fill-current h-4 w-4 transition-transform duration-300 ease-in ${AIOpen ? 'rotate-180' : 'rotate-0'}`}
                         xmlns="http://www.w3.org/2000/svg"

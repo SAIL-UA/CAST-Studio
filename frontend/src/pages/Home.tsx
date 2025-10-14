@@ -71,11 +71,11 @@ const Home = () => {
         
                 {/* Left Home */}
                 <div id="left-home" className="w-1/5 px-3 max-xl:hidden">
-                    <div id="nav-dropdown" className="h-[46vh] ml-2">
+                    <div id="nav-dropdown" className="ml-2">
                         <NavDropdown setCenterNarrativePatternsOpen={setCenterNarrativePatternsOpen} />
                     </div>
 
-                    <div id="footer" className="h-[46vh] flex flex-col justify-start items-start">
+                    <div id="footer" className="flex flex-col justify-start items-start">
                         <Footer />
 
                     </div>
