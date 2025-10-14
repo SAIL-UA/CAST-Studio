@@ -119,13 +119,13 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                     processedText = processedText.replace(fullMatch, replacement);
                 } else {
                     // If image fails to load, show a placeholder
-                    const replacement = `*[Image not available: ${filename}]*`;
+                    const replacement = `Image not available: ${filename}`;
                     processedText = processedText.replace(fullMatch, replacement);
                 }
             } catch (error) {
                 console.error(`Error loading image ${filename}:`, error);
                 // Replace with error placeholder
-                const replacement = `*[Image not available: ${filename}]*`;
+                const replacement = `Image not available: ${filename}`;
                 processedText = processedText.replace(fullMatch, replacement);
             }
         }
@@ -155,7 +155,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
 
                 const recommendedList = storyData.recommended_order || [];
                 const processedRecommendedPromises = recommendedList.map((filename) =>
-                    processNarrativeWithImages(`[FIGURE: ${filename}]`)
+                    processNarrativeWithImages(filename)
                 );
 
                 const [

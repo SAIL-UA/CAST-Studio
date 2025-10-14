@@ -157,18 +157,23 @@ export const deleteFigure = async(filename: string) => {
 
 export const serveImage = async(filename: string) => {
   try {
+    console.log(`Attempting to serve image: ${filename}`);
     const response = await API.get(`/images/${encodeURIComponent(filename)}/serve/`, {
       responseType: 'blob',
     })
+    
+    console.log(`Image response status: ${response.status}`);
     
     if (response.status !== 200) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
     const blob = await response.data;
-    return URL.createObjectURL(blob); 
+    const blobUrl = URL.createObjectURL(blob);
+    console.log(`Successfully created blob URL for ${filename}:`, blobUrl);
+    return blobUrl; 
   } catch (err) {
-    console.error('Failed to fetch image blob:', err);
+    console.error(`Failed to fetch image blob for ${filename}:`, err);
     return ''; 
   }
 };
