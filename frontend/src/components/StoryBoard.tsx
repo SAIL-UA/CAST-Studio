@@ -263,7 +263,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
     // Visible component
     return (
         <div id="story-board-container" className="flex flex-col h-full w-full bg-white">
-            <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start p-2 flex-shrink-0">
+            <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start p-2 flex-shrink-0 grid-background">
                 <UploadButton />
                 <GroupButton onClick={handleCreateGroup} />
                 <GenerateStoryButton images={workspaceImages} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
