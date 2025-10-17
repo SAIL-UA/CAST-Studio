@@ -7,6 +7,13 @@ import NarrativeExamplesButton from './NarrativeExamplesButton';
 // Import images
 import Brutus from '../assets/images/brutus.jpg';
 import Casa from '../assets/images/casa.jpg'
+import questionanswer from '../assets/images/questionanswer.png'
+import timeline from '../assets/images/timeline.png'
+import causeeffect from '../assets/images/causeeffect.png'
+import factoranalysis from '../assets/images/factoranalysis.png'
+import overviewdetail from '../assets/images/overviewdetail.png'
+import problemsolution from '../assets/images/problemsolution.png'
+import workflowprocess from '../assets/images/workflow.png'
 import Fresas from '../assets/images/fresas.jpg'
 import Popeye from '../assets/images/popeye.jpg'
 import Super from '../assets/images/super.jpg'
@@ -49,7 +56,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 {/* Grid item 1 - Casa - Cause and Effect*/}
                 <div className='flex flex-row h-full bg-sky-lighter p-2 items-center hover:bg-grey-light'>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
-                        <img src={Casa} alt="Casa" className="w-full h-full object-cover ml-2" />
+                        <img src={causeeffect} alt="Casa" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Cause and Effect</h3>
@@ -73,7 +80,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 {/* Grid item 2 - Fresas - Question and Answer*/}
                 <div className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
-                        <img src={Fresas} alt="Fresas" className="w-full h-full object-cover ml-2" />
+                        <img src={questionanswer} alt="Fresas" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Question and Answer</h3>
@@ -99,7 +106,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 {/* Grid item 3 - Super - Time Series Progression*/}
                 <div className={`${center ? 'bg-grey' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
-                        <img src={Super} alt="Super" className="w-full h-full object-cover ml-2" />
+                        <img src={timeline} alt="Super" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Timeline</h3>
@@ -122,7 +129,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 {/* Grid item 4 - Popeye - Factor Analysis*/}
                 <div className={`${center ? 'bg-indigo-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
-                        <img src={Popeye} alt="Popeye" className="w-full h-full object-cover ml-2" />
+                        <img src={factoranalysis} alt="Popeye" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Factor Analysis</h3>
@@ -145,7 +152,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 {/* Grid item 5 - Popeye - Overview To Detail*/}
                 <div className='flex flex-row h-full bg-sky-lighter p-2 items-center hover:bg-grey-light'>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
-                        <img src={Popeye} alt="Popeye" className="w-full h-full object-cover ml-2" />
+                        <img src={overviewdetail} alt="Popeye" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Overview To Detail</h3>
@@ -168,7 +175,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 {/* Grid item 6 - Brutus - Problem and Solution*/}
                 <div className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'>
                     <div className="w-1/4 h-3/4 object-cover p-2">
-                        <img src={Brutus} alt="Brutus" className="w-full h-full object-cover ml-2" />
+                        <img src={problemsolution} alt="Brutus" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Problem and Solution</h3>
@@ -191,7 +198,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 {/* Grid item 7 - Brutus - Comparative Analysis*/}
                 <div className={`${center ? 'bg-grey' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
-                        <img src={Fresas} alt="Fresas" className="w-full h-full object-cover ml-2" />
+                        <img src={workflowprocess} alt="Fresas" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Comparative Analysis</h3>
@@ -214,7 +221,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 {/* Grid item 8 - Brutus - Workflow or Process*/}
                 <div className={`${center ? 'bg-indigo-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center  hover:bg-grey-light` }>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
-                        <img src={Brutus} alt="Brutus" className="w-full h-full object-cover ml-2" />
+                        <img src={workflowprocess} alt="Brutus" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Workflow or Process</h3>
@@ -237,7 +244,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 {/* Grid item 9 - Popeye - Shock and Lead*/}
                 <div className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'>
                     <div className="w-1/4 h-3/4 object-cover pr-1">
-                        <img src={Popeye} alt="Popeye" className="w-full h-full object-cover ml-2" />
+                        <img src={workflowprocess} alt="Popeye" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
                         <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Shock and Lead</h3>

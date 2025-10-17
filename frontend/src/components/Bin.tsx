@@ -77,16 +77,16 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
 
   // Dynamic styling based on drop state
   const getBinClasses = () => {
-    let baseClasses = "relative w-full h-full rounded-sm transition-colors duration-200";
+    let baseClasses = "relative w-full h-full rounded-sm transition-colors duration-200 grid-background";
     
     if (isSuggestedOrderBin) {
-      baseClasses += " bg-grey-lightest border-grey-lightest";
+      baseClasses += " bg-grey-lightest border-grey-lightest grid-background";
     } else if (isOver && canDrop) {
-      baseClasses += " bg-blue-50 border-blue-400 border-dashed";
+      baseClasses += " bg-blue-50 border-blue-400 border-dashed grid-background";
     } else if (canDrop) {
-      baseClasses += " bg-grey-lightest border-grey-lightest border-dashed";
+      baseClasses += " bg-grey-lightest border-grey-lightest border-dashed grid-background";
     } else {
-      baseClasses += " bg-white border-grey-lightest";
+      baseClasses += " bg-white border-grey-lightest grid-background";
     }
     
     return baseClasses;
@@ -113,10 +113,10 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
       {/* Bin content */}
       <div className={
         isSuggestedOrderBin 
-          ? "flex flex-wrap gap-2" 
+          ? "flex flex-wrap gap-2 grid-background" 
           : id === 'story-bin' 
-            ? "flex flex-wrap gap-2 p-2" 
-            : "relative w-full h-full"
+            ? "flex flex-wrap gap-2 p-2  grid-background" 
+            : "relative w-full h-full  grid-background"
       }>
         {images.map((image, index) => (
           <DraggableCard

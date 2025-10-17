@@ -5,7 +5,7 @@
 
 
 // Import images
-import recommendedNarrative from '../assets/images/read-02.jpg';
+import recommendedNarrative from '../assets/images/workflow.png';
 
 
 // Recommended narratives component
