@@ -15,6 +15,10 @@ backend/jupyterhub.sqlite
 **/migrations/*.py
 !**/migrations/__init__.py
 
+*.sh
+!docker-down.sh
+!docker-up.sh
+
 # .sql files
 *.sql
 package-lock.json

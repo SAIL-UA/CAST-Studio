@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+
+# Git
+.git/
+.gitignore
+
+# Jupyter cruft
+.ipynb_checkpoints/
+
+# Data / logs
+*.csv
+*.tsv
+*.parquet
+*.h5
+*.db
+*.sqlite
+*.log
+
+# OS cruft
+.DS_Store
