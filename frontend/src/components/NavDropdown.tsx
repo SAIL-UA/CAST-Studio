@@ -71,7 +71,7 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                     >
                         <li className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>
-                        Gather Data Source
+                        Gather Data Visualizations
                         </li>
                         <li className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>
@@ -89,14 +89,14 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                 onClick={() => setCenterNarrativePatternsOpen(true)}>
                     <span className="flex items-center justify-start">
                         <img src={browse} alt="Browse" className="w-4 h-4 mr-2" />
-                        Browse Narrative Patterns
+                        Browse Narrative Structures
                     </span>
                 </li>
                 <li className="cursor-pointer hover:text-indigo"
                 onClick={handleDropdownSelection}>
                     <span className="flex items-center justify-start">
                         <img src={home} alt="JupyterHub" className="w-4 h-4 mr-2" />
-                        Visit JupyterHub
+                        Return to JupyterHub
                     </span>
                 </li>
             </ul>

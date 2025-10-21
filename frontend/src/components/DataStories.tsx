@@ -262,7 +262,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
             </div>
 
             {/* Content */}
-            <div id="data-stories-content" className="flex flex-col w-full flex-1 mt-4 bg-white rounded-sm p-4 overflow-y-auto min-h-0">
+            <div id="data-stories-content" className="flex flex-col w-full flex-1 mt-4 rounded-sm p-4 overflow-y-auto min-h-0">
             <div className="w-full mb-4">
                     <ExportButton />
                     <FeedbackButton />
@@ -272,7 +272,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 {narrativeSelected ? (
                     // Narrative Structuring Content
                     <div className="w-full space-y-6">
-                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structuring{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structure{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
                         
                         {isGenerating ? (
                             <GeneratingPlaceholder contentName="narrative analysis" lines={6} />
@@ -282,8 +282,8 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                             <>
                                 {/* Theme and Objective */}
                                 {storyData.theme_response && (
-                                    <div className="bg-grey-lightest p-4 rounded-lg">
-                                        <h4 className="font-semibold text-grey-darkest mb-2">Theme & Objective</h4>
+                                    <div className="p-4 rounded-lg">
+                                        <h4 className="font-semibold text-grey-darkest mb-2">Theme and Objective</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
                                             <ReactMarkdown 
                                                 components={imageComponents}
@@ -298,7 +298,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
 
                                 {/* Figure Categories */}
                                 {storyData.categorize_figures_response && (
-                                    <div className="bg-grey-lightest p-4 rounded-lg">
+                                    <div className="p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Figure Categories</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
                                             <ReactMarkdown 
@@ -314,7 +314,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
 
                                 {/* Sequence Justification */}
                                 {storyData.sequence_response && (
-                                    <div className="bg-grey-lightest p-4 rounded-lg">
+                                    <div className="p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Sequence Justification</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
                                             <ReactMarkdown 
@@ -330,7 +330,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
 
                                 {/* Recommended Order */}
                                 {processedRecommended && processedRecommended.length > 0 && (
-                                    <div className="bg-grey-lightest p-4 rounded-lg">
+                                    <div className="p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Recommended Figure Order</h4>
                                         <ol className="list-decimal list-inside text-grey-darkest">
                                             {processedRecommended.map((md, index) => (
@@ -350,7 +350,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                             </>
                         ) : (
                             <div className="text-center text-grey-darkest mt-8">
-                                <p>No narrative structuring data available.</p>
+                                <p>No narrative structure data available.</p>
                                 <p className="text-sm mt-2">Click "Generate Story" to create narrative insights.</p>
                             </div>
                         )}

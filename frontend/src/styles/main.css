@@ -66,6 +66,10 @@
   height: 75px;
 }
 
+#data-stories-content{
+  background-color: #eaf1f7;
+}
+
 .grid-background{
   background: linear-gradient(-90deg, rgba(0, 0, 0, .04) 1px, transparent 1px),
       linear-gradient(rgba(0,0,0,.04) 1px, transparent 1px), #f2f2f2;
