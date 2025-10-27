@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { ImageData } from '../types/types';
 
 // === Create Axios instances ===
 const API = axios.create({
@@ -41,6 +42,7 @@ const refreshToken = async () => {
   const newAccess = response.data.access;
 
   localStorage.setItem('access', newAccess);
+  localStorage.setItem('refresh', response.data.refresh || refresh); // Update refresh if provided
   API.defaults.headers.common['Authorization'] = `Bearer ${newAccess}`;
   USER_API.defaults.headers.common['Authorization'] = `Bearer ${newAccess}`;
 
@@ -67,7 +69,7 @@ const refreshToken = async () => {
           })
             .then(token => {
               originalRequest.headers['Authorization'] = 'Bearer ' + token;
-              return axios(originalRequest);
+              return instance(originalRequest);
             })
             .catch(err => Promise.reject(err));
         }
@@ -79,7 +81,7 @@ const refreshToken = async () => {
           const newToken = await refreshToken();
           processQueue(null, newToken);
           originalRequest.headers['Authorization'] = 'Bearer ' + newToken;
-          return axios(originalRequest);
+          return instance(originalRequest);
         } catch (err) {
           localStorage.removeItem('access');
           localStorage.removeItem('refresh');
@@ -155,24 +157,6 @@ export const deleteFigure = async(filename: string) => {
   return response.data;
 };
 
-export const serveImage = async(filename: string) => {
-  try {
-    const response = await API.get(`/images/${encodeURIComponent(filename)}/serve/`, {
-      responseType: 'blob',
-    })
-    
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const blob = await response.data;
-    return URL.createObjectURL(blob); 
-  } catch (err) {
-    console.error('Failed to fetch image blob:', err);
-    return ''; 
-  }
-};
-
 export const updateImageData = async(imageId: string, data: any) => {
   const response = await API.post(`/images/${imageId}/update/`, { data })
   return response;
@@ -222,21 +206,11 @@ export const generateDescriptionAll = async() => {
   return response.data;
 };
 
-export const logAction = async(elementId: string, actionType: string) => {
-  const response = await API.post('/actions/log/', {
-    window_size: { 
-      x: window.innerWidth,
-      y: window.innerHeight
-    },
-    dpr: window.devicePixelRatio,
-    mouse_pos: {
-      x: 0,
-      y: 0
-    },
-    action_type: actionType,
-    element_id: elementId,
+export const logMousePositionBatch = async(positions: Array<{x: number, y: number, timestamp: string}>) => {
+  const response = await API.post('/log/mouse-batch/', {
+    pos_batch: positions,
     timestamp: new Date().toISOString()
-  })
+  });
   return response.data;
 };
 
@@ -252,6 +226,34 @@ export const requestFeedbackStatus = async(taskId: string) => {
   // 202: { status: 'pending|started|retry|received' }, 200: array [{title,text}]
   return { status: response.status, data: response.data };
 };
+
+export const logScrollBatch = async(sessions: Array<{
+  elementId: string,
+  clientHeight: number,
+  scrollHeight: number,
+  events: Array<{
+    scrollTop: number,
+    scrollPercentage: number,
+    timestamp: string
+  }>
+}>) => {
+  const response = await API.post('/log/scroll-batch/', {
+    sessions: sessions,
+    timestamp: new Date().toISOString()
+  });
+  return response.data;
+};
+
+export const logUserAction = async(actionType: string, elementId: string, state_info?: Record<string, ImageData>) => {
+  const response = await API.post('/log/user-action/', {
+    action_type: actionType,
+    state_info: state_info || {},
+    element_id: elementId,
+    timestamp: new Date().toISOString()
+  });
+  return response.data;
+}
+>>>>>>> fee5805 (feat: Implement user action logging across various components)
 
 // Password reset endpoints
 export const requestPasswordReset = async(email: string) => {

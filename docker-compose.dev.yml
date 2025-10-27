@@ -43,7 +43,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./data:/data/CAST_ext  # Use local data directory
+      - ./data:/data  # Use local data directory
       - static:/app/staticfiles
     networks:
       - cast-network
@@ -59,7 +59,7 @@ services:
     container_name: cast-celery-dev
     restart: unless-stopped
     volumes:
-      - ./data:/data/CAST_ext  # Use local data directory
+      - ./data:/data  # Use local data directory
     env_file:
       - .env
     networks:
@@ -95,6 +95,7 @@ services:
       - ./nginx/project.dev.conf:/etc/nginx/conf.d/default.conf
       - frontend_build:/var/www/html
       - static:/staticfiles:ro
+      - ./data/user_images:/data/user_images:ro
     depends_on:
       - backend
       - frontend

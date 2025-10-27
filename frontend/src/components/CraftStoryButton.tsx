@@ -1,5 +1,6 @@
 // Import dependencies
 import { useNavigate } from 'react-router-dom';
+import { logAction } from '../utils/userActionLogger';
 
 
 
@@ -11,6 +12,7 @@ const CraftStoryButton = () => {
 
     // Handle upload
     const handleCraft = (e: React.MouseEvent<HTMLButtonElement>) => {
+        logAction(e);
         // Send request to backend here
         navigate('/construction');
     }
@@ -18,6 +20,7 @@ const CraftStoryButton = () => {
     // Visible component
     return (
         <button id="upload-button"
+        log-id="craft-story-button"
         className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
         onClick={handleCraft}>
         Generate Story

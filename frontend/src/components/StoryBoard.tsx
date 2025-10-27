@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { getImageDataAll, serveImage, updateImageData as updateImageDataAPI, createGroup, getGroups, updateGroup as updateGroupAPI, deleteGroup as deleteGroupAPI, addImageToGroup as addImageToGroupAPI, removeImageFromGroup as removeImageFromGroupAPI } from '../services/api';
+import { getImageUrl } from '../utils/imageUtils';
 
 // Import components
 import UploadButton from './UploadButton';
@@ -15,6 +16,7 @@ import Bin from './Bin';
 
 // Import types
 import { ImageData, GroupData } from '../types/types';
+import { logAction } from '../utils/userActionLogger';
 
 
 // Define props interface
@@ -131,7 +133,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
     };
 
     // Handle image deletion
-    const handleDelete = () => {
+    const handleDelete = (imageId: string) => {
         fetchUserData(); // Refresh data after deletion
     };
 
@@ -327,7 +329,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
         .filter(img => img.in_storyboard === true && !img.groupId)
         .map(img => ({
             ...img,
-            image: serveImage(img.filepath)
+            image: getImageUrl(img.filepath)
         }));
 
     // Loading state

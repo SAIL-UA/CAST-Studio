@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from .serializers import UserSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer, PasswordResetCodeVerifySerializer
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
@@ -33,8 +35,8 @@ class LoginView(APIView):
 
       if user is not None:
         refresh = RefreshToken.for_user(user)
-        request.session['user_folder'] = os.path.join(settings.DATA_PATH, user.username, "workspace", "cache")
-        os.makedirs(request.session['user_folder'], exist_ok=True)
+        request.session['DATA_PATH'] = settings.DATA_PATH
+        os.makedirs(os.path.join(settings.USER_DIR, user.username, "workspace"), exist_ok=True)
 
         return Response({
           "access": str(refresh.access_token),
@@ -46,6 +48,25 @@ class LoginView(APIView):
     except Exception as e:
       print(e)
       return Response({"detail": "An error occurred during login."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+class RefreshTokenView(APIView):
+  permission_classes = [AllowAny]
+  
+  def post(self, request):
+    refresh = request.data.get("refresh")
+    if not refresh:
+      return Response({"detail": "No refresh token provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = TokenRefreshSerializer(data={"refresh": refresh})
+    try:
+      serializer.is_valid(raise_exception=True)
+    except (TokenError, InvalidToken) as e:
+      return Response({"detail": "Token is invalid or expired"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Returns {'access': '...'} and, if ROTATE_REFRESH_TOKENS=True, also {'refresh': '...'}
+    return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
 
 class LogoutView(APIView):
   def post(self, request):

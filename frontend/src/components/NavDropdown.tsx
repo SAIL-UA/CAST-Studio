@@ -1,6 +1,7 @@
 // Import dependencies
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { logAction } from '../utils/userActionLogger';
 
 // Import images
 import home from '../assets/images/home.svg';
@@ -22,12 +23,14 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
 
     // Dropdown toggle
-    const toggleDropdown = () => {
+    const toggleDropdown = (e: React.MouseEvent) => {
+        logAction(e);
         setTutorialsOpen(!tutorialsOpen);
     }
 
     // Handle dropdown selections
-    const handleDropdownSelection = () => {
+    const handleDropdownSelection = (e: React.MouseEvent) => {
+        logAction(e);
         navigate(`/construction`);
     }
 
@@ -35,8 +38,10 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
     return (
         <div id="nav-dropdown-container" className="flex flex-col mt-10 mx-8 font-roboto-regular text-indigo-darkest">
             <ul className="space-y-4 text-sm font-sans">
-                <li className="cursor-pointer hover:text-indigo"
-                onClick={() => {
+                <li log-id="nav-dropdown-home-button" 
+                className="cursor-pointer hover:text-indigo"
+                onClick={(e) => {
+                    logAction(e);
                     setCenterNarrativePatternsOpen(false);
                     navigate(`/`);
                 }}>
@@ -46,7 +51,7 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                     </span>
                 </li>
 
-                <li
+                <li log-id="nav-dropdown-tutorials-button"
                 className="cursor-pointer flex justify-between items-center hover:text-indigo"
                 onClick={toggleDropdown}
                 >
@@ -69,30 +74,39 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                         ${tutorialsOpen ? 'dropdown-open-active' : 'hidden'}
                     `}
                     >
-                        <li className="cursor-pointer hover:text-indigo-dark"
+                        <li log-id="nav-dropdown-tutorial-gather-data-source"
+                        className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>
                         Gather Data Visualizations
                         </li>
-                        <li className="cursor-pointer hover:text-indigo-dark"
+                        <li log-id="nav-dropdown-tutorial-create-data-insights"
+                        className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>
                         Create Data Insights
                         </li>
-                        <li className="cursor-pointer hover:text-indigo-dark"
+                        <li log-id="nav-dropdown-tutorial-generate-narrative-structure"
+                        className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>
                         Generate Narrative Structure
                         </li>
-                        <li className="cursor-pointer hover:text-indigo-dark"
+                        <li log-id="nav-dropdown-tutorial-generate-data-story"
+                        className="cursor-pointer hover:text-indigo-dark"
                         onClick={handleDropdownSelection}>Generate Data Story</li>
                     </ul>
 
-                <li className="cursor-pointer hover:text-indigo"
-                onClick={() => setCenterNarrativePatternsOpen(true)}>
+                <li log-id="nav-dropdown-browse-narrative-patterns-button"
+                className="cursor-pointer hover:text-indigo"
+                onClick={(e) => {
+                    setCenterNarrativePatternsOpen(true);
+                    logAction(e);
+
+                }}>
                     <span className="flex items-center justify-start">
                         <img src={browse} alt="Browse" className="w-4 h-4 mr-2" />
                         Browse Narrative Structures
                     </span>
                 </li>
-                <li id="lol" className="cursor-pointer hover:text-indigo"
+                <li log-id="nav-dropdown-jupyterhub-button" className="cursor-pointer hover:text-indigo"
                 onClick={handleDropdownSelection}>
                     <span className="flex items-center justify-start">
                         <img src={home} alt="JupyterHub" className="w-4 h-4 mr-2" />

@@ -3,6 +3,7 @@
 // Import components
 import SelectNarrativeButton from './SelectNarrativeButton';
 import NarrativeExamplesButton from './NarrativeExamplesButton';
+import { logAction } from '../utils/userActionLogger';
 
 // Import images
 import Brutus from '../assets/images/brutus.jpg';
@@ -30,6 +31,12 @@ type NarrativePatternsProps = {
 // Narrative patterns component
 const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, center, setStoryLoading, setRightNarrativeExamplesOpen }: NarrativePatternsProps) => {
 
+    // Reusable hover handler that captures pattern from data attribute
+    const handleHover = (e: React.MouseEvent<HTMLDivElement>) => {
+        const pattern = e.currentTarget.getAttribute('data-pattern');
+        logAction(e, { narrative_pattern: pattern });
+    };
+
     return (
         <div id="narrative-patterns" className="p-0 m-0">
             <div className="flex flex-row w-full">
@@ -40,11 +47,15 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                     className="flex items-center justify-end w-1/4"
                     >
                         <svg
+                        log-id="narrative-patterns-close-button"
                         className="w-6 h-6"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
-                        onClick={() => setRightNarrativePatternsOpen(false)}>
+                        onClick={(e) => {
+                            setRightNarrativePatternsOpen(false);
+                            logAction(e);
+                        }}>
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </div>
@@ -54,7 +65,12 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
             <div className={`grid grid-cols-1 ${center ? 'min-lg:grid-cols-2' : ''} auto-rows-min gap-2 grid-rows-5 items-center`}>
                 
                 {/* Grid item 1 - Casa - Cause and Effect*/}
-                <div className='flex flex-row h-full bg-sky-lighter p-2 items-center hover:bg-grey-light'>
+                <div
+                log-id="narrative-pattern-card"
+                data-pattern="cause_and_effect"
+                className='flex flex-row h-full bg-sky-lighter p-2 items-center hover:bg-grey-light'
+                onMouseEnter={handleHover}
+                >
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={causeeffect} alt="Casa" className="w-full h-full object-contain ml-2" />
                     </div>
@@ -78,7 +94,12 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 2 - Fresas - Question and Answer*/}
-                <div className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'>
+                <div
+                log-id="narrative-pattern-card"
+                data-pattern="question_answer"
+                className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'
+                onMouseEnter={handleHover}
+                >
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={questionanswer} alt="Fresas" className="w-full h-full object-contain ml-2" />
                     </div>
@@ -104,7 +125,12 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 3 - Super - Time Series Progression*/}
-                <div className={`${center ? 'bg-sky-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }>
+                <div
+                log-id="narrative-pattern-card"
+                data-pattern="time_based"
+                className={`${center ? 'bg-sky-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }
+                onMouseEnter={handleHover}
+                >
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={timeline} alt="Super" className="w-full h-full object-contain ml-2" />
                     </div>
@@ -127,7 +153,12 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 4 - Popeye - Factor Analysis*/}
-                <div className={`${center ? 'bg-sky-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }>
+                <div
+                log-id="narrative-pattern-card"
+                data-pattern="factor_analysis"
+                className={`${center ? 'bg-sky-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }
+                onMouseEnter={handleHover}
+                >
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={factoranalysis} alt="Popeye" className="w-full h-full object-contain ml-2" />
                     </div>
@@ -150,7 +181,12 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 5 - Popeye - Overview To Detail*/}
-                <div className='flex flex-row h-full bg-sky-lighter p-2 items-center hover:bg-grey-light'>
+                <div
+                log-id="narrative-pattern-card"
+                data-pattern="overview_to_detail"
+                className='flex flex-row h-full bg-sky-lighter p-2 items-center hover:bg-grey-light'
+                onMouseEnter={handleHover}
+                >
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={overviewdetail} alt="Popeye" className="w-full h-full object-contain ml-2" />
                     </div>
@@ -173,7 +209,12 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 6 - Brutus - Problem and Solution*/}
-                <div className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'>
+                <div
+                log-id="narrative-pattern-card"
+                data-pattern="problem_solution"
+                className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'
+                onMouseEnter={handleHover}
+                >
                     <div className="w-1/4 h-3/4 object-cover p-2">
                         <img src={problemsolution} alt="Brutus" className="w-full h-full object-contain ml-2" />
                     </div>
@@ -196,7 +237,12 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 7 - Brutus - Comparative Analysis*/}
-                <div className={`${center ? 'bg-sky-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }>
+                <div
+                log-id="narrative-pattern-card"
+                data-pattern="comparative"
+                className={`${center ? 'bg-sky-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center hover:bg-grey-light` }
+                onMouseEnter={handleHover}
+                >
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={workflowprocess} alt="Fresas" className="w-full h-full object-contain ml-2" />
                     </div>
@@ -219,7 +265,12 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 8 - Brutus - Workflow or Process*/}
-                <div className={`${center ? 'bg-sky-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center  hover:bg-grey-light` }>
+                <div
+                log-id="narrative-pattern-card"
+                data-pattern="workflow_process"
+                className={`${center ? 'bg-sky-lighter' : 'bg-sky-lighter'} flex flex-row h-full p-2 items-center  hover:bg-grey-light` }
+                onMouseEnter={handleHover}
+                >
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={workflowprocess} alt="Brutus" className="w-full h-full object-contain ml-2" />
                     </div>
@@ -242,7 +293,12 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 </div>
 
                 {/* Grid item 9 - Popeye - Shock and Lead*/}
-                <div className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'>
+                <div
+                log-id="narrative-pattern-card"
+                data-pattern="shock_lead"
+                className='flex flex-row bg-sky-lighter h-full p-2 items-center hover:bg-grey-light'
+                onMouseEnter={handleHover}
+                >
                     <div className="w-1/4 h-3/4 object-cover pr-1">
                         <img src={workflowprocess} alt="Popeye" className="w-full h-full object-contain ml-2" />
                     </div>

@@ -34,7 +34,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent  # Adjusted to point to
 # Read the .env file located at the root directory
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-DATA_PATH = env('DATA_PATH')#, default="/data/CAST_ext/users")
+DATA_PATH = env('DATA_PATH')
+USER_DIR = env('USER_DIR_BASE')
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_ACCEPT_CONTENT = ['json']

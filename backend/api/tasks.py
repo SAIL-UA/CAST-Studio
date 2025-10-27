@@ -685,7 +685,7 @@ def generate_description_task(image_id):
     ImageData = _get_model('api', 'ImageData')            # <— late import
     try:
         image = ImageData.objects.get(id=image_id)
-        image_path = os.path.join(os.getenv('DATA_PATH'), image.user.username, "workspace", "cache", image.filepath)
+        image_path = os.path.join(os.getenv('DATA_PATH'), image.filepath)
         with open(image_path, "rb") as f:
             b64 = base64.b64encode(f.read()).decode("utf-8")
 

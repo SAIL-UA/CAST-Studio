@@ -1,6 +1,7 @@
 // Import dependencies
 import { useState } from 'react';
-import { getImageDataAll, serveImage, updateImageData as updateImageDataAPI } from '../services/api';
+import { getImageDataAll, updateImageData as updateImageDataAPI } from '../services/api';
+import { logAction } from '../utils/userActionLogger';
 
 
 // Import components
@@ -32,12 +33,14 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLoa
 
 
     // Handle storyboard
-    const handleStoryboard = () => {
+    const handleStoryboard = (e: React.MouseEvent) => {
         setRecycleBinSelected(false);
+        logAction(e);
     }
 
-    const handleRecycleBin = () => {
+    const handleRecycleBin = (e: React.MouseEvent) => {
         setRecycleBinSelected(true);
+        logAction(e);
     }
 
     // Visible component
@@ -49,6 +52,7 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLoa
                 </div>
                 <div id="workspace-header-right" className="flex w-1/2 h-full items-end justify-end gap-2 text-sm">
                 <button id="narrative-button"
+                    log-id="storyboard-button"
                     className={`underline-animate ${recycleBinSelected ? '' : 'active'} mx-3`}
                     onClick={handleStoryboard}
                     >
@@ -56,6 +60,7 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLoa
                     </button>
 
                     <button id="story-button"
+                    log-id="recycle-bin-button"
                     className={`underline-animate ${recycleBinSelected ? 'active' : ''} mx-3`}
                     onClick={handleRecycleBin}>
                     Recycle Bin

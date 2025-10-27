@@ -1,5 +1,6 @@
 // Import dependencies
 import { useNavigate } from 'react-router-dom';
+import { logAction } from '../utils/userActionLogger';
 
 
 
@@ -10,14 +11,16 @@ const ExportButton = () => {
     const navigate = useNavigate();
 
     // Handle upload
-    const handleCraft = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const handleCraft = (e: React.MouseEvent) => {
+        logAction(e);
         // Send request to backend here
         navigate('/construction');
     }
 
     // Visible component
     return (
-        <button id="upload-button"
+        <button id="export-button"
+        log-id="export-button"
         className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
         onClick={handleCraft}>
         Export

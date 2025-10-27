@@ -1,27 +1,26 @@
 from django.urls import path
 from .views import (
-    ImageDataView, UploadFigureView, DeleteFigureView, ServeImageView,
+    ImageDataView, UploadFigureView, DeleteFigureView,
     UpdateImageDataView, GenerateNarrativeAsyncView, GetNarrativeCacheView,
     UpdateNarrativeCacheView, ClearNarrativeCacheView,
     GenerateDescriptionsView, GenerateNarrativeView,
     LogActionView, RefreshTokenView, UploadJupyterLogView,
     ExportJupyterLogsView, RequestFeedbackView,
     CreateGroupView, GetGroupsView, UpdateGroupView, DeleteGroupView,
-    AddImageToGroupView, RemoveImageFromGroupView
+    AddImageToGroupView, RemoveImageFromGroupView,
+    LogMousePositionView, LogScrollView
 )
 
 urlpatterns = [
-    # Authentication
-    path("auth/refresh/", RefreshTokenView.as_view(), name="auth-refresh"),
-
     # User Actions
-    path("actions/log/", LogActionView.as_view(), name="log-action"),
+    path("log/user-action/", LogActionView.as_view(), name="log-action"),
+    path("log/mouse-batch/", LogMousePositionView.as_view(), name="log-mouse-position"),
+    path("log/scroll-batch/", LogScrollView.as_view(), name="log-scroll-position"),
     path("actions/requestfeedback/", RequestFeedbackView.as_view(), name="request-feedback"),
 
     # Images
     path("images/", ImageDataView.as_view(), name="image-list"),                     # GET list or single via query param
     path("images/upload/", UploadFigureView.as_view(), name="image-upload"),
-    path("images/<str:filename>/serve/", ServeImageView.as_view(), name="image-serve"),
     path("images/<uuid:image_id>/update/", UpdateImageDataView.as_view(), name="image-update"),
     path("images/<str:filename>/delete/", DeleteFigureView.as_view(), name="image-delete"),
 

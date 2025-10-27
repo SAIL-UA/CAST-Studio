@@ -17,6 +17,18 @@ export interface ImageData {
   groupId?: string; // NEW: Which group this card belongs to (if any)
 }
 
+// Partial image data type for logging
+export interface ImageMetadata {
+  image_id: string;
+  x: number;
+  y: number
+  filepath: string;
+  description: string; // long description
+  source: string;
+  user: number;
+  groupId?: string;
+}
+
 export interface DragItem {
   id: string;
   type?: string;
