@@ -19,7 +19,9 @@ from django.http import StreamingHttpResponse
 from django.utils.timezone import now
 from django.utils._os import safe_join
 from rest_framework.throttling import UserRateThrottle
-from .tasks import generate_description_task, generate_narrative_task
+from .tasks import generate_description_task, generate_narrative_task, generate_feedback_task
+from celery.result import AsyncResult
+from config.celery import app as celery_app
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework.views import APIView
@@ -409,6 +411,63 @@ class GenerateNarrativeView(APIView):
 
     except Exception as e:
       return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RequestFeedbackView(APIView):
+  permission_classes = [IsAuthenticated]
+  throttle_classes = [BurstRateThrottle]
+
+  def post(self, request):
+    """
+    Start feedback generation for the user's current storyboard.
+    Body optional: { "storyboard_id": string }
+    Returns 202 with { task_id }.
+    """
+    try:
+      storyboard_id = None
+      if isinstance(request.data, dict):
+        storyboard_id = request.data.get('storyboard_id')
+
+      task = generate_feedback_task.delay(request.user.id, storyboard_id)
+      return Response({"status": "accepted", "task_id": task.id}, status=status.HTTP_202_ACCEPTED)
+    except Exception as e:
+      return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+  def get(self, request):
+    """
+    Poll for feedback completion using query param task_id.
+    - While running: 202 { status }
+    - When done: 200 with items array [{title, text}, ...]
+    - On failure: 500 with error
+    """
+    try:
+      task_id = request.query_params.get('task_id')
+      if not task_id:
+        return Response({"status": "error", "message": "task_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+      res = AsyncResult(task_id, app=celery_app)
+      if res.state in ("PENDING", "RECEIVED", "STARTED", "RETRY"):
+        return Response({"status": res.state.lower()}, status=status.HTTP_202_ACCEPTED)
+      if res.state == "SUCCESS":
+        data = res.result
+        if isinstance(data, list):
+          items = [
+            {"title": str(it.get("title", "")), "text": str(it.get("text", ""))}
+            for it in data if isinstance(it, dict)
+          ]
+        else:
+          items = []
+          if isinstance(data, dict):
+            summary = data.get("summary")
+            suggestions = data.get("suggestions") or []
+            if summary:
+              items.append({"title": "Summary", "text": str(summary)})
+            for s in suggestions:
+              items.append({"title": "Suggestion", "text": str(s)})
+        return Response(items, status=status.HTTP_200_OK)
+      return Response({"status": res.state.lower(), "error": str(res.result)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+      return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Group Management Views
 class CreateGroupView(APIView):

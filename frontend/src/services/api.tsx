@@ -227,6 +227,19 @@ export const logAction = async(data: any) => {
   return response.data;
 };
 
+// Feedback (async task + polling)
+export const requestFeedback = async(data: any) => {
+  const response = await API.post('/actions/requestfeedback/', data);
+  // Response is: { status: 'accepted', task_id: '...' }
+  return response.data;
+};
+
+export const requestFeedbackStatus = async(taskId: string) => {
+  const response = await API.get('/actions/requestfeedback/', { params: { task_id: taskId } });
+  // 202: { status: 'pending|started|retry|received' }, 200: array [{title,text}]
+  return { status: response.status, data: response.data };
+};
+
 // Password reset endpoints
 export const requestPasswordReset = async(email: string) => {
   const response = await USER_API.post('/password-reset/', { email });

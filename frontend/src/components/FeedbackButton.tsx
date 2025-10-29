@@ -1,26 +1,67 @@
-// Import dependencies
-import { useNavigate } from 'react-router-dom';
+import { requestFeedback, requestFeedbackStatus } from '../services/api';
 
+type FeedbackItem = { title: string; text: string };
 
 const FeedbackButton = () => {
+    const handleFeedback = async () => {
+        try {
+            // Start background task
+            const startResp = await requestFeedback({});
+            const taskId: string = startResp?.task_id;
+            if (!taskId) return;
 
-    // Navigation helper
-    const navigate = useNavigate();
+            // Poll until complete
+            const start = Date.now();
+            const timeoutMs = 60_000; // 60s safety timeout
+            const intervalMs = 1500;
 
-    // Handle group
-    const handleFeedback = (e: React.MouseEvent<HTMLButtonElement>) => {
-        // Send request to backend here
-        navigate('/construction');
-    }
+            const poll = async (): Promise<FeedbackItem[] | null> => {
+                const { status, data } = await requestFeedbackStatus(taskId);
+                if (status === 200 && Array.isArray(data)) {
+                    return data as FeedbackItem[];
+                }
+                return null;
+            };
 
-    // Visible component
+            let items: FeedbackItem[] | null = null;
+            while (Date.now() - start < timeoutMs) {
+                // eslint-disable-next-line no-await-in-loop
+                const res = await poll();
+                if (res && res.length > 0) {
+                    items = res;
+                    break;
+                }
+                // eslint-disable-next-line no-await-in-loop
+                await new Promise((r) => setTimeout(r, intervalMs));
+            }
+
+            if (items && items.length > 0) {
+                const event = new CustomEvent('showFeedbackPanel', {
+                    detail: {
+                        items: items.map((it) => ({
+                            title: it.title,
+                            text: it.text,
+                            source: 'Story Studio AI',
+                        })),
+                    },
+                });
+                window.dispatchEvent(event);
+            }
+        } catch (err) {
+            // Silent failure for now; optionally surface a toast later
+            console.error('Feedback request failed:', err);
+        }
+    };
+
     return (
-        <button id="feedback-button"
-        className="bg-red-400 text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-        onClick={handleFeedback}>
-        Request Feedback
+        <button
+            id="feedback-button"
+            className="bg-red-400 text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+            onClick={handleFeedback}
+        >
+            Request Feedback
         </button>
-    )
-}
+    );
+};
 
-export default FeedbackButton; 
+export default FeedbackButton;

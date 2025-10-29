@@ -10,6 +10,7 @@ import Header from '../components/Header';
 import NavDropdown from '../components/NavDropdown';
 import DataStories from '../components/DataStories';
 import RecommendedNarratives from '../components/RecommendedNarratives';
+import FeedbackPanel, { FeedbackCardData } from '../components/FeedbackPanel';
 import Footer from '../components/Footer';
 import NarrativePatterns from '../components/NarrativePatterns'
 import Workspace from '../components/Workspace'
@@ -34,6 +35,8 @@ const Home = () => {
     // const [leftOpen, setLeftOpen] = useState(false);
     const [centerNarrativePatternsOpen, setCenterNarrativePatternsOpen] = useState(false);
     const [rightNarrativePatternsOpen, setRightNarrativePatternsOpen] = useState(false);
+    const [rightFeedbackOpen, setRightFeedbackOpen] = useState(false);
+    const [feedbackItems, setFeedbackItems] = useState<FeedbackCardData[]>([]);
     const [rightNarrativeExamplesOpen, setRightNarrativeExamplesOpen] = useState(false);
     const [selectedPattern, setSelectedPattern] = useState('');
     const [storyLoading, setStoryLoading] = useState(false);
@@ -50,6 +53,22 @@ const Home = () => {
         setScreenLarge(width.matches); // Set initial state
         width.addEventListener('change', handler); // Event listener for all screen size changes
         return () => width.removeEventListener('change', handler); // Cleanup
+    }, []);
+
+    // Feedback event handler
+    useEffect(() => {
+        const onShowFeedback = (e: Event) => {
+            const ce = e as CustomEvent;
+            const items = Array.isArray(ce.detail?.items) ? ce.detail.items : [];
+            if (items.length > 0) {
+                setFeedbackItems(items);
+                setRightFeedbackOpen(true);
+                setRightOpen(true); // ensure sidebar visible
+                setRightNarrativePatternsOpen(false);
+            }
+        };
+        window.addEventListener('showFeedbackPanel', onShowFeedback as EventListener);
+        return () => window.removeEventListener('showFeedbackPanel', onShowFeedback as EventListener);
     }, []);
 
     // Collapse sidebars when screen size changes
@@ -138,7 +157,9 @@ const Home = () => {
                             <div id="right-top" className="min-h-[46vh] mt-8">
                                 {/* Right bottom */}
                                 <div id="right-top-bottom" className="flex w-full min-h-1/2">
-                                    {rightNarrativePatternsOpen ? (
+                                    {rightFeedbackOpen ? (
+                                        <FeedbackPanel items={feedbackItems} onClose={() => setRightFeedbackOpen(false)} />
+                                    ) : rightNarrativePatternsOpen ? (
                                         rightNarrativeExamplesOpen ? (
                                             <NarrativeExamples
                                             selectedPattern={selectedPattern}

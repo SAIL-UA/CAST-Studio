@@ -1,6 +1,6 @@
 # backend/api/tasks.py
 from celery import shared_task
-import os, base64, re, logging
+import os, base64, re, logging, json, mimetypes
 from functools import lru_cache
 from django.apps import apps
 from django.conf import settings
@@ -8,6 +8,9 @@ from django.contrib.auth import get_user_model
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
+
+# Guardrail against oversized payloads when attaching image data.
+MAX_FEEDBACK_IMAGES = 12
 
 def _openai_client():
     # create lazily to avoid creating clients during import/migrations
@@ -37,6 +40,32 @@ def _load_prompt(filename: str) -> str:
     except Exception as e:
         logger.error(f"Error loading prompt {filename}: {e}")
         return f"Error loading prompt: {filename}"
+
+@lru_cache(maxsize=256)
+def _image_to_data_url(username: str, relative_path: str) -> str | None:
+    """Convert an image on disk to a base64 data URL for OpenAI image inputs."""
+    data_root = os.getenv('DATA_PATH')
+    if not data_root:
+        logger.warning("DATA_PATH is not configured; skipping image embedding for feedback.")
+        return None
+
+    try:
+        abs_path = os.path.abspath(os.path.join(data_root, username, "workspace", "cache", relative_path))
+        if not os.path.exists(abs_path):
+            logger.warning(f"Image not found for feedback embedding: {abs_path}")
+            return None
+
+        with open(abs_path, "rb") as f:
+            encoded = base64.b64encode(f.read()).decode("ascii")
+
+        mime_type, _ = mimetypes.guess_type(abs_path)
+        if not mime_type:
+            mime_type = "image/jpeg"
+
+        return f"data:{mime_type};base64,{encoded}"
+    except Exception as exc:
+        logger.error(f"Error encoding image {relative_path} for feedback: {exc}")
+        return None
 
 
 def _categorize_figure(description: str) -> str:
@@ -336,6 +365,320 @@ def extract_figure_filenames(sequence_response: str) -> list[str]:
 
     return found
 
+
+def _extract_json_object(text: str) -> dict | None:
+    """Best-effort extraction of a top-level JSON object from model content.
+
+    - Strips markdown code fences like ```json ... ``` or ``` ... ```
+    - Attempts direct json.loads
+    - Falls back to slicing from first '{' to last '}'
+    """
+    if not text:
+        return None
+    s = text.strip()
+    # Strip fenced code blocks
+    if s.startswith("```") and s.endswith("```"):
+        # remove first and last fence lines
+        lines = s.splitlines()
+        if len(lines) >= 3:
+            # drop opening (maybe ```json) and closing ```
+            lines = lines[1:-1]
+            s = "\n".join(lines).strip()
+    # Try parse directly
+    try:
+        return json.loads(s)
+    except Exception:
+        pass
+    # Fallback: slice between first '{' and last '}'
+    try:
+        start = s.find('{')
+        end = s.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            candidate = s[start:end+1]
+            return json.loads(candidate)
+    except Exception:
+        return None
+    return None
+
+
+def _generate_feedback(groups_data: list, ungrouped_data: dict, counts: dict) -> list[dict]:
+    """
+    Use OpenAI to generate structured feedback items for the storyboard context.
+
+    Input shapes:
+        groups_data: [{ "name": str, "description": str, "figures": { filepath: {"description": str, "data_url": str|None} } }, ...]
+        ungrouped_data: { filepath: {"description": str, "data_url": str|None} }
+        counts: { groups, storyboard_images, nongrouped_images }
+
+    Returns: a list of up to 4 items with fields:
+        [{ section: "missing_items"|"item_quality"|"grouping_quality", title: str, text: str }]
+    """
+    # Format narrative-ready context strings
+    groups_text = ""
+    grouped_image_entries: list[tuple[str, str, str, str | None]] = []
+    for group in groups_data:
+        group_name = group.get('name', '')
+        group_desc = group.get('description', '')
+        groups_text += f"\n### Group: {group_name}\n"
+        groups_text += f"Description: {group_desc}\n"
+        groups_text += "Figures in this group:\n"
+        for fig_file, fig_info in group.get('figures', {}).items():
+            desc = fig_info.get('description', '')
+            data_url = fig_info.get('data_url')
+            groups_text += f"  - {fig_file}: {desc}\n"
+            caption_desc = desc if len(desc) <= 280 else f"{desc[:277]}..."
+            grouped_image_entries.append((group_name, fig_file, caption_desc, data_url))
+
+    ungrouped_text = "\n### Ungrouped Figures:\n"
+    ungrouped_image_entries: list[tuple[str, str, str, str | None]] = []
+    for fig_file, fig_info in ungrouped_data.items():
+        desc = fig_info.get('description', '')
+        data_url = fig_info.get('data_url')
+        ungrouped_text += f"  - {fig_file}: {desc}\n"
+        caption_desc = desc if len(desc) <= 280 else f"{desc[:277]}..."
+        ungrouped_image_entries.append(("Ungrouped", fig_file, caption_desc, data_url))
+
+    counts_text = (
+        f"Total groups: {counts.get('groups', 0)}\n"
+        f"Storyboard images: {counts.get('storyboard_images', 0)}\n"
+        f"Ungrouped images: {counts.get('nongrouped_images', 0)}\n"
+    )
+
+    prompt = f"""
+### Input
+Storyboard counts:
+{counts_text}
+{groups_text}
+{ungrouped_text}
+
+Attached images correspond to the figures listed above.
+
+{_load_prompt('feedback_prompt.txt')}
+""".strip()
+
+    try:
+        client = _openai_client()
+        # Define a strict JSON schema for structured output
+        schema = {
+            "name": "feedback_items",
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 4,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {
+                                "section": {
+                                    "type": "string",
+                                    "enum": ["missing_items", "item_quality", "grouping_quality"]
+                                },
+                                "title": {"type": "string"},
+                                "text": {"type": "string"}
+                            },
+                            "required": ["section", "title", "text"]
+                        }
+                    }
+                },
+                "required": ["items"]
+            },
+            "strict": True
+        }
+
+        message_content: list[dict[str, object]] = [{"type": "text", "text": prompt}]
+        images_attached = 0
+
+        for group_name, fig_file, desc, data_url in grouped_image_entries:
+            if not data_url:
+                continue
+            if images_attached >= MAX_FEEDBACK_IMAGES:
+                logger.info("Reached feedback image embedding limit; remaining group images skipped.")
+                break
+            caption = f"Group '{group_name}' figure '{fig_file}'. Description: {desc}"
+            message_content.append({"type": "text", "text": caption})
+            message_content.append({"type": "image_url", "image_url": {"url": data_url}})
+            images_attached += 1
+
+        if images_attached < MAX_FEEDBACK_IMAGES:
+            for group_name, fig_file, desc, data_url in ungrouped_image_entries:
+                if not data_url:
+                    continue
+                if images_attached >= MAX_FEEDBACK_IMAGES:
+                    logger.info("Reached feedback image embedding limit; remaining ungrouped images skipped.")
+                    break
+                caption = f"{group_name} figure '{fig_file}'. Description: {desc}"
+                message_content.append({"type": "text", "text": caption})
+                message_content.append({"type": "image_url", "image_url": {"url": data_url}})
+                images_attached += 1
+
+        resp = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": message_content},
+            ],
+            temperature=0.1,
+            timeout=30,
+            response_format={"type": "json_schema", "json_schema": schema},
+        )
+        parsed_obj = None
+        # Prefer native parsed if SDK provides it
+        try:
+            parsed_obj = resp.choices[0].message.parsed
+        except Exception:
+            parsed_obj = None
+
+        if not parsed_obj:
+            content = (resp.choices[0].message.content or "").strip()
+            parsed_obj = _extract_json_object(content)
+
+        if isinstance(parsed_obj, dict) and isinstance(parsed_obj.get("items"), list):
+            items = []
+            for it in parsed_obj["items"]:
+                if not isinstance(it, dict):
+                    continue
+                # Keep section if present; UI will ignore unknown keys
+                title = str(it.get("title", "")).strip()
+                text = str(it.get("text", "")).strip()
+                section = it.get("section")
+                if title and text:
+                    item = {"title": title, "text": text}
+                    if isinstance(section, str):
+                        item["section"] = section
+                    items.append(item)
+            # Enforce max 4
+            return items[:4] if items else []
+
+        # Fallback: synthesize a single generic item from raw content
+        fallback_text = (resp.choices[0].message.content or "").strip()
+        return [{"title": "Feedback", "text": fallback_text}]
+    except Exception as e:
+        logger.error(f"Error generating feedback via OpenAI: {e}")
+        return [{"title": "Error", "text": f"Error generating feedback: {e}"}]
+
+
+@shared_task
+def generate_feedback_task(user_id: str, storyboard_id: str | None = None) -> list[dict]:
+    """
+    Generate lightweight feedback by inspecting the user's storyboard data.
+
+    Counts:
+      - total number of groups
+      - number of storyboard images that are not in any group
+
+    Returns a dict; the API layer adapts it to an array of items for the UI.
+    Example:
+      {
+        "summary": "you have 2 groups and 5 nongrouped images.",
+        "highlights": [],
+        "suggestions": [],
+        "meta": { "storyboard_id": "...", "counts": {"groups": 2, "nongrouped_images": 5, "storyboard_images": 7} }
+      }
+    """
+    try:
+        User = get_user_model()
+        ImageData = _get_model('api', 'ImageData')
+        Group = _get_model('api', 'Group')
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return {
+                "summary": "User not found.",
+                "highlights": [],
+                "suggestions": [],
+                "meta": {"storyboard_id": storyboard_id, "error": "user_not_found"},
+            }
+
+        # Fetch storyboard images
+        storyboard_images_qs = ImageData.objects.filter(user=user, in_storyboard=True)
+        storyboard_images_count = storyboard_images_qs.count()
+
+        # Counts
+        groups_qs = Group.objects.filter(user=user).prefetch_related('images')
+        groups_count = groups_qs.count()
+        nongrouped_count = storyboard_images_qs.filter(group__isnull=True).count()
+
+        counts = {
+            "groups": groups_count,
+            "storyboard_images": storyboard_images_count,
+            "nongrouped_images": nongrouped_count,
+        }
+
+        # Build groups data structure with descriptions
+        groups_data = []
+        for group in groups_qs:
+            group_images = storyboard_images_qs.filter(group=group)
+            if not group_images.exists():
+                # still include empty groups for context
+                groups_data.append({
+                    "name": group.name,
+                    "description": group.description or "",
+                    "figures": {}
+                })
+                continue
+
+            figures = {}
+            for img in group_images:
+                desc = img.long_desc or img.short_desc or ""
+                data_url = _image_to_data_url(user.username, img.filepath)
+                figure_payload = {"description": desc}
+                if data_url:
+                    figure_payload["data_url"] = data_url
+                figures[img.filepath] = figure_payload
+
+            groups_data.append({
+                "name": group.name,
+                "description": group.description or "",
+                "figures": figures,
+            })
+
+        # Build ungrouped data
+        ungrouped_images = storyboard_images_qs.filter(group__isnull=True)
+        ungrouped_data = {}
+        for img in ungrouped_images:
+            desc = img.long_desc or img.short_desc or ""
+            data_url = _image_to_data_url(user.username, img.filepath)
+            payload = {"description": desc}
+            if data_url:
+                payload["data_url"] = data_url
+            ungrouped_data[img.filepath] = payload
+
+        # If nothing to analyze, short-circuit
+        if storyboard_images_count == 0:
+            return [{
+                "section": "missing_items",
+                "title": "No storyboard images",
+                "text": "Add images to the storyboard to request AI feedback."
+            }]
+
+        # Call OpenAI to generate feedback
+        items = _generate_feedback(groups_data, ungrouped_data, counts)
+        # Ensure items have the minimal shape expected by the GET mapper
+        safe_items = []
+        for it in items[:4]:
+            if isinstance(it, dict):
+                t = str(it.get("title", "")).strip()
+                x = str(it.get("text", "")).strip()
+                if t and x:
+                    safe = {"title": t, "text": x}
+                    if isinstance(it.get("section"), str):
+                        safe["section"] = it["section"]
+                    safe_items.append(safe)
+        if not safe_items:
+            # Last resort: provide counts as a single item
+            safe_items = [{
+                "title": "Storyboard summary",
+                "text": f"You have {groups_count} groups and {nongrouped_count} ungrouped images."
+            }]
+        return safe_items
+    except Exception as e:
+        logger.error(f"Error generating feedback for user {user_id}: {e}")
+        return [{"title": "Error", "text": str(e)}]
 
 @shared_task
 def generate_description_task(image_id):

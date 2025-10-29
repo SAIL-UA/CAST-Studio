@@ -5,7 +5,7 @@ from .views import (
     UpdateNarrativeCacheView, ClearNarrativeCacheView,
     GenerateDescriptionsView, GenerateNarrativeView,
     LogActionView, RefreshTokenView, UploadJupyterLogView,
-    ExportJupyterLogsView,
+    ExportJupyterLogsView, RequestFeedbackView,
     CreateGroupView, GetGroupsView, UpdateGroupView, DeleteGroupView,
     AddImageToGroupView, RemoveImageFromGroupView
 )
@@ -16,6 +16,7 @@ urlpatterns = [
 
     # User Actions
     path("actions/log/", LogActionView.as_view(), name="log-action"),
+    path("actions/requestfeedback/", RequestFeedbackView.as_view(), name="request-feedback"),
 
     # Images
     path("images/", ImageDataView.as_view(), name="image-list"),                     # GET list or single via query param
