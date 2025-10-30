@@ -264,7 +264,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
             {/* Content */}
             <div id="data-stories-content" className="flex flex-col w-full flex-1 mt-4 rounded-sm p-4 overflow-y-auto min-h-0">
             <div className="w-full mb-4">
-                    <ExportButton />
+                    <ExportButton storyData={storyData} />
                     <FeedbackButton />
                     <SubmitButton />
             </div>
