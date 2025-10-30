@@ -1,12 +1,17 @@
 // Import dependencies
 import { useState, useRef } from 'react';
+import { exportStory } from '../services/api';
 
-// Temporary import 
-import sample_pdf from '../assets/downloadables/sample_pdf.pdf';
-import sample_pptx from '../assets/downloadables/sample_pptx.pptx';
+// Import types
+import { StoryDataRaw } from '../types/types';
+
+// Props interface
+type ExportButtonProps = {
+    storyData: StoryDataRaw | null;
+}
 
 // Export button component
-const ExportButton = () => {
+const ExportButton = ({ storyData }: ExportButtonProps) => {
     
     // State for dropdown visibility
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -16,27 +21,26 @@ const ExportButton = () => {
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Handle export
-    const handleExport = async (format: string) => {
-        // Format input to lowercase and trim whitespace
-        format = format.toLowerCase().trim();
-
-        // Default to pdf if format is not valid
-        if (format !== 'pdf' && format !== 'pptx') {
-            format = 'pdf';
+    const handleExport = async () => {
+        try {
+            const resp = await exportStory((storyData || {}) as StoryDataRaw);
+            console.log(storyData);
+            const blob = new Blob([resp.data], { type: resp.headers['content-type'] || 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const cd = resp.headers['content-disposition'] as string | undefined;
+            const match = cd && cd.match(/filename="?([^";]+)"?/i);
+            a.href = url;
+            a.download = match?.[1] || `data-story-${new Date().toISOString().replace(/[:.-]/g,'')}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
         }
-        // TODO: Send request to backend here with format
-        console.log(`Exporting as ${format}`);
-        
-        const link = document.createElement('a');
-        if (format === 'pdf') {
-            link.href = sample_pdf;
-        } else if (format === 'pptx') {
-            link.href = sample_pptx;
+        catch (error) {
+            console.error('Error exporting story:', error);
+            alert('An error occurred while exporting the story. Please try again.');
         }
-
-        link.download = `sample_${format}.${format}`;
-        link.click();
-        
     }
 
     // Handle mouse enter with delay
@@ -85,15 +89,9 @@ const ExportButton = () => {
                 >
                     <button
                         className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-                        onClick={() => handleExport('pdf')}
+                        onClick={() => handleExport()}
                     >
                         PDF
-                    </button>
-                    <button
-                        className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-                        onClick={() => handleExport('pptx')}
-                    >
-                        PPTX
                     </button>
                 </div>
             )}

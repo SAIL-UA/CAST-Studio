@@ -315,3 +315,7 @@ def generate_narrative_task(user_id, story_structure_id=None):
     except Exception as e:
         logger.error(f"Error generating narrative: {e}")
         return f"Error generating narrative: {e}"
+
+
+def export():
+    pass

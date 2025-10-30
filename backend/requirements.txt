@@ -140,6 +140,7 @@ qtconsole
 QtPy
 redis
 referencing
+reportlab
 requests
 retrying
 rfc3339-validator

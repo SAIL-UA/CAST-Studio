@@ -78,3 +78,11 @@ export interface GroupDivProps {
   onDescriptionChange: (groupId: string, newDescription: string) => void;
   storyBinRef: React.RefObject<HTMLDivElement | null>;
 }
+
+export interface StoryDataRaw {
+  narrative?: string;
+  recommended_order?: string[];
+  categorize_figures_response?: string;
+  theme_response?: string;
+  sequence_response?: string;
+}
