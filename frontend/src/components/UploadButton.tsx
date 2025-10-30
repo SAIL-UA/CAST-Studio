@@ -2,8 +2,12 @@
 import React, { useRef, useState } from 'react';
 import { uploadFigure } from '../services/api';
 
+type UploadButtonProps = {
+    onUploaded?: () => void | Promise<void>;
+}
+
 // Upload button component
-const UploadButton = () => {
+const UploadButton = ({ onUploaded }: UploadButtonProps) => {
     // Hidden file input ref
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,6 +39,9 @@ const UploadButton = () => {
             setShowModal(false);
             setShortDesc("");
             setSource("");
+            if (onUploaded) {
+                try { await onUploaded(); } catch {}
+            }
         } catch (err: any) {
             console.error('upload error', err?.response?.status, err?.response?.data || err);
             window.alert(`Failed to upload figure: ${err?.response?.status || ''} ${err?.response?.data ? JSON.stringify(err.response.data) : ''}`);

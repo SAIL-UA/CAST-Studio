@@ -1,6 +1,6 @@
 // Import dependencies
-import { useState } from 'react';
-import { getImageDataAll, serveImage, updateImageData as updateImageDataAPI } from '../services/api';
+import { useState, useEffect } from 'react';
+import { getImageDataAll, updateImageData as updateImageDataAPI, serveImage } from '../services/api';
 
 
 // Import components
@@ -29,6 +29,82 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLoa
 
     // States
     const [recycleBinSelected, setRecycleBinSelected] = useState(false);
+    const [images, setImages] = useState<ImageData[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch user data from backend
+    const fetchUserData = async () => {
+        try {
+            const response: any = await getImageDataAll();
+            if (!response?.data?.images || response.data.images.length === 0) {
+                setImages([]);
+                return;
+            }
+
+            const fetchedImages: ImageData[] = response.data.images.map((img: any) => ({
+                ...img,
+                x: img.in_storyboard ? img.x : 0,
+                y: img.in_storyboard ? img.y : 0,
+            }));
+
+            // Validate each image actually exists on backend; drop missing
+            const validationResults = await Promise.all(
+                fetchedImages.map(async (img) => {
+                    try {
+                        const url = await serveImage(img.filepath);
+                        return url ? img : null;
+                    } catch {
+                        return null;
+                    }
+                })
+            );
+
+            const validImages = validationResults.filter((v): v is ImageData => v !== null);
+            setImages(validImages);
+        } catch (error) {
+            console.error('Error fetching user data:', error);
+            setImages([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchUserData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Update image data (position, status, etc.)
+    const updateImageData = async (imageId: string, data: Partial<ImageData>) => {
+        try {
+            const response = await updateImageDataAPI(imageId, data);
+            if (response.status === 200) {
+                setImages((prevImages) =>
+                    prevImages.map((img) =>
+                        img.id === imageId ? { ...img, ...data } : img
+                    )
+                );
+            } else {
+                console.error('Error updating image data:', response.data?.errors);
+            }
+        } catch (error) {
+            console.error('Error updating image data:', error);
+        }
+    };
+
+    // Centralized handlers
+    const handleDelete = (imageId: string) => {
+        // Optimistically remove from images; component-specific cleanup (e.g., groups) happens locally
+        setImages(prev => prev.filter(img => img.id !== imageId));
+    };
+
+    const handleTrash = (imageId: string) => {
+        updateImageData(imageId, { in_storyboard: false });
+    };
+
+    const handleUnTrash = (imageId: string) => {
+        updateImageData(imageId, { in_storyboard: true });
+    };
 
 
     // Handle storyboard
@@ -64,9 +140,30 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLoa
             </div>
             <div className='w-full flex-1 mt-4'>
                 {recycleBinSelected ? 
-                    <RecycleBoard />
+                    <RecycleBoard 
+                        images={images}
+                        setImages={setImages}
+                        loading={loading}
+                        updateImageData={updateImageData}
+                        onDelete={handleDelete}
+                        onTrash={handleTrash}
+                        onUnTrash={handleUnTrash}
+                    />
                 : 
-                    <StoryBoard setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
+                    <StoryBoard 
+                        images={images}
+                        setImages={setImages}
+                        loading={loading}
+                        updateImageData={updateImageData}
+                        onDelete={handleDelete}
+                        onTrash={handleTrash}
+                        onUnTrash={handleUnTrash}
+                        onRefreshImages={fetchUserData}
+                        setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} 
+                        setSelectedPattern={setSelectedPattern} 
+                        storyLoading={storyLoading} 
+                        setStoryLoading={setStoryLoading} 
+                    />
                 }
             </div>
         </div>

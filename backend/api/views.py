@@ -186,7 +186,7 @@ class UploadFigureView(APIView):
       "short_desc": request.data.get('short_desc') or "",
       "long_desc": request.data.get('long_desc') or "Placeholder long description.",
       "source": request.data.get('source') or "",
-      "in_storyboard": False,
+      "in_storyboard": True,
       "x": 0,
       "y": 0,
       "has_order": False,
