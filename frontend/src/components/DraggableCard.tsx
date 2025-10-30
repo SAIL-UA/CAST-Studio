@@ -8,7 +8,6 @@ import { updateImageData, generateDescription, deleteFigure, getImageData } from
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 import { logAction, captureActionContext } from '../utils/userActionLogger';
 import { formatImageMetadata, getImageUrl } from '../utils/imageUtils';
-import { log } from 'console';
 
 function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, draggable = true }: DraggableCardProps) {
   const [showModal, setShowModal] = useState(false);
@@ -20,6 +19,8 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
   const isMountedRef = useRef(true);
   // Track initial and current image metadata for change detection
   const imageMetadataRef = useRef<ImageMetadata>(null);
+  // Track drop result from react-dnd for logging
+  const dropResultRef = useRef<any>(null);
   
 
   async function loadMetadata(currentImage: ImageData = image, metadata? : ImageMetadata) {
@@ -76,6 +77,11 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
           groupId: image.groupId,
         };
       },
+      end: (item, monitor) => {
+        // Capture drop result for use in onDragEnd handler
+        const dropResult = monitor.getDropResult();
+        dropResultRef.current = dropResult;
+      },
       collect: (monitor) => ({
         isDragging: !!monitor.isDragging(),
       }),
@@ -86,11 +92,23 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
   const handleDragEnd = async (e: React.DragEvent) => {
     const ctx = captureActionContext(e);
     const updatedImageMetadata = await formatImageMetadata(image);
-    logAction(ctx, {
+
+    // Check if dropped into a group (from react-dnd drop result)
+    const dropResult = dropResultRef.current;
+    const stateInfo: any = {
       image_metadata: imageMetadataRef.current,
       updated_image_metadata: updatedImageMetadata
-    });
+    };
+
+    // If dropped into a group, include group info
+    if (dropResult?.droppedInGroup) {
+      stateInfo.group_metadata = dropResult.groupMetadata;
+      stateInfo.previous_group_id = image.groupId || null;
+    }
+
+    logAction(ctx, stateInfo);
     imageMetadataRef.current = updatedImageMetadata;
+    dropResultRef.current = null; // Clear for next drag
   };
 
   // Calculate card styling based on state

@@ -1,6 +1,6 @@
 import { logUserAction } from "../services/api";
 
-type UserActionType = "click" | "hover" | "drag" | "drop" | "scroll";
+type UserActionType = "click" | "hover" | "drag" | "drop";
 
 interface ActionContext {
   actionType: UserActionType;
@@ -19,6 +19,8 @@ const getElementId = (element: HTMLElement | null): string => {
 
 const getActionTypeFromEvent = (event: React.SyntheticEvent): UserActionType => {
   switch (event.type) {
+    // treat blur as click for now
+    case "blur":
     case "click":
       return "click";
     case "mouseenter":

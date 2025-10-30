@@ -25,12 +25,12 @@ from config.celery import app as celery_app
 from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
-  JupyterLog, MousePositionLog, ScrollLog, Group
+  JupyterLog, MousePositionLog, ScrollLog, Group, GroupData
 )
 from .serializers import (
   ImageDataSerializer, NarrativeCacheSerializer,
   JupyterLogsSerializer, MousePositionLogSerializer,
-  UserActionSerializer, ScrollLogSerializer, GroupSerializer
+  UserActionSerializer, ScrollLogSerializer, GroupSerializer, GroupDataSerializer
 )
 from .tasks import generate_description_task, generate_narrative_task, generate_feedback_task
 
@@ -317,6 +317,86 @@ class UpdateImageDataView(APIView):
     except Exception as e:
       return Response({"errors": e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
   
+
+class GetGroupView(APIView): 
+  permission_classes = [IsAuthenticated]
+  def get(self, request):
+    group_id = request.query_params.get("group_id")
+    if group_id: # single group
+      group_data = GroupData.objects.get(id=group_id)
+    else: # all groups
+      group_data = GroupData.objects.filter(user=request.user)
+    
+    if not group_data:
+      return Response({"message": "No group data found"}, status=status.HTTP_204_NO_CONTENT)
+      
+    serialized_group_data = GroupDataSerializer(group_data, many=False if group_id else True)
+    
+    return Response({"groups": serialized_group_data.data}, status=status.HTTP_200_OK)
+
+class CreateGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request):
+    try:
+      group_data = request.data.get('data')
+      group_data['user'] = request.user.id
+      
+      serializer = GroupDataSerializer(data=group_data)
+      if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Group created successfully", "group": serializer.data}, status=status.HTTP_201_CREATED)
+      else:
+        return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+class UpdateGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request, group_id=None):
+    try:
+      group_id = group_id or request.data.get('group_id')
+      if not group_id:
+        return Response({"message": "No group ID provided"}, status=status.HTTP_400_BAD_REQUEST)
+      
+      update_data = request.data.get('data')
+      
+      existing_group = GroupData.objects.get(id=group_id)
+      
+      if not existing_group:
+        return Response({"message": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
+      
+      serializer = GroupDataSerializer(existing_group, data=update_data, partial=True)
+      
+      if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Group updated successfully", "group": serializer.data}, status=status.HTTP_200_OK)
+      else:
+        return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+class DeleteGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request, group_id=None):
+    """
+    Expects group_id from URL path or JSON body with { "group_id": "<group_id>" }
+    Deletes the group data.
+    """
+    group_id = group_id or request.data.get('group_id')
+
+    if not group_id:
+      return Response({"message": "No group ID provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+      group = GroupData.objects.get(id=group_id)
+      group.delete()
+      return Response({"message": "Group deleted successfully"}, status=status.HTTP_200_OK)
+    except GroupData.DoesNotExist:
+      return Response({"message": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+
+
 
 class GenerateNarrativeAsyncView(APIView):
   permission_classes = [IsAuthenticated]

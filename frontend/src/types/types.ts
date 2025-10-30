@@ -88,5 +88,16 @@ export interface GroupDivProps {
   onCardRemove: (cardId: string, groupId: string) => void;
   onNameChange: (groupId: string, newName: string) => void;
   onDescriptionChange: (groupId: string, newDescription: string) => void;
+  onGroupUpdate: (groupId: string, updates: { name?: string; description?: string }) => void;
   storyBinRef: React.RefObject<HTMLDivElement | null>;
+}
+
+// Lightweight metadata for logging
+export interface GroupMetadata {
+  id: string;
+  number: number;
+  name: string;
+  description: string;
+  initialPosition: { x: number; y: number };
+  cards: ImageData[];
 }

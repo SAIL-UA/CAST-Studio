@@ -1,9 +1,18 @@
 from rest_framework import serializers
-from .models import ImageData, NarrativeCache, JupyterLog, Group, UserAction, MousePositionLog, ScrollLog
+from .models import (
+  ImageData, NarrativeCache, JupyterLog,
+  UserAction, MousePositionLog, ScrollLog,
+  Group, GroupData
+)
 
 class UserActionSerializer(serializers.ModelSerializer):
   class Meta:
     model = UserAction
+    fields = '__all__'
+
+class GroupDataSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = GroupData
     fields = '__all__'
 
 class ImageDataSerializer(serializers.ModelSerializer):

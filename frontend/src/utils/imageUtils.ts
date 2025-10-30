@@ -24,6 +24,7 @@ export const formatImageMetadata = async (image: ImageData|string): Promise<Imag
     filepath: imageData.filepath,
     description: imageData.long_desc || '',
     source: imageData.source || '',
-    user: imageData.user
+    user: imageData.user,
+    groupId: imageData.groupId || undefined
   };
 };

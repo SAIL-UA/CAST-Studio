@@ -162,6 +162,28 @@ export const updateImageData = async(imageId: string, data: any) => {
   return response;
 };
 
+
+export const getGroups = async(group_id?: string) => {
+  const url = group_id ? `/groups/?group_id=${encodeURIComponent(group_id)}` : '/groups/';
+  const response = await API.get(url);
+  return response.data.groups;
+};
+
+export const createGroup = async(data: any) => {
+  const response = await API.post('/groups/create/', { data });
+  return response;
+};
+
+export const updateGroup = async(groupId: string, data: any) => {
+  const response = await API.post(`/groups/${groupId}/update/`, { data });
+  return response;
+};
+
+export const deleteGroup = async(groupId: string) => {
+  const response = await API.post(`/groups/${groupId}/delete/`, {});
+  return response;
+};
+
 export const generateNarrativeAsync = async(story_structure_id?: string, use_groups?: boolean) => {
   const response = await API.post('/narrative/generate/async/', {
     story_structure_id: story_structure_id || null,
@@ -279,38 +301,3 @@ export const confirmPasswordReset = async(email: string, code: string, newPasswo
   return response;
 };
 
-// Group Management
-export const createGroup = async(groupData: any) => {
-  const response = await API.post('/groups/create/', groupData);
-  return response.data;
-};
-
-export const getGroups = async() => {
-  const response = await API.get('/groups/');
-  return response.data;
-};
-
-export const updateGroup = async(groupId: string, groupData: any) => {
-  const response = await API.patch(`/groups/${groupId}/update/`, groupData);
-  return response.data;
-};
-
-export const deleteGroup = async(groupId: string) => {
-  const response = await API.delete(`/groups/${groupId}/delete/`);
-  return response.data;
-};
-
-export const addImageToGroup = async(imageId: string, groupId: string) => {
-  const response = await API.post('/groups/images/add/', {
-    image_id: imageId,
-    group_id: groupId
-  });
-  return response.data;
-};
-
-export const removeImageFromGroup = async(imageId: string) => {
-  const response = await API.post('/groups/images/remove/', {
-    image_id: imageId
-  });
-  return response.data;
-};

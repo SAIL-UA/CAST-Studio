@@ -2,31 +2,65 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { GroupDivProps, DragItem } from '../types/types';
 import DraggableCard from './DraggableCard';
+import { formatImageMetadata } from '../utils/imageUtils';
+import { formatGroupMetadata } from '../utils/groupUtils';
+import { logAction } from '../utils/userActionLogger';
+import { captureActionContext } from '../utils/userActionLogger';
 
-const GroupDiv: React.FC<GroupDivProps> = ({ 
-  id, 
-  number, 
-  name, 
-  description, 
-  cards, 
-  initialPosition, 
-  onClose, 
-  onPositionUpdate, 
-  onCardAdd, 
-  onCardRemove, 
-  onNameChange, 
-  onDescriptionChange, 
-  storyBinRef 
+const GroupDiv: React.FC<GroupDivProps> = ({
+  id,
+  number,
+  name,
+  description,
+  cards,
+  initialPosition,
+  onClose,
+  onPositionUpdate,
+  onCardAdd,
+  onCardRemove,
+  onNameChange,
+  onDescriptionChange,
+  onGroupUpdate,
+  storyBinRef
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
+  const dragEventContext = useRef<any>(null);
   const groupRef = useRef<HTMLDivElement>(null);
   const [editingName, setEditingName] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
   const [tempName, setTempName] = useState(name);
   const [tempDescription, setTempDescription] = useState(description);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Track group metadata for logging (following DraggableCard pattern)
+  const groupMetadataRef = useRef<any>(null);
+
+  // Load metadata on mount and when group changes
+  useEffect(() => {
+    const loadMetadata = async () => {
+      const metadata = await formatGroupMetadata({
+        id,
+        number,
+        name,
+        description,
+        cards,
+        initialPosition,
+        onClose,
+        onPositionUpdate,
+        onCardAdd,
+        onCardRemove,
+        onNameChange,
+        onDescriptionChange,
+        onGroupUpdate,
+        storyBinRef
+      });
+      groupMetadataRef.current = metadata;
+    };
+    loadMetadata();
+  }, [id, name, description, cards.length]);
 
   // React DnD hook for drop functionality (accept cards)
   const [{ isOver: isOverCard, canDrop: canDropCard }, dropCard] = useDrop(() => ({
@@ -36,8 +70,32 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       if (item.groupId !== id && cards.length < 3) {
         console.log(`Card ${item.id} dropped into group ${id}`);
         onCardAdd(item.id, id);
+
+        // Generate metadata synchronously if ref is not initialized yet
+        // This handles the case when groups are loaded from backend
+        const currentMetadata = groupMetadataRef.current || {
+          id,
+          number,
+          name,
+          description,
+          card_ids: cards.map(c => c.id),
+          card_count: cards.length
+        };
+
+        // Return group info with current state BEFORE the addition
+        // Plus indication of what's being added for accurate logging
+        return {
+          droppedInGroup: true,
+          groupId: id,
+          groupMetadata: {
+            ...currentMetadata,
+            card_count: cards.length,
+            card_count_after_drop: cards.length + 1,
+            card_being_added: item.id
+          }
+        };
       }
-      return { droppedInGroup: true };
+      return { droppedInGroup: false };
     },
     canDrop: (item: DragItem) => {
       // Can drop if: not already in this group AND group has less than 3 cards
@@ -83,31 +141,64 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       // Update position when drag ends
       const dropResult = monitor.getDropResult();
       const clientOffset = monitor.getClientOffset();
-      
+
+      let finalX = item.oldX;
+      let finalY = item.oldY;
+      let positionChanged = false;
+
       // If dropped on a target that returned position data, use that
       if (dropResult && typeof dropResult === 'object' && 'x' in dropResult && 'y' in dropResult) {
         const newPosition = dropResult as { x: number; y: number };
-        setPosition({ x: newPosition.x, y: newPosition.y });
-        onPositionUpdate(newPosition.x, newPosition.y);
-        return;
+        finalX = newPosition.x;
+        finalY = newPosition.y;
+        setPosition({ x: finalX, y: finalY });
+
+        // Check if position actually changed
+        positionChanged =
+          Math.abs(finalX - item.oldX) > 1 ||
+          Math.abs(finalY - item.oldY) > 1;
+
+        if (positionChanged) {
+          onPositionUpdate(finalX, finalY);
+        }
       }
-      
       // Otherwise calculate position (for drops outside valid targets)
-      if (clientOffset && storyBinRef.current) {
+      else if (clientOffset && storyBinRef.current) {
         const binRect = storyBinRef.current.getBoundingClientRect();
-        
+
         // Calculate new position relative to container
         let newX = clientOffset.x - binRect.left - item.offsetX;
         let newY = clientOffset.y - binRect.top - item.offsetY;
-        
+
         // Constrain within container boundaries
         const groupWidth = 320; // 20rem = 320px
         const groupHeight = 256; // 16rem = 256px
         newX = Math.max(0, Math.min(newX, binRect.width - groupWidth));
         newY = Math.max(0, Math.min(newY, binRect.height - groupHeight));
-        
-        setPosition({ x: newX, y: newY });
-        onPositionUpdate(newX, newY);
+
+        finalX = newX;
+        finalY = newY;
+        setPosition({ x: finalX, y: finalY });
+
+        // Check if position actually changed
+        positionChanged =
+          Math.abs(finalX - item.oldX) > 1 ||
+          Math.abs(finalY - item.oldY) > 1;
+
+        if (positionChanged) {
+          onPositionUpdate(finalX, finalY);
+        }
+      }
+
+      // Log the drag if position changed and we have event context
+      if (positionChanged && dragEventContext.current) {
+        const stateInfo: any = {
+          group_metadata: groupMetadataRef.current,
+          position_before: { x: item.oldX, y: item.oldY },
+          position_after: { x: finalX, y: finalY }
+        };
+        logAction(dragEventContext.current, stateInfo);
+        dragEventContext.current = null;
       }
     },
     collect: (monitor) => ({
@@ -115,15 +206,28 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     }),
   }), [id, position, storyBinRef]);
 
+  const handleDragStart = (e: React.DragEvent) => {
+    // Capture event context for logging at the end
+    dragEventContext.current = captureActionContext(e as React.SyntheticEvent);
+    dragStartPosition.current = { x: position.x, y: position.y };
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    // Cleanup - logging is handled in React DnD end callback
+    dragEventContext.current = null;
+    dragStartPosition.current = null;
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     // Don't start custom drag if React DnD is already handling it
     if (isDraggingDnd) return;
-    
+
     if (!storyBinRef.current) return;
-    
+
     const binRect = storyBinRef.current.getBoundingClientRect();
-    
+
     setIsDragging(true);
+    dragStartPosition.current = { x: position.x, y: position.y }; // Store initial position
     setDragOffset({
       x: e.clientX - binRect.left - position.x,
       y: e.clientY - binRect.top - position.y
@@ -139,11 +243,11 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       }
 
       const binRect = storyBinRef.current.getBoundingClientRect();
-      
+
       // Calculate new position relative to container
       let newX = e.clientX - binRect.left - dragOffset.x;
       let newY = e.clientY - binRect.top - dragOffset.y;
-      
+
       // Constrain within container boundaries (similar to card constraints)
       const groupWidth = 320; // GroupDiv width
       const groupHeight = 256; // GroupDiv height
@@ -152,10 +256,21 @@ const GroupDiv: React.FC<GroupDivProps> = ({
 
       const newPosition = { x: newX, y: newY };
       setPosition(newPosition);
-      onPositionUpdate(newX, newY);
+      // Don't call onPositionUpdate here - only update local state during drag
     };
 
     const handleMouseUp = () => {
+      if (isDragging && dragStartPosition.current) {
+        // Only call onPositionUpdate if position actually changed
+        const positionChanged =
+          Math.abs(position.x - dragStartPosition.current.x) > 1 ||
+          Math.abs(position.y - dragStartPosition.current.y) > 1;
+
+        if (positionChanged) {
+          onPositionUpdate(position.x, position.y);
+        }
+        dragStartPosition.current = null;
+      }
       setIsDragging(false);
     };
 
@@ -180,6 +295,12 @@ const GroupDiv: React.FC<GroupDivProps> = ({
 
   const handleClose = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering drag
+
+    // Log group closure
+    logAction(e, {
+      group_metadata: groupMetadataRef.current
+    });
+
     onClose(id);
   };
 
@@ -194,38 +315,146 @@ const GroupDiv: React.FC<GroupDivProps> = ({
   const containerPos = getContainerPosition();
 
   // Handle name editing
-  const handleNameSave = () => {
-    onNameChange(id, tempName);
+  const handleNameSave = async (e: React.FocusEvent | React.KeyboardEvent) => {
     setEditingName(false);
+
+    // Only call API if name actually changed
+    if (tempName === name) {
+      return; // No change, skip API call and logging
+    }
+
+    const ctx = captureActionContext(e as React.SyntheticEvent);
+    const groupMetadataBefore = groupMetadataRef.current;
+
+    onNameChange(id, tempName);
+
+    // Update metadata and log
+    const groupMetadataAfter = await formatGroupMetadata({
+      id,
+      number,
+      name: tempName,
+      description,
+      cards,
+      initialPosition,
+      onClose,
+      onPositionUpdate,
+      onCardAdd,
+      onCardRemove,
+      onNameChange,
+      onDescriptionChange,
+      onGroupUpdate,
+      storyBinRef
+    });
+
+    logAction(ctx, {
+      group_metadata_before: groupMetadataBefore,
+      group_metadata_after: groupMetadataAfter
+    });
+
+    groupMetadataRef.current = groupMetadataAfter;
   };
 
   const handleDescriptionSave = () => {
-    onDescriptionChange(id, tempDescription);
     setEditingDescription(false);
+
+    // Only call API if description actually changed
+    if (tempDescription === description) {
+      return; // No change, skip API call
+    }
+
+    onDescriptionChange(id, tempDescription);
   };
 
-  // Handle card removal from group
-  const handleCardRemove = (cardId: string) => {
+  // Handle card removal from group (only called from remove button with event)
+  const handleCardRemove = async (e: React.MouseEvent, cardId: string) => {
+    const ctx = captureActionContext(e as React.SyntheticEvent);
+    const imageMetadata = await formatImageMetadata(cardId);
+    const groupMetadata = groupMetadataRef.current;
+
+    logAction(ctx, {
+      image_metadata: imageMetadata,
+      group_metadata: groupMetadata,
+      cards_in_group_before: cards.length
+    });
+
     onCardRemove(cardId, id);
   };
 
   // Handle edit modal
-  const handleShowEditModal = () => {
+  const handleShowEditModal = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering drag
+
+    // Log opening edit modal
+    logAction(e, {
+      group_metadata: groupMetadataRef.current
+    });
+
     setTempName(name);
     setTempDescription(description);
     setShowEditModal(true);
     document.body.style.overflow = 'hidden';
   };
 
-  const handleCloseEditModal = () => {
+  const handleCloseEditModal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    logAction(e, { group_metadata: groupMetadataRef.current });
     setShowEditModal(false);
     document.body.style.overflow = 'auto';
   };
 
-  const handleSaveEditModal = () => {
-    onNameChange(id, tempName);
-    onDescriptionChange(id, tempDescription);
-    handleCloseEditModal();
+  const handleSaveEditModal = async (e: React.MouseEvent) => {
+    setShowEditModal(false);
+    document.body.style.overflow = 'auto';
+
+    // Build object with only changed fields
+    const updates: { name?: string; description?: string } = {};
+    const nameChanged = tempName !== name;
+    const descriptionChanged = tempDescription !== description;
+
+    if (nameChanged) {
+      updates.name = tempName;
+    }
+    if (descriptionChanged) {
+      updates.description = tempDescription;
+    }
+
+    // If nothing changed, skip API call and logging
+    if (!nameChanged && !descriptionChanged) {
+      return;
+    }
+
+    const ctx = captureActionContext(e as React.SyntheticEvent);
+    const groupMetadataBefore = groupMetadataRef.current;
+
+    // Single API call with all changes
+    onGroupUpdate(id, updates);
+
+    // Get updated metadata
+    const groupMetadataAfter = await formatGroupMetadata({
+      id,
+      number,
+      name: updates.name || name,
+      description: updates.description || description,
+      cards,
+      initialPosition,
+      onClose,
+      onPositionUpdate,
+      onCardAdd,
+      onCardRemove,
+      onNameChange,
+      onDescriptionChange,
+      onGroupUpdate,
+      storyBinRef
+    });
+
+    logAction(ctx, {
+      group_metadata_before: groupMetadataBefore,
+      group_metadata_after: groupMetadataAfter,
+      name_changed: nameChanged,
+      description_changed: descriptionChanged
+    });
+
+    groupMetadataRef.current = groupMetadataAfter;
   };
 
   // Combine refs for drag and drop functionality
@@ -239,6 +468,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
 
   return (
     <div 
+      log-id="group"
       ref={combinedRef}
       className={`absolute w-80 h-64 bg-grey-lighter-2 select-none rounded-sm shadow-md border transition-all duration-200 ${
         isOverCard && canDropCard 
@@ -258,23 +488,26 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         pointerEvents: 'auto'
       }}
       onMouseDown={handleMouseDown}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
       {/* Header */}
       <div className="flex justify-between items-center p-2 bg-bama-crimson text-white">
         {editingName ? (
           <input
+            log-id="group-inline-name-input"
             type="text"
             value={tempName}
             onChange={(e) => setTempName(e.target.value)}
             onBlur={handleNameSave}
-            onKeyPress={(e) => e.key === 'Enter' && handleNameSave()}
+            // onKeyPress={(e) => e.key === 'Enter' && handleNameSave(e)}
             className="text-sm font-bold bg-transparent border-b border-white text-white placeholder-white placeholder-opacity-70 outline-none"
             placeholder="Group name"
             autoFocus
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <h4 
+          <h4
             className="text-sm font-bold cursor-pointer hover:underline"
             onClick={(e) => {
               e.stopPropagation();
@@ -289,19 +522,18 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         <div className="flex items-center space-x-1">
           {/* Edit button */}
           <button
+            log-id="group-edit-button"
             className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleShowEditModal();
-            }}
+            onClick={handleShowEditModal}
             style={{ cursor: 'pointer' }}
             title="Edit group"
           >
             ✎
           </button>
-          
+
           {/* Close button */}
           <button
+            log-id="group-close-button"
             className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
             onClick={handleClose}
             style={{ cursor: 'pointer' }}
@@ -343,16 +575,17 @@ const GroupDiv: React.FC<GroupDivProps> = ({
                     index={index}
                     onDescriptionsUpdate={() => {}} // Groups handle their own descriptions
                     onDelete={() => {}} // Groups handle their own deletion
-                    onTrash={() => handleCardRemove(card.id)}
+                    onTrash={() => onCardRemove(card.id, id)} // Don't log here - DraggableCard already logs
                     onUnTrash={() => {}}
                     draggable={true}
                   />
                 </div>
                 {/* Remove button overlay - positioned on the top-right of the scaled image */}
                 <button
+                log-id="group-remove-card-button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleCardRemove(card.id);
+                    handleCardRemove(e, card.id);
                   }}
                   className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30 shadow-md"
                   style={{
@@ -394,6 +627,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
                 Edit Group
               </h3>
               <button
+                log-id="group-close-edit-modal-button"
                 onClick={handleCloseEditModal}
                 className="w-6 h-6 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
               >
@@ -453,12 +687,14 @@ const GroupDiv: React.FC<GroupDivProps> = ({
             {/* Modal Footer */}
             <div className="flex justify-end space-x-3 p-4 border-t border-grey-lightest">
               <button
+              log-id="group-cancel-edit-button"
                 onClick={handleCloseEditModal}
                 className="px-4 py-2 text-grey-darker bg-grey-lighter hover:bg-grey-light rounded-md transition-colors duration-200"
               >
                 Cancel
               </button>
               <button
+                log-id="group-save-changes-button"
                 onClick={handleSaveEditModal}
                 className="px-4 py-2 bg-bama-crimson hover:bg-bama-crimson-dark text-white rounded-md transition-colors duration-200"
               >

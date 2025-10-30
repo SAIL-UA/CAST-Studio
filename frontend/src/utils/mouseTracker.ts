@@ -10,7 +10,7 @@ interface MousePosition {
 class MouseTracker {
   private positions: MousePosition[] = [];
   private batchInterval: number = 60000; // 60 seconds
-  private maxBatchSize: number = 100000; // Max positions per batch
+  private maxBatchSize: number = 10000; // Max positions per batch
   private intervalId: NodeJS.Timeout | null = null;
   private isTracking: boolean = false;
 
