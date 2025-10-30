@@ -43,25 +43,39 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
 
     // Fetch user data from backend
     const fetchUserData = async () => {
-        await getImageDataAll()
-        .then((response: any) => {
-            if (response.data.images.length === 0) {
+        try {
+            const response: any = await getImageDataAll();
+            if (!response?.data?.images || response.data.images.length === 0) {
                 setImages([]);
                 return;
-            } 
-            const fetchedImages = response.data.images.map((img: any) => ({
+            }
+
+            const fetchedImages: ImageData[] = response.data.images.map((img: any) => ({
                 ...img,
                 x: img.in_storyboard ? img.x : 0,
                 y: img.in_storyboard ? img.y : 0,
             }));
-            setImages(fetchedImages);
-        })
-        .catch((error) => {
+
+            // Validate each image actually exists on the backend; drop missing ones
+            const validationResults = await Promise.all(
+                fetchedImages.map(async (img) => {
+                    try {
+                        const url = await serveImage(img.filepath);
+                        return url ? img : null;
+                    } catch {
+                        return null;
+                    }
+                })
+            );
+
+            const validImages = validationResults.filter((v): v is ImageData => v !== null);
+            setImages(validImages);
+        } catch (error) {
             console.error('Error fetching user data:', error);
-        })
-        .finally(() => {
+            setImages([]);
+        } finally {
             setLoading(false);
-        });
+        }
     };
 
     // Fetch data on component mount
@@ -100,9 +114,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
         );
     };
 
-    // Handle image deletion
-    const handleDelete = () => {
-        fetchUserData(); // Refresh data after deletion
+    // Handle image deletion (remove from local state immediately)
+    const handleDelete = (imageId: string) => {
+        setImages(prev => prev.filter(img => img.id !== imageId));
+        // Also remove from any groups if present
+        setGroupDivs(prev => prev.map(group => ({
+            ...group,
+            cards: group.cards.filter(card => card.id !== imageId),
+            last_modified: new Date().toISOString()
+        })));
     };
 
     // Handle image trash
@@ -181,7 +201,6 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
         // Create card with served image URL
         const cardWithImage = {
             ...cardToAdd,
-            image: serveImage(cardToAdd.filepath),
             groupId: groupId
         };
 
@@ -243,11 +262,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
 
     // Show only images that are in the storyboard (in_storyboard === true) and NOT in any group
     const workspaceImages = images
-        .filter(img => img.in_storyboard === true && !img.groupId)
-        .map(img => ({
-            ...img,
-            image: serveImage(img.filepath)
-        }));
+        .filter(img => img.in_storyboard === true && !img.groupId);
 
     // Loading state
     if (loading) {

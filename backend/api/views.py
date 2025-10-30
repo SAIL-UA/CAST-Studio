@@ -25,6 +25,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
 from .models import NarrativeCache
 from .serializers import NarrativeCacheSerializer
 
@@ -147,6 +148,7 @@ class ImageDataView(APIView):
   
 class UploadFigureView(APIView):
   permission_classes = [IsAuthenticated]
+  parser_classes = [MultiPartParser, FormParser]
   def post(self, request):
     
     figure = request.FILES.get('figure')
@@ -158,27 +160,25 @@ class UploadFigureView(APIView):
     user_folder = os.path.join(os.getenv('DATA_PATH'), username, "workspace", "cache")
     os.makedirs(user_folder, exist_ok=True)
 
-    # ✅ Build file path
+    # Build file path
     figure_id = str(uuid.uuid4())
     ext = os.path.splitext(figure.name)[1]
     figure_path = os.path.join(user_folder, f"{figure_id}{ext}")
 
-    # ✅ Save file
+    # Save file
     with open(figure_path, 'wb+') as destination:
       for chunk in figure.chunks():
         destination.write(chunk)
     
     now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     
-    
-    
     serializer = ImageDataSerializer(data={
       "id": figure_id,
       "user": request.user.id,
       "filepath": f"{figure_id}{ext}",
-      "short_desc": request.data.get('short_desc'),
+      "short_desc": request.data.get('short_desc') or "",
       "long_desc": request.data.get('long_desc') or "Placeholder long description.",
-      "source": request.data.get('source'),
+      "source": request.data.get('source') or "",
       "in_storyboard": False,
       "x": 0,
       "y": 0,
@@ -196,30 +196,36 @@ class UploadFigureView(APIView):
   
 class DeleteFigureView(APIView):
   permission_classes = [IsAuthenticated]
-  def post(self, request):
+  def post(self, request, filename=None):
     """
-    Expects JSON body with { "filename": "<image_filename>" }
-    Deletes the file and its corresponding JSON.
+    Deletes the file and its corresponding DB record.
+    Filename is taken from the URL pattern.
     """
-    filename = request.data.get('filename')
-
     if not filename:
       return Response({"message": "No filename provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-    user_folder = request.session.get('user_folder')
-    file_path = os.path.join(user_folder, filename)
-    base_name, ext = os.path.splitext(filename)
-    
+    # Build user-specific cache folder (same as in upload)
+    user_folder = os.path.join(os.getenv('DATA_PATH'), request.user.username, "workspace", "cache")
+
+    try:
+      filepath = safe_join(user_folder, filename)
+    except ValueError:
+      return Response({"message": "Invalid filename"}, status=status.HTTP_400_BAD_REQUEST)
+
+    base_name, _ = os.path.splitext(filename)
+
     # Remove image file if it exists
-    if os.path.exists(file_path):
-      os.remove(file_path)
+    if os.path.exists(filepath):
+      os.remove(filepath)
 
-
-    image_data = ImageData.objects.get(id=base_name)
-    if image_data:
+    # Remove DB record if it exists
+    try:
+      image_data = ImageData.objects.get(id=base_name)
       image_data.delete()
+    except ImageData.DoesNotExist:
+      pass
 
-    return Response({"message": "Figure deleted successfully"}, status=status.HTTP_200_OK)
+    return Response({"status": "success", "message": "Figure deleted successfully", "deleted_id": base_name, "deleted_filename": filename}, status=status.HTTP_200_OK)
   
   
 class ServeImageView(APIView):
