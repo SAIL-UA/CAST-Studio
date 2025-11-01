@@ -20,7 +20,7 @@ const UploadButton = () => {
         <button id="upload-button"
         className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
         onClick={handleUpload}>
-        Upload
+        Upload Visuals
         </button>
     )
 }
