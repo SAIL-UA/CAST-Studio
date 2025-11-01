@@ -30,11 +30,10 @@ const Footer = () => {
                             Visit CAST Home
                         </span>
                     </li>
-                    <li className="cursor-pointer hover:font-roboto-semibold"
-                    onClick={handleDropdownSelection}>
+                    <li className="cursor-pointer hover:font-roboto-semibold">
                         <span className="flex items-center justify-start">
                             <img src={home} alt="JupyterHub" className="w-4 h-4 mr-2" />
-                            Visit NSF RITEL Home
+                            <a href="https://www.nsf.gov/funding/opportunities/ritel-research-innovative-technologies-enhanced-learning" target="_blank">Visit NSF RITEL Home</a>
                         </span>
                     </li>
                 </ul>
