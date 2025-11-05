@@ -8,8 +8,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - db_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"  # Only expose if needed for external DB tools
     networks:
       - cast-network
     restart: always
