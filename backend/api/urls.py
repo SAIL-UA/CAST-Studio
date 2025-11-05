@@ -4,7 +4,7 @@ from .views import (
     UpdateImageDataView, GenerateNarrativeAsyncView, GetNarrativeCacheView,
     UpdateNarrativeCacheView, ClearNarrativeCacheView,
     GenerateDescriptionsView, GenerateNarrativeView,
-    LogActionView, RefreshTokenView, UploadJupyterLogView,
+    LogActionView, UploadJupyterLogView,
     ExportJupyterLogsView, RequestFeedbackView,
     CreateGroupView, GetGroupView, UpdateGroupView, DeleteGroupView,
     LogMousePositionView, LogScrollView

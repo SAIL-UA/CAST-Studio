@@ -42,7 +42,7 @@ def _load_prompt(filename: str) -> str:
         return f"Error loading prompt: {filename}"
 
 @lru_cache(maxsize=256)
-def _image_to_data_url(username: str, relative_path: str) -> str | None:
+def _image_to_data_url(relative_path: str) -> str | None:
     """Convert an image on disk to a base64 data URL for OpenAI image inputs."""
     data_root = os.getenv('DATA_PATH')
     if not data_root:
@@ -50,7 +50,8 @@ def _image_to_data_url(username: str, relative_path: str) -> str | None:
         return None
 
     try:
-        abs_path = os.path.abspath(os.path.join(data_root, username, "workspace", "cache", relative_path))
+        # Images are stored directly in DATA_PATH with filename only
+        abs_path = os.path.abspath(os.path.join(data_root, relative_path))
         if not os.path.exists(abs_path):
             logger.warning(f"Image not found for feedback embedding: {abs_path}")
             return None
@@ -582,7 +583,7 @@ def generate_feedback_task(user_id: str, storyboard_id: str | None = None) -> li
     try:
         User = get_user_model()
         ImageData = _get_model('api', 'ImageData')
-        Group = _get_model('api', 'Group')
+        GroupData = _get_model('api', 'GroupData')
 
         try:
             user = User.objects.get(id=user_id)
@@ -599,9 +600,9 @@ def generate_feedback_task(user_id: str, storyboard_id: str | None = None) -> li
         storyboard_images_count = storyboard_images_qs.count()
 
         # Counts
-        groups_qs = Group.objects.filter(user=user).prefetch_related('images')
+        groups_qs = GroupData.objects.filter(user=user).prefetch_related('images')
         groups_count = groups_qs.count()
-        nongrouped_count = storyboard_images_qs.filter(group__isnull=True).count()
+        nongrouped_count = storyboard_images_qs.filter(group_id__isnull=True).count()
 
         counts = {
             "groups": groups_count,
@@ -612,7 +613,7 @@ def generate_feedback_task(user_id: str, storyboard_id: str | None = None) -> li
         # Build groups data structure with descriptions
         groups_data = []
         for group in groups_qs:
-            group_images = storyboard_images_qs.filter(group=group)
+            group_images = storyboard_images_qs.filter(group_id=group)
             if not group_images.exists():
                 # still include empty groups for context
                 groups_data.append({
@@ -625,7 +626,7 @@ def generate_feedback_task(user_id: str, storyboard_id: str | None = None) -> li
             figures = {}
             for img in group_images:
                 desc = img.long_desc or img.short_desc or ""
-                data_url = _image_to_data_url(user.username, img.filepath)
+                data_url = _image_to_data_url(img.filepath)
                 figure_payload = {"description": desc}
                 if data_url:
                     figure_payload["data_url"] = data_url
@@ -638,11 +639,11 @@ def generate_feedback_task(user_id: str, storyboard_id: str | None = None) -> li
             })
 
         # Build ungrouped data
-        ungrouped_images = storyboard_images_qs.filter(group__isnull=True)
+        ungrouped_images = storyboard_images_qs.filter(group_id__isnull=True)
         ungrouped_data = {}
         for img in ungrouped_images:
             desc = img.long_desc or img.short_desc or ""
-            data_url = _image_to_data_url(user.username, img.filepath)
+            data_url = _image_to_data_url(img.filepath)
             payload = {"description": desc}
             if data_url:
                 payload["data_url"] = data_url
@@ -717,7 +718,7 @@ def generate_description_task(image_id):
 def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
     User = get_user_model()
     ImageData = _get_model('api', 'ImageData')
-    Group = _get_model('api', 'Group')
+    GroupData = _get_model('api', 'GroupData')
     NarrativeCache = _get_model('api', 'NarrativeCache')
     from django.db import transaction
 
@@ -730,16 +731,16 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
         # Branch based on use_groups parameter
         if use_groups:
             # NEW: Group-aware narrative generation
-            groups = Group.objects.filter(user=user).prefetch_related('images')
+            groups = GroupData.objects.filter(user=user).prefetch_related('images')
 
             # Separate grouped and ungrouped images
-            grouped_images = storyboard_images.filter(group__isnull=False)
-            ungrouped_images = storyboard_images.filter(group__isnull=True)
+            grouped_images = storyboard_images.filter(group_id__isnull=False)
+            ungrouped_images = storyboard_images.filter(group_id__isnull=True)
 
             # Build groups data structure
             groups_data = []
             for group in groups:
-                group_images = grouped_images.filter(group=group)
+                group_images = grouped_images.filter(group_id=group)
                 if not group_images.exists():
                     continue
 
