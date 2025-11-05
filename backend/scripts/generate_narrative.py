@@ -17,7 +17,7 @@ if not API_KEY:
 
 client = Client(api_key=API_KEY)
 
-DATA_PATH = '/data/CAST_ext/users/'
+DATA_PATH = os.getenv("DATA_PATH")
 
 def load_story_structures():
     """

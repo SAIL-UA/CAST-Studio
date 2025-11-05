@@ -1,34 +1,38 @@
 import os
-import uuid
-from openai import OpenAI
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .models import UserAction, ImageData, NarrativeCache, JupyterLog, Group
-from .serializers import ImageDataSerializer, NarrativeCacheSerializer, JupyterLogsSerializer, GroupSerializer
-from users.models import User
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from .tasks import generate_narrative_task
-from django.http import FileResponse
-from datetime import datetime, timezone
-from django.core.exceptions import ObjectDoesNotExist
-from io import StringIO
 import csv
 import json
-from django.http import StreamingHttpResponse
+import uuid
+from io import StringIO
+from openai import OpenAI
+from datetime import datetime, timezone
+
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import FileResponse, StreamingHttpResponse
 from django.utils.timezone import now
 from django.utils._os import safe_join
-from rest_framework.throttling import UserRateThrottle
-from .tasks import generate_description_task, generate_narrative_task, generate_feedback_task
-from celery.result import AsyncResult
-from config.celery import app as celery_app
-from rest_framework_simplejwt.serializers import TokenRefreshSerializer
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
-from .models import NarrativeCache
-from .serializers import NarrativeCacheSerializer
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.throttling import UserRateThrottle
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+
+from celery.result import AsyncResult
+from config.celery import app as celery_app
+
+from users.models import User
+from .models import (
+  UserAction, ImageData, NarrativeCache,
+  JupyterLog, MousePositionLog, ScrollLog, Group, GroupData
+)
+from .serializers import (
+  ImageDataSerializer, NarrativeCacheSerializer,
+  JupyterLogsSerializer, MousePositionLogSerializer,
+  UserActionSerializer, ScrollLogSerializer, GroupSerializer, GroupDataSerializer
+)
+from .tasks import generate_description_task, generate_narrative_task, generate_feedback_task
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
@@ -36,36 +40,107 @@ class BurstRateThrottle(UserRateThrottle):
   rate = '10/min'
   
 class LogsExportRateThrottle(UserRateThrottle):
-  rate = '5/hr'
-
-
-class RefreshTokenView(APIView):
-  permission_classes = [AllowAny]
-  
-  def post(self, request):
-    refresh = request.data.get("refresh")
-    if not refresh:
-      return Response({"detail": "No refresh token provided"}, status=status.HTTP_400_BAD_REQUEST)
-
-    serializer = TokenRefreshSerializer(data={"refresh": refresh})
-    try:
-      serializer.is_valid(raise_exception=True)
-    except (TokenError, InvalidToken) as e:
-      return Response({"detail": "Token is invalid or expired"}, status=status.HTTP_401_UNAUTHORIZED)
-
-    # Returns {'access': '...'} and, if ROTATE_REFRESH_TOKENS=True, also {'refresh': '...'}
-    return Response(serializer.validated_data, status=status.HTTP_200_OK)
-    
-    
+  rate = '5/hr'    
     
 class LogActionView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
-    headers = dict(request.headers)
-    user_action = UserAction.objects.create(user=request.user, action=request.data, request_headers=headers)
-    user_action.save()
-    return Response({"message": "Action logged successfully"}, status=status.HTTP_200_OK)
+    try:
+      action_type = request.data.get('action_type')
+      
+      if action_type not in ["click", "hover", "drag", "drop"]:
+        return Response({
+        "error": f"Action type {action_type} not recognized."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+      # Create UserAction directly
+      user_action = UserAction.objects.create(
+        user=request.user,
+        action=action_type,
+        state_info=request.data.get('state_info', {}),
+        element=request.data.get('element_id', ''),
+        request_headers=dict(request.headers)
+      )
+      
+      return Response({
+        "message": "Action logged successfully",
+        "action_id": user_action.id
+      }, status=status.HTTP_200_OK)
+
+    except KeyError as e:
+      return Response({
+        "error": f"Missing required field: {str(e)}"
+      }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+      return Response({
+        "error": f"Failed to log action: {str(e)}"
+      }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
   
+class LogMousePositionView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request):
+    try:
+      log_data = {
+        'log_id': str(uuid.uuid4()),
+        'user': request.user.id,
+        'mouse_pos_batch': request.data['pos_batch'],  # list of {"x": ..., "y": ..., "timestamp": ...}
+        'request_headers': dict(request.headers),
+        'timestamp': request.data['timestamp']
+      }
+
+      log_serializer = MousePositionLogSerializer(data=log_data)
+      if log_serializer.is_valid():
+        log_serializer.save()
+        return Response({
+          "message": "Mouse positions logged successfully",
+        }, status=status.HTTP_200_OK)
+      else:
+        return Response({
+          "error": f"Unable to serialize mouse position logs: {log_serializer.errors}"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except KeyError as e:
+      return Response({
+        "error": f"Missing required field: {str(e)}"
+      }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+      return Response({
+        "error": f"Failed to log mouse positions: {str(e)}"
+      }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+class LogScrollView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request):
+    try:
+      # New optimized structure: sessions with batched events per element
+      sessions = request.data.get('sessions', [])
+
+      log_data = {
+        'log_id': str(uuid.uuid4()),
+        'user': request.user.id,
+        'scroll_batch': sessions,  # Store the optimized sessions structure
+        'request_headers': dict(request.headers),
+        'timestamp': request.data.get('timestamp')
+      }
+
+      scroll_serializer = ScrollLogSerializer(data=log_data)
+      if scroll_serializer.is_valid():
+        scroll_serializer.save()
+
+        # Count total events across all sessions for logging
+        total_events = sum(len(session.get('events', [])) for session in sessions)
+
+        return Response({
+          "message": f"Scroll log saved successfully ({total_events} events across {len(sessions)} element(s))",
+        }, status=status.HTTP_200_OK)
+      else:
+        return Response({
+          "error": f"Unable to serialize scroll log: {scroll_serializer.errors}"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+      return Response({
+        "error": f"Failed to log scroll data: {str(e)}"
+      }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class UploadJupyterLogView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -155,24 +230,17 @@ class UploadFigureView(APIView):
     if not figure:
       return Response({"message": "No file part in the request"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # ✅ Reconstruct the user folder path
-    username = request.user.username
-    user_folder = os.path.join(os.getenv('DATA_PATH'), username, "workspace", "cache")
-    os.makedirs(user_folder, exist_ok=True)
-
-    # ✅ Build file path
+    # Build file path
     figure_id = str(uuid.uuid4())
     ext = os.path.splitext(figure.name)[1]
-    figure_path = os.path.join(user_folder, f"{figure_id}{ext}")
+    figure_path = os.path.join(os.getenv('DATA_PATH'), f"{figure_id}{ext}")
 
-    # ✅ Save file
+    # Save file
     with open(figure_path, 'wb+') as destination:
       for chunk in figure.chunks():
         destination.write(chunk)
     
     now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    
-    
     
     serializer = ImageDataSerializer(data={
       "id": figure_id,
@@ -181,7 +249,7 @@ class UploadFigureView(APIView):
       "short_desc": request.data.get('short_desc'),
       "long_desc": request.data.get('long_desc') or "Placeholder long description.",
       "source": request.data.get('source'),
-      "in_storyboard": False,
+      "in_storyboard": True,
       "x": 0,
       "y": 0,
       "has_order": False,
@@ -208,8 +276,8 @@ class DeleteFigureView(APIView):
     if not filename:
       return Response({"message": "No filename provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-    user_folder = request.session.get('user_folder')
-    file_path = os.path.join(user_folder, filename)
+    data_path = request.session.get('DATA_PATH')
+    file_path = os.path.join(data_path, filename)
     base_name, ext = os.path.splitext(filename)
     
     # Remove image file if it exists
@@ -222,27 +290,6 @@ class DeleteFigureView(APIView):
       image_data.delete()
 
     return Response({"message": "Figure deleted successfully"}, status=status.HTTP_200_OK)
-  
-  
-class ServeImageView(APIView):
-  permission_classes = [IsAuthenticated]
-  def get(self, request, filename):
-    
-    user_folder = os.path.join(os.getenv('DATA_PATH'), request.user.username, "workspace", "cache")
-    
-    try:
-      filepath = safe_join(user_folder, filename)
-    except ValueError:
-      return Response({"message": "Invalid filename"}, status=status.HTTP_400_BAD_REQUEST)
-    
-    if not os.path.exists(filepath):
-      return Response({"message": f"File not found: {filepath}"}, status=status.HTTP_404_NOT_FOUND)
-    
-    response = FileResponse(open(filepath, 'rb'), content_type='image/png')
-    response["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-    response["Access-Control-Allow-Credentials"] = "true"
-    
-    return response
     
 class UpdateImageDataView(APIView):
   permission_classes = [IsAuthenticated]
@@ -264,12 +311,92 @@ class UpdateImageDataView(APIView):
       
       if serializer.is_valid():
         serializer.save()
-        return Response({"message": "Image data updated successfully"}, status=status.HTTP_200_OK)
+        return Response({"message": "Image data updated successfully", "image_data": serializer.data}, status=status.HTTP_200_OK)
       else:
         return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
       return Response({"errors": e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
   
+
+class GetGroupView(APIView): 
+  permission_classes = [IsAuthenticated]
+  def get(self, request):
+    group_id = request.query_params.get("group_id")
+    if group_id: # single group
+      group_data = GroupData.objects.get(id=group_id)
+    else: # all groups
+      group_data = GroupData.objects.filter(user=request.user)
+    
+    if not group_data:
+      return Response({"message": "No group data found"}, status=status.HTTP_204_NO_CONTENT)
+      
+    serialized_group_data = GroupDataSerializer(group_data, many=False if group_id else True)
+    
+    return Response({"groups": serialized_group_data.data}, status=status.HTTP_200_OK)
+
+class CreateGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request):
+    try:
+      group_data = request.data.get('data')
+      group_data['user'] = request.user.id
+      
+      serializer = GroupDataSerializer(data=group_data)
+      if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Group created successfully", "group": serializer.data}, status=status.HTTP_201_CREATED)
+      else:
+        return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+class UpdateGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request, group_id=None):
+    try:
+      group_id = group_id or request.data.get('group_id')
+      if not group_id:
+        return Response({"message": "No group ID provided"}, status=status.HTTP_400_BAD_REQUEST)
+      
+      update_data = request.data.get('data')
+      
+      existing_group = GroupData.objects.get(id=group_id)
+      
+      if not existing_group:
+        return Response({"message": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
+      
+      serializer = GroupDataSerializer(existing_group, data=update_data, partial=True)
+      
+      if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Group updated successfully", "group": serializer.data}, status=status.HTTP_200_OK)
+      else:
+        return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+class DeleteGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request, group_id=None):
+    """
+    Expects group_id from URL path or JSON body with { "group_id": "<group_id>" }
+    Deletes the group data.
+    """
+    group_id = group_id or request.data.get('group_id')
+
+    if not group_id:
+      return Response({"message": "No group ID provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+      group = GroupData.objects.get(id=group_id)
+      group.delete()
+      return Response({"message": "Group deleted successfully"}, status=status.HTTP_200_OK)
+    except GroupData.DoesNotExist:
+      return Response({"message": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+
+
 
 class GenerateNarrativeAsyncView(APIView):
   permission_classes = [IsAuthenticated]

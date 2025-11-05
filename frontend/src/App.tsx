@@ -1,8 +1,12 @@
 // Import dependencies
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 // Import providers
 import { useAuth } from './contexts/Auth';
+
+// Import services
+import { mouseTracker } from './utils/mouseTracker';
 
 // Import pages
 import Home from './pages/Home';
@@ -14,10 +18,23 @@ import ResetPassword from './pages/ResetPassword';
 
 // Main App component
 function App() {
-  // Don't worry about logging for now, however I would like to put that in a separate Logging file so the frontend code is cleaner
-  
   // Contexts
   const { userAuthenticated } = useAuth();
+
+  // Start mouse tracking when app mounts
+  useEffect(() => {
+    // Only start tracking if user is authenticated
+    if (userAuthenticated) {
+      mouseTracker.start();
+    } else {
+      mouseTracker.stop();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      mouseTracker.stop();
+    };
+  }, [userAuthenticated]);
 
   //  Visible component
   return (

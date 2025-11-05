@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:17
@@ -36,7 +34,7 @@ services:
     expose:
       - "8051"
     volumes:
-      - /data/CAST_ext:/data/CAST_ext
+      - /data/user_images:/data/user_images
       - static:/app/staticfiles
     networks:
       - cast-network
@@ -72,6 +70,7 @@ services:
       - frontend_build:/var/www/html
       - static:/staticfiles:ro
       - nginx-logs:/var/log/nginx
+      - /data/user_images:/data/user_images:ro
       - ./nginx/ssl:/etc/letsencrypt  # certs live here
       - ./nginx/www:/var/www/certbot  # webroot for ACME challenge
     depends_on:
@@ -100,7 +99,7 @@ services:
       - .env
     volumes:
       - /home/aii03admin/CAST_ext:/app
-      - /data/CAST_ext:/data/CAST_ext
+      - /data/user_images:/data/user_images
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
     networks:

@@ -1,5 +1,6 @@
 // Import dependencies
 import { useNavigate } from 'react-router-dom';
+import { logAction } from '../utils/userActionLogger';
 
 // Import images
 import home from '../assets/images/home.svg';
@@ -11,7 +12,8 @@ const Footer = () => {
     const navigate = useNavigate();
 
     // Handle dropdown selections
-    const handleDropdownSelection = () => {
+    const handleDropdownSelection = (e: React.MouseEvent) => {
+        logAction(e);
         navigate(`/construction`);
     }
 
@@ -24,13 +26,16 @@ const Footer = () => {
                 <br />
                 <ul className="text-sm space-y-2 font-sans">
                     <li className="cursor-pointer hover:font-roboto-semibold"
+                    log-id="footer-cast-home-link"
                     onClick={handleDropdownSelection}>
                         <span className="flex items-center justify-start">
                             <img src={home} alt="JupyterHub" className="w-4 h-4 mr-2" />
                             Visit CAST Home
                         </span>
                     </li>
-                    <li className="cursor-pointer hover:font-roboto-semibold">
+                    <li className="cursor-pointer hover:font-roboto-semibold"
+                    log-id="footer-nsf-ritel-home-link"
+                    onClick={handleDropdownSelection}>
                         <span className="flex items-center justify-start">
                             <img src={home} alt="JupyterHub" className="w-4 h-4 mr-2" />
                             <a href="https://www.nsf.gov/funding/opportunities/ritel-research-innovative-technologies-enhanced-learning" target="_blank">Visit NSF RITEL Home</a>

@@ -3,9 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useDrag } from 'react-dnd';
-import { DraggableCardProps, DragItem, ImageData } from '../types/types';
-import { updateImageData, generateDescription, deleteFigure, serveImage, getImageData } from '../services/api';
+import { DraggableCardProps, DragItem, ImageData, ImageMetadata } from '../types/types';
+import { updateImageData, generateDescription, deleteFigure, getImageData } from '../services/api';
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
+import { logAction, captureActionContext } from '../utils/userActionLogger';
+import { formatImageMetadata, getImageUrl } from '../utils/imageUtils';
 
 function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, draggable = true }: DraggableCardProps) {
   const [showModal, setShowModal] = useState(false);
@@ -15,19 +17,25 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
   const [imageUrl, setImageUrl] = useState<string>('');
   const cardRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
+  // Track initial and current image metadata for change detection
+  const imageMetadataRef = useRef<ImageMetadata>(null);
+  // Track drop result from react-dnd for logging
+  const dropResultRef = useRef<any>(null);
+  
 
+  async function loadMetadata(currentImage: ImageData = image, metadata? : ImageMetadata) {
+    if (!metadata) {
+      metadata = await formatImageMetadata(currentImage);
+    }
+    imageMetadataRef.current = metadata;
+  }
 
   useEffect(() => {
-    const fetchImageBlob = async () => {
-      try {
-        const blobUrl = await serveImage(image.filepath);
-        if (isMountedRef.current) setImageUrl(blobUrl);
-      } catch (err) {
-        console.error('Failed to fetch image blob:', err);
-      }
-    };
-    fetchImageBlob();
-    
+    // Use direct static URL for nginx serving
+    const imageUrl = getImageUrl(image.filepath);
+    setImageUrl(imageUrl);
+    loadMetadata();
+
     return () => {
       isMountedRef.current = false;
     };
@@ -69,12 +77,39 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
           groupId: image.groupId,
         };
       },
+      end: (item, monitor) => {
+        // Capture drop result for use in onDragEnd handler
+        const dropResult = monitor.getDropResult();
+        dropResultRef.current = dropResult;
+      },
       collect: (monitor) => ({
         isDragging: !!monitor.isDragging(),
       }),
     }),
     [draggable, image.id]
   );
+
+  const handleDragEnd = async (e: React.DragEvent) => {
+    const ctx = captureActionContext(e);
+    const updatedImageMetadata = await formatImageMetadata(image);
+
+    // Check if dropped into a group (from react-dnd drop result)
+    const dropResult = dropResultRef.current;
+    const stateInfo: any = {
+      image_metadata: imageMetadataRef.current,
+      updated_image_metadata: updatedImageMetadata
+    };
+
+    // If dropped into a group, include group info
+    if (dropResult?.droppedInGroup) {
+      stateInfo.group_metadata = dropResult.groupMetadata;
+      stateInfo.previous_group_id = image.groupId || null;
+    }
+
+    logAction(ctx, stateInfo);
+    imageMetadataRef.current = updatedImageMetadata;
+    dropResultRef.current = null; // Clear for next drag
+  };
 
   // Calculate card styling based on state
   const getCardStyle = (): React.CSSProperties => {
@@ -106,34 +141,52 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     return baseStyle;
   };
 
-  const handleShow = () => {
+  const handleShow = async (e: React.MouseEvent) => {
+    logAction(e, { image_metadata: imageMetadataRef.current });
     setShowModal(true);
     document.body.style.overflow = 'hidden';
   };
 
-  const handleClose = (additionalData?: Partial<ImageData>) => {
+  const handleClose = async (e: React.MouseEvent) => {
+    const ctx = captureActionContext(e);
+    if (image.short_desc === tempShortDesc && image.long_desc === tempLongDesc) {
+      logAction(ctx, { image_metadata: imageMetadataRef.current });
+      setShowModal(false);
+      document.body.style.overflow = 'auto';
+      return;
+    }
+    
     updateImageData(image.id, {
+      ...image,
       short_desc: tempShortDesc,
       long_desc: tempLongDesc,
-      ...additionalData
-    })
-      .then(() => {
-        onDescriptionsUpdate(image.id, tempShortDesc, tempLongDesc);
-        setShowModal(false);
-        document.body.style.overflow = 'auto';
-      })
-      .catch((error) => {
-        console.error('Error updating descriptions:', error);
-        setShowModal(false);
-        document.body.style.overflow = 'auto';
-      });
+    }).then(() => {
+      onDescriptionsUpdate(image.id, tempShortDesc, tempLongDesc);
+      setShowModal(false);
+      document.body.style.overflow = 'auto';
+    }).catch((error) => {
+      console.error('Error updating descriptions:', error);
+      setShowModal(false);
+      document.body.style.overflow = 'auto';
+    });
+  
+    const updatedImageMetadata = await formatImageMetadata(image);
+    logAction(ctx, {
+      image_metadata: imageMetadataRef.current,
+      updated_image_metadata: updatedImageMetadata
+    });
+
+    imageMetadataRef.current = updatedImageMetadata;
+    
+    
   };
 
-const handleDelete = async () => {
+  const handleDelete = async (e: React.MouseEvent) => {
+    const ctx = captureActionContext(e);
     if (!window.confirm('Are you sure you want to delete this figure?')) {
       return;
     }
-
+    logAction(ctx, { image_metadata: imageMetadataRef.current });
     try {
       const res = await deleteFigure(image.filepath);
       if (res.status === 'success') {
@@ -148,8 +201,10 @@ const handleDelete = async () => {
       alert('An error occurred while deleting the figure');
     }
   };
-  const handleGenerateDescription = async () => {
+
+  const handleGenerateDescription = async (e: React.MouseEvent) => {
     setLoadingGenDesc(true);
+    const ctx = captureActionContext(e);
     
     try {
       // Start the description generation task
@@ -163,7 +218,6 @@ const handleDelete = async () => {
           
           while (attempts < maxAttempts) {
             attempts++;
-            console.log(`Polling description generation ${attempts}/${maxAttempts}`);
             
             try {
               // Get updated image data from backend
@@ -174,8 +228,14 @@ const handleDelete = async () => {
               if (!updatedImage.long_desc_generating && updatedImage.long_desc) {
                 // Description generation complete
                 setTempLongDesc(updatedImage.long_desc);
-                console.log('Description generated successfully');
                 setLoadingGenDesc(false);
+                // Log the action with updated metadata, and update the ref
+                const updatedImageMetadata = await formatImageMetadata(updatedImage);
+                logAction(ctx, { 
+                  image_metadata: imageMetadataRef.current,
+                  updated_image_metadata: updatedImageMetadata
+                });
+                imageMetadataRef.current = updatedImageMetadata;
                 return;
               }
             } catch (error) {
@@ -204,14 +264,26 @@ const handleDelete = async () => {
     }
   };
 
-  const handleTrash = () => {
+  const handleTrash = (e: React.MouseEvent) => {
     if (onTrash) onTrash(image.id);
-    handleClose({ in_storyboard: false });
+    logAction(e, { image_metadata: imageMetadataRef.current });
+    updateImageData(image.id, {
+      ...image,
+      in_storyboard: false
+    });
+    setShowModal(false);
+    document.body.style.overflow = 'auto';
   };
 
-  const handleUnTrash = () => {
+  const handleUnTrash = (e: React.MouseEvent) => {
     if (onUnTrash) onUnTrash(image.id);
-    handleClose({ in_storyboard: true });
+    logAction(e, { image_metadata: imageMetadataRef.current });
+    updateImageData(image.id, {
+      ...image,
+      in_storyboard: true
+    });
+    setShowModal(false);
+    document.body.style.overflow = 'auto';
   };
 
   // Combine refs for draggable functionality
@@ -229,7 +301,9 @@ const handleDelete = async () => {
         style={getCardStyle()}
       >
         <div id="card-container"
+          log-id={"draggable-card"}
           ref={cardRef}
+          onDragEnd={handleDragEnd}
           className={`card-width overflow-hidden rounded-sm shadow-md bg-grey-lighter-2 border-bama-crimson border-1 ${
             image.long_desc?.trim() ? 'border border-grey-lightest' : 'border-2 border-red-500'
           }`}
@@ -241,7 +315,8 @@ const handleDelete = async () => {
               </p>
             </div>
             <div id="card-header-right" className="flex justify-end w-1/2">
-              <button 
+              <button
+                log-id="edit-figure-button"
                 onClick={handleShow}
                 className="text-white font-roboto-medium hover:font-roboto-bold hover:underline transition-all duration-150"
               >
@@ -274,7 +349,9 @@ const handleDelete = async () => {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Editing: {image.id}</h2>
                 <button
-                  onClick={() => {
+                  log-id="close-figure-edit-modal-button"
+                  onClick={(e) => {
+                    logAction(e, { image_metadata: imageMetadataRef.current });
                     setShowModal(false);
                     document.body.style.overflow = 'auto';
                   }}
@@ -328,7 +405,7 @@ const handleDelete = async () => {
 
               {/* Generate Description Button */}
               <div className="mt-4 text-center">
-                <button
+                <button log-id="generate-description-button"
                   onClick={handleGenerateDescription}
                   disabled={loadingGenDesc}
                   className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
@@ -341,14 +418,14 @@ const handleDelete = async () => {
               <div className="flex flex-col min-lg:flex-row items-center justify-center min-lg:justify-between mt-6 gap-4">
                 {/* Storyboard action button */}
                 {image.in_storyboard ? (
-                  <button
+                  <button log-id="move-figure-to-recycle-bin-button"
                     onClick={handleTrash}
                     className="w-full min-lg:w-1/3 px-4 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-150"
                   >
                     Move to Recycle Bin
                   </button>
                 ) : (
-                  <button
+                  <button log-id="restore-figure-to-storyboard-button"
                     onClick={handleUnTrash}
                     className="w-full min-lg:w-1/3 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-150"
                   >
@@ -357,7 +434,7 @@ const handleDelete = async () => {
                 )}
                 
                 {/* Delete button */}
-                <button
+                <button log-id="delete-figure-button"
                   onClick={handleDelete}
                   className="w-full min-lg:w-1/3 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-150"
                 >
@@ -365,8 +442,8 @@ const handleDelete = async () => {
                 </button>
 
                 {/* Save & Close button */}
-                <button
-                  onClick={() => handleClose()}
+                <button log-id="save-and-close-figure-button"
+                  onClick={(e) => handleClose(e)}
                   className="w-full min-lg:w-1/3 px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-150"
                 >
                   Save & Close

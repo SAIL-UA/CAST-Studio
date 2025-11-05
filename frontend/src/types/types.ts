@@ -17,6 +17,18 @@ export interface ImageData {
   groupId?: string; // NEW: Which group this card belongs to (if any)
 }
 
+// Partial image data type for logging
+export interface ImageMetadata {
+  image_id: string;
+  x: number;
+  y: number
+  filepath: string;
+  description: string; // long description
+  source: string;
+  user: number;
+  groupId?: string;
+}
+
 export interface DragItem {
   id: string;
   type?: string;
@@ -76,5 +88,16 @@ export interface GroupDivProps {
   onCardRemove: (cardId: string, groupId: string) => void;
   onNameChange: (groupId: string, newName: string) => void;
   onDescriptionChange: (groupId: string, newDescription: string) => void;
+  onGroupUpdate: (groupId: string, updates: { name?: string; description?: string }) => void;
   storyBinRef: React.RefObject<HTMLDivElement | null>;
+}
+
+// Lightweight metadata for logging
+export interface GroupMetadata {
+  id: string;
+  number: number;
+  name: string;
+  description: string;
+  initialPosition: { x: number; y: number };
+  cards: ImageData[];
 }

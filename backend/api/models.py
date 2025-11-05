@@ -6,9 +6,17 @@ class UserAction(models.Model):
   """
   User actions.
   """
+  class ActionType(models.TextChoices):
+    CLICK = "click", "Click"
+    HOVER = "hover", "Hover"
+    DRAG = "drag", "Drag"
+    DROP = "drop", "Drop"
+  
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
   user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='user_actions')
-  action = models.JSONField(default=dict)
+  action = models.CharField(max_length=10, choices=ActionType.choices, default=ActionType.CLICK)
+  state_info = models.JSONField(default=dict)
+  element = models.TextField(default="")
   request_headers = models.JSONField(default=dict)
   timestamp = models.DateTimeField(auto_now_add=True)
 
@@ -40,6 +48,34 @@ class Group(models.Model):
     db_table = 'groups'
     managed = True
     ordering = ['number']
+
+class ScrollLog(models.Model):
+  """
+  Logs scroll events.
+  """
+  log_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='scroll_logs')
+  scroll_batch = models.JSONField(default=list)  # List of scroll positions
+  request_headers = models.JSONField(default=dict)
+  timestamp = models.DateTimeField(auto_now_add=True)
+
+  class Meta:
+    db_table = 'scroll_logs'
+    managed = True
+
+class MousePositionLog(models.Model):
+  """
+  Logs mouse position (normalized to window)
+  """
+  log_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='storystudio_logs')
+  mouse_pos_batch = models.JSONField(default=list)  # List of mouse positions
+  request_headers = models.JSONField(default=dict)
+  timestamp = models.DateTimeField(auto_now_add=True)
+
+  class Meta:
+    db_table = 'mouse_position_logs'
+    managed = True
     
 class JupyterLog(models.Model):
   """
@@ -61,9 +97,30 @@ class JupyterLog(models.Model):
   class Meta:
     db_table = 'jupyter_logs'
     managed = True
-    
-    
+
+
+class GroupData(models.Model):
+  """
+  Group data.
+  """
+  id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='group_data')
+  name = models.CharField(max_length=100, default="Untitled Group")
+  number = models.IntegerField(default=0)
+  description = models.TextField(default="", null=True, blank=True)
+  x = models.FloatField(default=0.0)
+  y = models.FloatField(default=0.0)
+  cards = models.JSONField(default=list)  # List of image IDs
+  created_at = models.DateTimeField(auto_now_add=True)
+  last_modified = models.DateTimeField(auto_now=True)
   
+  def __str__(self):
+    return f"{self.user.username} - {self.name}"
+  
+  class Meta:
+    db_table = 'group_data'
+    managed = True
+    
 class ImageData(models.Model):
   """
   Image data.
@@ -75,13 +132,14 @@ class ImageData(models.Model):
   long_desc = models.TextField(default="")
   long_desc_generating = models.BooleanField(default=False)
   source = models.TextField(default="")
-  in_storyboard = models.BooleanField(default=False)
+  in_storyboard = models.BooleanField(default=True)
   x = models.FloatField(default=0.0)
   y = models.FloatField(default=0.0)
+  group_id = models.ForeignKey(GroupData, on_delete=models.SET_NULL, db_column='group_id', null=True, blank=True, related_name='images')
   has_order = models.BooleanField(default=False)
   order_num = models.IntegerField(default=0)
   group = models.ForeignKey('Group', on_delete=models.SET_NULL, null=True, blank=True, related_name='images')
-  last_saved = models.DateTimeField(auto_now_add=True)
+  last_saved = models.DateTimeField(auto_now=True)
   created_at = models.DateTimeField(auto_now_add=True)
 
   def __str__(self):

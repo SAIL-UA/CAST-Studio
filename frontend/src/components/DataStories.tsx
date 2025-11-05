@@ -1,8 +1,11 @@
 // Import dependencies
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { getNarrativeCache, serveImage } from '../services/api';
+import { getNarrativeCache } from '../services/api';
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
+import { logAction } from '../utils/userActionLogger';
+import { getImageUrl } from '../utils/imageUtils';
+import { scrollTracker } from '../utils/scrollTracker';
 
 // Import components
 import ExportButton from './ExportButton';
@@ -73,7 +76,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
             const data = customEvent.detail;
             setIsGenerating(false);
             console.log('Story data received:', data);
-            
+
             // Story data already has processed figures from GenerateStoryButton
             setStoryData(data);
         };
@@ -91,6 +94,9 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
         return () => {
             window.removeEventListener('storyGenerated', handleStoryGenerated as EventListener);
             window.removeEventListener('storyGenerationStarted', handleStoryGenerationStarted as EventListener);
+
+            // Flush any pending scroll events before unmounting
+            scrollTracker.flush();
         };
     }, [])
 
@@ -99,13 +105,17 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
     const processNarrativeWithImages = async (text: string): Promise<string> => {
         if (!text) return text;
         
-        // Find all figure placeholders
-        const figurePattern = /\[FIGURE:\s*([^\]]+)\]/g;
+        console.log('Processing text:', text);
+        
+        // Find all figure placeholders - handle nested FIGURE tags
+        const figurePattern = /\[FIGURE:\s*(?:\[FIGURE:\s*)?([^[\]]+\.(?:png|jpg|jpeg|gif|webp))\]?\]/gi;
         const matches: RegExpExecArray[] = [];
         let match;
         while ((match = figurePattern.exec(text)) !== null) {
             matches.push(match);
         }
+        
+        console.log('Found matches:', matches);
         
         if (matches.length === 0) return text;
         
@@ -114,28 +124,31 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
         // Process each figure placeholder
         for (const match of matches) {
             const fullMatch = match[0];
-            const filename = match[1].trim();
+            let filename = match[1].trim();
+            
+            // Clean up any nested FIGURE tags in filename
+            filename = filename.replace(/^\[FIGURE:\s*/, '').replace(/\]$/, '');
+            
+            console.log('Processing match:', { fullMatch, filename });
             
             try {
-                // Get blob URL for the image
-                const blobUrl = await serveImage(filename);
-                if (blobUrl) {
-                    // Replace with markdown image syntax using blob URL
-                    const replacement = `![Figure](${blobUrl})`;
-                    processedText = processedText.replace(fullMatch, replacement);
-                } else {
-                    // If image fails to load, show a placeholder
-                    const replacement = `*[Image not available: ${filename}]*`;
-                    processedText = processedText.replace(fullMatch, replacement);
-                }
+                const imageUrl = getImageUrl(filename);
+                console.log('Generated image URL:', imageUrl);
+                // Replace with markdown image syntax using image URL
+                const replacement = `![Figure](${imageUrl})`;
+                processedText = processedText.replace(fullMatch, replacement);
+                console.log('Replacement made:', { fullMatch, replacement });
             } catch (error) {
-                console.error(`Error loading image ${filename}:`, error);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error(`Error loading image ${filename}:`, error);
+                }
                 // Replace with error placeholder
                 const replacement = `*[Image not available: ${filename}]*`;
                 processedText = processedText.replace(fullMatch, replacement);
             }
         }
         
+        console.log('Final processed text:', processedText);
         return processedText;
     };
 
@@ -225,15 +238,32 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
     };
 
     // Handle narrative button
-    const handleNarrative = () => {
+    const handleNarrative = (e: React.MouseEvent) => {
+        logAction(e);
         setNarrativeSelected(true)
         setStorySelected(false)
     }
 
-    const handleStory = () => {
+    const handleStory = (e: React.MouseEvent) => {
+        logAction(e);
         setNarrativeSelected(false)
         setStorySelected(true)
 
+    }
+
+    // Handle scroll events - batched and sent after 5 seconds of inactivity
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const target = e.currentTarget;
+        const elementId = target.id || target.getAttribute('log-id') || 'unknown';
+        const scrollPercentage = Math.round((target.scrollTop / (target.scrollHeight - target.clientHeight)) * 100);
+
+        scrollTracker.trackScroll(
+            elementId,
+            target.scrollTop,
+            target.scrollHeight,
+            target.clientHeight,
+            scrollPercentage
+        );
     }
 
     // Visible component
@@ -247,6 +277,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 <div id="data-stories-header-right" className="flex w-1/2 h-full items-end justify-end text-sm">
                     
                     <button id="narrative-button"
+                    log-id="data-stories-narrative-button"
                     className={`underline-animate ${narrativeSelected ? 'active' : ''} mx-3`}
                     onClick={handleNarrative}
                     >
@@ -254,6 +285,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                     </button>
 
                     <button id="story-button"
+                    log-id="data-stories-story-button"
                     className={`underline-animate ${storySelected ? 'active' : ''} mx-3`}
                     onClick={handleStory}>
                     Story
@@ -262,7 +294,12 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
             </div>
 
             {/* Content */}
-            <div id="data-stories-content" className="flex flex-col w-full flex-1 mt-4 rounded-sm p-4 overflow-y-auto min-h-0">
+            <div
+                id="data-stories-content"
+                log-id="data-stories-content"
+                className="flex flex-col w-full flex-1 mt-4 rounded-sm p-4 overflow-y-auto min-h-0"
+                onScroll={handleScroll}
+            >
             <div className="w-full mb-4">
                     <ExportButton />
                     <FeedbackButton />

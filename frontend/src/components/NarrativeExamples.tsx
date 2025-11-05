@@ -1,5 +1,6 @@
 // Import dependencies
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { logAction } from '../utils/userActionLogger';
 
 // Import components
 
@@ -9,6 +10,7 @@ import Casa from '../assets/images/casa.jpg'
 import Fresas from '../assets/images/fresas.jpg'
 import Popeye from '../assets/images/popeye.jpg'
 import Super from '../assets/images/super.jpg'
+import { log } from 'console';
 
 // Define props interface
 type NarrativeExamplesProps = {
@@ -23,10 +25,20 @@ const NarrativeExamples = ({ selectedPattern, setRightNarrativeExamplesOpen }: N
     const [content, setContent] = useState<{ title: string, domain: string, link: string, image: string }[]>([]);
 
     // Handle Exit
-    const handleExit = () => {
+    const handleExit = (e: React.MouseEvent) => {
+        logAction(e, { narrative_pattern: selectedPattern });
         setRightNarrativeExamplesOpen(false);
     }
 
+    const handleNarrativeLinkClick = (e: React.MouseEvent, item: any) => {
+        logAction(e, { 
+            narrative_pattern: selectedPattern, 
+            narrative_example: item.title, 
+            narrative_example_link: item.link 
+        });
+        window.open(item.link, '_blank')
+        
+    }
     useEffect(() => {
         // Determine what content to display on mount
         if (selectedPattern === 'cause_and_effect') {
@@ -237,6 +249,7 @@ const NarrativeExamples = ({ selectedPattern, setRightNarrativeExamplesOpen }: N
             {/* Narrative Examples Header */}
             <div className="flex flex-col w-full m-0 p-0">
                 <div
+                log-id="narrative-examples-back-button"
                 className="flex flex-row items-center justify-start w-full cursor-pointer"
                 onClick={handleExit}
 
@@ -276,8 +289,9 @@ const NarrativeExamples = ({ selectedPattern, setRightNarrativeExamplesOpen }: N
                                 <div className="flex flex-col items-start justify-start w-full">
                                     <h4 className="text-xs roboto-medium text-grey-darkest py-1">{item.domain}</h4>
                                     <button
+                                    log-id="narrative-examples-visit-button"
                                     className="bg-indigo-lighter rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-                                    onClick={() => window.open(item.link, '_blank')}
+                                    onClick={(e) => handleNarrativeLinkClick(e, item)}
                                     >
                                         <p className="text-xs font-roboto-light">Visit</p>
                                     </button>

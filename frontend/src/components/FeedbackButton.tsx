@@ -1,9 +1,12 @@
+// Import dependencies
 import { requestFeedback, requestFeedbackStatus } from '../services/api';
+import { logAction } from '../utils/userActionLogger';
 
 type FeedbackItem = { title: string; text: string };
 
 const FeedbackButton = () => {
-    const handleFeedback = async () => {
+    const handleFeedback = async (e: React.MouseEvent) => {
+        logAction(e);
         try {
             // Start background task
             const startResp = await requestFeedback({});
@@ -56,6 +59,7 @@ const FeedbackButton = () => {
     return (
         <button
             id="feedback-button"
+            log-id="feedback-button"
             className="bg-red-400 text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
             onClick={handleFeedback}
         >

@@ -1,5 +1,5 @@
 // Import dependencies
-
+import { logAction } from '../utils/userActionLogger';
 // Import components
 
 // Define props interface
@@ -12,7 +12,8 @@ type NarrativeExamplesButtonProps = {
 // Narrative Examples Button Component
 const NarrativeExamplesButton = ({ value, setRightNarrativeExamplesOpen, setSelectedPattern }: NarrativeExamplesButtonProps) => {
 
-    const handleClick = () => {
+    const handleClick = (e: React.MouseEvent) => {
+        logAction(e, { narrative_pattern: value });
         setSelectedPattern(value);
         setRightNarrativeExamplesOpen(true);
     }
@@ -20,6 +21,7 @@ const NarrativeExamplesButton = ({ value, setRightNarrativeExamplesOpen, setSele
 
     return (
         <button
+        log-id="narrative-examples-button"
         className="bg-indigo-lighter rounded-full mt-2 px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
         onClick={handleClick}
         >

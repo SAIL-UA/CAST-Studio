@@ -254,7 +254,7 @@ const GenerateStoryButton = ({ images = [], setRightNarrativePatternsOpen, setSe
             <div className="relative flex items-center justify-between">
                 <button 
                     ref={AIRef}
-                    id="generate-story-button"
+                    id="select-narrative-button"
                     className={`flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
                     onMouseEnter={handleAIEnter}
                     onMouseLeave={handleAILeave}

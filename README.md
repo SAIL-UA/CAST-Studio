@@ -36,7 +36,11 @@ CAST Story Studio is a full-stack application for story generation and managemen
    POSTGRES_PASSWORD=your_postgres_password
    POSTGRES_HOST=your_postgres_host
    POSTGRES_PORT=your_postgres_port
-   DATA_PATH=/data/CAST_ext/users
+   DATA_PATH=/data/user_images
+   USER_DIR_BASE=/data/CAST_ext
+   STORYSTUDIO_API_URL=http://backend:8051/
+   REACT_APP_IMAGE_BASE_URL=/images
+   CELERY_BROKER_URL=redis://redis:6379/0
    OPENAI_API_KEY=your-openai-api-key
    FRONTEND_URL=http://localhost
    EMAIL_HOST_USER=your-email@gmail.com
