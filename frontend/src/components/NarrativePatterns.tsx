@@ -168,13 +168,13 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
                         setSelectedPattern={setSelectedPattern}
-                        value="IN_PROGRESS_factor_analysis"
+                        value="factor_analysis"
                         setStoryLoading={setStoryLoading} />
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                 setSelectedPattern={setSelectedPattern}
-                                value="IN_PROGRESS_factor_analysis"
+                                value="factor_analysis"
                                 />
                         )}
                     </div>
@@ -308,13 +308,13 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
                         setSelectedPattern={setSelectedPattern}
-                        value="IN_PROGRESS_shock_lead"
+                        value="shock_lead"
                         setStoryLoading={setStoryLoading} />
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                 setSelectedPattern={setSelectedPattern}
-                                value="IN_PROGRESS_shock_lead"
+                                value="shock_lead"
                                 />
                         )}
                     </div>

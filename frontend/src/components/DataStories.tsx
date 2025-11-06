@@ -306,7 +306,6 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
             <div className="w-full mb-4">
                     <ExportButton storyData={storyData} />
                     <FeedbackButton />
-                    <SubmitButton />
             </div>
 
                 {narrativeSelected ? (

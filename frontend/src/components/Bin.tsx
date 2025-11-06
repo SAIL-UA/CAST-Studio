@@ -139,7 +139,7 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
             {isSuggestedOrderBin ? (
               <p>No suggested order available</p>
             ) : (
-              <p>No Data Insights</p>
+              <p></p>
             )}
           </div>
         </div>

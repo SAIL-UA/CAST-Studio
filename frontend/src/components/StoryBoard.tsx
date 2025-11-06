@@ -437,7 +437,6 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 <GenerateStoryButton setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} />
                 <CraftStoryButton images={workspaceImages} storyLoading={storyLoading} setStoryLoading={setStoryLoading} hasGroups={groupDivs.length > 0} />
                 <FeedbackButton />
-                <SubmitButton />
 
             </div>
             <div id = "story-bin-wrapper" className="flex-1 min-h-0 relative" ref={storyBinRef}>

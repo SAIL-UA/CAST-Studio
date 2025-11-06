@@ -559,7 +559,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         {isOverCard && !canDropCard && cards.length >= 3 && (
           <div className="flex items-center justify-center h-full border-2 border-dashed border-red-400 rounded-lg bg-red-50">
             <div className="text-red-600 text-sm font-medium">
-              Group is full (max 3 cards)
+              Group is full (Max: 3 visuals)
             </div>
           </div>
         )}
@@ -604,8 +604,8 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         ) : !isOverCard && (
           <div className="flex items-center justify-center h-full text-grey-dark text-sm text-center">
             <div>
-              Drag cards here<br/>
-              <span className="text-xs">(max 3 cards)</span>
+              Drag a visual in here.<br/>
+              <span className="text-xs">You can include up to three visuals in a group.</span>
             </div>
           </div>
         )}

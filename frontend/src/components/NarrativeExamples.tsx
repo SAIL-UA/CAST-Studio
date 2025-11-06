@@ -140,7 +140,7 @@ const NarrativeExamples = ({ selectedPattern, setRightNarrativeExamplesOpen }: N
                     "image": Super
                 }
             ]);
-        } else if (selectedPattern === 'IN_PROGRESS_factor_analysis') {
+        } else if (selectedPattern === 'factor_analysis') {
             setContent([]);
         } else if (selectedPattern === 'overview_to_detail') {
             setContent([
@@ -225,7 +225,7 @@ const NarrativeExamples = ({ selectedPattern, setRightNarrativeExamplesOpen }: N
             ]);
         } else if (selectedPattern === 'workflow_process') {
             setContent([]);
-        } else if (selectedPattern === 'IN_PROGRESS_shock_lead') {
+        } else if (selectedPattern === 'shock_lead') {
             setContent([
                 {
                     "title": "Cheaper mortgeaes and car loans",
