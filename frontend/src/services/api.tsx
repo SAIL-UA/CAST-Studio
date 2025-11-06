@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ImageData } from '../types/types';
+import { ImageData, StoryDataRaw } from '../types/types';
 
 // === Create Axios instances ===
 const API = axios.create({
@@ -306,3 +306,7 @@ export const confirmPasswordReset = async(email: string, code: string, newPasswo
   return response;
 };
 
+export const exportStory = async(storyData: StoryDataRaw) => {
+  const response = await API.post('/export/', { storyData }, { responseType: 'blob' })
+  return response;
+};

@@ -7,7 +7,8 @@ from .views import (
     LogActionView, UploadJupyterLogView,
     ExportJupyterLogsView, RequestFeedbackView,
     CreateGroupView, GetGroupView, UpdateGroupView, DeleteGroupView,
-    LogMousePositionView, LogScrollView
+    LogMousePositionView, LogScrollView,
+    ExportStoryView
 )
 
 urlpatterns = [
@@ -42,4 +43,7 @@ urlpatterns = [
     # Jupyter Logs
     path("jupyter/logs/upload/", UploadJupyterLogView.as_view(), name="jupyter-log-upload"),
     path("jupyter/logs/export/", ExportJupyterLogsView.as_view(), name="jupyter-log-export"),
+
+    # Export Story
+    path("export/", ExportStoryView.as_view(), name="export-story"),
 ]

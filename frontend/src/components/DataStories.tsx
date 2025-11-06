@@ -301,7 +301,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 onScroll={handleScroll}
             >
             <div className="w-full mb-4">
-                    <ExportButton />
+                    <ExportButton storyData={storyData} />
                     <FeedbackButton />
                     <SubmitButton />
             </div>

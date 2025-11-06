@@ -3,7 +3,7 @@ import os
 import csv
 import json
 import uuid
-from io import StringIO
+from io import StringIO, BytesIO
 from openai import OpenAI
 from datetime import datetime, timezone
 
@@ -22,6 +22,15 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework.parsers import MultiPartParser, FormParser
+
+# ReportLab exports
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem, Image as RLImage
+from reportlab.lib.utils import ImageReader
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_LEFT
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
 
 # Celery
 from celery.result import AsyncResult
@@ -653,3 +662,217 @@ class RequestFeedbackView(APIView):
       return Response({"status": res.state.lower(), "error": str(res.result)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
       return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ExportStoryView(APIView):
+  permission_classes = [IsAuthenticated]
+  throttle_classes = [BurstRateThrottle]
+
+  def post(self, request):
+    try:
+      payload = (request.data or {}).get('storyData') or {}
+
+      # If no payload provided, attempt to pull latest from NarrativeCache
+      if not payload:
+        cache = NarrativeCache.objects.filter(user=request.user).first()
+        if cache:
+          payload = {
+            "narrative": cache.narrative,
+            "recommended_order": cache.order or [],
+            "categorize_figures_response": None,
+            "theme_response": cache.theme,
+            "sequence_response": cache.sequence_justification,
+          }
+
+      # Build structured sections for rendering
+      sections = []
+      if payload.get('theme_response'):
+        sections.append(("Theme & Objective", str(payload.get('theme_response')).strip()))
+      if payload.get('categorize_figures_response'):
+        sections.append(("Figure Categories", str(payload.get('categorize_figures_response')).strip()))
+      if payload.get('sequence_response'):
+        sections.append(("Sequence Justification", str(payload.get('sequence_response')).strip()))
+      if payload.get('narrative'):
+        sections.append(("Story", str(payload.get('narrative')).strip()))
+      rec = payload.get('recommended_order') or []
+      if isinstance(rec, list) and rec:
+        rec_text = "\n".join([f"- {str(f)}" for f in rec])
+        sections.append(("Recommended Order", rec_text))
+
+      timestamp = now().strftime("%Y%m%dT%H%M%SZ")
+
+      # Compose PDF with platypus
+      buffer = BytesIO()
+      # Consistent margins used both for doc and image sizing
+      margin_left = 0.75 * inch
+      margin_right = 0.75 * inch
+      margin_top = 0.75 * inch
+      margin_bottom = 0.75 * inch
+      page_width, page_height = letter
+      max_content_width = page_width - margin_left - margin_right
+      max_content_height = page_height - margin_top - margin_bottom
+      # Do not constrain figure height; only constrain by available width
+
+      doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        leftMargin=margin_left,
+        rightMargin=margin_right,
+        topMargin=margin_top,
+        bottomMargin=margin_bottom,
+      )
+
+      styles = getSampleStyleSheet()
+      heading_style = ParagraphStyle(
+        name="SectionHeading",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=14,
+        leading=18,
+        spaceBefore=6,
+        spaceAfter=6,
+        textColor=colors.black,
+        alignment=TA_LEFT,
+      )
+      body_style = ParagraphStyle(
+        name="Body",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=11,
+        leading=14,
+        spaceAfter=6,
+      )
+
+      # Minimal markdown to Paragraph markup
+      import re
+      def md_inline_to_html(text: str) -> str:
+        text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        # code
+        text = re.sub(r"`([^`]+)`", r"<font name='Courier'>\1</font>", text)
+        # bold then italics
+        text = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", text)
+        text = re.sub(r"\*([^*]+)\*", r"<i>\1</i>", text)
+        return text
+
+      def md_to_flowables(md_text: str):
+        lines = md_text.splitlines()
+        flow = []
+        list_buffer = []
+
+        def flush_list():
+          nonlocal list_buffer
+          if list_buffer:
+            items = [ListItem(Paragraph(md_inline_to_html(i), body_style)) for i in list_buffer]
+            flow.append(ListFlowable(items, bulletType="bullet", leftIndent=14))
+            list_buffer = []
+
+        # Add images referenced by [FIGURE: filename] inline; replace placeholders with inline <img/>
+        figure_pattern = re.compile(r"\[\s*FIGURE\s*[:：﹕]\s*([^\]]+?)\s*\]", re.IGNORECASE | re.UNICODE)
+        data_path = os.getenv('DATA_PATH')
+        if not data_path:
+          data_path = ''  # Fallback to empty string if not configured
+
+        for raw in lines:
+          line = raw.rstrip()
+          if not line.strip():
+            flush_list()
+            flow.append(Spacer(1, 6))
+            continue
+
+          if line.lstrip().startswith(("- ", "* ")):
+            content = line.lstrip()[2:].strip()
+            # If bullet contains a figure placeholder, treat it as normal content for image handling
+            if figure_pattern.search(content):
+              flush_list()
+              line = content
+            else:
+              list_buffer.append(content)
+              continue
+
+          flush_list()
+
+          # Build block image flowables for each figure and replace placeholders
+          img_flowables = []
+          def build_img_flowable(filename: str):
+            # Images are stored directly in DATA_PATH root, matching upload/delete/nginx serving location
+            figure_path = os.path.join(data_path, filename)
+            if not os.path.exists(figure_path):
+              return None
+            try:
+              ir = ImageReader(figure_path)
+              iw, ih = ir.getSize()
+              if not iw or not ih:
+                return None
+              # Target height: 25% of full page height (not just usable content)
+              target_h = float(page_height) * 0.25
+              # Primary scale by height
+              scale_h = target_h / float(ih)
+              target_w = float(iw) * scale_h
+              # If width would exceed content width, scale down to fit
+              if target_w > float(max_content_width):
+                scale_w = float(max_content_width) / target_w
+                target_w = float(max_content_width)
+                target_h = target_h * scale_w
+              return RLImage(figure_path, width=target_w, height=target_h)
+            except Exception:
+              return None
+
+          # Replace each [FIGURE:...] with a token, then later swap with img tag
+          tokens = []
+          def token_replacer(m):
+            fname = m.group(1).strip()
+            # Remove any zero-width or non-filename characters that may sneak in
+            fname = re.sub(r"[^A-Za-z0-9._-]", "", fname)
+            flowable = build_img_flowable(fname)
+            tokens.append(flowable)
+            return f"[[[FIGIMG_{len(tokens)-1}]]]"  # placeholder token
+
+          tokenized = figure_pattern.sub(token_replacer, line)
+          if tokens:
+            # If there is surrounding text (excluding tokens), render it as its own paragraph
+            import re as _re
+            text_without_tokens = _re.sub(r"\[\[\[FIGIMG_\d+\]\]\]", "", tokenized)
+            if text_without_tokens.strip():
+              flow.append(Paragraph(md_inline_to_html(text_without_tokens), body_style))
+              flow.append(Spacer(1, 6))
+            # Add each image as a block-level element at full content width
+            for fl in tokens:
+              if fl is not None:
+                flow.append(fl)
+                flow.append(Spacer(1, 10))
+          else:
+            # No images on this line; render as normal paragraph
+            flow.append(Paragraph(md_inline_to_html(tokenized), body_style))
+
+        flush_list()
+        return flow
+
+      story = []
+      # Title and metadata
+      story.append(Paragraph("Data Story", ParagraphStyle(
+        name="DocTitle", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=16, leading=20)))
+      story.append(Spacer(1, 6))
+      story.append(Paragraph(f"Exported: {timestamp}", ParagraphStyle(
+        name="Meta", parent=styles["Normal"], fontName="Helvetica", fontSize=9, textColor=colors.grey)))
+      story.append(Spacer(1, 12))
+
+      # Sections
+      for title, content in sections:
+        story.append(Paragraph(title, heading_style))
+        story.extend(md_to_flowables(content))
+        story.append(Spacer(1, 10))
+
+      if not sections:
+        story.append(Paragraph("No story content provided.", body_style))
+
+      doc.build(story)
+
+      pdf_bytes = buffer.getvalue()
+      buffer.close()
+
+      response = FileResponse(BytesIO(pdf_bytes), content_type="application/pdf")
+      response["Content-Disposition"] = f'attachment; filename="data-story-{timestamp}.pdf"'
+      response["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+      response["Access-Control-Allow-Credentials"] = "true"
+      return response
+    except Exception as e:
+      return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

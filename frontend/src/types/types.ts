@@ -101,3 +101,11 @@ export interface GroupMetadata {
   initialPosition: { x: number; y: number };
   cards: ImageData[];
 }
+
+export interface StoryDataRaw {
+  narrative?: string;
+  recommended_order?: string[];
+  categorize_figures_response?: string;
+  theme_response?: string;
+  sequence_response?: string;
+}
