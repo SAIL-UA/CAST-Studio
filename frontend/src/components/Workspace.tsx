@@ -1,21 +1,10 @@
 // Import dependencies
 import { useState } from 'react';
-import { getImageDataAll, updateImageData as updateImageDataAPI } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
-
 
 // Import components
 import StoryBoard from './StoryBoard';
 import RecycleBoard from './Recycle';
-import UploadButton from './UploadButton';
-import GroupButton from './GroupButton';
-import GenerateStoryButton from './GenerateStoryButton';
-import CraftStoryButton from './CraftStoryButton';
-import FeedbackButton from './FeedbackButton';
-import SubmitButton from './SubmitButton';
-
-// Import types
-import { ImageData, GroupData } from '../types/types';
 
 // Define props interface
 type WorkspaceProps = {
