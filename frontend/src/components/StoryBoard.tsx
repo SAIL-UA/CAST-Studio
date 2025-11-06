@@ -1,8 +1,8 @@
 // Import dependencies
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { flushSync } from 'react-dom';
+import React, { useState, useEffect, useRef } from 'react';
 import { getImageDataAll, updateImageData as updateImageDataAPI, createGroup, getGroups, updateGroup, deleteGroup } from '../services/api';
 import { getImageUrl } from '../utils/imageUtils';
+import { logAction } from '../utils/userActionLogger';
 
 // Import components
 import UploadButton from './UploadButton';
@@ -16,7 +16,6 @@ import Bin from './Bin';
 
 // Import types
 import { ImageData, GroupData } from '../types/types';
-import { logAction } from '../utils/userActionLogger';
 
 
 // Define props interface

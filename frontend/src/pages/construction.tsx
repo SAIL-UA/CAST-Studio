@@ -1,5 +1,4 @@
 // Import dependencies
-import React from 'react';
 
 // Import compopnents
 import Header from '../components/Header';

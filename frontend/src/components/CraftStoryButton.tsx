@@ -1,6 +1,5 @@
 // Import dependencies
 import { logAction } from '../utils/userActionLogger';
-import { createPortal } from 'react-dom';
 import { generateDescription, generateNarrativeAsync, getImageDataAll, getNarrativeCache } from '../services/api';
 
 // Import types
