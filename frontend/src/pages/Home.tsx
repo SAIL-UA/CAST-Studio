@@ -116,7 +116,7 @@ const Home = () => {
                     ) : (
                         <>
                             <div className="h-[75vh] mt-10 mb-6 pr-4 pl-4">
-                                <Workspace setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
+                                <Workspace setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
                             </div>
                             <div className="h-[75vh] mt-6 mb-6 pl-4 pr-4">
                                 <DataStories selectedPattern={selectedPattern} />

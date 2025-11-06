@@ -23,6 +23,7 @@ import { logAction } from '../utils/userActionLogger';
 type StoryBoardProps = {
     setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;
+    selectedPattern: string;
     storyLoading: boolean;
     setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -31,7 +32,7 @@ type StoryBoardProps = {
 // (keeping legacy name for now to minimize changes)
 
 // StoryBoard component
-const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLoading, setStoryLoading }: StoryBoardProps) => {
+const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading }: StoryBoardProps) => {
     // State management for images
     const [images, setImages] = useState<ImageData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -433,7 +434,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
             <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start p-2 flex-shrink-0 grid-background">
                 <UploadButton onUploaded={fetchUserData}/>
                 <GroupButton onClick={handleCreateGroup} />
-                <GenerateStoryButton images={workspaceImages} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} hasGroups={groupDivs.length > 0} />
+                <GenerateStoryButton setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} />
+                <CraftStoryButton images={workspaceImages} storyLoading={storyLoading} setStoryLoading={setStoryLoading} hasGroups={groupDivs.length > 0} />
                 <FeedbackButton />
                 <SubmitButton />
 

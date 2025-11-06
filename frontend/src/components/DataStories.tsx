@@ -40,6 +40,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
     const [processedSequence, setProcessedSequence] = useState<string>('');
     const [isProcessingImages, setIsProcessingImages] = useState(false);
     const [processedRecommended, setProcessedRecommended] = useState<string[]>([]);
+    const [processedPattern, setProcessedPattern] = useState<string>('');
 
     // Check for existing cached narrative on component mount
     const loadCachedNarrative = async () => {
@@ -161,6 +162,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 setProcessedCategories('');
                 setProcessedSequence('');
                 setProcessedRecommended([]);
+                setProcessedPattern('');
                 return;
             }
 
@@ -171,17 +173,17 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 const processedThemeTextPromise = processNarrativeWithImages(storyData.theme_response || '');
                 const processedCategoriesTextPromise = processNarrativeWithImages(storyData.categorize_figures_response || '');
                 const processedSequenceTextPromise = processNarrativeWithImages(storyData.sequence_response || '');
-
+                
                 const recommendedList = storyData.recommended_order || [];
                 const processedRecommendedPromises = recommendedList.map((filename) =>
                     processNarrativeWithImages(`[FIGURE: ${filename}]`)
-                );
-
-                const [
-                    processedNarrativeText,
-                    processedThemeText,
-                    processedCategoriesText,
-                    processedSequenceText,
+            );
+            
+            const [
+                processedNarrativeText,
+                processedThemeText,
+                processedCategoriesText,
+                processedSequenceText,
                     processedRecommendedList
                 ] = await Promise.all([
                     processedNarrativeTextPromise,
@@ -190,12 +192,13 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                     processedSequenceTextPromise,
                     Promise.all(processedRecommendedPromises)
                 ]);
-
+                
                 setProcessedNarrative(processedNarrativeText);
                 setProcessedTheme(processedThemeText);
                 setProcessedCategories(processedCategoriesText);
                 setProcessedSequence(processedSequenceText);
                 setProcessedRecommended(processedRecommendedList);
+                setProcessedPattern(selectedPattern || '');
             } catch (error) {
                 console.error('Error processing images:', error);
             } finally {
@@ -309,7 +312,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 {narrativeSelected ? (
                     // Narrative Structuring Content
                     <div className="w-full space-y-6">
-                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structure{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structure{processedPattern ? `: ${processedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
                         
                         {isGenerating ? (
                             <GeneratingPlaceholder contentName="narrative analysis" lines={6} />
@@ -395,7 +398,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 ) : (
                     // Generated Story Content (when storySelected is true)
                     <div className="w-full">
-                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story{selectedPattern ? `: ${selectedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story{processedPattern ? `: ${processedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
                         
                         {isGenerating ? (
                             <GeneratingPlaceholder contentName="data story" lines={8} />
