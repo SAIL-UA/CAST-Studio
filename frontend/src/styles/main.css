@@ -140,6 +140,15 @@ background-color: #eaf1f7;
     font-size: 0.75rem;
   }
 
+  #select-narrative-button{
+    font-size: 0.75rem;
+  }
+
+  #export-button{
+    font-size: 0.75rem;
+  }
+  
+
   #feedback-button{
     font-size: 0.75rem;
   }
