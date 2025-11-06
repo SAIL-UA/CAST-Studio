@@ -1,5 +1,5 @@
 // Import dependencies
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { getImageDataAll, updateImageData as updateImageDataAPI } from '../services/api';
 
 // Import components

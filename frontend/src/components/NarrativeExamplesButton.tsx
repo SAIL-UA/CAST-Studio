@@ -1,5 +1,6 @@
 // Import dependencies
 import { logAction } from '../utils/userActionLogger';
+
 // Import components
 
 // Define props interface

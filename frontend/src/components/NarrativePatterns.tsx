@@ -6,8 +6,6 @@ import NarrativeExamplesButton from './NarrativeExamplesButton';
 import { logAction } from '../utils/userActionLogger';
 
 // Import images
-import Brutus from '../assets/images/brutus.jpg';
-import Casa from '../assets/images/casa.jpg'
 import questionanswer from '../assets/images/questionanswer.png'
 import timeline from '../assets/images/timeline.png'
 import causeeffect from '../assets/images/causeeffect.png'
@@ -15,9 +13,6 @@ import factoranalysis from '../assets/images/factoranalysis.png'
 import overviewdetail from '../assets/images/overviewdetail.png'
 import problemsolution from '../assets/images/problemsolution.png'
 import workflowprocess from '../assets/images/workflow.png'
-import Fresas from '../assets/images/fresas.jpg'
-import Popeye from '../assets/images/popeye.jpg'
-import Super from '../assets/images/super.jpg'
 
 // Define props interface
 type NarrativePatternsProps = {
