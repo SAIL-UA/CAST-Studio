@@ -174,8 +174,9 @@ export const serveImage = async(filename: string) => {
 
     const blob = await response.data;
     return URL.createObjectURL(blob); 
-  } catch (err) {
-    console.error('Failed to fetch image blob:', err);
+  } catch (err: any) {
+    // Only log error messages, not stack traces
+    console.error('Image serving error:', err.message);
     return ''; 
   }
 };

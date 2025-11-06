@@ -1,6 +1,6 @@
 // Import dependencies
 import { useState, useEffect } from 'react';
-import { getImageDataAll, updateImageData as updateImageDataAPI, serveImage } from '../services/api';
+import { getImageDataAll, updateImageData as updateImageDataAPI } from '../services/api';
 
 
 // Import components
@@ -36,31 +36,20 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLoa
     const fetchUserData = async () => {
         try {
             const response: any = await getImageDataAll();
+            console.log('Response length:', response.data.images.length);
             if (!response?.data?.images || response.data.images.length === 0) {
                 setImages([]);
                 return;
             }
 
+            // Backend now filters out orphaned records, so all returned images are valid
             const fetchedImages: ImageData[] = response.data.images.map((img: any) => ({
                 ...img,
                 x: img.in_storyboard ? img.x : 0,
                 y: img.in_storyboard ? img.y : 0,
             }));
 
-            // Validate each image actually exists on backend; drop missing
-            const validationResults = await Promise.all(
-                fetchedImages.map(async (img) => {
-                    try {
-                        const url = await serveImage(img.filepath);
-                        return url ? img : null;
-                    } catch {
-                        return null;
-                    }
-                })
-            );
-
-            const validImages = validationResults.filter((v): v is ImageData => v !== null);
-            setImages(validImages);
+            setImages(fetchedImages);
         } catch (error) {
             console.error('Error fetching user data:', error);
             setImages([]);

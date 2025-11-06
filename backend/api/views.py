@@ -141,16 +141,38 @@ class ImageDataView(APIView):
   def get(self, request):
     image_id = request.query_params.get("image_id")
     if image_id: # single image
-      image_data = ImageData.objects.get(id=image_id)
+      try:
+        image_data = ImageData.objects.get(id=image_id, user=request.user)
+        # Check if file exists for single image
+        user_folder = os.path.join(os.getenv('DATA_PATH'), request.user.username, "workspace", "cache")
+        filepath = os.path.join(user_folder, image_data.filepath)
+        if not os.path.exists(filepath):
+          return Response({"message": "Image file not found"}, status=status.HTTP_404_NOT_FOUND)
+        serialized_image_data = ImageDataSerializer(image_data, many=False)
+        return Response({"images": serialized_image_data.data}, status=status.HTTP_200_OK)
+      except ImageData.DoesNotExist:
+        return Response({"message": "Image data not found"}, status=status.HTTP_404_NOT_FOUND)
     else: # all images
       image_data = ImageData.objects.filter(user=request.user)
-    
-    if not image_data:
-      return Response({"message": "No image data found"}, status=status.HTTP_204_NO_CONTENT)
       
-    serialized_image_data = ImageDataSerializer(image_data, many=False if image_id else True)
-    
-    return Response({"images": serialized_image_data.data}, status=status.HTTP_200_OK)
+      # Filter out images where files don't exist
+      user_folder = os.path.join(os.getenv('DATA_PATH'), request.user.username, "workspace", "cache")
+      valid_images = []
+      
+      for img in image_data:
+        filepath = os.path.join(user_folder, img.filepath)
+        if os.path.exists(filepath):
+          valid_images.append(img)
+        # Optionally: delete orphaned DB records automatically
+        else:
+          img.delete()
+      
+      if not valid_images:
+        return Response({"message": "No image data found"}, status=status.HTTP_204_NO_CONTENT)
+        
+      serialized_image_data = ImageDataSerializer(valid_images, many=True)
+      
+      return Response({"images": serialized_image_data.data}, status=status.HTTP_200_OK)
   
   
 class UploadFigureView(APIView):
