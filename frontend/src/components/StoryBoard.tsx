@@ -157,9 +157,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         await fetchGroups(); // Refresh groups
 
         // Temporary force re-render until refactor for centralized workspace state management is complete
-        setTimeout(() => {
-            window.location.reload();
-        }, 500);
+        // setTimeout(() => {
+        //     window.location.reload();
+        // }, 500);
     };
 
     // Handle image trash
