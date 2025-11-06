@@ -275,7 +275,6 @@ export const logUserAction = async(actionType: string, elementId: string, state_
   });
   return response.data;
 }
->>>>>>> fee5805 (feat: Implement user action logging across various components)
 
 // Password reset endpoints
 export const requestPasswordReset = async(email: string) => {

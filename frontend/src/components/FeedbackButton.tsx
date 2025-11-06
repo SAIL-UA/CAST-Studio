@@ -1,12 +1,12 @@
 // Import dependencies
 import { requestFeedback, requestFeedbackStatus } from '../services/api';
-import { logAction } from '../utils/userActionLogger';
+import { logAction, captureActionContext } from '../utils/userActionLogger';
 
 type FeedbackItem = { title: string; text: string };
 
 const FeedbackButton = () => {
     const handleFeedback = async (e: React.MouseEvent) => {
-        logAction(e);
+        const ctx = captureActionContext(e);
         try {
             // Start background task
             const startResp = await requestFeedback({});
@@ -49,6 +49,7 @@ const FeedbackButton = () => {
                     },
                 });
                 window.dispatchEvent(event);
+                logAction(ctx, { "feedback_items": items })
             }
         } catch (err) {
             // Silent failure for now; optionally surface a toast later
