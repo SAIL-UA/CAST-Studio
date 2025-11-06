@@ -1,6 +1,7 @@
 // Import dependencies
 import React, { useRef, useState } from 'react';
 import { uploadFigure } from '../services/api';
+import { logAction } from '../utils/userActionLogger';
 
 type UploadButtonProps = {
     onUploaded?: () => void | Promise<void>;
@@ -39,7 +40,7 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
     }
 
     // Handle actual upload on submit
-    const handleSubmit = async () => {
+    const handleSubmit = async (e: React.MouseEvent) => {
         if (selectedFiles.length === 0) {
             window.alert('Please select at least one file first');
             return;
@@ -58,7 +59,9 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
             formData.append('source', source);
 
             try {
-                await uploadFigure(formData);
+                const figResponse = await uploadFigure(formData);
+                console.log(figResponse);
+                logAction(e, { "image_data": figResponse?.fig_data || "No figure data returned from uploadFigure" });
                 successCount++;
             } catch (err: any) {
                 console.error('upload error', err?.response?.status, err?.response?.data || err);
@@ -129,6 +132,7 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
                     >{selectedFiles.length > 0 ? 'Add More Files' : 'Select Files'}</button>
                     {selectedFiles.length > 0 && (
                         <button
+                            log-id="upload-button"
                             className="bg-bama-crimson text-sm text-white rounded px-3 py-1"
                             onClick={handleSubmit}
                         >Upload</button>

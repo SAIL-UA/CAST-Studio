@@ -1,5 +1,6 @@
 // Import dependencies
 import { useState, useRef } from 'react';
+import { logAction } from '../utils/userActionLogger';
 
 // Props interface
 type GenerateStoryButtonProps = {
@@ -20,15 +21,18 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
     const AITimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Handle generate story
-    const handleAIStoryGeneration = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    const handleAIStoryGeneration = async (e: React.MouseEvent) => {
         setAIOpen(false);
         setSelectedPattern('AI Assistance');
+        logAction(e, { "narrative_pattern": 'AI Assistance' });
     }
 
     // Handle select manually
-    const handleSelectManually = () => {
+    const handleSelectManually = (e: React.MouseEvent) => {
         setAIOpen(false);
         setRightNarrativePatternsOpen(true);
+        // The logging logic in SelectNarrativeButton.tsx should already capture manually selected narratives
+        // logAction(e, { "narrative_pattern": selectedPattern });
     }
 
     // Handle mouse enter with delay
@@ -89,6 +93,7 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
                     onMouseLeave={handleAILeave}
                 >
                     <button 
+                        log-id="select-narrative-button"
                         className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleAIStoryGeneration}
                         disabled={storyLoading}

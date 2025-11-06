@@ -1,5 +1,5 @@
 // Import dependencies
-import { logAction } from '../utils/userActionLogger';
+import { captureActionContext, logAction } from '../utils/userActionLogger';
 import { generateDescription, generateNarrativeAsync, getImageDataAll, getNarrativeCache } from '../services/api';
 
 // Import types
@@ -64,8 +64,8 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
 
 
     // Handle upload
-    const handleCraft = async (e: React.MouseEvent<HTMLButtonElement>) => {
-        logAction(e);
+    const handleCraft = async (e: React.MouseEvent) => {
+        const ctx = captureActionContext(e);
         
         // Generate story with selected pattern
         setStoryLoading(true);
@@ -152,6 +152,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                                 
                                 console.log('New story generated successfully');
                                 setStoryLoading(false);
+                                logAction(ctx, { "story_data": cacheData })
                                 return;
                             }
                         } catch (error) {

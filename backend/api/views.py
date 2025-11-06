@@ -19,8 +19,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.throttling import UserRateThrottle
-from rest_framework_simplejwt.serializers import TokenRefreshSerializer
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework.parsers import MultiPartParser, FormParser
 
 # ReportLab exports
@@ -288,7 +286,9 @@ class UploadFigureView(APIView):
 
     if serializer.is_valid():
       serializer.save()
-      return Response({"message": "Figure uploaded successfully"}, status=status.HTTP_200_OK)
+      fig_data = serializer.validated_data
+      fig_data['user'] = request.user.id
+      return Response({"message": "Figure uploaded successfully", "fig_data": fig_data }, status=status.HTTP_200_OK)
     else:
       return Response({"message": f"Figure upload failed: {serializer.errors}"}, status=status.HTTP_400_BAD_REQUEST)
 

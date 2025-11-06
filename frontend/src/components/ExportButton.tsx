@@ -1,6 +1,7 @@
 // Import dependencies
 import { useState, useRef } from 'react';
 import { exportStory } from '../services/api';
+import { logAction, captureActionContext } from '../utils/userActionLogger';
 
 // Import types
 import { StoryDataRaw } from '../types/types';
@@ -21,8 +22,9 @@ const ExportButton = ({ storyData }: ExportButtonProps) => {
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Handle export
-    const handleExport = async () => {
+    const handleExport = async (e: React.MouseEvent) => {
         try {
+            const ctx = captureActionContext(e);
             const resp = await exportStory((storyData || {}) as StoryDataRaw);
             console.log(storyData);
             const blob = new Blob([resp.data], { type: resp.headers['content-type'] || 'application/pdf' });
@@ -36,6 +38,7 @@ const ExportButton = ({ storyData }: ExportButtonProps) => {
             a.click();
             a.remove();
             URL.revokeObjectURL(url);
+            logAction(ctx, { "story_data": storyData });
         }
         catch (error) {
             console.error('Error exporting story:', error);
@@ -88,8 +91,9 @@ const ExportButton = ({ storyData }: ExportButtonProps) => {
                     onMouseLeave={handleExportLeave}
                 >
                     <button
+                        log-id="export-pdf-button"
                         className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-                        onClick={() => handleExport()}
+                        onClick={(e) => handleExport(e)}
                     >
                         PDF
                     </button>
