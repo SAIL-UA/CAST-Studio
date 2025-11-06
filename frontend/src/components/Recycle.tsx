@@ -79,8 +79,12 @@ const Trash = () => {
     };
 
     // Handle image deletion
-    const handleDelete = () => {
-        fetchUserData(); // Refresh data after deletion
+    const handleDelete = async () => {
+        await fetchUserData(); // Refresh data after deletion
+        // Temporary force re-render until refactor for centralized workspace state management is complete
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
     };
 
     // Handle image trash

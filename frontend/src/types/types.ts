@@ -45,7 +45,7 @@ export interface BinProps {
   images: ImageData[];
   updateImageData: (imageId: string, data: Partial<ImageData>) => void;
   onDescriptionsUpdate: (id: string, newShortDesc: string, newLongDesc: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => void | Promise<void>;
   onTrash: (id: string) => void;
   onUnTrash: (id: string) => void;
   isSuggestedOrderBin?: boolean;
@@ -55,7 +55,7 @@ export interface DraggableCardProps {
   image: ImageData;
   index: number;
   onDescriptionsUpdate: (id: string, newShortDesc: string, newLongDesc: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => void | Promise<void>;
   onTrash: (id: string) => void;
   onUnTrash: (id: string) => void;
   draggable?: boolean;

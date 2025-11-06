@@ -148,7 +148,13 @@ export const getImageDataAll = async() => {
 };
 
 export const uploadFigure = async(formData: FormData) => {
-  const response = await API.post('/images/upload/', formData)
+  // Pass FormData through unchanged; let the browser set multipart boundary
+  const response = await API.post('/images/upload/', formData, {
+    transformRequest: [(data) => data],
+    headers: {
+      // Intentionally leave 'Content-Type' undefined so axios sets the boundary
+    },
+  });
   return response.data;
 };
 

@@ -1,6 +1,6 @@
 // Import dependencies
-import React, { useState, useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { getImageDataAll, updateImageData as updateImageDataAPI, createGroup, getGroups, updateGroup, deleteGroup } from '../services/api';
 import { getImageUrl } from '../utils/imageUtils';
 
@@ -35,7 +35,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
     // State management for images
     const [images, setImages] = useState<ImageData[]>([]);
     const [loading, setLoading] = useState(true);
-    
+
     // State for multiple group divs - now using GroupData
     const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
     const [nextGroupNumber, setNextGroupNumber] = useState(1);
@@ -152,8 +152,14 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
     };
 
     // Handle image deletion
-    const handleDelete = (imageId: string) => {
-        fetchUserData(); // Refresh data after deletion
+    const handleDelete = async (imageId: string) => {
+        await fetchUserData(); // Refresh data after deletion
+        await fetchGroups(); // Refresh groups
+
+        // Temporary force re-render until refactor for centralized workspace state management is complete
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
     };
 
     // Handle image trash
@@ -425,7 +431,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, storyLo
     return (
         <div id="story-board-container" className="flex flex-col h-full w-full bg-white">
             <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start p-2 flex-shrink-0 grid-background">
-                <UploadButton />
+                <UploadButton onUploaded={fetchUserData}/>
                 <GroupButton onClick={handleCreateGroup} />
                 <GenerateStoryButton images={workspaceImages} setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} hasGroups={groupDivs.length > 0} />
                 <FeedbackButton />

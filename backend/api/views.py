@@ -1,3 +1,4 @@
+# General utilities
 import os
 import csv
 import json
@@ -6,11 +7,13 @@ from io import StringIO
 from openai import OpenAI
 from datetime import datetime, timezone
 
+# Django
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import FileResponse, StreamingHttpResponse
 from django.utils.timezone import now
 from django.utils._os import safe_join
 
+# REST Framework
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -18,20 +21,27 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.throttling import UserRateThrottle
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from rest_framework.parsers import MultiPartParser, FormParser
 
+# Celery
 from celery.result import AsyncResult
 from config.celery import app as celery_app
 
+# Models
 from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
   JupyterLog, MousePositionLog, ScrollLog, GroupData
 )
+
+# Serializers
 from .serializers import (
   ImageDataSerializer, NarrativeCacheSerializer,
   JupyterLogsSerializer, MousePositionLogSerializer,
   UserActionSerializer, ScrollLogSerializer, GroupDataSerializer
 )
+
+# Tasks
 from .tasks import generate_description_task, generate_narrative_task, generate_feedback_task
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -224,16 +234,25 @@ class ImageDataView(APIView):
   
 class UploadFigureView(APIView):
   permission_classes = [IsAuthenticated]
+  parser_classes = [MultiPartParser, FormParser]
   def post(self, request):
     
     figure = request.FILES.get('figure')
     if not figure:
       return Response({"message": "No file part in the request"}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Build file path - save directly to DATA_PATH root to match nginx serving location
+    data_path = os.getenv('DATA_PATH')
+    if not data_path:
+      return Response({"message": "DATA_PATH not configured"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    # Ensure DATA_PATH directory exists
+    os.makedirs(data_path, exist_ok=True)
+
     # Build file path
     figure_id = str(uuid.uuid4())
     ext = os.path.splitext(figure.name)[1]
-    figure_path = os.path.join(os.getenv('DATA_PATH'), f"{figure_id}{ext}")
+    figure_path = os.path.join(data_path, f"{figure_id}{ext}")
 
     # Save file
     with open(figure_path, 'wb+') as destination:
@@ -246,9 +265,9 @@ class UploadFigureView(APIView):
       "id": figure_id,
       "user": request.user.id,
       "filepath": f"{figure_id}{ext}",
-      "short_desc": request.data.get('short_desc'),
+      "short_desc": request.data.get('short_desc') or "",
       "long_desc": request.data.get('long_desc') or "Placeholder long description.",
-      "source": request.data.get('source'),
+      "source": request.data.get('source') or "",
       "in_storyboard": True,
       "x": 0,
       "y": 0,
@@ -263,34 +282,73 @@ class UploadFigureView(APIView):
       return Response({"message": "Figure uploaded successfully"}, status=status.HTTP_200_OK)
     else:
       return Response({"message": f"Figure upload failed: {serializer.errors}"}, status=status.HTTP_400_BAD_REQUEST)
-  
+
+
 class DeleteFigureView(APIView):
   permission_classes = [IsAuthenticated]
-  def post(self, request):
+  def post(self, request, **kwargs):
     """
-    Expects JSON body with { "filename": "<image_filename>" }
-    Deletes the file and its corresponding JSON.
+    Deletes the file and its corresponding DB record.
+    Filename is taken from the URL pattern.
     """
-    filename = request.data.get('filename')
-
+    filename = kwargs.get('filename')
     if not filename:
       return Response({"message": "No filename provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-    data_path = request.session.get('DATA_PATH')
-    file_path = os.path.join(data_path, filename)
-    base_name, ext = os.path.splitext(filename)
-    
+    # Build file path - use DATA_PATH root to match upload location and nginx serving
+    data_path = os.getenv('DATA_PATH')
+    if not data_path:
+      return Response({"message": "DATA_PATH not configured"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    try:
+      filepath = safe_join(data_path, filename)
+    except ValueError:
+      return Response({"message": "Invalid filename"}, status=status.HTTP_400_BAD_REQUEST)
+
+    base_name, _ = os.path.splitext(filename)
+
+    # Try to find the image record - first by ID (as UUID), then by filepath as fallback
+    image_data = None
+    try:
+      # Convert base_name string to UUID object for database lookup
+      image_id = uuid.UUID(base_name)
+      image_data = ImageData.objects.get(id=image_id, user=request.user)
+    except (ValueError, ImageData.DoesNotExist):
+      # If UUID conversion fails or not found by ID, try filepath lookup
+      try:
+        image_data = ImageData.objects.get(filepath=filename, user=request.user)
+      except ImageData.DoesNotExist:
+        # Check if it exists for another user (security check)
+        other_user_image = ImageData.objects.filter(filepath=filename).exclude(user=request.user).first()
+        if other_user_image:
+          return Response({"status": "error", "message": "Image belongs to another user"}, status=status.HTTP_403_FORBIDDEN)
+
     # Remove image file if it exists
-    if os.path.exists(file_path):
-      os.remove(file_path)
+    file_deleted = False
+    if os.path.exists(filepath):
+      try:
+        os.remove(filepath)
+        file_deleted = True
+      except Exception as e:
+        return Response({"status": "error", "message": f"Failed to delete file: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    else:
+      # Log warning but don't fail - file might have been manually deleted
+      print(f"Warning: File not found at {filepath}")
 
-
-    image_data = ImageData.objects.get(id=base_name)
+    # Remove DB record if it exists
     if image_data:
-      image_data.delete()
+      try:
+        image_data.delete()
+        return Response({"status": "success", "message": "Figure deleted successfully", "deleted_id": str(image_data.id), "deleted_filename": filename}, status=status.HTTP_200_OK)
+      except Exception as e:
+        return Response({"status": "error", "message": f"Failed to delete database record: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    else:
+      # If file was deleted but DB record doesn't exist, that's okay
+      if file_deleted:
+        return Response({"status": "success", "message": "File deleted but database record not found", "deleted_filename": filename}, status=status.HTTP_200_OK)
+      else:
+        return Response({"status": "error", "message": f"Image record not found for filename: {filename} (base_name: {base_name})"}, status=status.HTTP_404_NOT_FOUND)
 
-    return Response({"message": "Figure deleted successfully"}, status=status.HTTP_200_OK)
-    
 class UpdateImageDataView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request, image_id=None):

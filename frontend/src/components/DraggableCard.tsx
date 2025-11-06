@@ -190,7 +190,9 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     try {
       const res = await deleteFigure(image.filepath);
       if (res.status === 'success') {
-        if (onDelete) onDelete(image.id);
+        if (onDelete) {
+          await onDelete(image.id);
+        }
         setShowModal(false);
         document.body.style.overflow = 'auto';
       } else {
