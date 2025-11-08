@@ -1,6 +1,7 @@
 // Import dependencies
 import React, { useRef, useState } from 'react';
 import { uploadFigure } from '../services/api';
+import { logAction } from '../utils/userActionLogger';
 
 type UploadButtonProps = {
     onUploaded?: () => void | Promise<void>;
@@ -39,7 +40,7 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
     }
 
     // Handle actual upload on submit
-    const handleSubmit = async () => {
+    const handleSubmit = async (e: React.MouseEvent) => {
         if (selectedFiles.length === 0) {
             window.alert('Please select at least one file first');
             return;
@@ -58,7 +59,9 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
             formData.append('source', source);
 
             try {
-                await uploadFigure(formData);
+                const figResponse = await uploadFigure(formData);
+                console.log(figResponse);
+                logAction(e, { "image_data": figResponse?.fig_data || "No figure data returned from uploadFigure" });
                 successCount++;
             } catch (err: any) {
                 console.error('upload error', err?.response?.status, err?.response?.data || err);
@@ -93,7 +96,7 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
     return (
         <>
         {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50" onClick={handleCancel} />
             <div className="relative bg-white rounded-lg shadow-xl p-4 w-[360px] max-w-[90vw]">
                 <div className="mb-3">
@@ -129,6 +132,7 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
                     >{selectedFiles.length > 0 ? 'Add More Files' : 'Select Files'}</button>
                     {selectedFiles.length > 0 && (
                         <button
+                            log-id="upload-button"
                             className="bg-bama-crimson text-sm text-white rounded px-3 py-1"
                             onClick={handleSubmit}
                         >Upload</button>

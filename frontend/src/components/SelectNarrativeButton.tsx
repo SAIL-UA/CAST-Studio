@@ -18,11 +18,12 @@ const SelectNarrativeButton = ({ setSelectedPattern, value, setStoryLoading }: S
     // Handle button click
     const handleSelectNarrative = async (e: React.MouseEvent, value: string) => {
         setSelectedPattern(value);
+        logAction(e, { "narrative_pattern": value });
     }
 
     return (
         <button
-        log-id={`select-narrative-button`}
+        log-id="select-narrative-button"
         className='bg-white rounded-full mt-2 px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200'
         onClick={(e) => handleSelectNarrative(e, value)}
         >
