@@ -186,6 +186,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
         <button id="upload-button"
         log-id="craft-story-button"
         className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{backgroundColor: "#348b94"}}
         onClick={handleCraft}
         disabled={storyLoading}>
         {storyLoading ? 'Generating...' : 'Generate Story'}

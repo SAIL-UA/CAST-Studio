@@ -10,7 +10,6 @@ import { scrollTracker } from '../utils/scrollTracker';
 // Import components
 import ExportButton from './ExportButton';
 import FeedbackButton from './FeedbackButton';
-import SubmitButton from './SubmitButton';
 
 
 // Story data interface
@@ -279,20 +278,22 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 </div>
                 <div id="data-stories-header-right" className="flex w-1/2 h-full items-end justify-end text-sm">
                     
-                    <button id="narrative-button"
-                    log-id="data-stories-narrative-button"
-                    className={`underline-animate ${narrativeSelected ? 'active' : ''} mx-3`}
-                    onClick={handleNarrative}
-                    >
-                    Narrative
-                    </button>
-
                     <button id="story-button"
                     log-id="data-stories-story-button"
                     className={`underline-animate ${storySelected ? 'active' : ''} mx-3`}
                     onClick={handleStory}>
                     Story
                     </button>
+
+                    <button id="narrative-button"
+                    log-id="data-stories-narrative-button"
+                    className={`underline-animate ${narrativeSelected ? 'active' : ''} mx-3`}
+                    onClick={handleNarrative}
+                    >
+                    Reasoning
+                    </button>
+
+
                 </div>
             </div>
 

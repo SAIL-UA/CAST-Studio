@@ -602,10 +602,9 @@ const GroupDiv: React.FC<GroupDivProps> = ({
             ))}
           </div>
         ) : !isOverCard && (
-          <div className="flex items-center justify-center h-full text-grey-dark text-sm text-center">
+          <div className="flex items-top justify-top h-full text-grey-dark text-sm text-top">
             <div>
-              Drag a visual in here.<br/>
-              <span className="text-xs">You can include up to three visuals in a group.</span>
+              <span className="text-xs">Drag a visual in here to begin. <br/>You can include up to three visuals in a group.</span>
             </div>
           </div>
         )}
