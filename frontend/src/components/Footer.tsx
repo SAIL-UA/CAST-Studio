@@ -34,8 +34,7 @@ const Footer = () => {
                         </span>
                     </li>
                     <li className="cursor-pointer hover:font-roboto-semibold"
-                    log-id="footer-nsf-ritel-home-link"
-                    onClick={handleDropdownSelection}>
+                    log-id="footer-nsf-ritel-home-link">
                         <span className="flex items-center justify-start">
                             <img src={home} alt="JupyterHub" className="w-4 h-4 mr-2" />
                             <a href="https://www.nsf.gov/funding/opportunities/ritel-research-innovative-technologies-enhanced-learning" target="_blank">Visit NSF RITEL Home</a>

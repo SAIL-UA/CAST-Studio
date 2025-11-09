@@ -79,23 +79,35 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                         onClick={(e) => {
                             logAction(e);
                             setCenterNarrativePatternsOpen(false);
-                            navigate(`/Tutorials`);
+                            navigate(`/tutorials`);
                         }}>
                         Gather Data Visualizations
                         </li>
                         <li log-id="nav-dropdown-tutorial-create-data-insights"
                         className="cursor-pointer hover:text-indigo-dark"
-                        onClick={handleDropdownSelection}>
+                        onClick={(e) => {
+                            logAction(e);
+                            setCenterNarrativePatternsOpen(false);
+                            navigate(`/tutorials`);
+                        }}>
                         Create Data Insights
                         </li>
                         <li log-id="nav-dropdown-tutorial-generate-narrative-structure"
                         className="cursor-pointer hover:text-indigo-dark"
-                        onClick={handleDropdownSelection}>
+                        onClick={(e) => {
+                            logAction(e);
+                            setCenterNarrativePatternsOpen(false);
+                            navigate(`/tutorials`);
+                        }}>
                         Generate Narrative Structure
                         </li>
                         <li log-id="nav-dropdown-tutorial-generate-data-story"
                         className="cursor-pointer hover:text-indigo-dark"
-                        onClick={handleDropdownSelection}>Generate Data Story</li>
+                        onClick={(e) => {
+                            logAction(e);
+                            setCenterNarrativePatternsOpen(false);
+                            navigate(`/tutorials`);
+                        }}>Generate Data Story</li>
                     </ul>
 
                 <li log-id="nav-dropdown-browse-narrative-patterns-button"
