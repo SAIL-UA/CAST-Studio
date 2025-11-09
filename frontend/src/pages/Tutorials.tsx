@@ -91,7 +91,7 @@ const Tutorials = () => {
             You can also upload visuals directly from your computer by clicking 'Upload Visuals' in the StoryStudio Workspace.            
             </p>
           </div>
-          <br />
+          
           <h2 className="text-lg font-bold">1.2 Create Data Insights</h2>
           <div className="rounded-lg p-8 md:p-12">
             <p className="text-lg text-grey-darkest leading-relaxed">
@@ -136,7 +136,7 @@ const Tutorials = () => {
             </p>
           </div>
 
-          <br />
+          
           <h2 className="text-lg font-bold">1.3 Craft Narratives</h2>
           <div className="rounded-lg p-8 md:p-12">
             <p className="text-lg text-grey-darkest leading-relaxed">
@@ -161,7 +161,7 @@ const Tutorials = () => {
             </p>
           </div>
 
-          <br />
+          
           <h2 className="text-lg font-bold">1.4 Create Data Stories</h2>
           <div className="rounded-lg p-8 md:p-12">
             <p className="text-lg text-grey-darkest leading-relaxed">
