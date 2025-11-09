@@ -501,14 +501,14 @@ const GroupDiv: React.FC<GroupDivProps> = ({
             onChange={(e) => setTempName(e.target.value)}
             onBlur={handleNameSave}
             // onKeyPress={(e) => e.key === 'Enter' && handleNameSave(e)}
-            className="text-sm font-bold bg-transparent border-b border-white text-white placeholder-white placeholder-opacity-70 outline-none"
+            className="text-xs font-bold bg-transparent border-b border-white text-white placeholder-white placeholder-opacity-70 outline-none"
             placeholder="Group name"
             autoFocus
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
           <h4
-            className="text-sm font-bold cursor-pointer hover:underline"
+            className="text-xs font-bold cursor-pointer hover:underline"
             onClick={(e) => {
               e.stopPropagation();
               setEditingName(true);

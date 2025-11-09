@@ -12,6 +12,7 @@ import { mouseTracker } from './utils/mouseTracker';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Construction from './pages/construction';
+import Tutorials from './pages/Tutorials'
 import ForgotPassword from './pages/ForgotPassword';
 import VerifyResetCode from './pages/VerifyResetCode';
 import ResetPassword from './pages/ResetPassword';
@@ -48,6 +49,7 @@ function App() {
                 <Route path='/verify-reset-code' element={<VerifyResetCode />} />
                 <Route path='/reset-password' element={<ResetPassword />} />
                 <Route path='/construction' element={<Construction />} />
+                <Route path='/tutorials' element={<Tutorials />}/>
             </Routes>
       </div>
     </Router>

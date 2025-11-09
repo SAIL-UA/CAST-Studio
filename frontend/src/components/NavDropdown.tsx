@@ -76,7 +76,11 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                     >
                         <li log-id="nav-dropdown-tutorial-gather-data-source"
                         className="cursor-pointer hover:text-indigo-dark"
-                        onClick={handleDropdownSelection}>
+                        onClick={(e) => {
+                            logAction(e);
+                            setCenterNarrativePatternsOpen(false);
+                            navigate(`/Tutorials`);
+                        }}>
                         Gather Data Visualizations
                         </li>
                         <li log-id="nav-dropdown-tutorial-create-data-insights"
