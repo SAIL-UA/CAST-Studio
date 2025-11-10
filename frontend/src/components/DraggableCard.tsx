@@ -345,79 +345,12 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
 
       {/* Modal for editing - rendered as portal to escape container constraints */}
       {showModal && ReactDOM.createPortal(
+        
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-              {/* Modal Header */}
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Editing: {image.id}</h2>
-                <button
-                  log-id="close-figure-edit-modal-button"
-                  onClick={(e) => {
-                    logAction(e, { image_metadata: imageMetadataRef.current });
-                    setShowModal(false);
-                    document.body.style.overflow = 'auto';
-                  }}
-                  className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full p-2 transition-all duration-150"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Image Display */}
-              <div className="text-center mb-4">
-                <img
-                  src={imageUrl}
-                  alt={image.id}
-                  className="max-w-full h-auto mx-auto rounded-lg"
-                />
-              </div>
-
-              {/* Form Fields */}
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="shortDesc" className="block text-sm font-medium text-grey-darkest mb-2">
-                    Short Description
-                  </label>
-                  <textarea
-                    id="shortDesc"
-                    rows={2}
-                    value={tempShortDesc}
-                    onChange={(e) => setTempShortDesc(e.target.value)}
-                    className="w-full px-3 py-2 border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="longDesc" className="block text-sm font-medium text-grey-darkest mb-2">
-                    Long Description
-                  </label>
-                  {loadingGenDesc ? <GeneratingPlaceholder contentName="description" lines={5} /> : (
-                  <textarea
-                    id="longDesc"
-                    rows={5}
-                    value={tempLongDesc}
-                    onChange={(e) => setTempLongDesc(e.target.value)}
-                    className="w-full px-3 py-2 border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  )}
-                </div>
-              </div>
-
-              {/* Generate Description Button */}
-              <div className="mt-4 text-center">
-                <button log-id="generate-description-button"
-                  onClick={handleGenerateDescription}
-                  disabled={loadingGenDesc}
-                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
-                >
-                  {loadingGenDesc ? 'Generating...' : 'Generate Description'}
-                </button>
-              </div>
 
               {/* Modal Footer */}
-              <div className="flex flex-col min-lg:flex-row items-center justify-center min-lg:justify-between mt-6 gap-4">
+              <div className="flex flex-col min-lg:flex-row items-center justify-center min-lg:justify-between gap-4">
                 {/* Storyboard action button */}
                 {image.in_storyboard ? (
                   <button log-id="move-figure-to-recycle-bin-button"
@@ -451,6 +384,79 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
                   Save & Close
                 </button>
               </div>
+
+
+              <br/>
+              {/* Modal Header */}
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Editing: {image.id}</h2>
+                <button
+                  log-id="close-figure-edit-modal-button"
+                  onClick={(e) => {
+                    logAction(e, { image_metadata: imageMetadataRef.current });
+                    setShowModal(false);
+                    document.body.style.overflow = 'auto';
+                  }}
+                  className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full p-2 transition-all duration-150"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Image Display */}
+              <div className="text-center mb-4">
+                <img
+                  src={imageUrl}
+                  alt={image.id}
+                  className="w-4/5 h-auto mx-auto rounded-lg"
+                />
+              </div>
+
+              {/* Form Fields */}
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="shortDesc" className="block text-sm font-medium text-grey-darkest mb-2">
+                    Short Description
+                  </label>
+                  <textarea
+                    id="shortDesc"
+                    rows={2}
+                    value={tempShortDesc}
+                    onChange={(e) => setTempShortDesc(e.target.value)}
+                    className="w-full px-3 py-2 border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="longDesc" className="block text-sm font-medium text-grey-darkest mb-2">
+                    Long Description
+                  </label>
+                  {loadingGenDesc ? <GeneratingPlaceholder contentName="description" lines={5} /> : (
+                  <textarea
+                    id="longDesc"
+                    rows={4}
+                    value={tempLongDesc}
+                    onChange={(e) => setTempLongDesc(e.target.value)}
+                    className="w-full px-3 py-2 border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  )}
+                </div>
+              </div>
+
+              {/* Generate Description Button */}
+              <div className="mt-4 text-center">
+                <button log-id="generate-description-button"
+                  onClick={handleGenerateDescription}
+                  disabled={loadingGenDesc}
+                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
+                >
+                  {loadingGenDesc ? 'Generating...' : 'Generate Description'}
+                </button>
+              </div>
+
+
             </div>
           </div>,
         document.body
