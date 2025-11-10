@@ -24,6 +24,7 @@ import gs42 from '../assets/images/gs4_2.png';
 import gs43 from '../assets/images/gs4_3.png';
 
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom'
 
 // Import compopnents
 import Header from '../components/Header';
@@ -35,8 +36,19 @@ import NavDropdown from '../components/NavDropdown';
 const Tutorials = () => {
 
 //States
-  const [centerNarrativePatternsOpen, setCenterNarrativePatternsOpen] = useState(true);
+  const [centerNarrativePatternsOpen, setCenterNarrativePatternsOpen] = useState(false);
   const [rightNarrativePatternsOpen, setRightNarrativePatternsOpen] = useState(false);
+
+  const scroll_location = useLocation();
+
+  useEffect(() => {
+    if (scroll_location.state && scroll_location.state.targetId) {
+      const element = document.getElementById(scroll_location.state.targetId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [scroll_location.state]); // Re-run if location.state changes
 
 // Visible Component
   return (
@@ -59,7 +71,7 @@ const Tutorials = () => {
       <div id="middle-home" className="w-4/5 max-xl:w-full px-4 flex flex-col border-l border-1 border-grey-light">
         <div className="w-full min-h-screen p-4">
           <br />
-          <h1 className="text-2xl">1. Getting Started</h1>
+          <h1 className="text-2xl" id="tutorial_one">1. Getting Started</h1>
           <br />
           <h2 className="text-lg font-bold">1.1 Gather Data Visualizations</h2>
           <div className="rounded-lg p-8 md:p-12">
@@ -92,7 +104,7 @@ const Tutorials = () => {
             </p>
           </div>
           
-          <h2 className="text-lg font-bold">1.2 Create Data Insights</h2>
+          <h2 className="text-lg font-bold" id="tutorial_two">1.2 Create Data Insights</h2>
           <div className="rounded-lg p-8 md:p-12">
             <p className="text-lg text-grey-darkest leading-relaxed">
               Click the 'Edit' button in the header of Visual 1 to reveal the edit menu.
@@ -137,7 +149,7 @@ const Tutorials = () => {
           </div>
 
           
-          <h2 className="text-lg font-bold">1.3 Craft Narratives</h2>
+          <h2 className="text-lg font-bold" id="tutorial_three">1.3 Craft Narratives</h2>
           <div className="rounded-lg p-8 md:p-12">
             <p className="text-lg text-grey-darkest leading-relaxed">
             Hover over the 'Select Narratives' button to reveal manual and AI-assisted narrative selection options. Click 'Select Manually'.
@@ -162,7 +174,7 @@ const Tutorials = () => {
           </div>
 
           
-          <h2 className="text-lg font-bold">1.4 Create Data Stories</h2>
+          <h2 className="text-lg font-bold" id="tutorial_four">1.4 Create Data Stories</h2>
           <div className="rounded-lg p-8 md:p-12">
             <p className="text-lg text-grey-darkest leading-relaxed">
             When you click 'Generate Story', the LLM is prompted to bring everything in your Workspace together, including visuals and groups, into a coherent and compelling story with a 'cause and effect' narrative structure.

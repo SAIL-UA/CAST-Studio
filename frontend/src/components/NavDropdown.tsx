@@ -20,7 +20,7 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
     const navigate = useNavigate();
 
     // State
-    const [tutorialsOpen, setTutorialsOpen] = useState(false);
+    const [tutorialsOpen, setTutorialsOpen] = useState(true);
 
     // Dropdown toggle
     const toggleDropdown = (e: React.MouseEvent) => {
@@ -33,6 +33,8 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
         logAction(e);
         navigate(`/construction`);
     }
+
+    
 
     // Visible component
     return (
@@ -57,7 +59,7 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                 >
                 <span className="flex items-center justify-start">
                     <img src={categories} alt="Categories" className="w-4 h-4 mr-2" />
-                    Browse Tutorials
+                    Get Started
                 </span>
                 <span className={`flex items-center justify-end transition-transform duration-300 ease-in ${tutorialsOpen ? 'rotate-180' : 'rotate-0'}`}> 
                     <svg className="fill-current h-4 w-4"
@@ -79,7 +81,7 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                         onClick={(e) => {
                             logAction(e);
                             setCenterNarrativePatternsOpen(false);
-                            navigate(`/tutorials`);
+                            navigate(`/tutorials`, { state: { targetId: 'tutorial_one' } });
                         }}>
                         Gather Data Visualizations
                         </li>
@@ -88,7 +90,7 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                         onClick={(e) => {
                             logAction(e);
                             setCenterNarrativePatternsOpen(false);
-                            navigate(`/tutorials`);
+                            navigate(`/tutorials`, { state: { targetId: 'tutorial_two' } });
                         }}>
                         Create Data Insights
                         </li>
@@ -97,7 +99,7 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                         onClick={(e) => {
                             logAction(e);
                             setCenterNarrativePatternsOpen(false);
-                            navigate(`/tutorials`);
+                            navigate(`/tutorials`, { state: { targetId: 'tutorial_three' } });
                         }}>
                         Generate Narrative Structure
                         </li>
@@ -106,7 +108,7 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                         onClick={(e) => {
                             logAction(e);
                             setCenterNarrativePatternsOpen(false);
-                            navigate(`/tutorials`);
+                            navigate(`/tutorials`, { state: { targetId: 'tutorial_four' } });
                         }}>Generate Data Story</li>
                     </ul>
 
