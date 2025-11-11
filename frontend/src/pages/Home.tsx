@@ -61,14 +61,24 @@ const Home = () => {
             const ce = e as CustomEvent;
             const items = Array.isArray(ce.detail?.items) ? ce.detail.items : [];
             if (items.length > 0) {
+                // Close other right-panel contexts before opening feedback
+                setRightNarrativePatternsOpen(false);
+                setRightNarrativeExamplesOpen(false);
                 setFeedbackItems(items);
                 setRightFeedbackOpen(true);
                 setRightOpen(true); // ensure sidebar visible
-                setRightNarrativePatternsOpen(false);
             }
         };
+        const onOpenNarrativePatterns = () => {
+            // Close feedback panel when narrative patterns requested
+            setRightFeedbackOpen(false);
+        };
         window.addEventListener('showFeedbackPanel', onShowFeedback as EventListener);
-        return () => window.removeEventListener('showFeedbackPanel', onShowFeedback as EventListener);
+        window.addEventListener('openNarrativePatternsPanel', onOpenNarrativePatterns as EventListener);
+        return () => {
+            window.removeEventListener('showFeedbackPanel', onShowFeedback as EventListener);
+            window.removeEventListener('openNarrativePatternsPanel', onOpenNarrativePatterns as EventListener);
+        };
     }, []);
 
     // Collapse sidebars when screen size changes

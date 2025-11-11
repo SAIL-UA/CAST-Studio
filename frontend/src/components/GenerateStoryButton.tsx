@@ -30,6 +30,9 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
     // Handle select manually
     const handleSelectManually = (e: React.MouseEvent) => {
         setAIOpen(false);
+        // Dispatch a global event so parent container (Home) can ensure other panels (e.g., Feedback) close
+        window.dispatchEvent(new CustomEvent('openNarrativePatternsPanel'));
+        // Fallback: still open patterns directly (in case listener not registered yet)
         setRightNarrativePatternsOpen(true);
         // The logging logic in SelectNarrativeButton.tsx should already capture manually selected narratives
         // logAction(e, { "narrative_pattern": selectedPattern });
@@ -42,6 +45,8 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
             clearTimeout(AITimeoutRef.current);
             AITimeoutRef.current = null;
         }
+        // Ensure any competing panels (e.g., Feedback) are hidden while this menu is active
+        window.dispatchEvent(new CustomEvent('openSelectNarrativeDropdown'));
         setAIOpen(true);
     };
 
@@ -88,7 +93,7 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
             {/* Dropdown Menu */}
             {AIOpen && (
                 <div 
-                    className="absolute top-full z-50 left-0 mt-1 shadow-lg bg-transparent overflow-hidden m-1"
+                    className="absolute top-full left-0 mt-1 shadow-lg bg-transparent overflow-hidden m-1 z-[200]"
                     onMouseEnter={handleAIEnter}
                     onMouseLeave={handleAILeave}
                 >
