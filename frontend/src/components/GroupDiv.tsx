@@ -1,3 +1,4 @@
+// Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { GroupDivProps, DragItem } from '../types/types';
@@ -30,7 +31,6 @@ const GroupDiv: React.FC<GroupDivProps> = ({
   const dragEventContext = useRef<any>(null);
   const groupRef = useRef<HTMLDivElement>(null);
   const [editingName, setEditingName] = useState(false);
-  const [editingDescription, setEditingDescription] = useState(false);
   const [tempName, setTempName] = useState(name);
   const [tempDescription, setTempDescription] = useState(description);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -352,17 +352,6 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     });
 
     groupMetadataRef.current = groupMetadataAfter;
-  };
-
-  const handleDescriptionSave = () => {
-    setEditingDescription(false);
-
-    // Only call API if description actually changed
-    if (tempDescription === description) {
-      return; // No change, skip API call
-    }
-
-    onDescriptionChange(id, tempDescription);
   };
 
   // Handle card removal from group (only called from remove button with event)
