@@ -23,7 +23,7 @@ export interface ImageMetadata {
   x: number;
   y: number
   filepath: string;
-  description: string; // long description
+  description: string;
   source: string;
   user: number;
   groupId?: string;

@@ -10,7 +10,6 @@ import GenerateStoryButton from './GenerateStoryButton';
 import CraftStoryButton from './CraftStoryButton';
 import GroupButton from './GroupButton';
 import FeedbackButton from './FeedbackButton';
-import SubmitButton from './SubmitButton';
 import GroupDiv from './GroupDiv';
 import Bin from './Bin';
 
@@ -25,49 +24,26 @@ type StoryBoardProps = {
     selectedPattern: string;
     storyLoading: boolean;
     setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    images: ImageData[];
+    setImages: React.Dispatch<React.SetStateAction<ImageData[]>>;
+    loading: boolean;
+    fetchUserData: () => Promise<void>;
+    updateImageData: (imageId: string, data: Partial<ImageData>) => void;
+    handleImageRecycle: (imageId: string) => void;
+    handleImageRestore: (imageId: string) => void;
 }
 
-// Use the new GroupData type instead of GroupInstance
-// (keeping legacy name for now to minimize changes)
-
 // StoryBoard component
-const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading }: StoryBoardProps) => {
-    // State management for images
-    const [images, setImages] = useState<ImageData[]>([]);
-    const [loading, setLoading] = useState(true);
+const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, images, setImages, loading, fetchUserData, updateImageData, handleImageRecycle, handleImageRestore }: StoryBoardProps) => {
 
-    // State for multiple group divs - now using GroupData
+    // States
     const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
     const [nextGroupNumber, setNextGroupNumber] = useState(1);
     
-    // Ref for story bin container
+    // References
     const storyBinRef = useRef<HTMLDivElement>(null);
 
-    // Fetch user data from backend
-    const fetchUserData = async () => {
-        await getImageDataAll()
-        .then((response: any) => {
-            if (response.data.images.length === 0) {
-                setImages([]);
-                return;
-            }
-            const fetchedImages = response.data.images.map((img: any) => ({
-                ...img,
-                x: img.in_storyboard ? img.x : 0,
-                y: img.in_storyboard ? img.y : 0,
-                groupId: img.group_id || undefined, // Map backend group_id to frontend groupId
-            }));
-            setImages(fetchedImages);
-        })
-        .catch((error) => {
-            console.error('Error fetching user data:', error);
-        })
-        .finally(() => {
-            setLoading(false);
-        });
-    };
-
-    // Fetch groups from backend
+    // Fetch groups
     const fetchGroups = async () => {
         try {
             const fetchedGroups = await getGroups();
@@ -120,26 +96,6 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         }
     }, [loading, images.length]);
 
-    // Update image data (position, status, etc.)
-    const updateImageData = async (imageId: string, data: Partial<ImageData>) => {
-        try {
-            const response = await updateImageDataAPI(imageId, data);
-            if (response.status === 200) {
-                console.log('Image data updated successfully');
-                // Update local state
-                setImages((prevImages) =>
-                    prevImages.map((img) => 
-                        img.id === imageId ? { ...img, ...data } : img
-                    )
-                );
-            } else {
-                console.error('Error updating image data:', response.data.errors);
-            }
-        } catch (error) {
-            console.error('Error updating image data:', error);
-        }
-    };
-
     // Handle description updates
     const handleDescriptionsUpdate = (id: string, newShortDesc: string, newLongDesc: string) => {
         setImages((prevImages) =>
@@ -155,21 +111,6 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     const handleDelete = async (imageId: string) => {
         await fetchUserData(); // Refresh data after deletion
         await fetchGroups(); // Refresh groups
-
-        // Temporary force re-render until refactor for centralized workspace state management is complete
-        // setTimeout(() => {
-        //     window.location.reload();
-        // }, 500);
-    };
-
-    // Handle image trash
-    const handleTrash = (imageId: string) => {
-        updateImageData(imageId, { in_storyboard: false });
-    };
-
-    // Handle image untrash
-    const handleUnTrash = (imageId: string) => {
-        updateImageData(imageId, { in_storyboard: true });
     };
 
     // Handle creating new group div
@@ -445,8 +386,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     updateImageData={updateImageData}
                     onDescriptionsUpdate={handleDescriptionsUpdate}
                     onDelete={handleDelete}
-                    onTrash={handleTrash}
-                    onUnTrash={handleUnTrash}
+                    onTrash={handleImageRecycle}
+                    onUnTrash={handleImageRestore}
                     isSuggestedOrderBin={false}
                 />
                 {/* Render groups directly in the scrollable container so they scroll with content */}
