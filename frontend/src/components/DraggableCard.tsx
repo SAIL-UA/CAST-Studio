@@ -11,6 +11,7 @@ import { formatImageMetadata, getImageUrl } from '../utils/imageUtils';
 
 function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, draggable = true }: DraggableCardProps) {
   const [showModal, setShowModal] = useState(false);
+  const [editingShortDesc, setEditingShortDesc] = useState(false);
   const [tempShortDesc, setTempShortDesc] = useState(image.short_desc || '');
   const [tempLongDesc, setTempLongDesc] = useState(image.long_desc || '');
   const [loadingGenDesc, setLoadingGenDesc] = useState(false);
@@ -40,6 +41,13 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
       isMountedRef.current = false;
     };
   }, [image.filepath]);
+
+  // Sync tempShortDesc when image prop changes (but not while editing)
+  useEffect(() => {
+    if (!editingShortDesc) {
+      setTempShortDesc(image.short_desc || '');
+    }
+  }, [image.short_desc, editingShortDesc]);
 
 
   // React DnD hook for drag functionality
@@ -288,6 +296,38 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     document.body.style.overflow = 'auto';
   };
 
+  const handleShortDescSave = async (e: React.FocusEvent | React.KeyboardEvent) => {
+    setEditingShortDesc(false);
+
+    // Only call API if description actually changed
+    if (tempShortDesc === image.short_desc) {
+      return; // No change, skip API call and logging
+    }
+
+    const ctx = captureActionContext(e as React.SyntheticEvent);
+    const imageMetadataBefore = imageMetadataRef.current;
+
+    // Update the image data
+    await updateImageData(image.id, {
+      ...image,
+      short_desc: tempShortDesc,
+    });
+
+    // Call the callback to update parent state
+    onDescriptionsUpdate(image.id, tempShortDesc, image.long_desc || '');
+
+    // Update metadata and log
+    const updatedImage = { ...image, short_desc: tempShortDesc };
+    const imageMetadataAfter = await formatImageMetadata(updatedImage);
+
+    logAction(ctx, {
+      image_metadata: imageMetadataBefore,
+      updated_image_metadata: imageMetadataAfter
+    });
+
+    imageMetadataRef.current = imageMetadataAfter;
+  };
+
   // Combine refs for draggable functionality
   const dragRef = (element: HTMLDivElement | null) => {
     if (draggable && element) {
@@ -336,9 +376,35 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
           
           <div id="card-footer" 
           className="p-2">
-            <p className="text-somewhat-tiny text-grey-darkest overflow-hidden text-ellipsis line-clamp-4">
-              {image.short_desc}
-            </p>
+            {editingShortDesc ? (
+              <textarea
+                log-id="card-inline-short-desc-input"
+                value={tempShortDesc}
+                onChange={(e) => setTempShortDesc(e.target.value)}
+                onBlur={handleShortDescSave}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleShortDescSave(e);
+                  }
+                }}
+                className="text-somewhat-tiny text-grey-darkest w-full bg-transparent border-b border-grey-darkest outline-none resize-none"
+                placeholder="Short description"
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+                rows={4}
+              />
+            ) : (
+              <p 
+                className="text-somewhat-tiny text-grey-darkest overflow-hidden text-ellipsis line-clamp-4 cursor-pointer hover:underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingShortDesc(true);
+                }}
+              >
+                {image.short_desc || 'Click to add description'}
+              </p>
+            )}
           </div>
         </div>
       </div>

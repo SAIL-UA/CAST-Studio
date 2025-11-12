@@ -43,7 +43,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // References
     const storyBinRef = useRef<HTMLDivElement>(null);
 
-    // Fetch groups
+    // Fetch groups from backend
     const fetchGroups = async () => {
         try {
             const fetchedGroups = await getGroups();

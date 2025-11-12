@@ -14,7 +14,8 @@ export interface ImageData {
   order_num: number;
   last_saved: string;
   created_at: string;
-  groupId?: string; // NEW: Which group this card belongs to (if any)
+  groupId?: string;
+  index: number;
 }
 
 // Partial image data type for logging

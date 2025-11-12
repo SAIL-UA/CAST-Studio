@@ -500,7 +500,12 @@ const GroupDiv: React.FC<GroupDivProps> = ({
             value={tempName}
             onChange={(e) => setTempName(e.target.value)}
             onBlur={handleNameSave}
-            // onKeyPress={(e) => e.key === 'Enter' && handleNameSave(e)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleNameSave(e);
+              }
+            }}
             className="text-xs font-bold bg-transparent border-b border-white text-white placeholder-white placeholder-opacity-70 outline-none"
             placeholder="Group name"
             autoFocus
@@ -567,17 +572,17 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         {/* Card components - arranged in grid */}
         {cards.length > 0 ? (
           <div className="grid grid-cols-3 gap-2 h-full">
-            {cards.map((card, index) => (
+            {cards.map((card) => (
               <div key={card.id} className="relative group h-fit">
                 <div className="transform scale-75 origin-top-left">
                   <DraggableCard
                     image={card}
-                    index={index}
+                    index={card.index}
                     onDescriptionsUpdate={() => {}} // Groups handle their own descriptions
                     onDelete={() => {}} // Groups handle their own deletion
                     onTrash={() => onCardRemove(card.id, id)} // Don't log here - DraggableCard already logs
                     onUnTrash={() => {}}
-                    draggable={true}
+                    draggable={false}
                   />
                 </div>
                 {/* Remove button overlay - positioned on the top-right of the scaled image */}

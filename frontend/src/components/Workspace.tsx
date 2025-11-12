@@ -51,7 +51,8 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
                 in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : true,
                 x: img.x !== undefined ? img.x : (index % 4) * 160,
                 y: img.y !== undefined ? img.y : Math.floor(index / 4) * 120,
-                groupId: img.group_id || undefined
+                groupId: img.group_id || undefined,
+                index: index
             }));
             setImages(fetchedImages);
         })
