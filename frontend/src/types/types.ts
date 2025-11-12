@@ -16,6 +16,7 @@ export interface ImageData {
   created_at: string;
   groupId?: string;
   index: number;
+  url: string;
 }
 
 // Partial image data type for logging

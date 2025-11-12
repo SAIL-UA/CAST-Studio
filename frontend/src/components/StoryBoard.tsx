@@ -1,7 +1,6 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
-import { getImageDataAll, updateImageData as updateImageDataAPI, createGroup, getGroups, updateGroup, deleteGroup } from '../services/api';
-import { getImageUrl } from '../utils/imageUtils';
+import { updateImageData as updateImageDataAPI, createGroup, getGroups, updateGroup, deleteGroup } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
 
 // Import components
@@ -62,8 +61,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     .filter((card: ImageData | undefined): card is ImageData => card !== undefined)
                     .map((card: ImageData) => ({
                         ...card,
-                        groupId: group.id, // Ensure groupId is set
-                        image: getImageUrl(card.filepath)
+                        groupId: group.id
                     }));
 
                 return {
@@ -83,11 +81,6 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
             console.error('Error fetching groups:', error);
         }
     };
-
-    // Fetch data on component mount
-    useEffect(() => {
-        fetchUserData();
-    }, []);
 
     // Fetch groups after images are loaded
     useEffect(() => {
@@ -171,10 +164,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 await updateImageDataAPI(card.id, { group_id: null, in_storyboard: true });
             }
 
-            // Update local state: return all cards from this group to the workspace
+            // Update local state: return all cards from this group to the workspace (preserve index)
             setImages(prev => prev.map(img =>
                 img.groupId === groupId
-                    ? { ...img, groupId: undefined, in_storyboard: true }
+                    ? { ...img, groupId: undefined, in_storyboard: true, index: img.index }
                     : img
             ));
 
@@ -231,13 +224,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
             // Create card with served image URL for local state
             const cardWithImage = {
                 ...cardToAdd,
-                image: getImageUrl(cardToAdd.filepath),
                 groupId: groupId
             };
 
-            // Update local state: update the card's groupId
+            // Update local state: update the card's groupId (preserve index)
             setImages(prev => prev.map(img =>
-                img.id === cardId ? { ...img, groupId: groupId } : img
+                img.id === cardId ? { ...img, groupId: groupId, index: img.index } : img
             ));
 
             // Add card to group's cards array
@@ -271,10 +263,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
             const updatedCardIds = currentCardIds.filter((id: string) => id !== cardId);
             await updateGroup(groupId, { cards: updatedCardIds });
 
-            // Update local state: update the card's groupId to null and ensure it's in the storyboard
+            // Update local state: update the card's groupId to null and ensure it's in the storyboard (preserve index)
             setImages(prev => prev.map(img =>
                 img.id === cardId
-                    ? { ...img, groupId: undefined, in_storyboard: true }
+                    ? { ...img, groupId: undefined, in_storyboard: true, index: img.index }
                     : img
             ));
 
@@ -350,12 +342,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     };
 
     // Show only images that are in the storyboard (in_storyboard === true) and NOT in any group
-    const workspaceImages = images
-        .filter(img => img.in_storyboard === true && !img.groupId)
-        .map(img => ({
-            ...img,
-            image: getImageUrl(img.filepath)
-        }));
+    const workspaceImages = images.filter(img => img.in_storyboard === true && !img.groupId);
 
     // Loading state
     if (loading) {

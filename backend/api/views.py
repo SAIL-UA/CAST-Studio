@@ -268,6 +268,15 @@ class UploadFigureView(APIView):
     
     now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     
+    # Find the first available index for this user's images
+    user_images = ImageData.objects.filter(user=request.user)
+    used_indices = set(user_images.values_list('index', flat=True))
+    
+    # Find first available index starting from 0
+    first_available_index = 0
+    while first_available_index in used_indices:
+      first_available_index += 1
+    
     serializer = ImageDataSerializer(data={
       "id": figure_id,
       "user": request.user.id,
@@ -280,6 +289,7 @@ class UploadFigureView(APIView):
       "y": 0,
       "has_order": False,
       "order_num": 0,
+      "index": first_available_index,
       "created_at": now,
       "last_saved": now
     })

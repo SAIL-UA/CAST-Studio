@@ -33,7 +33,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
 
   useEffect(() => {
     // Use direct static URL for nginx serving
-    const imageUrl = getImageUrl(image.filepath);
+    const imageUrl = image.url || getImageUrl(image.filepath);
     setImageUrl(imageUrl);
     loadMetadata();
 

@@ -22,11 +22,6 @@ type RecycleBoardProps = {
 // Trash component (duplicate of Workspace)
 const RecycleBoard = ({ images, setImages, loading, fetchUserData, updateImageData, handleImageRecycle, handleImageRestore }: RecycleBoardProps) => {
 
-    // Fetch data on component mount
-    useEffect(() => {
-        fetchUserData();
-    }, []);
-
     // Handle description updates
     const handleDescriptionsUpdate = (id: string, newShortDesc: string, newLongDesc: string) => {
         setImages((prevImages) =>

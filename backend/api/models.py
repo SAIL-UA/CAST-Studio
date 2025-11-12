@@ -116,6 +116,7 @@ class ImageData(models.Model):
   group_id = models.ForeignKey(GroupData, on_delete=models.SET_NULL, db_column='group_id', null=True, blank=True, related_name='images')
   has_order = models.BooleanField(default=False)
   order_num = models.IntegerField(default=0)
+  index = models.IntegerField(default=0)
   last_saved = models.DateTimeField(auto_now=True)
   created_at = models.DateTimeField(auto_now_add=True)
 

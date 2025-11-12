@@ -1,8 +1,9 @@
 // Import dependencies
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { logAction } from '../utils/userActionLogger';
 import { getImageDataAll, updateImageData as updateImageDataAPI } from '../services/api';
 import { ImageData } from '../types/types';
+import { getImageUrl } from '../utils/imageUtils';
 
 // Import components
 import StoryBoard from './StoryBoard';
@@ -46,14 +47,21 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
                 setImages([]);
                 return;
             }
-            const fetchedImages = response.data.images.map((img: any, index: number) => ({
-                ...img,
-                in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : true,
-                x: img.x !== undefined ? img.x : (index % 4) * 160,
-                y: img.y !== undefined ? img.y : Math.floor(index / 4) * 120,
-                groupId: img.group_id || undefined,
-                index: index
-            }));
+            
+            // Use indices from backend - they're already assigned correctly
+            const fetchedImages = response.data.images.map((img: any) => {
+                const index = img.index !== undefined && img.index !== null ? img.index : 0;
+                
+                return {
+                    ...img,
+                    in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : true,
+                    x: img.x !== undefined ? img.x : (index % 4) * 160,
+                    y: img.y !== undefined ? img.y : Math.floor(index / 4) * 120,
+                    groupId: img.group_id || undefined,
+                    url: getImageUrl(img.filepath),
+                    index: index
+                };
+            });
             setImages(fetchedImages);
         })
         .catch((error) => {
@@ -69,10 +77,10 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
         try {
             const response = await updateImageDataAPI(imageId, data);
             if (response.status === 200) {
-                // Update local state
+                // Update local state - preserve index from existing state
                 setImages((prevImages) =>
                     prevImages.map((img) => 
-                        img.id === imageId ? { ...img, ...data } : img
+                        img.id === imageId ? { ...img, ...data, index: img.index } : img
                     )
                 );
             }
@@ -90,6 +98,11 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
     const handleImageRestore = (imageId: string) => {
         updateImageData(imageId, { in_storyboard: true });
     };
+
+    // On component mount, fetch user data
+    useEffect(() => {
+        fetchUserData();
+    }, []);
 
     // Visible component
     return (
