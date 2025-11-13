@@ -26,7 +26,7 @@ const NarrativeExamplesButton = ({ value, setRightNarrativeExamplesOpen, setSele
         className="bg-indigo-lighter rounded-full mt-2 px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
         onClick={handleClick}
         >
-            <p className="text-sm font-roboto-light">See Examples</p>
+            <p className="text-xs font-roboto-light">See Examples</p>
         </button>
     )
 }

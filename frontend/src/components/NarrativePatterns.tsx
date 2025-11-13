@@ -36,14 +36,14 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
         <div id="narrative-patterns" className="p-0 m-0">
             <div className="flex flex-row w-full">
 
-                <h3 className={`${center ? 'text-2xl mb-4 mt-2' : 'text-lg mb-2 mt-4 w-3/4 ml-2'}`}>Narrative Structures</h3>
+                <p className={`${center ? 'text-2xl mb-4 mt-2' : 'text-sm text-gray-500 font-regular ml-4 w-3/4'}`}>Narrative Structures</p>
                 {!center && (
                     <div
-                    className="flex items-center justify-end w-1/4"
+                    className="flex items-center justify-end"
                     >
                         <svg
                         log-id="narrative-patterns-close-button"
-                        className="w-6 h-6"
+                        className="w-4 h-4 ml-2"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -70,7 +70,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <img src={causeeffect} alt="Casa" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
-                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Cause and Effect</h3>
+                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Cause and Effect</h3>
                         <p className="text-xs">How a variable or event influences another.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
 
@@ -99,7 +99,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <img src={questionanswer} alt="Fresas" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
-                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Question and Answer</h3>
+                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Question and Answer</h3>
                         <p className="text-xs">A central question, followed by evidence to support the answer.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
@@ -130,7 +130,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <img src={timeline} alt="Super" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
-                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Timeline</h3>
+                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Timeline</h3>
                         <p className="text-xs">A sequence of events in time to highlight patterns and trends.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
@@ -158,7 +158,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <img src={factoranalysis} alt="Popeye" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
-                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Factor Analysis</h3>
+                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Factor Analysis</h3>
                         <p className="text-xs">A breakdown of a phenomenon into influencing factors.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
@@ -186,7 +186,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <img src={overviewdetail} alt="Popeye" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
-                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Overview To Detail</h3>
+                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Overview To Detail</h3>
                         <p className="text-xs">A broad snapshot of a phenomenon, followed by finer details.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
@@ -214,7 +214,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <img src={problemsolution} alt="Brutus" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
-                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Problem and Solution</h3>
+                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Problem and Solution</h3>
                         <p className="text-xs">A challenge, followed by evidence for a solution.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
@@ -242,7 +242,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <img src={workflowprocess} alt="Fresas" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
-                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Comparative Analysis</h3>
+                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Comparative Analysis</h3>
                         <p className="text-xs">A side-by-side view of events to reveal similarities and differences.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
@@ -270,7 +270,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <img src={workflowprocess} alt="Brutus" className="w-full h-full object-contain ml-2" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
-                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Workflow or Process</h3>
+                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Workflow or Process</h3>
                         <p className="text-xs">Discusses the key stages of a system or pipeline.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
@@ -295,10 +295,10 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                 onMouseEnter={handleHover}
                 >
                     <div className="w-1/4 h-3/4 object-cover pr-1">
-                        <img src={workflowprocess} alt="Popeye" className="w-full h-full object-contain ml-2" />
+                        <img src={workflowprocess} alt="Popeye" className="w-full h-full object-contain ml-4" />
                     </div>
                     <div className="w-3/4 h-auto pl-4">
-                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-lg'}`}>Shock and Lead</h3>
+                        <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Shock and Lead</h3>
                         <p className="text-xs">A striking fact, followed by analysis of explanatory factors.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
