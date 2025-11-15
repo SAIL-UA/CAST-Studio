@@ -31,7 +31,7 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
     // Handle dropdown selections
     const handleDropdownSelection = (e: React.MouseEvent) => {
         logAction(e);
-        navigate(`/construction`);
+        //navigate(`/construction`);
     }
 
     
@@ -112,7 +112,7 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                         }}>Generate Data Story</li>
                     </ul>
 
-                <li log-id="nav-dropdown-browse-narrative-patterns-button"
+                {/* <li log-id="nav-dropdown-browse-narrative-patterns-button"
                 className="cursor-pointer hover:text-indigo"
                 onClick={(e) => {
                     setCenterNarrativePatternsOpen(true);
@@ -123,12 +123,12 @@ const NavDropdown = ({ setCenterNarrativePatternsOpen }: NavDropdownProps) => {
                         <img src={browse} alt="Browse" className="w-4 h-4 mr-2" />
                         Browse Narrative Structures
                     </span>
-                </li>
+                </li> */}
                 <li log-id="nav-dropdown-jupyterhub-button" className="cursor-pointer hover:text-indigo"
                 onClick={handleDropdownSelection}>
                     <span className="flex items-center justify-start">
                         <img src={home} alt="JupyterHub" className="w-4 h-4 mr-2" />
-                        Return to JupyterHub
+                        <a href="https://cast-storystudio.com/jupyterhub" target="_blank">Return to JupyterHub</a>
                     </span>
                 </li>
             </ul>
