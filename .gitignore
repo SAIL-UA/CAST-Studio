@@ -22,3 +22,5 @@ backend/jupyterhub.sqlite
 # .sql files
 *.sql
 package-lock.json
+
+**/ssl/*
