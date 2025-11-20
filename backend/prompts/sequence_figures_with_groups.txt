@@ -17,6 +17,7 @@ You will receive:
    - Group-first: Start with groups, then integrate ungrouped figures
    - Integrated: Mix groups and ungrouped figures based on narrative flow
    - Context-driven: Place ungrouped figures where they best support the story
+4. Insert figure placeholders: `[FIGURE: filename]`
 
 ### Sequencing Guidelines:
 1. **Group Coherence**: Keep figures within a group together when they tell a connected story
@@ -32,13 +33,13 @@ You will receive:
 1. **Chosen Storytelling Structure**: [Name the structure you're using]
 2. **Sequence of Elements**:
    - Group 1: [Group Name]
-     - Step 1: [Figure Name]
-     - Step 2: [Figure Name]
+     - Step 1: [FIGURE: sales_overview_2010.png]
+     - Step 2: [FIGURE: marketing_overview.png]
    - Standalone Figure:
-     - Step 3: [Figure Name]
+     - Step 3: [FIGURE: regional_sales_breakdown.png]
    - Group 2: [Group Name]
-     - Step 4: [Figure Name]
-     - Step 5: [Figure Name]
+     - Step 4: [FIGURE: customer_demographics.png]
+     - Step 5: [FIGURE: customer_behavior.png]
    (...continue as needed)
 3. **Justification**:
    - Explain why this sequence was chosen
