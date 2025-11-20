@@ -12,6 +12,9 @@ import FeedbackButton from './FeedbackButton';
 import GroupDiv from './GroupDiv';
 import Bin from './Bin';
 
+// Import scaffolds
+import CauseEffect from './scaffolds/CauseEffect';
+
 // Import types
 import { ImageData, GroupData } from '../types/types';
 
@@ -366,7 +369,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 <FeedbackButton />
 
             </div>
-            <div id = "story-bin-wrapper" className="flex-1 min-h-0 relative" ref={storyBinRef}>
+            <div id = "story-bin-wrapper" className="flex-1 min-h-0 relative overflow-auto" ref={storyBinRef}>
                 <Bin
                     id="story-bin"
                     images={workspaceImages}
@@ -377,6 +380,14 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     onUnTrash={handleImageRestore}
                     isSuggestedOrderBin={false}
                 />
+                {/* Render Cause and Effect scaffold when pattern is selected */}
+                {selectedPattern === 'cause_and_effect' && (
+                    <CauseEffect
+                        images={images}
+                        storyBinRef={storyBinRef}
+                        setSelectedPattern={setSelectedPattern}
+                    />
+                )}
                 {/* Render groups directly in the scrollable container so they scroll with content */}
                 {groupDivs.map(group => (
                     <GroupDiv 
