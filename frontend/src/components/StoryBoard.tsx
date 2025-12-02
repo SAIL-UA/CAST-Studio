@@ -53,33 +53,30 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 setGroupDivs([]);
                 return;
             }
-
-            // Convert backend format to frontend format
-            // Backend stores card IDs, frontend needs full ImageData objects
+    
+            // Derive cards from images array using group_id
             const groupsWithCards = fetchedGroups.map((group: any) => {
-                const cardIds = group.cards || [];
-
-                const fullCards = cardIds
-                    .map((cardId: string) => images.find(img => img.id === cardId))
-                    .filter((card: ImageData | undefined): card is ImageData => card !== undefined)
+                // Filter images that belong to this group
+                const fullCards = images
+                    .filter(img => img.groupId === group.id)
                     .map((card: ImageData) => ({
                         ...card,
-                        groupId: group.id
+                        groupId: group.id  // Ensure groupId is set
                     }));
-
+    
                 return {
                     ...group,
-                    cards: fullCards
+                    cards: fullCards  // Derived from images state array
                 };
             });
-
+    
             setGroupDivs(groupsWithCards);
-
+    
             // Update nextGroupNumber to be max(group numbers) + 1
             const maxNumber = groupsWithCards.reduce((max: number, group: GroupData) =>
                 Math.max(max, group.number), 0);
             setNextGroupNumber(maxNumber + 1);
-
+    
         } catch (error) {
             console.error('Error fetching groups:', error);
         }
@@ -87,10 +84,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
     // Fetch groups after images are loaded
     useEffect(() => {
-        if (!loading && images.length >= 0) {
+        if (!loading && images.length > 0) {
             fetchGroups();
         }
-    }, [loading, images.length]);
+    }, [loading, images]);
 
     // Handle description updates
     const handleDescriptionsUpdate = (id: string, newShortDesc: string, newLongDesc: string) => {
@@ -201,50 +198,43 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Handle adding card to group
     const handleCardAddToGroup = async (cardId: string, groupId: string) => {
         try {
-            // Find the card with complete image data
             const cardToAdd = images.find(img => img.id === cardId);
             if (!cardToAdd) return;
-
-            // Fetch current group from backend FIRST to get authoritative card list
-            // This prevents race conditions when adding multiple cards quickly
-            const currentGroupData = await getGroups(groupId);
-            if (!currentGroupData) return;
-
-            // Check if card is already in the group (ensure uniqueness)
-            const currentCardIds = currentGroupData.cards || [];
-            if (currentCardIds.includes(cardId)) {
+    
+            // Check if card is already in the group (using local state)
+            if (cardToAdd.groupId === groupId) {
                 console.log(`Card ${cardId} already in group ${groupId}, skipping`);
                 return;
             }
-
-            // Now update both image and group in parallel
-            const updatedCardIds = [...currentCardIds, cardId];
-            await Promise.all([
-                updateImageDataAPI(cardId, { group_id: groupId }),
-                updateGroup(groupId, { cards: updatedCardIds })
-            ]);
-
-            // Create card with served image URL for local state
-            const cardWithImage = {
-                ...cardToAdd,
-                groupId: groupId
-            };
-
+    
+            // Only update image's group_id - no need to update group.cards
+            await updateImageDataAPI(cardId, { group_id: groupId });
+    
             // Update local state: update the card's groupId (preserve index)
             setImages(prev => prev.map(img =>
                 img.id === cardId ? { ...img, groupId: groupId, index: img.index } : img
             ));
-
-            // Add card to group's cards array
-            setGroupDivs(prev => prev.map(group =>
-                group.id === groupId
-                    ? {
+    
+            // Update group's cards array by deriving from updated images
+            // The cards will be automatically updated when fetchGroups runs or we can derive here
+            setGroupDivs(prev => prev.map(group => {
+                if (group.id === groupId) {
+                    // Derive cards from images with this groupId
+                    const updatedCards = images
+                        .filter(img => img.id === cardId || img.groupId === groupId)
+                        .map(img => ({
+                            ...img,
+                            groupId: groupId
+                        }));
+                    
+                    return {
                         ...group,
-                        cards: [...group.cards, cardWithImage],
+                        cards: updatedCards,
                         last_modified: new Date().toISOString()
-                      }
-                    : group
-            ));
+                    };
+                }
+                return group;
+            }));
         } catch (error) {
             console.error('Error adding image to group:', error);
         }
@@ -253,36 +243,35 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Handle removing card from group
     const handleCardRemoveFromGroup = async (cardId: string, groupId: string) => {
         try {
-            // Update image's group_id to null in backend
+            // Only update image's group_id to null - no need to update group.cards
             await updateImageDataAPI(cardId, { group_id: null, in_storyboard: true });
-
-            // Fetch current group from backend to get authoritative card list
-            // This prevents race conditions when removing multiple cards quickly
-            const currentGroupData = await getGroups(groupId);
-            if (!currentGroupData) return;
-
-            // Update group's cards array in backend (remove the card ID)
-            const currentCardIds = currentGroupData.cards || [];
-            const updatedCardIds = currentCardIds.filter((id: string) => id !== cardId);
-            await updateGroup(groupId, { cards: updatedCardIds });
-
-            // Update local state: update the card's groupId to null and ensure it's in the storyboard (preserve index)
+    
+            // Update local state: update the card's groupId to null (preserve index)
             setImages(prev => prev.map(img =>
                 img.id === cardId
                     ? { ...img, groupId: undefined, in_storyboard: true, index: img.index }
                     : img
             ));
-
-            // Remove card from group's cards array
-            setGroupDivs(prev => prev.map(group =>
-                group.id === groupId
-                    ? {
+    
+            // Update group's cards array by deriving from updated images
+            setGroupDivs(prev => prev.map(group => {
+                if (group.id === groupId) {
+                    // Derive cards from images with this groupId (excluding the removed one)
+                    const updatedCards = images
+                        .filter(img => img.id !== cardId && img.groupId === groupId)
+                        .map(img => ({
+                            ...img,
+                            groupId: groupId
+                        }));
+                    
+                    return {
                         ...group,
-                        cards: group.cards.filter(card => card.id !== cardId),
+                        cards: updatedCards,
                         last_modified: new Date().toISOString()
-                      }
-                    : group
-            ));
+                    };
+                }
+                return group;
+            }));
         } catch (error) {
             console.error('Error removing card from group:', error);
         }
