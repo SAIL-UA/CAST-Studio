@@ -77,6 +77,28 @@ class JupyterLog(models.Model):
     managed = True
 
 
+class ScaffoldData(models.Model):
+  """
+  Scaffold data.
+  """
+  id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='scaffold_data')
+  name = models.CharField(max_length=100, default="No Scaffold")
+  number = models.IntegerField(default=0)
+  description = models.TextField(default="", null=True, blank=True)
+  x = models.FloatField(default=0.0)
+  y = models.FloatField(default=0.0)
+  created_at = models.DateTimeField(auto_now_add=True)
+  last_modified = models.DateTimeField(auto_now=True)
+  
+  def __str__(self):
+    return f"{self.user.username} - {self.name}"
+  
+  class Meta:
+    db_table = 'scaffold_data'
+    managed = True
+
+
 class GroupData(models.Model):
   """
   Group data.
@@ -88,7 +110,7 @@ class GroupData(models.Model):
   description = models.TextField(default="", null=True, blank=True)
   x = models.FloatField(default=0.0)
   y = models.FloatField(default=0.0)
-  cards = models.JSONField(default=list)  # List of image IDs
+  scaffold_id = models.ForeignKey(ScaffoldData, on_delete=models.SET_NULL, db_column='scaffold_id', null=True, blank=True, related_name='groups')
   created_at = models.DateTimeField(auto_now_add=True)
   last_modified = models.DateTimeField(auto_now=True)
   
@@ -98,6 +120,7 @@ class GroupData(models.Model):
   class Meta:
     db_table = 'group_data'
     managed = True
+    
     
 class ImageData(models.Model):
   """
@@ -114,6 +137,7 @@ class ImageData(models.Model):
   x = models.FloatField(default=0.0)
   y = models.FloatField(default=0.0)
   group_id = models.ForeignKey(GroupData, on_delete=models.SET_NULL, db_column='group_id', null=True, blank=True, related_name='images')
+  scaffold_id = models.ForeignKey(ScaffoldData, on_delete=models.SET_NULL, db_column='scaffold_id', null=True, blank=True, related_name='images')
   has_order = models.BooleanField(default=False)
   order_num = models.IntegerField(default=0)
   index = models.IntegerField(default=0)
@@ -126,7 +150,7 @@ class ImageData(models.Model):
   class Meta:
     db_table = 'image_data'
     managed = True
-    
+
     
 class NarrativeCache(models.Model):
   """
