@@ -11,6 +11,7 @@ import GroupButton from './GroupButton';
 import FeedbackButton from './FeedbackButton';
 import GroupDiv from './GroupDiv';
 import Bin from './Bin';
+import ClearAllButton from './ClearAllButton';
 
 // Import scaffolds
 import CauseEffect from './scaffolds/CauseEffect';
@@ -409,6 +410,16 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                         storyBinRef={storyBinRef}
                     />
                 ))}
+                {/* ClearAll button - positioned in bottom left */}
+                <ClearAllButton 
+                    images={images}
+                    setImages={setImages}
+                    setGroupDivs={setGroupDivs}
+                    onClearComplete={async () => {
+                        await fetchUserData();
+                        await fetchGroups();
+                    }}
+                />
             </div>
         </div>
     )
