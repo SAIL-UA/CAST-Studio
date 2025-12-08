@@ -51,5 +51,5 @@ urlpatterns = [
     path("scaffolds/", GetScaffoldView.as_view(), name="scaffold-list"),
     path("scaffolds/create/", CreateScaffoldView.as_view(), name="scaffold-create"),
     path("scaffolds/<uuid:scaffold_id>/update/", UpdateScaffoldView.as_view(), name="scaffold-update"),
-    path("scaffolds/<uuid:scaffold_id>/delete/", DeleteScaffoldView.as_view(), name="scaffold-delete"),
+    path("scaffolds/delete/", DeleteScaffoldView.as_view(), name="scaffold-delete"),
 ]

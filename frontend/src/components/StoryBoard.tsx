@@ -422,6 +422,17 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         }
     };
 
+    // Handle scaffold close
+    const handleScaffoldClose = async () => {
+        try {
+            await deleteScaffold();
+            setScaffold(null);
+            setSelectedPattern('');
+        } catch (error) {
+            console.error('Error closing scaffold:', error);
+        }
+    };
+
     // Show only images that are in the storyboard (in_storyboard === true) and NOT in any group or scaffold
     const workspaceImages = images.filter(img => img.in_storyboard === true && !img.groupId && !img.scaffoldId);
 
@@ -473,29 +484,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                 console.error('Error updating scaffold position:', error);
                             }
                         }}
-                        onClose={async () => {
-                            try {
-                                // Remove scaffold_id from all images in this scaffold
-                                const cardsInScaffold = images.filter(img => img.scaffoldId === scaffold.id);
-                                for (const card of cardsInScaffold) {
-                                    await updateImageDataAPI(card.id, { scaffold_id: null });
-                                }
-
-                                // Update local state
-                                setImages(prev => prev.map(img =>
-                                    img.scaffoldId === scaffold.id
-                                        ? { ...img, scaffoldId: undefined }
-                                        : img
-                                ));
-
-                                // Delete scaffold from backend
-                                await deleteScaffold(scaffold.id);
-                                setScaffold(null);
-                                setSelectedPattern('');
-                            } catch (error) {
-                                console.error('Error closing scaffold:', error);
-                            }
-                        }}
+                        onClose={handleScaffoldClose}
                     />
                 )}
                 {/* Render groups directly in the scrollable container so they scroll with content */}

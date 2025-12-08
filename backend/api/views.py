@@ -980,6 +980,18 @@ class CreateScaffoldView(APIView):
         # Delete all current scaffolds
         for scaffold in current_scaffolds:
           scaffold.delete()
+
+        # Update images to not have a scaffold_id
+        images = ImageData.objects.filter(user=request.user)
+        for image in images:
+          image.scaffold_id = None
+          image.save()
+
+        # Update groups to not have a scaffold_id
+        groups = GroupData.objects.filter(user=request.user)
+        for group in groups:
+          group.scaffold_id = None
+          group.save()
       
       # Create new scaffold
       scaffold_data = {
@@ -1050,15 +1062,25 @@ class UpdateScaffoldView(APIView):
 
 class DeleteScaffoldView(APIView):
   permission_classes = [IsAuthenticated]
-  def post(self, request, scaffold_id=None):
-    scaffold_id = scaffold_id or request.data.get('scaffold_id')
-
-    if not scaffold_id:
-      return Response({"message": "No scaffold ID provided"}, status=status.HTTP_400_BAD_REQUEST)
-
+  def post(self, request):
     try:
-      scaffold = ScaffoldData.objects.get(id=scaffold_id, user=request.user)
-      scaffold.delete()
-      return Response({"message": "Scaffold deleted successfully"}, status=status.HTTP_200_OK)
-    except ScaffoldData.DoesNotExist:
-      return Response({"message": "Scaffold not found"}, status=status.HTTP_404_NOT_FOUND)
+      # Since only one scaffold per user is allowed, just delete all scaffolds
+      scaffolds = ScaffoldData.objects.filter(user=request.user)
+      for scaffold in scaffolds:
+        scaffold.delete()
+      
+      # Update images to not have a scaffold_id
+      images = ImageData.objects.filter(user=request.user)
+      for image in images:
+        image.scaffold_id = None
+        image.save()
+
+      # Update groups to not have a scaffold_id
+      groups = GroupData.objects.filter(user=request.user)
+      for group in groups:
+        group.scaffold_id = None
+        group.save()
+
+      return Response({"message": "All scaffolds deleted successfully"}, status=status.HTTP_200_OK)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

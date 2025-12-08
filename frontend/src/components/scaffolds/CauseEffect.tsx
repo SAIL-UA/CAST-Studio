@@ -1,7 +1,7 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
-import { ImageData, DragItem } from '../../types/types';
+import { ImageData, DragItem, GroupData } from '../../types/types';
 import DraggableCard from '../DraggableCard';
 
 // Define props interface

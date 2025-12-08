@@ -327,7 +327,7 @@ export const updateScaffold = async(scaffoldId: string, data: any) => {
   return response;
 };
 
-export const deleteScaffold = async(scaffoldId: string) => {
-  const response = await API.post(`/scaffolds/${scaffoldId}/delete/`, {});
+export const deleteScaffold = async() => {
+  const response = await API.post(`/scaffolds/delete/`, {});
   return response;
 };
