@@ -8,7 +8,7 @@ from .views import (
     ExportJupyterLogsView, RequestFeedbackView,
     CreateGroupView, GetGroupView, UpdateGroupView, DeleteGroupView,
     LogMousePositionView, LogScrollView,
-    ExportStoryView
+    ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView
 )
 
 urlpatterns = [
@@ -46,4 +46,10 @@ urlpatterns = [
 
     # Export Story
     path("export/", ExportStoryView.as_view(), name="export-story"),
+
+    # Scaffolds
+    path("scaffolds/", GetScaffoldView.as_view(), name="scaffold-list"),
+    path("scaffolds/create/", CreateScaffoldView.as_view(), name="scaffold-create"),
+    path("scaffolds/<uuid:scaffold_id>/update/", UpdateScaffoldView.as_view(), name="scaffold-update"),
+    path("scaffolds/<uuid:scaffold_id>/delete/", DeleteScaffoldView.as_view(), name="scaffold-delete"),
 ]

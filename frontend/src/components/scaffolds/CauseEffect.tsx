@@ -9,15 +9,36 @@ type CauseEffectProps = {
     images: ImageData[];
     storyBinRef: React.RefObject<HTMLDivElement | null>;
     setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;
+    scaffold?: {
+        id: string;
+        x: number;
+        y: number;
+    };
+    onPositionUpdate?: (x: number, y: number) => void;
+    onClose?: () => void;
 }
 
 // Cause and Effect Scaffold component
 const CauseEffect = ({
     images,
     storyBinRef,
-    setSelectedPattern
+    setSelectedPattern,
+    scaffold,
+    onPositionUpdate,
+    onClose
 }: CauseEffectProps) => {
-    const [position, setPosition] = useState({ x: 50, y: 50 });
+    // Use scaffold position if provided, otherwise default
+    const [position, setPosition] = useState({ 
+        x: scaffold?.x || 50, 
+        y: scaffold?.y || 50 
+    });
+    
+    // Update position when scaffold changes
+    useEffect(() => {
+        if (scaffold) {
+            setPosition({ x: scaffold.x, y: scaffold.y });
+        }
+    }, [scaffold]);
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
@@ -107,7 +128,7 @@ const CauseEffect = ({
             offsetY: 0,
         };
     },
-    end: (item, monitor) => {
+        end: (item, monitor) => {
         const dropResult = monitor.getDropResult();
         const clientOffset = monitor.getClientOffset();
 
@@ -119,6 +140,10 @@ const CauseEffect = ({
             finalX = newPosition.x;
             finalY = newPosition.y;
             setPosition({ x: finalX, y: finalY });
+            // Call onPositionUpdate if provided
+            if (onPositionUpdate) {
+                onPositionUpdate(finalX, finalY);
+            }
         } else if (clientOffset && storyBinRef.current) {
             const binRect = storyBinRef.current.getBoundingClientRect();
             const wrapperWidth = 680; // Width for two groups side by side
@@ -133,12 +158,16 @@ const CauseEffect = ({
                 finalX = newX;
                 finalY = newY;
                 setPosition({ x: finalX, y: finalY });
+                // Call onPositionUpdate if provided
+                if (onPositionUpdate) {
+                    onPositionUpdate(finalX, finalY);
+                }
             }
         },
         collect: (monitor) => ({
             isDraggingDnd: !!monitor.isDragging(),
         }),
-    }), [position, storyBinRef]);
+    }), [position, storyBinRef, onPositionUpdate]);
 
     // Handle mouse drag for wrapper
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -183,6 +212,15 @@ const CauseEffect = ({
         const handleMouseUp = () => {
             if (isDragging) {
                 setIsDragging(false);
+                // Call onPositionUpdate when drag ends if position changed
+                if (dragStartPosition.current && onPositionUpdate) {
+                    const positionChanged =
+                        Math.abs(position.x - dragStartPosition.current.x) > 1 ||
+                        Math.abs(position.y - dragStartPosition.current.y) > 1;
+                    if (positionChanged) {
+                        onPositionUpdate(position.x, position.y);
+                    }
+                }
                 dragStartPosition.current = null;
             }
         };
@@ -196,7 +234,7 @@ const CauseEffect = ({
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, dragOffset, isDraggingDnd, storyBinRef]);
+    }, [isDragging, dragOffset, isDraggingDnd, storyBinRef, position, onPositionUpdate]);
 
     // Stop custom dragging when React DnD starts
     useEffect(() => {
@@ -243,7 +281,11 @@ const CauseEffect = ({
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedPattern('');
+                        if (onClose) {
+                            onClose();
+                        } else {
+                            setSelectedPattern('');
+                        }
                     }}
                     className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                     style={{ cursor: 'pointer' }}

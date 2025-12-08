@@ -38,14 +38,14 @@ from config.celery import app as celery_app
 from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
-  JupyterLog, MousePositionLog, ScrollLog, GroupData
+  JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData
 )
 
 # Serializers
 from .serializers import (
   ImageDataSerializer, NarrativeCacheSerializer,
   JupyterLogsSerializer, MousePositionLogSerializer,
-  UserActionSerializer, ScrollLogSerializer, GroupDataSerializer
+  UserActionSerializer, ScrollLogSerializer, GroupDataSerializer, ScaffoldDataSerializer
 )
 
 # Tasks
@@ -886,3 +886,164 @@ class ExportStoryView(APIView):
       return response
     except Exception as e:
       return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class CreateScaffoldView(APIView):
+  permission_classes = [IsAuthenticated]
+  
+  def post(self, request):
+    """
+    Create a scaffold instance.
+    Expected body: {
+      "pattern": "cause_and_effect",
+      "x": 0.0 (optional, defaults to 0.0),
+      "y": 0.0 (optional, defaults to 0.0)
+    }
+    """
+    try:
+      # Mapping from pattern values to display names, numbers, and descriptions
+      SCAFFOLD_MAPPING = {
+        'cause_and_effect': {
+          'name': 'Cause and Effect',
+          'number': 1,
+          'description': 'How a variable or event influences another.'
+        },
+        'question_answer': {
+          'name': 'Question and Answer',
+          'number': 2,
+          'description': 'A central question, followed by evidence to support the answer.'
+        },
+        'time_based': {
+          'name': 'Timeline',
+          'number': 3,
+          'description': 'A sequence of events in time to highlight patterns and trends.'
+        },
+        'factor_analysis': {
+          'name': 'Factor Analysis',
+          'number': 4,
+          'description': 'A breakdown of a phenomenon into influencing factors.'
+        },
+        'overview_to_detail': {
+          'name': 'Overview To Detail',
+          'number': 5,
+          'description': 'A broad snapshot of a phenomenon, followed by finer details.'
+        },
+        'problem_solution': {
+          'name': 'Problem and Solution',
+          'number': 6,
+          'description': 'A challenge, followed by evidence for a solution.'
+        },
+        'comparative': {
+          'name': 'Comparative Analysis',
+          'number': 7,
+          'description': 'A side-by-side view of events to reveal similarities and differences.'
+        },
+        'workflow_process': {
+          'name': 'Workflow or Process',
+          'number': 8,
+          'description': 'Discusses the key stages of a system or pipeline.'
+        },
+        'shock_lead': {
+          'name': 'Shock and Lead',
+          'number': 9,
+          'description': 'A striking fact, followed by analysis of explanatory factors.'
+        },
+      }
+      
+      # Get scaffold pattern from request
+      scaffold_pattern = request.data.get('pattern', '')
+      
+      # Validate pattern
+      if not scaffold_pattern:
+        return Response({
+          "error": "'pattern' field is required"
+        }, status=status.HTTP_400_BAD_REQUEST)
+      
+      if scaffold_pattern not in SCAFFOLD_MAPPING:
+        return Response({
+          "error": f"Invalid pattern '{scaffold_pattern}'. Must be one of: {', '.join(SCAFFOLD_MAPPING.keys())}"
+        }, status=status.HTTP_400_BAD_REQUEST)
+      
+      # Get scaffold info from mapping
+      scaffold_info = SCAFFOLD_MAPPING[scaffold_pattern]
+      
+      # Prepare scaffold data
+      scaffold_data = {
+        'user': request.user.id,
+        'name': scaffold_info['name'],
+        'number': scaffold_info['number'],
+        'description': scaffold_info['description'],
+        'x': request.data.get('x', 0.0),
+        'y': request.data.get('y', 0.0),
+      }
+      
+      serializer = ScaffoldDataSerializer(data=scaffold_data)
+      if serializer.is_valid():
+        serializer.save()
+        return Response({
+          "message": "Scaffold created successfully",
+          "scaffold": serializer.data
+        }, status=status.HTTP_201_CREATED)
+      else:
+        return Response({
+          "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
+    except Exception as e:
+      return Response({
+        "error": str(e)
+      }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class GetScaffoldView(APIView):
+  permission_classes = [IsAuthenticated]
+  def get(self, request):
+    scaffold_id = request.query_params.get("scaffold_id")
+    if scaffold_id: # single scaffold
+      scaffold_data = ScaffoldData.objects.get(id=scaffold_id, user=request.user)
+    else: # all scaffolds for user
+      scaffold_data = ScaffoldData.objects.filter(user=request.user)
+    
+    if not scaffold_data:
+      return Response({"message": "No scaffold data found"}, status=status.HTTP_204_NO_CONTENT)
+      
+    serialized_scaffold_data = ScaffoldDataSerializer(scaffold_data, many=False if scaffold_id else True)
+    
+    return Response({"scaffolds": serialized_scaffold_data.data}, status=status.HTTP_200_OK)
+
+class UpdateScaffoldView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request, scaffold_id=None):
+    try:
+      scaffold_id = scaffold_id or request.data.get('scaffold_id')
+      if not scaffold_id:
+        return Response({"message": "No scaffold ID provided"}, status=status.HTTP_400_BAD_REQUEST)
+      
+      update_data = request.data.get('data')
+      
+      existing_scaffold = ScaffoldData.objects.get(id=scaffold_id, user=request.user)
+      
+      serializer = ScaffoldDataSerializer(existing_scaffold, data=update_data, partial=True)
+      
+      if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Scaffold updated successfully", "scaffold": serializer.data}, status=status.HTTP_200_OK)
+      else:
+        return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except ScaffoldData.DoesNotExist:
+      return Response({"message": "Scaffold not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class DeleteScaffoldView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request, scaffold_id=None):
+    scaffold_id = scaffold_id or request.data.get('scaffold_id')
+
+    if not scaffold_id:
+      return Response({"message": "No scaffold ID provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+      scaffold = ScaffoldData.objects.get(id=scaffold_id, user=request.user)
+      scaffold.delete()
+      return Response({"message": "Scaffold deleted successfully"}, status=status.HTTP_200_OK)
+    except ScaffoldData.DoesNotExist:
+      return Response({"message": "Scaffold not found"}, status=status.HTTP_404_NOT_FOUND)

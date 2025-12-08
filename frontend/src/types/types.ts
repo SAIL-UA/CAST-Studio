@@ -15,8 +15,20 @@ export interface ImageData {
   last_saved: string;
   created_at: string;
   groupId?: string;
+  scaffoldId?: string;
   index: number;
   url: string;
+}
+
+export interface ScaffoldData {
+  id: string;
+  name: string;
+  number: number;
+  description: string;
+  x: number;
+  y: number;
+  cards: ImageData[];
+  groups: GroupData[];
 }
 
 // Partial image data type for logging
@@ -29,6 +41,7 @@ export interface ImageMetadata {
   source: string;
   user: number;
   groupId?: string;
+  scaffoldId?: string;
 }
 
 export interface DragItem {

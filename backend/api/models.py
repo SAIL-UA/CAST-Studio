@@ -41,6 +41,7 @@ class ScrollLog(models.Model):
     db_table = 'scroll_logs'
     managed = True
 
+
 class MousePositionLog(models.Model):
   """
   Logs mouse position (normalized to window)
@@ -54,7 +55,8 @@ class MousePositionLog(models.Model):
   class Meta:
     db_table = 'mouse_position_logs'
     managed = True
-    
+
+   
 class JupyterLog(models.Model):
   """
   User-code execution logs from the JupyterHub server.

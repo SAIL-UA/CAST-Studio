@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
   ImageData, NarrativeCache, JupyterLog,
   UserAction, MousePositionLog, ScrollLog,
-  GroupData
+  GroupData, ScaffoldData
 )
 
 class UserActionSerializer(serializers.ModelSerializer):
@@ -38,4 +38,9 @@ class ScrollLogSerializer(serializers.ModelSerializer):
 class JupyterLogsSerializer(serializers.ModelSerializer):
   class Meta:
     model = JupyterLog
+    fields = '__all__'
+
+class ScaffoldDataSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = ScaffoldData
     fields = '__all__'

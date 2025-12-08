@@ -310,3 +310,24 @@ export const exportStory = async(storyData: StoryDataRaw) => {
   const response = await API.post('/export/', { storyData }, { responseType: 'blob' })
   return response;
 };
+
+export const createScaffold = async(pattern: string, x?: number, y?: number) => {
+  const response = await API.post('/scaffolds/create/', { pattern, x, y });
+  return response.data;
+};
+
+export const getScaffolds = async(scaffold_id?: string) => {
+  const url = scaffold_id ? `/scaffolds/?scaffold_id=${encodeURIComponent(scaffold_id)}` : '/scaffolds/';
+  const response = await API.get(url);
+  return response.data.scaffolds;
+};
+
+export const updateScaffold = async(scaffoldId: string, data: any) => {
+  const response = await API.post(`/scaffolds/${scaffoldId}/update/`, { data });
+  return response;
+};
+
+export const deleteScaffold = async(scaffoldId: string) => {
+  const response = await API.post(`/scaffolds/${scaffoldId}/delete/`, {});
+  return response;
+};

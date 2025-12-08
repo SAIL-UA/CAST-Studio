@@ -1,6 +1,6 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
-import { updateImageData as updateImageDataAPI, createGroup, getGroups, updateGroup, deleteGroup } from '../services/api';
+import { updateImageData as updateImageDataAPI, createGroup, getGroups, updateGroup, deleteGroup, createScaffold, getScaffolds, updateScaffold, deleteScaffold } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
 
 // Import components
@@ -17,7 +17,7 @@ import ClearAllButton from './ClearAllButton';
 import CauseEffect from './scaffolds/CauseEffect';
 
 // Import types
-import { ImageData, GroupData } from '../types/types';
+import { ImageData, GroupData, ScaffoldData } from '../types/types';
 
 
 // Define props interface
@@ -41,6 +41,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
     // States
     const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
+    const [scaffold, setScaffold] = useState<ScaffoldData | null>(null);
     const [nextGroupNumber, setNextGroupNumber] = useState(1);
     
     // References
@@ -83,12 +84,99 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         }
     };
 
-    // Fetch groups after images are loaded
+    // Fetch scaffolds from backend
+    const fetchScaffolds = async () => {
+        try {
+            const fetchedScaffolds = await getScaffolds();
+            if (!fetchedScaffolds || fetchedScaffolds.length === 0) {
+                setScaffold(null);
+                return;
+            }
+
+            // For now, assume one scaffold per user (or take the first one)
+            // You might want to handle multiple scaffolds differently
+            const scaffoldData = fetchedScaffolds[0];
+            
+            // Derive cards from images array using scaffold_id
+            const scaffoldCards = images
+                .filter(img => img.scaffoldId === scaffoldData.id)
+                .map((card: ImageData) => ({
+                    ...card,
+                    scaffoldId: scaffoldData.id
+                }));
+
+            const scaffoldWithCards: ScaffoldData = {
+                ...scaffoldData,
+                cards: scaffoldCards,
+                groups: [] // You might want to populate this if scaffolds can have groups
+            };
+
+            setScaffold(scaffoldWithCards);
+            
+            // Set selectedPattern based on scaffold name/number
+            // Map scaffold number back to pattern
+            const patternMap: { [key: number]: string } = {
+                1: 'cause_and_effect',
+                2: 'question_answer',
+                3: 'time_based',
+                4: 'factor_analysis',
+                5: 'overview_to_detail',
+                6: 'problem_solution',
+                7: 'comparative',
+                8: 'workflow_process',
+                9: 'shock_lead'
+            };
+            const pattern = patternMap[scaffoldData.number];
+            if (pattern) {
+                setSelectedPattern(pattern);
+            }
+
+        } catch (error) {
+            console.error('Error fetching scaffolds:', error);
+        }
+    };
+
+    // Fetch groups and scaffolds after images are loaded
     useEffect(() => {
         if (!loading && images.length > 0) {
             fetchGroups();
+            fetchScaffolds();
         }
     }, [loading, images]);
+
+    // Handle creating scaffold when pattern is selected (if scaffold doesn't exist)
+    useEffect(() => {
+        const handleCreateScaffoldIfNeeded = async () => {
+            // Only create scaffold if pattern is selected and scaffold doesn't exist
+            if (selectedPattern && selectedPattern !== '' && !scaffold) {
+                try {
+                    // Calculate initial position
+                    let initialX = 50;
+                    let initialY = 50;
+                    
+                    if (storyBinRef.current) {
+                        const rect = storyBinRef.current.getBoundingClientRect();
+                        initialX = rect.width / 2 - 250; // Center scaffold (assuming 500px width)
+                        initialY = 50;
+                    }
+
+                    const response = await createScaffold(selectedPattern, initialX, initialY);
+                    if (response.scaffold) {
+                        const newScaffold: ScaffoldData = {
+                            ...response.scaffold,
+                            cards: [],
+                            groups: []
+                        };
+                        setScaffold(newScaffold);
+                    }
+                } catch (error) {
+                    console.error('Error creating scaffold:', error);
+                }
+            }
+        };
+
+        handleCreateScaffoldIfNeeded();
+    }, [selectedPattern, scaffold]);
 
     // Handle description updates
     const handleDescriptionsUpdate = (id: string, newShortDesc: string, newLongDesc: string) => {
@@ -334,8 +422,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         }
     };
 
-    // Show only images that are in the storyboard (in_storyboard === true) and NOT in any group
-    const workspaceImages = images.filter(img => img.in_storyboard === true && !img.groupId);
+    // Show only images that are in the storyboard (in_storyboard === true) and NOT in any group or scaffold
+    const workspaceImages = images.filter(img => img.in_storyboard === true && !img.groupId && !img.scaffoldId);
 
     // Loading state
     if (loading) {
@@ -371,11 +459,43 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     isSuggestedOrderBin={false}
                 />
                 {/* Render Cause and Effect scaffold when pattern is selected */}
-                {selectedPattern === 'cause_and_effect' && (
+                {selectedPattern === 'cause_and_effect' && scaffold && (
                     <CauseEffect
                         images={images}
                         storyBinRef={storyBinRef}
                         setSelectedPattern={setSelectedPattern}
+                        scaffold={scaffold}
+                        onPositionUpdate={async (newX: number, newY: number) => {
+                            try {
+                                await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                            } catch (error) {
+                                console.error('Error updating scaffold position:', error);
+                            }
+                        }}
+                        onClose={async () => {
+                            try {
+                                // Remove scaffold_id from all images in this scaffold
+                                const cardsInScaffold = images.filter(img => img.scaffoldId === scaffold.id);
+                                for (const card of cardsInScaffold) {
+                                    await updateImageDataAPI(card.id, { scaffold_id: null });
+                                }
+
+                                // Update local state
+                                setImages(prev => prev.map(img =>
+                                    img.scaffoldId === scaffold.id
+                                        ? { ...img, scaffoldId: undefined }
+                                        : img
+                                ));
+
+                                // Delete scaffold from backend
+                                await deleteScaffold(scaffold.id);
+                                setScaffold(null);
+                                setSelectedPattern('');
+                            } catch (error) {
+                                console.error('Error closing scaffold:', error);
+                            }
+                        }}
                     />
                 )}
                 {/* Render groups directly in the scrollable container so they scroll with content */}
