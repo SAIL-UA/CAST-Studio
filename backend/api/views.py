@@ -965,8 +965,23 @@ class CreateScaffoldView(APIView):
       
       # Get scaffold info from mapping
       scaffold_info = SCAFFOLD_MAPPING[scaffold_pattern]
+
+      # Get any current scaffolds for user
+      current_scaffolds = ScaffoldData.objects.filter(user=request.user)
+
+      # If current scaffold is same as new scaffold, return error
+      if current_scaffolds.count() == 1 and current_scaffolds[0].name == scaffold_info['name']:
+        return Response({
+          "message": "Scaffold already created"
+        }, status=status.HTTP_200_OK)
+
+      # If different scaffold, delete all current scaffolds
+      if current_scaffolds.count() > 0:
+        # Delete all current scaffolds
+        for scaffold in current_scaffolds:
+          scaffold.delete()
       
-      # Prepare scaffold data
+      # Create new scaffold
       scaffold_data = {
         'user': request.user.id,
         'name': scaffold_info['name'],
