@@ -90,6 +90,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         try {
             const fetchedScaffolds = await getScaffolds();
             if (!fetchedScaffolds || fetchedScaffolds.length === 0) {
+                setSelectedPattern('');
                 setScaffold(null);
                 return;
             }
@@ -180,8 +181,13 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
     // Handle image deletion
     const handleDelete = async (imageId: string) => {
-        await fetchUserData(); // Refresh data after deletion
-        await fetchGroups(); // Refresh groups
+        // Immediately remove from local state for instant UI update
+        setImages((prevImages) => prevImages.filter(img => img.id !== imageId));
+        
+        // Then refresh from backend to ensure consistency
+        await fetchUserData();
+        await fetchGroups();
+        await fetchScaffolds();
     };
 
     // Handle creating new group div
@@ -422,9 +428,6 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         }
     };
 
-    // Show only images that are in the storyboard (in_storyboard === true) and NOT in any group or scaffold
-    const workspaceImages = images.filter(img => img.in_storyboard === true && !img.groupId && !img.scaffoldId);
-
     // Loading state
     if (loading) {
         return (
@@ -435,6 +438,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
             </div>
         );
     }
+
+    const workspaceImages = images.filter(img => 
+        img.in_storyboard === true && !img.groupId && !img.scaffoldId
+    );
 
     // Visible component
     return (
@@ -514,9 +521,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     images={images}
                     setImages={setImages}
                     setGroupDivs={setGroupDivs}
+                    setScaffold={setScaffold}
+                    setSelectedPattern={setSelectedPattern}
                     onClearComplete={async () => {
                         await fetchUserData();
                         await fetchGroups();
+                        await fetchScaffolds();
                     }}
                 />
             </div>

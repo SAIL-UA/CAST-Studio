@@ -45,26 +45,26 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
         .then((response: any) => {
             if (response.data.images.length === 0) {
                 setImages([]);
-                return;
             }
-            
-            // Use indices from backend - they're already assigned correctly
-            const fetchedImages = response.data.images.map((img: any) => {
-                const index = img.index !== undefined && img.index !== null ? img.index : 0;
-                
-                return {
-                    ...img,
-                    in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : true,
-                    x: img.x !== undefined ? img.x : (index % 4) * 160,
-                    y: img.y !== undefined ? img.y : Math.floor(index / 4) * 120,
-                    groupId: img.group_id || undefined,
-                    scaffoldId: img.scaffold_id || undefined,  // Transform snake_case to camelCase to match types.ts
-                    scaffold_group_number: img.scaffold_group_number || undefined,  // Keep snake_case to match types.ts
-                    url: getImageUrl(img.filepath),
-                    index: index
-                };
-            });
-            setImages(fetchedImages);
+            else {
+                // Use indices from backend - they're already assigned correctly
+                const fetchedImages = response.data.images.map((img: any) => {
+                    const index = img.index !== undefined && img.index !== null ? img.index : 0;
+                    
+                    return {
+                        ...img,
+                        in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : true,
+                        x: img.x !== undefined ? img.x : (index % 4) * 160,
+                        y: img.y !== undefined ? img.y : Math.floor(index / 4) * 120,
+                        groupId: img.group_id || undefined,
+                        scaffoldId: img.scaffold_id || undefined,  // Transform snake_case to camelCase to match types.ts
+                        scaffold_group_number: img.scaffold_group_number || undefined,  // Keep snake_case to match types.ts
+                        url: getImageUrl(img.filepath),
+                        index: index
+                    };
+                });
+                setImages(fetchedImages);
+            }
         })
         .catch((error) => {
             console.error('Error fetching user data:', error);

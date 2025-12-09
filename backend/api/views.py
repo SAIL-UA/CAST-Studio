@@ -996,16 +996,18 @@ class CreateScaffoldView(APIView):
         for scaffold in current_scaffolds:
           scaffold.delete()
 
-        # Update images to not have a scaffold_id
+        # Update images to not have a scaffold_id or scaffold_group_number
         images = ImageData.objects.filter(user=request.user)
         for image in images:
           image.scaffold_id = None
+          image.scaffold_group_number = None
           image.save()
 
-        # Update groups to not have a scaffold_id
+        # Update groups to not have a scaffold_id or scaffold_group_number
         groups = GroupData.objects.filter(user=request.user)
         for group in groups:
           group.scaffold_id = None
+          group.scaffold_group_number = None
           group.save()
       
       # Create new scaffold
@@ -1085,16 +1087,18 @@ class DeleteScaffoldView(APIView):
       for scaffold in scaffolds:
         scaffold.delete()
       
-      # Update images to not have a scaffold_id
+      # Update images to not have a scaffold_id or scaffold_group_number
       images = ImageData.objects.filter(user=request.user)
       for image in images:
         image.scaffold_id = None
+        image.scaffold_group_number = None
         image.save()
 
-      # Update groups to not have a scaffold_id
+      # Update groups to not have a scaffold_id or scaffold_group_number
       groups = GroupData.objects.filter(user=request.user)
       for group in groups:
         group.scaffold_id = None
+        group.scaffold_group_number = None
         group.save()
 
       return Response({"message": "All scaffolds deleted successfully"}, status=status.HTTP_200_OK)

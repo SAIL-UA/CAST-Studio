@@ -1,32 +1,42 @@
 // Import dependencies
 import React, { useState } from 'react';
-import { deleteFigure, deleteGroup, getGroups } from '../services/api';
+import { deleteFigure, deleteGroup, getGroups, getScaffolds, deleteScaffold } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
-import { ImageData, GroupData } from '../types/types';
+import { ImageData, GroupData, ScaffoldData } from '../types/types';
 
 type ClearAllButtonProps = {
     images: ImageData[];
     onClearComplete: () => Promise<void>;
     setImages?: React.Dispatch<React.SetStateAction<ImageData[]>>;
     setGroupDivs?: React.Dispatch<React.SetStateAction<GroupData[]>>;
+    setScaffold?: React.Dispatch<React.SetStateAction<ScaffoldData | null>>;
+    setSelectedPattern?: React.Dispatch<React.SetStateAction<string>>;
 }
 
 // ClearAll component
-const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs }: ClearAllButtonProps) => {
+const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setScaffold, setSelectedPattern }: ClearAllButtonProps) => {
     const [showModal, setShowModal] = useState<boolean>(false);
     const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const [groupCount, setGroupCount] = useState<number>(0);
+    const [scaffoldCount, setScaffoldCount] = useState<number>(0);
 
     // Handle opening the confirmation modal
     const handleOpenModal = async (e: React.MouseEvent) => {
         logAction(e);
-        // Fetch group count before showing modal
+        // Fetch group and scaffold counts before showing modal
         try {
             const groups = await getGroups();
             setGroupCount(groups?.length || 0);
         } catch (error) {
             console.error('Error fetching groups:', error);
             setGroupCount(0);
+        }
+        try {
+            const scaffolds = await getScaffolds();
+            setScaffoldCount(scaffolds?.length || 0);
+        } catch (error) {
+            console.error('Error fetching scaffolds:', error);
+            setScaffoldCount(0);
         }
         setShowModal(true);
     };
@@ -42,10 +52,15 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs }: Cl
         setIsDeleting(true);
 
         try {
-            // Get all groups first
-            const groups = await getGroups();
-            
+            // Delete all scaffolds
+            try {
+                await deleteScaffold();
+            } catch (error) {
+                console.error('Error deleting scaffolds:', error);
+            }
+
             // Delete all groups
+            const groups = await getGroups();
             if (groups && groups.length > 0) {
                 for (const group of groups) {
                     try {
@@ -81,15 +96,20 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs }: Cl
             if (setGroupDivs) {
                 setGroupDivs([]);
             }
-
+            if (setScaffold) {
+                setScaffold(null);
+            }
+            if (setSelectedPattern) {
+                setSelectedPattern('');
+            }
             // Refresh data from backend to ensure consistency
             await onClearComplete();
 
             // Show result message
             if (failCount === 0) {
-                window.alert(`Successfully deleted all ${successCount} image(s) and ${groups?.length || 0} group(s)`);
+                window.alert(`Successfully deleted all ${successCount} image(s), ${groups?.length || 0} group(s), and ${scaffoldCount} scaffold(s)`);
             } else {
-                window.alert(`Deletion complete: ${successCount} image(s) succeeded, ${failCount} failed. ${groups?.length || 0} group(s) deleted.`);
+                window.alert(`Deletion complete: ${successCount} image(s) succeeded, ${failCount} failed. ${groups?.length || 0} group(s) and ${scaffoldCount} scaffold(s) deleted.`);
             }
 
             setShowModal(false);
@@ -114,13 +134,14 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs }: Cl
                         <div className="mb-3">
                             <div className="text-sm font-semibold mb-2">Clear All Items</div>
                             <div className="text-sm text-gray-600 mb-3">
-                                Are you sure you want to permanently delete all images and groups? This action cannot be undone.
+                                Are you sure you want to permanently delete all images, groups, and scaffolds? This action cannot be undone.
                             </div>
                             <div className="text-sm text-gray-500 mb-3">
                                 This will delete:
                                 <ul className="list-disc list-inside mt-1 ml-2">
                                     <li>{imageCount} image(s) from workspace and recycle bin</li>
                                     <li>{groupCount} group(s)</li>
+                                    <li>{scaffoldCount} scaffold(s)</li>
                                 </ul>
                             </div>
                         </div>
@@ -158,7 +179,7 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs }: Cl
                     e.currentTarget.style.backgroundColor = 'rgba(0, 92, 132, 0.5)';
                 }}
                 onClick={handleOpenModal}
-                title="Clear all images and groups"
+                title="Clear all images, groups, and scaffolds"
             >
                 ×
             </button>
