@@ -49,12 +49,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     const storyBinRef = useRef<HTMLDivElement>(null);
 
     // Fetch groups from backend
-    const fetchGroups = async () => {
+    const fetchGroups = async (): Promise<GroupData[]> => {
         try {
             const fetchedGroups = await getGroups();
             if (!fetchedGroups || fetchedGroups.length === 0) {
                 setGroupDivs([]);
-                return;
+                return [];
             }
     
             // Derive cards from images array using group_id
@@ -82,13 +82,16 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 Math.max(max, group.number), 0);
             setNextGroupNumber(maxNumber + 1);
     
+            return groupsWithCards;
+    
         } catch (error) {
             console.error('Error fetching groups:', error);
+            return [];
         }
     };
 
     // Fetch scaffolds from backend
-    const fetchScaffolds = async () => {
+    const fetchScaffolds = async (groupsToUse?: GroupData[]) => {
         try {
             const fetchedScaffolds = await getScaffolds();
             if (!fetchedScaffolds || fetchedScaffolds.length === 0) {
@@ -109,8 +112,11 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     scaffoldId: scaffoldData.id
                 }));
 
+            // Use provided groups or fall back to state
+            const groups = groupsToUse || groupDivs;
+            
             // Derive groups that belong to this scaffold
-            const scaffoldGroups = groupDivs
+            const scaffoldGroups = groups
                 .filter(group => group.scaffoldId === scaffoldData.id)
                 .map((group: GroupData) => ({
                     ...group,
@@ -143,10 +149,14 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
     // Fetch groups and scaffolds after images are loaded
     useEffect(() => {
-        if (!loading && images.length > 0) {
-            fetchGroups();
-            fetchScaffolds();
-        }
+        const loadData = async () => {
+            if (!loading && images.length > 0) {
+                // Fetch groups first, then scaffolds (scaffolds depend on groups)
+                const groups = await fetchGroups();
+                await fetchScaffolds(groups);
+            }
+        };
+        loadData();
     }, [loading, images]);
 
     // Handle creating scaffold when pattern is selected (if scaffold doesn't exist)
@@ -201,8 +211,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         
         // Then refresh from backend to ensure consistency
         await fetchUserData();
-        await fetchGroups();
-        await fetchScaffolds();
+        const groups = await fetchGroups();
+        await fetchScaffolds(groups);
     };
 
     // Handle creating new group div
@@ -682,8 +692,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     setSelectedPattern={setSelectedPattern}
                     onClearComplete={async () => {
                         await fetchUserData();
-                        await fetchGroups();
-                        await fetchScaffolds();
+                        const groups = await fetchGroups();
+                        await fetchScaffolds(groups);
                     }}
                 />
             </div>
