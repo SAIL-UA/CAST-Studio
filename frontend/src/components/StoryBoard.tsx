@@ -18,6 +18,7 @@ import CauseEffect from './scaffolds/CauseEffect';
 
 // Import types
 import { ImageData, GroupData, ScaffoldData } from '../types/types';
+import { SCAFFOLD_NUMBER_TO_PATTERN, SCAFFOLD_VALID_GROUP_NUMBERS } from '../types/scaffoldMappings';
 
 
 // Define props interface
@@ -114,19 +115,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
             setScaffold(scaffoldWithCards);
             
             // Set selectedPattern based on scaffold name/number
-            // Map scaffold number back to pattern
-            const patternMap: { [key: number]: string } = {
-                1: 'cause_and_effect',
-                2: 'question_answer',
-                3: 'time_based',
-                4: 'factor_analysis',
-                5: 'overview_to_detail',
-                6: 'problem_solution',
-                7: 'comparative',
-                8: 'workflow_process',
-                9: 'shock_lead'
-            };
-            const pattern = patternMap[scaffoldData.number];
+            const pattern = SCAFFOLD_NUMBER_TO_PATTERN[scaffoldData.number];
             if (pattern) {
                 setSelectedPattern(pattern);
             }
@@ -476,6 +465,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                         storyBinRef={storyBinRef}
                         setSelectedPattern={setSelectedPattern}
                         scaffold={scaffold}
+                        updateImageData={updateImageData}
                         onPositionUpdate={async (newX: number, newY: number) => {
                             try {
                                 await updateScaffold(scaffold.id, { x: newX, y: newY });

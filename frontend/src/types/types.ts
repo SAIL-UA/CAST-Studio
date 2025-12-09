@@ -18,6 +18,7 @@ export interface ImageData {
   scaffoldId?: string;
   index: number;
   url: string;
+  scaffold_group_number?: number;
 }
 
 export interface ScaffoldData {
@@ -25,6 +26,7 @@ export interface ScaffoldData {
   name: string;
   number: number;
   description: string;
+  valid_group_numbers?: number[];
   x: number;
   y: number;
   cards: ImageData[];
@@ -42,6 +44,7 @@ export interface ImageMetadata {
   user: number;
   groupId?: string;
   scaffoldId?: string;
+  scaffold_group_number?: number;
 }
 
 export interface DragItem {
@@ -51,7 +54,9 @@ export interface DragItem {
   oldY: number;
   offsetX: number;
   offsetY: number;
-  groupId?: string; // NEW: Which group this item belongs to (if any)
+  groupId?: string;
+  scaffoldId?: string;
+  scaffold_group_number?: number;
 }
 
 // Props interfaces for components
@@ -87,6 +92,7 @@ export interface GroupData {
   cards: ImageData[];
   created_at: string;
   last_modified: string;
+  scaffold_group_number?: number;
 }
 
 // NEW: Enhanced Group component props

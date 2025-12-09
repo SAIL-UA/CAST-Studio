@@ -1,7 +1,8 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
-import { ImageData, DragItem, GroupData } from '../../types/types';
+import { ImageData, DragItem, ScaffoldData } from '../../types/types';
+import { SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 
 // Define props interface
@@ -9,11 +10,8 @@ type CauseEffectProps = {
     images: ImageData[];
     storyBinRef: React.RefObject<HTMLDivElement | null>;
     setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;
-    scaffold?: {
-        id: string;
-        x: number;
-        y: number;
-    };
+    scaffold?: ScaffoldData;
+    updateImageData: (imageId: string, data: Partial<ImageData>) => void;
     onPositionUpdate?: (x: number, y: number) => void;
     onClose?: () => void;
 }
@@ -24,6 +22,7 @@ const CauseEffect = ({
     storyBinRef,
     setSelectedPattern,
     scaffold,
+    updateImageData,
     onPositionUpdate,
     onClose
 }: CauseEffectProps) => {
@@ -39,6 +38,7 @@ const CauseEffect = ({
             setPosition({ x: scaffold.x, y: scaffold.y });
         }
     }, [scaffold]);
+    
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
@@ -46,17 +46,59 @@ const CauseEffect = ({
 
     const causesGroupId = 'cause-effect-causes';
     const effectsGroupId = 'cause-effect-effects';
+    
+    // Get scaffold group numbers from mappings using scaffold number
+    const scaffoldNumber = scaffold?.number || 1;
+    const validGroupNumbers = SCAFFOLD_VALID_GROUP_NUMBERS[scaffoldNumber] || [1, 2];
+    const CAUSES_GROUP_NUMBER = validGroupNumbers[0];  // scaffold_group_number for causes
+    const EFFECTS_GROUP_NUMBER = validGroupNumbers[1];  // scaffold_group_number for effects
 
-    // Local state to track which cards are in which group (for demo/UI purposes)
+    // Local state to track which cards are in which group
     const [causesCardIds, setCausesCardIds] = useState<Set<string>>(new Set());
     const [effectsCardIds, setEffectsCardIds] = useState<Set<string>>(new Set());
+
+    // Initialize local state from images that already have scaffold_group_number set
+    useEffect(() => {
+        if (!scaffold) return;
+        
+        const causesIds = new Set<string>();
+        const effectsIds = new Set<string>();
+        
+        images.forEach(img => {
+            if (img.scaffoldId === scaffold.id) {
+                if (img.scaffold_group_number === CAUSES_GROUP_NUMBER) {
+                    causesIds.add(img.id);
+                } else if (img.scaffold_group_number === EFFECTS_GROUP_NUMBER) {
+                    effectsIds.add(img.id);
+                }
+            }
+        });
+        
+        setCausesCardIds(causesIds);
+        setEffectsCardIds(effectsIds);
+    }, [scaffold, images]);
 
     // Get cards for each group from local state
     const causesCards = images.filter(img => causesCardIds.has(img.id));
     const effectsCards = images.filter(img => effectsCardIds.has(img.id));
 
-    // Local handlers for adding/removing cards (no backend calls)
-    const handleCardAdd = (cardId: string, groupId: string) => {
+    // Updated handler: now calls backend to persist scaffold_group_number
+    const handleCardAdd = async (cardId: string, groupId: string) => {
+        if (!scaffold) return;
+        
+        // Determine scaffold_group_number based on groupId
+        const scaffoldGroupNumber = groupId === causesGroupId 
+            ? CAUSES_GROUP_NUMBER 
+            : EFFECTS_GROUP_NUMBER;
+        
+        // Update backend with scaffoldId and scaffold_group_number
+        // Note: Use camelCase (scaffoldId) to match types.ts - updateImageData will transform to snake_case for API
+        await updateImageData(cardId, {
+            scaffoldId: scaffold.id,
+            scaffold_group_number: scaffoldGroupNumber
+        } as any);
+        
+        // Update local state
         if (groupId === causesGroupId) {
             setCausesCardIds(prev => {
                 const newSet = new Set(prev);
@@ -84,7 +126,18 @@ const CauseEffect = ({
         }
     };
 
-    const handleCardRemove = (cardId: string, groupId: string) => {
+    // Updated handler: now calls backend to clear scaffold_group_number
+    const handleCardRemove = async (cardId: string, groupId: string) => {
+        if (!scaffold) return;
+        
+        // Update backend to clear scaffoldId and scaffold_group_number
+        // Note: Use camelCase (scaffoldId) to match types.ts - updateImageData will transform to snake_case for API
+        await updateImageData(cardId, {
+            scaffoldId: undefined,
+            scaffold_group_number: undefined
+        } as any);
+        
+        // Update local state
         if (groupId === causesGroupId) {
             setCausesCardIds(prev => {
                 const newSet = new Set(prev);

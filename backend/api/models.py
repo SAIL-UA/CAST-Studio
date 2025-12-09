@@ -87,6 +87,7 @@ class ScaffoldData(models.Model):
   user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='scaffold_data')
   name = models.CharField(max_length=100, default="No Scaffold")
   number = models.IntegerField(default=0)
+  valid_group_numbers = models.JSONField(default=list, help_text="List of valid group numbers for this scaffold (1=causes, 2=effects, etc.)")
   description = models.TextField(default="", null=True, blank=True)
   x = models.FloatField(default=0.0)
   y = models.FloatField(default=0.0)
@@ -113,6 +114,7 @@ class GroupData(models.Model):
   x = models.FloatField(default=0.0)
   y = models.FloatField(default=0.0)
   scaffold_id = models.ForeignKey(ScaffoldData, on_delete=models.SET_NULL, db_column='scaffold_id', null=True, blank=True, related_name='groups')
+  scaffold_group_number = models.IntegerField(null=True, blank=True, help_text="Group number within scaffold (1=causes, 2=effects, etc.)")
   created_at = models.DateTimeField(auto_now_add=True)
   last_modified = models.DateTimeField(auto_now=True)
   
@@ -140,6 +142,7 @@ class ImageData(models.Model):
   y = models.FloatField(default=0.0)
   group_id = models.ForeignKey(GroupData, on_delete=models.SET_NULL, db_column='group_id', null=True, blank=True, related_name='images')
   scaffold_id = models.ForeignKey(ScaffoldData, on_delete=models.SET_NULL, db_column='scaffold_id', null=True, blank=True, related_name='images')
+  scaffold_group_number = models.IntegerField(null=True, blank=True, help_text="Group number within scaffold (1=causes, 2=effects, etc.)")
   has_order = models.BooleanField(default=False)
   order_num = models.IntegerField(default=0)
   index = models.IntegerField(default=0)

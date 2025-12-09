@@ -53,6 +53,70 @@ from .tasks import generate_description_task, generate_narrative_task, generate_
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
+# Scaffold mapping constant (shared across views)
+SCAFFOLD_MAPPING = {
+  'cause_and_effect': {
+    'name': 'Cause and Effect',
+    'number': 1,
+    'description': 'How a variable or event influences another.',
+    'valid_group_numbers': [1, 2] # 1=causes, 2=effects
+  },
+  'question_answer': {
+    'name': 'Question and Answer',
+    'number': 2,
+    'description': 'A central question, followed by evidence to support the answer.',
+    'valid_group_numbers': [1, 2] # 1=question, 2=answer
+  },
+  'time_based': {
+    'name': 'Timeline',
+    'number': 3,
+    'description': 'A sequence of events in time to highlight patterns and trends.',
+    'valid_group_numbers': [1, 2, 3] # 1=event 1, 2=event 2, 3=event 3, user can add more events as needed but this is default
+  },
+  'factor_analysis': {
+    'name': 'Factor Analysis',
+    'number': 4,
+    'description': 'A breakdown of a phenomenon into influencing factors.',
+    'valid_group_numbers': [1, 2, 3] # 1=factor 1, 2=factor 2, 3=factor 3, user can add more factors as needed but this is default
+  },
+  'overview_to_detail': {
+    'name': 'Overview To Detail',
+    'number': 5,
+    'description': 'A broad snapshot of a phenomenon, followed by finer details.',
+    'valid_group_numbers': [1, 2, 3, 4] # 1=overview, 2=detail 1, 3=detail 2, 4=detail 3, user can add more details as needed but this is default
+  },
+  'problem_solution': {
+    'name': 'Problem and Solution',
+    'number': 6,
+    'description': 'A challenge, followed by evidence for a solution.',
+    'valid_group_numbers': [1, 2] # 1=problem, 2=solution
+  },
+  'comparative': {
+    'name': 'Comparative Analysis',
+    'number': 7,
+    'description': 'A side-by-side view of events to reveal similarities and differences.',
+    'valid_group_numbers': [1, 2] # 1=item 1, 2=item 2
+  },
+  'workflow_process': {
+    'name': 'Workflow or Process',
+    'number': 8,
+    'description': 'Discusses the key stages of a system or pipeline.',
+    'valid_group_numbers': [1, 2, 3] # 1=stage 1, 2=stage 2, 3=stage 3, user can add more stages as needed but this is default
+  },
+  'shock_lead': {
+    'name': 'Shock and Lead',
+    'number': 9,
+    'description': 'A striking fact, followed by analysis of explanatory factors.',
+    'valid_group_numbers': [1, 2] # 1=shock fact, 2=explanatory factors
+  },
+}
+
+# Reverse mapping: scaffold number -> pattern name
+SCAFFOLD_NUMBER_TO_PATTERN = {info['number']: pattern for pattern, info in SCAFFOLD_MAPPING.items()}
+
+# Reverse mapping: scaffold number -> valid group numbers
+SCAFFOLD_NUMBER_TO_VALID_GROUPS = {info['number']: info['valid_group_numbers'] for _, info in SCAFFOLD_MAPPING.items()}
+
 class BurstRateThrottle(UserRateThrottle):
   rate = '10/min'
   
@@ -900,55 +964,6 @@ class CreateScaffoldView(APIView):
     }
     """
     try:
-      # Mapping from pattern values to display names, numbers, and descriptions
-      SCAFFOLD_MAPPING = {
-        'cause_and_effect': {
-          'name': 'Cause and Effect',
-          'number': 1,
-          'description': 'How a variable or event influences another.'
-        },
-        'question_answer': {
-          'name': 'Question and Answer',
-          'number': 2,
-          'description': 'A central question, followed by evidence to support the answer.'
-        },
-        'time_based': {
-          'name': 'Timeline',
-          'number': 3,
-          'description': 'A sequence of events in time to highlight patterns and trends.'
-        },
-        'factor_analysis': {
-          'name': 'Factor Analysis',
-          'number': 4,
-          'description': 'A breakdown of a phenomenon into influencing factors.'
-        },
-        'overview_to_detail': {
-          'name': 'Overview To Detail',
-          'number': 5,
-          'description': 'A broad snapshot of a phenomenon, followed by finer details.'
-        },
-        'problem_solution': {
-          'name': 'Problem and Solution',
-          'number': 6,
-          'description': 'A challenge, followed by evidence for a solution.'
-        },
-        'comparative': {
-          'name': 'Comparative Analysis',
-          'number': 7,
-          'description': 'A side-by-side view of events to reveal similarities and differences.'
-        },
-        'workflow_process': {
-          'name': 'Workflow or Process',
-          'number': 8,
-          'description': 'Discusses the key stages of a system or pipeline.'
-        },
-        'shock_lead': {
-          'name': 'Shock and Lead',
-          'number': 9,
-          'description': 'A striking fact, followed by analysis of explanatory factors.'
-        },
-      }
-      
       # Get scaffold pattern from request
       scaffold_pattern = request.data.get('pattern', '')
       
@@ -999,6 +1014,7 @@ class CreateScaffoldView(APIView):
         'name': scaffold_info['name'],
         'number': scaffold_info['number'],
         'description': scaffold_info['description'],
+        'valid_group_numbers': scaffold_info['valid_group_numbers'],  # Add this line
         'x': request.data.get('x', 0.0),
         'y': request.data.get('y', 0.0),
       }

@@ -58,6 +58,8 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
                     x: img.x !== undefined ? img.x : (index % 4) * 160,
                     y: img.y !== undefined ? img.y : Math.floor(index / 4) * 120,
                     groupId: img.group_id || undefined,
+                    scaffoldId: img.scaffold_id || undefined,  // Transform snake_case to camelCase to match types.ts
+                    scaffold_group_number: img.scaffold_group_number || undefined,  // Keep snake_case to match types.ts
                     url: getImageUrl(img.filepath),
                     index: index
                 };
@@ -75,9 +77,20 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
     // Update image data (position, status, etc.)
     const updateImageData = async (imageId: string, data: Partial<ImageData>) => {
         try {
-            const response = await updateImageDataAPI(imageId, data);
+            // Transform camelCase to snake_case for API call (backend expects snake_case)
+            const apiData: any = { ...data };
+            if ('scaffoldId' in apiData) {
+                apiData.scaffold_id = apiData.scaffoldId;
+                delete apiData.scaffoldId;
+            }
+            if ('groupId' in apiData) {
+                apiData.group_id = apiData.groupId;
+                delete apiData.groupId;
+            }
+            
+            const response = await updateImageDataAPI(imageId, apiData);
             if (response.status === 200) {
-                // Update local state - preserve index from existing state
+                // Update local state with camelCase field names (matching types.ts)
                 setImages((prevImages) =>
                     prevImages.map((img) => 
                         img.id === imageId ? { ...img, ...data, index: img.index } : img
