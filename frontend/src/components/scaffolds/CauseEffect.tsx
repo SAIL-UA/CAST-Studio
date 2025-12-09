@@ -1,9 +1,10 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
-import { ImageData, DragItem, ScaffoldData } from '../../types/types';
+import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
 import { SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
+import GroupDiv from '../GroupDiv';
 
 // Define props interface
 type CauseEffectProps = {
@@ -14,6 +15,13 @@ type CauseEffectProps = {
     updateImageData: (imageId: string, data: Partial<ImageData>) => void;
     onPositionUpdate?: (x: number, y: number) => void;
     onClose?: () => void;
+    onGroupAdd?: (groupId: string, scaffoldId: string, scaffoldGroupNumber?: number) => void;
+    onGroupRemove?: (groupId: string) => void;
+    onCardAddToGroup?: (cardId: string, groupId: string) => void;
+    onCardRemoveFromGroup?: (cardId: string, groupId: string) => void;
+    onGroupNameChange?: (groupId: string, newName: string) => void;
+    onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
+    onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
 }
 
 // Cause and Effect Scaffold component
@@ -24,7 +32,14 @@ const CauseEffect = ({
     scaffold,
     updateImageData,
     onPositionUpdate,
-    onClose
+    onClose,
+    onGroupAdd,
+    onGroupRemove,
+    onCardAddToGroup,
+    onCardRemoveFromGroup,
+    onGroupNameChange,
+    onGroupDescriptionChange,
+    onGroupUpdate
 }: CauseEffectProps) => {
     // Use scaffold position if provided, otherwise default
     const [position, setPosition] = useState({ 
@@ -81,6 +96,11 @@ const CauseEffect = ({
     // Get cards for each group from local state
     const causesCards = images.filter(img => causesCardIds.has(img.id));
     const effectsCards = images.filter(img => effectsCardIds.has(img.id));
+
+    // Get groups that belong to this scaffold, separated by scaffold_group_number
+    const scaffoldGroups = scaffold?.groups || [];
+    const causesGroups = scaffoldGroups.filter(group => group.scaffold_group_number === CAUSES_GROUP_NUMBER);
+    const effectsGroups = scaffoldGroups.filter(group => group.scaffold_group_number === EFFECTS_GROUP_NUMBER);
 
     // Updated handler: now calls backend to persist scaffold_group_number
     const handleCardAdd = async (cardId: string, groupId: string) => {
@@ -357,6 +377,17 @@ const CauseEffect = ({
                 cards={causesCards}
                 onCardAdd={handleCardAdd}
                 onCardRemove={handleCardRemove}
+                scaffoldId={scaffold?.id}
+                scaffoldGroupNumber={CAUSES_GROUP_NUMBER}
+                groups={causesGroups}
+                onGroupAdd={onGroupAdd}
+                onGroupRemove={onGroupRemove}
+                onCardAddToGroup={onCardAddToGroup}
+                onCardRemoveFromGroup={onCardRemoveFromGroup}
+                onGroupNameChange={onGroupNameChange}
+                onGroupDescriptionChange={onGroupDescriptionChange}
+                onGroupUpdate={onGroupUpdate}
+                storyBinRef={storyBinRef}
             />
 
             {/* Effects Group */}
@@ -366,8 +397,20 @@ const CauseEffect = ({
                 cards={effectsCards}
                 onCardAdd={handleCardAdd}
                 onCardRemove={handleCardRemove}
+                scaffoldId={scaffold?.id}
+                scaffoldGroupNumber={EFFECTS_GROUP_NUMBER}
+                groups={effectsGroups}
+                onGroupAdd={onGroupAdd}
+                onGroupRemove={onGroupRemove}
+                onCardAddToGroup={onCardAddToGroup}
+                onCardRemoveFromGroup={onCardRemoveFromGroup}
+                onGroupNameChange={onGroupNameChange}
+                onGroupDescriptionChange={onGroupDescriptionChange}
+                onGroupUpdate={onGroupUpdate}
+                storyBinRef={storyBinRef}
             />
             </div>
+
         </div>
     );
 };
@@ -379,16 +422,49 @@ type CauseEffectGroupProps = {
     cards: ImageData[];
     onCardAdd: (cardId: string, groupId: string) => void;
     onCardRemove: (cardId: string, groupId: string) => void;
+    scaffoldId?: string;
+    scaffoldGroupNumber?: number;
+    groups?: GroupData[];
+    onGroupAdd?: (groupId: string, scaffoldId: string, scaffoldGroupNumber?: number) => void;
+    onGroupRemove?: (groupId: string) => void;
+    onCardAddToGroup?: (cardId: string, groupId: string) => void;
+    onCardRemoveFromGroup?: (cardId: string, groupId: string) => void;
+    onGroupNameChange?: (groupId: string, newName: string) => void;
+    onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
+    onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
+    storyBinRef: React.RefObject<HTMLDivElement | null>;
 };
 
-const CauseEffectGroup = ({ id, title, cards, onCardAdd, onCardRemove }: CauseEffectGroupProps) => {
+const CauseEffectGroup = ({ 
+    id, 
+    title, 
+    cards, 
+    onCardAdd, 
+    onCardRemove,
+    scaffoldId,
+    scaffoldGroupNumber,
+    groups = [],
+    onGroupAdd,
+    onGroupRemove,
+    onCardAddToGroup,
+    onCardRemoveFromGroup,
+    onGroupNameChange,
+    onGroupDescriptionChange,
+    onGroupUpdate,
+    storyBinRef
+}: CauseEffectGroupProps) => {
     const groupRef = useRef<HTMLDivElement>(null);
 
-    // React DnD hook for drop functionality
+    // React DnD hook for drop functionality - accepts both images and groups
     const [{ isOver, canDrop }, drop] = useDrop(() => ({
-        accept: 'image',
+        accept: ['image', 'group'],
         drop: (item: DragItem, monitor) => {
-            if (item.groupId !== id && cards.length < 3) {
+            // Don't process drops from the scaffold itself
+            if (item.id === 'cause-effect-scaffold') {
+                return { droppedInGroup: false };
+            }
+            // Handle image drops
+            if (item.type !== 'group' && item.groupId !== id && cards.length < 3) {
                 console.log(`Card ${item.id} dropped into ${id}`);
                 onCardAdd(item.id, id);
                 return {
@@ -396,16 +472,38 @@ const CauseEffectGroup = ({ id, title, cards, onCardAdd, onCardRemove }: CauseEf
                     groupId: id,
                 };
             }
+            // Handle group drops
+            if (item.type === 'group' && scaffoldId && scaffoldGroupNumber !== undefined && onGroupAdd) {
+                // Check if group doesn't already belong to this scaffold
+                if (item.scaffoldId !== scaffoldId) {
+                    console.log(`Group ${item.id} dropped into ${id} (scaffold group ${scaffoldGroupNumber})`);
+                    onGroupAdd(item.id, scaffoldId, scaffoldGroupNumber);
+                    return {
+                        droppedInScaffoldGroup: true,
+                        scaffoldId: scaffoldId,
+                        scaffoldGroupNumber: scaffoldGroupNumber,
+                    };
+                }
+            }
             return { droppedInGroup: false };
         },
         canDrop: (item: DragItem) => {
-            return item.groupId !== id && cards.length < 3;
+            // Don't accept the scaffold itself (it has id 'cause-effect-scaffold')
+            if (item.id === 'cause-effect-scaffold') {
+                return false;
+            }
+            // For images: can drop if not already in this group and group has less than 3 cards
+            if (item.type !== 'group') {
+                return item.groupId !== id && cards.length < 3;
+            }
+            // For groups: can drop if it's a group and doesn't already belong to this scaffold
+            return item.type === 'group' && item.scaffoldId !== scaffoldId;
         },
         collect: (monitor) => ({
             isOver: monitor.isOver(),
             canDrop: monitor.canDrop(),
         }),
-    }), [id, onCardAdd, cards.length]);
+    }), [id, onCardAdd, cards.length, scaffoldId, scaffoldGroupNumber, onGroupAdd]);
 
     // Combine refs
     const combinedRef = (element: HTMLDivElement | null) => {
@@ -418,7 +516,7 @@ const CauseEffectGroup = ({ id, title, cards, onCardAdd, onCardRemove }: CauseEf
     return (
         <div
             ref={combinedRef}
-            className={`p-2 bg-white rounded border transition-all duration-200 flex-1 ${
+            className={`p-2 bg-white rounded border transition-all duration-200 flex-1 relative ${
                 isOver && canDrop
                     ? 'border-blue-400 border-2 bg-blue-50'
                     : isOver && !canDrop
@@ -434,11 +532,11 @@ const CauseEffectGroup = ({ id, title, cards, onCardAdd, onCardRemove }: CauseEf
                 <h4 className="text-xs font-bold text-grey-darkest">{title}</h4>
             </div>
 
-            {/* Drop zone indicator when empty */}
-            {isOver && canDrop && cards.length === 0 && (
-                <div className="flex items-center justify-center h-[80%] border-2 border-dashed border-blue-400 rounded-lg bg-blue-50">
+            {/* Drop zone indicator when dragging over */}
+            {isOver && canDrop && (
+                <div className="flex items-center justify-center h-[80%] border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 absolute inset-0 z-10">
                     <div className="text-blue-600 text-sm font-medium">
-                        Drop card here
+                        {cards.length === 0 ? 'Drop card or group here' : 'Drop here'}
                     </div>
                 </div>
             )}
@@ -448,6 +546,80 @@ const CauseEffectGroup = ({ id, title, cards, onCardAdd, onCardRemove }: CauseEf
                 <div className="flex items-center justify-center h-[80%] border-2 border-dashed border-red-400 rounded-lg bg-red-50">
                     <div className="text-red-600 text-sm font-medium">
                         Group is full (Max: 3 visuals)
+                    </div>
+                </div>
+            )}
+
+            {/* Display groups that belong to this scaffold group */}
+            {groups.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-grey-light">
+                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto" style={{ position: 'relative' }}>
+                        {groups.map((group, index) => {
+                            const scaledWidth = 160; // 320px * 0.5
+                            const scaledHeight = 128; // 256px * 0.5
+                            const gap = 8; // gap-2 = 8px
+                            
+                            return (
+                                <div 
+                                    key={group.id}
+                                    className="relative group"
+                                    style={{
+                                        width: `${scaledWidth}px`,
+                                        height: `${scaledHeight}px`,
+                                        marginRight: index < groups.length - 1 ? `${gap}px` : '0',
+                                        marginBottom: `${gap}px`,
+                                    }}
+                                >
+                                    <div 
+                                        style={{
+                                            transform: 'scale(0.5)',
+                                            transformOrigin: 'top left',
+                                            width: '320px',
+                                            height: '256px',
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                        }}
+                                    >
+                                        <GroupDiv
+                                            id={group.id}
+                                            number={group.number}
+                                            name={group.name}
+                                            description={group.description}
+                                            cards={group.cards}
+                                            initialPosition={{ x: 0, y: 0 }}
+                                            onClose={onGroupRemove ? () => onGroupRemove(group.id) : () => {}}
+                                            onPositionUpdate={() => {}}  // Disable position updates inside scaffold
+                                            onCardAdd={onCardAddToGroup || (() => {})}
+                                            onCardRemove={onCardRemoveFromGroup || (() => {})}
+                                            onNameChange={onGroupNameChange || (() => {})}
+                                            onDescriptionChange={onGroupDescriptionChange || (() => {})}
+                                            onGroupUpdate={onGroupUpdate || (() => {})}
+                                            storyBinRef={storyBinRef}
+                                            scaffoldId={group.scaffoldId}
+                                            disableDrag={true}
+                                        />
+                                    </div>
+                                    {/* Remove button overlay - similar to image remove button */}
+                                    {onGroupRemove && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onGroupRemove(group.id);
+                                            }}
+                                            className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30 shadow-md"
+                                            style={{
+                                                top: '-2px',
+                                                right: '8px'
+                                            }}
+                                            title="Remove group from scaffold"
+                                        >
+                                            ×
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

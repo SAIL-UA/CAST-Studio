@@ -69,7 +69,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     
                 return {
                     ...group,
-                    cards: fullCards  // Derived from images state array
+                    cards: fullCards,  // Derived from images state array
+                    scaffoldId: group.scaffold_id || undefined,  // Transform snake_case to camelCase
+                    scaffold_group_number: group.scaffold_group_number || undefined  // Preserve scaffold_group_number from backend
                 };
             });
     
@@ -107,10 +109,23 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     scaffoldId: scaffoldData.id
                 }));
 
+            // Derive groups that belong to this scaffold
+            const scaffoldGroups = groupDivs
+                .filter(group => group.scaffoldId === scaffoldData.id)
+                .map((group: GroupData) => ({
+                    ...group,
+                    cards: images
+                        .filter(img => img.groupId === group.id)
+                        .map((card: ImageData) => ({
+                            ...card,
+                            groupId: group.id
+                        }))
+                }));
+
             const scaffoldWithCards: ScaffoldData = {
                 ...scaffoldData,
                 cards: scaffoldCards,
-                groups: [] // You might want to populate this if scaffolds can have groups
+                groups: scaffoldGroups  // Populate groups that belong to scaffold
             };
 
             setScaffold(scaffoldWithCards);
@@ -274,6 +289,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 const remainingCount = groupDivs.filter(group => group.id !== groupId).length;
                 return remainingCount + 1;
             });
+
+            // If group was in a scaffold, also update scaffold state
+            const deletedGroup = groupDivs.find(g => g.id === groupId);
+            if (deletedGroup?.scaffoldId && scaffold && scaffold.id === deletedGroup.scaffoldId) {
+                setScaffold(prev => prev ? {
+                    ...prev,
+                    groups: prev.groups.filter(g => g.id !== groupId)
+                } : null);
+            }
         } catch (error) {
             console.error('Error closing group:', error);
         }
@@ -420,11 +444,108 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Handle scaffold close
     const handleScaffoldClose = async () => {
         try {
+            // Store scaffold ID before deletion for cleanup
+            const scaffoldIdToRemove = scaffold?.id;
+
+            // Delete scaffold from backend (backend will clear scaffold associations)
             await deleteScaffold();
+
+            // Update local state: remove scaffold associations from images
+            setImages(prev => prev.map(img =>
+                img.scaffoldId === scaffoldIdToRemove
+                    ? { ...img, scaffoldId: undefined, scaffold_group_number: undefined }
+                    : img
+            ));
+
+            // Update local state: remove scaffold associations from groups
+            setGroupDivs(prev => prev.map(group =>
+                group.scaffoldId === scaffoldIdToRemove
+                    ? { ...group, scaffoldId: undefined, scaffold_group_number: undefined }
+                    : group
+            ));
+
+            // Clear scaffold state
             setScaffold(null);
             setSelectedPattern('');
+
+            // Refresh data from backend to ensure consistency
+            await fetchUserData();
+            await fetchGroups();
         } catch (error) {
             console.error('Error closing scaffold:', error);
+        }
+    };
+
+    // Handle group being dropped into scaffold
+    const handleGroupAddToScaffold = async (groupId: string, scaffoldId: string, scaffoldGroupNumber?: number) => {
+        try {
+            // Transform camelCase to snake_case for backend
+            const updateData: any = { 
+                scaffold_id: scaffoldId,
+                scaffold_group_number: scaffoldGroupNumber 
+            };
+            
+            // Update group's scaffold_id in backend
+            await updateGroup(groupId, updateData);
+
+            // Update local state and scaffold immediately
+            setGroupDivs(prev => {
+                const updatedGroups = prev.map(group =>
+                    group.id === groupId
+                        ? { ...group, scaffoldId: scaffoldId, scaffold_group_number: scaffoldGroupNumber, last_modified: new Date().toISOString() }
+                        : group
+                );
+
+                // Update scaffold state immediately with the updated groups
+                if (scaffold && scaffold.id === scaffoldId) {
+                    const updatedScaffoldGroups = updatedGroups
+                        .filter(group => group.scaffoldId === scaffoldId)
+                        .map((group: GroupData) => ({
+                            ...group,
+                            cards: images
+                                .filter(img => img.groupId === group.id)
+                                .map((card: ImageData) => ({
+                                    ...card,
+                                    groupId: group.id
+                                }))
+                        }));
+
+                    setScaffold(prev => prev ? {
+                        ...prev,
+                        groups: updatedScaffoldGroups
+                    } : null);
+                }
+
+                return updatedGroups;
+            });
+        } catch (error) {
+            console.error('Error adding group to scaffold:', error);
+        }
+    };
+
+    // Handle group being removed from scaffold
+    const handleGroupRemoveFromScaffold = async (groupId: string) => {
+        try {
+            // Transform camelCase to snake_case for backend
+            const updateData: any = { 
+                scaffold_id: null,
+                scaffold_group_number: null 
+            };
+            
+            // Update group's scaffold_id to null in backend
+            await updateGroup(groupId, updateData);
+
+            // Update local state
+            setGroupDivs(prev => prev.map(group =>
+                group.id === groupId
+                    ? { ...group, scaffoldId: undefined, scaffold_group_number: undefined, last_modified: new Date().toISOString() }
+                    : group
+            ));
+
+            // Refresh scaffold
+            await fetchScaffolds();
+        } catch (error) {
+            console.error('Error removing group from scaffold:', error);
         }
     };
 
@@ -442,6 +563,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     const workspaceImages = images.filter(img => 
         img.in_storyboard === true && !img.groupId && !img.scaffoldId
     );
+
+    // Filter groups: only show groups that don't belong to a scaffold in main storyboard
+    const mainStoryboardGroups = groupDivs.filter(group => !group.scaffoldId);
 
     // Visible component
     return (
@@ -482,10 +606,17 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             }
                         }}
                         onClose={handleScaffoldClose}
+                        onGroupAdd={handleGroupAddToScaffold}
+                        onGroupRemove={handleGroupRemoveFromScaffold}
+                        onCardAddToGroup={handleCardAddToGroup}
+                        onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                        onGroupNameChange={handleGroupNameChange}
+                        onGroupDescriptionChange={handleGroupDescriptionChange}
+                        onGroupUpdate={handleGroupUpdate}
                     />
                 )}
-                {/* Render groups directly in the scrollable container so they scroll with content */}
-                {groupDivs.map(group => (
+                {/* Render groups directly in the scrollable container - only groups without scaffold */}
+                {mainStoryboardGroups.map(group => (
                     <GroupDiv 
                         key={group.id}
                         id={group.id}
@@ -514,6 +645,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                         onDescriptionChange={handleGroupDescriptionChange}
                         onGroupUpdate={handleGroupUpdate}
                         storyBinRef={storyBinRef}
+                        scaffoldId={group.scaffoldId}
                     />
                 ))}
                 {/* ClearAll button - positioned in bottom left */}

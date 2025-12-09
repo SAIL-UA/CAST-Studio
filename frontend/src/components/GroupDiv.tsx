@@ -22,7 +22,9 @@ const GroupDiv: React.FC<GroupDivProps> = ({
   onNameChange,
   onDescriptionChange,
   onGroupUpdate,
-  storyBinRef
+  storyBinRef,
+  scaffoldId,
+  disableDrag
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
@@ -107,10 +109,13 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     }),
   }), [id, onCardAdd, cards.length]);
 
-  // React DnD hook for drag functionality
+  // React DnD hook for drag functionality - conditionally disable if disableDrag is true
   const [{ isDraggingDnd }, drag] = useDrag(() => ({
     type: 'group',
+    canDrag: !disableDrag,  // Disable dragging if disableDrag is true
     item: () => {
+      if (disableDrag) return null;  // Return null if dragging is disabled
+      
       if (groupRef.current && storyBinRef.current) {
         const groupRect = groupRef.current.getBoundingClientRect();
         const binRect = storyBinRef.current.getBoundingClientRect();
@@ -126,6 +131,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
           oldY: position.y,
           offsetX,
           offsetY,
+          scaffoldId: scaffoldId,  // Include scaffoldId from props
         };
       }
       return {
@@ -135,6 +141,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         oldY: position.y,
         offsetX: 0,
         offsetY: 0,
+        scaffoldId: scaffoldId,  // Include scaffoldId from props
       };
     },
     end: (item, monitor) => {
@@ -204,7 +211,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     collect: (monitor) => ({
       isDraggingDnd: !!monitor.isDragging(),
     }),
-  }), [id, position, storyBinRef]);
+  }), [id, position, storyBinRef, scaffoldId, disableDrag]);
 
   const handleDragStart = (e: React.DragEvent) => {
     // Capture event context for logging at the end
@@ -219,6 +226,13 @@ const GroupDiv: React.FC<GroupDivProps> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Disable dragging if disableDrag is true - but allow event to bubble to scaffold
+    if (disableDrag) {
+      // Don't stop propagation - let the scaffold handle the drag
+      // Just prevent this component's drag behavior
+      return;
+    }
+    
     // Don't start custom drag if React DnD is already handling it
     if (isDraggingDnd) return;
 
@@ -471,14 +485,14 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       style={{
         left: containerPos.left,
         top: containerPos.top,
-        cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
+        cursor: disableDrag ? 'default' : (isDragging || isDraggingDnd ? 'grabbing' : 'grab'),
         opacity: isDraggingDnd ? 0.5 : 1,
         zIndex: 50,
         pointerEvents: 'auto'
       }}
       onMouseDown={handleMouseDown}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+      onDragStart={disableDrag ? undefined : handleDragStart}
+      onDragEnd={disableDrag ? undefined : handleDragEnd}
     >
       {/* Header */}
       <div className="flex justify-between items-center p-2 bg-bama-crimson text-white">

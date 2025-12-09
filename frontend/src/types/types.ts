@@ -92,6 +92,7 @@ export interface GroupData {
   cards: ImageData[];
   created_at: string;
   last_modified: string;
+  scaffoldId?: string;  // camelCase for frontend consistency
   scaffold_group_number?: number;
 }
 
@@ -111,6 +112,8 @@ export interface GroupDivProps {
   onDescriptionChange: (groupId: string, newDescription: string) => void;
   onGroupUpdate: (groupId: string, updates: { name?: string; description?: string }) => void;
   storyBinRef: React.RefObject<HTMLDivElement | null>;
+  scaffoldId?: string;  // Optional scaffoldId to include in drag item
+  disableDrag?: boolean;  // Disable dragging for groups inside scaffolds
 }
 
 // Lightweight metadata for logging
