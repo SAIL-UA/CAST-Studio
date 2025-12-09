@@ -526,6 +526,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Handle group being removed from scaffold
     const handleGroupRemoveFromScaffold = async (groupId: string) => {
         try {
+            // Store scaffold ID before removal for cleanup
+            const groupToRemove = groupDivs.find(g => g.id === groupId);
+            const scaffoldIdToRemove = groupToRemove?.scaffoldId;
+
             // Transform camelCase to snake_case for backend
             const updateData: any = { 
                 scaffold_id: null,
@@ -535,15 +539,36 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
             // Update group's scaffold_id to null in backend
             await updateGroup(groupId, updateData);
 
-            // Update local state
-            setGroupDivs(prev => prev.map(group =>
-                group.id === groupId
-                    ? { ...group, scaffoldId: undefined, scaffold_group_number: undefined, last_modified: new Date().toISOString() }
-                    : group
-            ));
+            // Update local state and scaffold immediately
+            setGroupDivs(prev => {
+                const updatedGroups = prev.map(group =>
+                    group.id === groupId
+                        ? { ...group, scaffoldId: undefined, scaffold_group_number: undefined, last_modified: new Date().toISOString() }
+                        : group
+                );
 
-            // Refresh scaffold
-            await fetchScaffolds();
+                // Update scaffold state immediately with the updated groups
+                if (scaffoldIdToRemove && scaffold && scaffold.id === scaffoldIdToRemove) {
+                    const updatedScaffoldGroups = updatedGroups
+                        .filter(group => group.scaffoldId === scaffoldIdToRemove)
+                        .map((group: GroupData) => ({
+                            ...group,
+                            cards: images
+                                .filter(img => img.groupId === group.id)
+                                .map((card: ImageData) => ({
+                                    ...card,
+                                    groupId: group.id
+                                }))
+                        }));
+
+                    setScaffold(prev => prev ? {
+                        ...prev,
+                        groups: updatedScaffoldGroups
+                    } : null);
+                }
+
+                return updatedGroups;
+            });
         } catch (error) {
             console.error('Error removing group from scaffold:', error);
         }
