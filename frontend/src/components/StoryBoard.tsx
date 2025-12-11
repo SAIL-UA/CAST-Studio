@@ -15,6 +15,8 @@ import ClearAllButton from './ClearAllButton';
 
 // Import scaffolds
 import CauseEffect from './scaffolds/CauseEffect';
+import QuestionAnswer from './scaffolds/QuestionAnswer';
+import ProblemSolution from './scaffolds/ProblemSolution';
 
 // Import types
 import { ImageData, GroupData, ScaffoldData } from '../types/types';
@@ -676,6 +678,58 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     {/* Render Cause and Effect scaffold when pattern is selected */}
                     {selectedPattern === 'cause_and_effect' && scaffold && (
                         <CauseEffect
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
+                    {/* Render Question and Answer scaffold when pattern is selected */}
+                    {selectedPattern === 'question_answer' && scaffold && (
+                        <QuestionAnswer
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
+                    {/* Render Problem and Solution scaffold when pattern is selected */}
+                    {selectedPattern === 'problem_solution' && scaffold && (
+                        <ProblemSolution
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}

@@ -36,7 +36,7 @@ const Header = () => {
 
     // Visible component
     return (
-        <div id="header-container" className='fixed w-screen z-10 bg-bama-crimson text-center p-4 px-6 flex items-center'>
+        <div id="header-container" className='fixed w-screen z-10 bg-bama-crimson text-center p-4 px-6 flex items-center z-[499]'>
             <header className="h-full w-full sticky top-0 bg-bama-crimson flex items-center px-6">
                 {/* Left: Logo + Title */}
                 <div className="w-1/5">
