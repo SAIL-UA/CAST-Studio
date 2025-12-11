@@ -179,7 +179,6 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
                     e.currentTarget.style.backgroundColor = 'rgba(0, 92, 132, 0.5)';
                 }}
                 onClick={handleOpenModal}
-                title="Clear all images, groups, and scaffolds"
             >
                 Clear All
             </button>
