@@ -132,6 +132,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
               opacity: isDragging ? 0.5 : 1,
               position: 'relative',
               cursor: 'move',
+              zIndex: 300,
             }
           : {
               left: `${image.x}px`,
@@ -139,12 +140,14 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
               opacity: isDragging ? 0.5 : 1,
               position: 'absolute',
               cursor: 'move',
+              zIndex: 300,
             }
         : {
             opacity: isDragging ? 0.5 : 1,
             position: 'relative',
             margin: '5px',
             cursor: 'grab',
+            zIndex: 300,
           }
     return baseStyle;
   };
@@ -412,7 +415,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
       {/* Modal for editing - rendered as portal to escape container constraints */}
       {showModal && ReactDOM.createPortal(
         
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
 
               {/* Modal Footer */}

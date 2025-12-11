@@ -96,7 +96,7 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
     return (
         <>
         {showModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50" onClick={handleCancel} />
             <div className="relative bg-white rounded-lg shadow-xl p-4 w-[360px] max-w-[90vw]">
                 <div className="mb-3">

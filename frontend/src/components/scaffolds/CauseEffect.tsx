@@ -366,7 +366,7 @@ const CauseEffect = ({
     return (
         <div
             ref={combinedRef}
-            className="absolute bg-grey-lighter-2 select-none rounded-sm shadow-md border border-grey-lightest"
+            className="absolute bg-grey-lighter-2 select-none rounded-sm shadow-md border border-grey-lightest z-[100]"
             style={{
                 left: containerPos.left,
                 top: containerPos.top,
@@ -374,7 +374,6 @@ const CauseEffect = ({
                 minHeight: '250px',
                 cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
                 opacity: isDraggingDnd ? 0.5 : 1,
-                zIndex: 40,
                 pointerEvents: 'auto'
             }}
             onMouseDown={handleMouseDown}
@@ -565,7 +564,7 @@ const CauseEffectGroup = ({
 
             {/* Drop zone indicator when dragging over */}
             {isOver && canDrop && (
-                <div className="flex items-center justify-center h-[80%] border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 absolute inset-0 z-10">
+                <div className="flex items-center justify-center h-[80%] border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 absolute inset-0 z-[105]">
                     <div className="text-blue-600 text-sm font-medium">
                         {cards.length === 0 ? 'Drop card or group here' : 'Drop here'}
                     </div>
@@ -638,7 +637,7 @@ const CauseEffectGroup = ({
                                                 e.stopPropagation();
                                                 onGroupRemove(group.id);
                                             }}
-                                            className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30 shadow-md"
+                                            className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
                                             style={{
                                                 top: '-2px',
                                                 right: '8px'
@@ -677,7 +676,7 @@ const CauseEffectGroup = ({
                                     e.stopPropagation();
                                     onCardRemove(card.id, id);
                                 }}
-                                className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30 shadow-md"
+                                className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
                                 style={{
                                     top: '-2px',
                                     right: '8px'

@@ -102,7 +102,7 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
     >
       {/* Drop zone indicator */}
       {isOver && canDrop && (
-        <div className="absolute inset-0 flex items-center justify-center bg-blue-100 bg-opacity-75 rounded-lg border-2 border-dashed border-blue-400 z-10">
+        <div className="absolute flex items-center justify-center bg-blue-100 bg-opacity-75 rounded-lg border-2 border-dashed border-blue-400 z-[50] w-[200dvw] h-[200dvh]">
           <div className="text-blue-600 text-lg font-semibold">
             Drop image here
           </div>

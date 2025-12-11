@@ -128,7 +128,7 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
     return (
         <>
             {showModal && (
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center">
+                <div className="fixed inset-0 z-[500] flex items-center justify-center">
                     <div className="absolute inset-0 bg-black/50" onClick={handleCloseModal} />
                     <div className="relative bg-white rounded-lg shadow-xl p-4 w-[360px] max-w-[90vw]">
                         <div className="mb-3">
@@ -167,7 +167,7 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
             )}
             <button
                 log-id="clear-all-button"
-                className="absolute bottom-4 left-4 w-5 h-5 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200 z-50"
+                className="absolute bottom-6 left-4 w-auto h-auto rounded-full px-3 py-1 flex items-center justify-center text-white font-bold text-sm transition-all duration-200 z-[350]"
                 style={{ 
                     cursor: 'pointer',
                     backgroundColor: 'rgba(0, 92, 132, 0.5)', // bama-crimson #005c84 with 50% opacity
@@ -181,7 +181,7 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
                 onClick={handleOpenModal}
                 title="Clear all images, groups, and scaffolds"
             >
-                ×
+                Clear All
             </button>
         </>
     );

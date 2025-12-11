@@ -501,7 +501,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     <div 
       log-id="group"
       ref={combinedRef}
-      className={`absolute w-80 h-64 bg-grey-lighter-2 select-none rounded-sm shadow-md border transition-all duration-200 ${
+      className={`absolute w-80 h-64 bg-grey-lighter-2 select-none rounded-sm shadow-md border transition-all duration-200 z-[200] ${
         isOverCard && canDropCard 
           ? 'border-blue-400 border-2 bg-blue-50' 
           : isOverCard && !canDropCard
@@ -515,7 +515,6 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         top: containerPos.top,
         cursor: disableDrag ? 'default' : (isDragging || isDraggingDnd ? 'grabbing' : 'grab'),
         opacity: isDraggingDnd ? 0.5 : 1,
-        zIndex: 50,
         pointerEvents: 'auto'
       }}
       onMouseDown={handleMouseDown}
@@ -559,7 +558,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
           {/* Edit button */}
           <button
             log-id="group-edit-button"
-            className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
+            className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200 z-[210]"
             onClick={handleShowEditModal}
             style={{ cursor: 'pointer' }}
             title="Edit group"
@@ -581,19 +580,28 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       </div>
       
       {/* Group content area */}
-      <div className="p-2 h-52 overflow-hidden">
+      <div className="p-2 h-52 overflow-hidden relative">
         {/* Drop zone indicator when empty and card is being dragged over */}
         {isOverCard && canDropCard && cards.length === 0 && (
-          <div className="flex items-center justify-center h-full border-2 border-dashed border-blue-400 rounded-lg bg-blue-50">
+          <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 z-[250] m-2">
             <div className="text-blue-600 text-sm font-medium">
               Drop card here
             </div>
           </div>
         )}
         
+        {/* Drop zone indicator when cards are present and card is being dragged over */}
+        {isOverCard && canDropCard && cards.length > 0 && cards.length < 3 && (
+          <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 z-[250] m-2">
+            <div className="text-blue-600 text-sm font-medium">
+              Drop here
+            </div>
+          </div>
+        )}
+        
         {/* Full group indicator when trying to drop on full group */}
         {isOverCard && !canDropCard && cards.length >= 3 && (
-          <div className="flex items-center justify-center h-full border-2 border-dashed border-red-400 rounded-lg bg-red-50">
+          <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-red-400 rounded-lg bg-red-50 z-[250] m-2">
             <div className="text-red-600 text-sm font-medium">
               Group is full (Max: 3 visuals)
             </div>
@@ -602,7 +610,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         
         {/* Card components - arranged in grid */}
         {cards.length > 0 ? (
-          <div className="grid grid-cols-3 gap-2 h-full">
+          <div className="grid grid-cols-3 gap-2 h-full relative">
             {cards.map((card) => (
               <div key={card.id} className="relative group h-fit">
                 <div className="transform scale-75 origin-top-left">
@@ -623,7 +631,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
                     e.stopPropagation();
                     handleCardRemove(e, card.id);
                   }}
-                  className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30 shadow-md"
+                  className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[205] shadow-md"
                   style={{
                     // Card is scaled to 75%, so 100px becomes 75px
                     // Position button more left and up from the top-right corner
@@ -649,7 +657,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       {/* Edit Modal */}
       {showEditModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]"
           onClick={handleCloseEditModal}
         >
           <div 

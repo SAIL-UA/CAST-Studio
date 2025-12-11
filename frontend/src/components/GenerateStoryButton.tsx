@@ -88,7 +88,7 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
             {/* Dropdown Menu */}
             {AIOpen && (
                 <div 
-                    className="absolute top-full z-50 left-0 mt-1 shadow-lg bg-transparent overflow-hidden m-1"
+                    className="absolute top-full z-[400] left-0 mt-1 shadow-lg bg-transparent overflow-hidden m-1"
                     onMouseEnter={handleAIEnter}
                     onMouseLeave={handleAILeave}
                 >
