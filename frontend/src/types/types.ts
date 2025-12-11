@@ -1,4 +1,6 @@
 // TypeScript interfaces for drag and drop functionality
+import React from 'react';
+
 export interface ImageData {
   id: string;
   user: number;
@@ -68,7 +70,7 @@ export interface BinProps {
   onDelete: (id: string) => void | Promise<void>;
   onTrash: (id: string) => void;
   onUnTrash: (id: string) => void;
-  isSuggestedOrderBin?: boolean;
+  children?: React.ReactNode;
 }
 
 export interface DraggableCardProps {

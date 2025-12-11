@@ -171,17 +171,26 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       }
       // Otherwise calculate position (for drops outside valid targets)
       else if (clientOffset && storyBinRef.current) {
-        const binRect = storyBinRef.current.getBoundingClientRect();
+        // Find the actual bin element (scrollable container) within the wrapper
+        const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
+        if (!binElement) return;
+        
+        const binRect = binElement.getBoundingClientRect();
+        // Account for scroll position within the bin
+        const scrollLeft = binElement.scrollLeft;
+        const scrollTop = binElement.scrollTop;
 
-        // Calculate new position relative to container
-        let newX = clientOffset.x - binRect.left - item.offsetX;
-        let newY = clientOffset.y - binRect.top - item.offsetY;
+        // Calculate new position relative to scrollable content container
+        let newX = clientOffset.x - binRect.left - item.offsetX + scrollLeft;
+        let newY = clientOffset.y - binRect.top - item.offsetY + scrollTop;
 
-        // Constrain within container boundaries
+        // Constrain within content boundaries
         const groupWidth = 320; // 20rem = 320px
         const groupHeight = 256; // 16rem = 256px
-        newX = Math.max(0, Math.min(newX, binRect.width - groupWidth));
-        newY = Math.max(0, Math.min(newY, binRect.height - groupHeight));
+        const contentWidth = binElement.scrollWidth;
+        const contentHeight = binElement.scrollHeight;
+        newX = Math.max(0, Math.min(newX, contentWidth - groupWidth));
+        newY = Math.max(0, Math.min(newY, contentHeight - groupHeight));
 
         finalX = newX;
         finalY = newY;
@@ -238,13 +247,20 @@ const GroupDiv: React.FC<GroupDivProps> = ({
 
     if (!storyBinRef.current) return;
 
-    const binRect = storyBinRef.current.getBoundingClientRect();
+    // Find the actual bin element (scrollable container) within the wrapper
+    const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
+    if (!binElement) return;
+
+    const binRect = binElement.getBoundingClientRect();
+    // Account for scroll position within the bin
+    const scrollLeft = binElement.scrollLeft;
+    const scrollTop = binElement.scrollTop;
 
     setIsDragging(true);
     dragStartPosition.current = { x: position.x, y: position.y }; // Store initial position
     setDragOffset({
-      x: e.clientX - binRect.left - position.x,
-      y: e.clientY - binRect.top - position.y
+      x: e.clientX - binRect.left - position.x + scrollLeft,
+      y: e.clientY - binRect.top - position.y + scrollTop
     });
   };
 
@@ -256,17 +272,29 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         return;
       }
 
-      const binRect = storyBinRef.current.getBoundingClientRect();
+      // Find the actual bin element (scrollable container) within the wrapper
+      const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
+      if (!binElement) {
+        setIsDragging(false);
+        return;
+      }
 
-      // Calculate new position relative to container
-      let newX = e.clientX - binRect.left - dragOffset.x;
-      let newY = e.clientY - binRect.top - dragOffset.y;
+      const binRect = binElement.getBoundingClientRect();
+      // Account for scroll position within the bin
+      const scrollLeft = binElement.scrollLeft;
+      const scrollTop = binElement.scrollTop;
 
-      // Constrain within container boundaries (similar to card constraints)
+      // Calculate new position relative to scrollable content container
+      let newX = e.clientX - binRect.left - dragOffset.x + scrollLeft;
+      let newY = e.clientY - binRect.top - dragOffset.y + scrollTop;
+
+      // Constrain within content boundaries
       const groupWidth = 320; // GroupDiv width
       const groupHeight = 256; // GroupDiv height
-      newX = Math.max(0, Math.min(newX, binRect.width - groupWidth));
-      newY = Math.max(0, Math.min(newY, binRect.height - groupHeight));
+      const contentWidth = binElement.scrollWidth;
+      const contentHeight = binElement.scrollHeight;
+      newX = Math.max(0, Math.min(newX, contentWidth - groupWidth));
+      newY = Math.max(0, Math.min(newY, contentHeight - groupHeight));
 
       const newPosition = { x: newX, y: newY };
       setPosition(newPosition);

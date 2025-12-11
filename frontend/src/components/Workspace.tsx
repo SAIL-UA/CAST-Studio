@@ -141,7 +141,7 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
                     </button>
                 </div>
             </div>
-            <div className='w-full flex-1 mt-4'>
+            <div className='w-full h-full mt-4 pb-2'>
                 {recycleBinSelected ? 
                     <RecycleBoard
                         images={images}

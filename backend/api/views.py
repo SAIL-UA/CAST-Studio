@@ -119,10 +119,12 @@ SCAFFOLD_NUMBER_TO_VALID_GROUPS = {info['number']: info['valid_group_numbers'] f
 
 class BurstRateThrottle(UserRateThrottle):
   rate = '10/min'
-  
+
+
 class LogsExportRateThrottle(UserRateThrottle):
   rate = '5/hr'    
-    
+
+
 class LogActionView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -156,7 +158,8 @@ class LogActionView(APIView):
       return Response({
         "error": f"Failed to log action: {str(e)}"
       }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-  
+
+
 class LogMousePositionView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -222,6 +225,8 @@ class LogScrollView(APIView):
       return Response({
         "error": f"Failed to log scroll data: {str(e)}"
       }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class UploadJupyterLogView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -233,7 +238,8 @@ class UploadJupyterLogView(APIView):
       return Response({"message": "Jupyter log uploaded successfully"}, status=status.HTTP_200_OK)
     else:
       return Response({"message": "Jupyter log upload failed", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 class ExportJupyterLogsView(APIView):
   permission_classes = [IsAuthenticated]
   throttle_classes = [LogsExportRateThrottle]
@@ -283,7 +289,6 @@ class ExportJupyterLogsView(APIView):
     response["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
     response["Access-Control-Allow-Credentials"] = "true"
     return response
-
   
   
 class ImageDataView(APIView):
@@ -432,6 +437,7 @@ class DeleteFigureView(APIView):
       else:
         return Response({"status": "error", "message": f"Image record not found for filename: {filename} (base_name: {base_name})"}, status=status.HTTP_404_NOT_FOUND)
 
+
 class UpdateImageDataView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request, image_id=None):
@@ -475,6 +481,7 @@ class GetGroupView(APIView):
     
     return Response({"groups": serialized_group_data.data}, status=status.HTTP_200_OK)
 
+
 class CreateGroupView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -490,7 +497,8 @@ class CreateGroupView(APIView):
         return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
       return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
+
 class UpdateGroupView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request, group_id=None):
@@ -535,8 +543,6 @@ class DeleteGroupView(APIView):
       return Response({"message": "Group deleted successfully"}, status=status.HTTP_200_OK)
     except GroupData.DoesNotExist:
       return Response({"message": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
-    
-
 
 
 class GenerateNarrativeAsyncView(APIView):
@@ -563,7 +569,6 @@ class GenerateNarrativeAsyncView(APIView):
 
     except Exception as e:
       return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
     
 
 class GetNarrativeCacheView(APIView):
@@ -607,7 +612,8 @@ class UpdateNarrativeCacheView(APIView):
       return Response({"status": "success"}, status=status.HTTP_200_OK)
     else:
       return Response({'status': 'error', 'message': 'Invalid data'}, status=status.HTTP_400_BAD_REQUEST)
-  
+
+
 class ClearNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -617,7 +623,8 @@ class ClearNarrativeCacheView(APIView):
     except ObjectDoesNotExist:
       pass
     return Response({"status": "success"}, status=status.HTTP_200_OK)
-  
+
+
 class GenerateDescriptionsView(APIView):
   permission_classes = [IsAuthenticated]
   throttle_classes = [BurstRateThrottle]
@@ -649,6 +656,7 @@ class GenerateDescriptionsView(APIView):
         {"message": f"Began generating descriptions for {len(images)} images"},
         status=status.HTTP_202_ACCEPTED,
       )
+
   
 class GenerateNarrativeView(APIView):
   permission_classes = [IsAuthenticated]
@@ -736,6 +744,7 @@ class RequestFeedbackView(APIView):
       return Response({"status": res.state.lower(), "error": str(res.result)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
       return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class ExportStoryView(APIView):
   permission_classes = [IsAuthenticated]
@@ -951,6 +960,7 @@ class ExportStoryView(APIView):
     except Exception as e:
       return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 class CreateScaffoldView(APIView):
   permission_classes = [IsAuthenticated]
   
@@ -1038,6 +1048,7 @@ class CreateScaffoldView(APIView):
         "error": str(e)
       }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 class GetScaffoldView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
@@ -1053,6 +1064,7 @@ class GetScaffoldView(APIView):
     serialized_scaffold_data = ScaffoldDataSerializer(scaffold_data, many=False if scaffold_id else True)
     
     return Response({"scaffolds": serialized_scaffold_data.data}, status=status.HTTP_200_OK)
+
 
 class UpdateScaffoldView(APIView):
   permission_classes = [IsAuthenticated]
@@ -1077,6 +1089,7 @@ class UpdateScaffoldView(APIView):
       return Response({"message": "Scaffold not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
       return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class DeleteScaffoldView(APIView):
   permission_classes = [IsAuthenticated]

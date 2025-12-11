@@ -5,15 +5,13 @@ import { useDrop } from 'react-dnd';
 import { BinProps, DragItem } from '../types/types';
 import DraggableCard from './DraggableCard';
 
-function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, isSuggestedOrderBin = false }: BinProps) {
+function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, children }: BinProps) {
   const binRef = useRef<HTMLDivElement>(null);
 
   // React DnD hook for drop functionality
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: ['image', 'group'],
     drop: (item: DragItem, monitor) => {
-      if (isSuggestedOrderBin) return;
-
       const clientOffset = monitor.getClientOffset();
 
       // Handle group drops - calculate and return new position for the group
@@ -21,15 +19,21 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
         if (!binRef.current || !clientOffset) return;
         
         const dropTargetRect = binRef.current.getBoundingClientRect();
+        // Account for scroll position within the bin
+        const scrollLeft = binRef.current.scrollLeft;
+        const scrollTop = binRef.current.scrollTop;
 
-        let x_bin = clientOffset.x - dropTargetRect.left - item.offsetX;
-        let y_bin = clientOffset.y - dropTargetRect.top - item.offsetY;
+        let x_bin = clientOffset.x - dropTargetRect.left - item.offsetX + scrollLeft;
+        let y_bin = clientOffset.y - dropTargetRect.top - item.offsetY + scrollTop;
 
-        // Constrain position within bin boundaries for groups
+        // Constrain position within bin content boundaries for groups
+        // The content area is 200dvw x 200dvh, but we'll use a reasonable max
         const groupWidth = 320; // GroupDiv width
         const groupHeight = 256; // GroupDiv height
-        x_bin = Math.max(0, Math.min(x_bin, dropTargetRect.width - groupWidth));
-        y_bin = Math.max(0, Math.min(y_bin, dropTargetRect.height - groupHeight));
+        const contentWidth = binRef.current.scrollWidth;
+        const contentHeight = binRef.current.scrollHeight;
+        x_bin = Math.max(0, Math.min(x_bin, contentWidth - groupWidth));
+        y_bin = Math.max(0, Math.min(y_bin, contentHeight - groupHeight));
 
         console.log(`Group ${item.id} dropped on ${id} at (${x_bin}, ${y_bin})`);
         
@@ -39,15 +43,18 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
       if (!clientOffset || !binRef.current) return;
 
       const dropTargetRect = binRef.current.getBoundingClientRect();
-      const binPageLeft = dropTargetRect.left + window.pageXOffset;
-      const binPageTop = dropTargetRect.top + window.pageYOffset;
+      // Account for scroll position within the bin
+      const scrollLeft = binRef.current.scrollLeft;
+      const scrollTop = binRef.current.scrollTop;
 
-      let x_bin = clientOffset.x + window.pageXOffset - binPageLeft - item.offsetX;
-      let y_bin = clientOffset.y + window.pageYOffset - binPageTop - item.offsetY;
+      let x_bin = clientOffset.x - dropTargetRect.left - item.offsetX + scrollLeft;
+      let y_bin = clientOffset.y - dropTargetRect.top - item.offsetY + scrollTop;
 
-      // Constrain position within bin boundaries
-      x_bin = Math.max(0, Math.min(x_bin, dropTargetRect.width - 150)); // Card width
-      y_bin = Math.max(0, Math.min(y_bin, dropTargetRect.height - 100)); // Card height
+      // Constrain position within bin content boundaries
+      const contentWidth = binRef.current.scrollWidth;
+      const contentHeight = binRef.current.scrollHeight;
+      x_bin = Math.max(0, Math.min(x_bin, contentWidth - 150)); // Card width
+      y_bin = Math.max(0, Math.min(y_bin, contentHeight - 100)); // Card height
 
       console.log(`Dropped ${item.id} into ${id} at (${x_bin}, ${y_bin})`);
 
@@ -60,12 +67,11 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
 
       // Note: Removed logging functionality as requested
     },
-    canDrop: () => !isSuggestedOrderBin,
     collect: (monitor) => ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
     }),
-  }), [id, isSuggestedOrderBin, updateImageData]);
+  }), [id, updateImageData]);
 
   // Combine refs for drop functionality
   const dropRef = (element: HTMLDivElement | null) => {
@@ -77,19 +83,15 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
 
   // Dynamic styling based on drop state
   const getBinClasses = () => {
-    let baseClasses = "relative w-full h-full rounded-sm transition-colors duration-200 grid-background";
+    const baseClasses = "absolute inset-0 w-full h-full overflow-auto rounded-sm transition-colors duration-200 grid-background border border-dashed";
     
-    if (isSuggestedOrderBin) {
-      baseClasses += " bg-grey-lightest border-grey-lightest grid-background";
-    } else if (isOver && canDrop) {
-      baseClasses += " bg-blue-50 border-blue-400 border-dashed grid-background";
+    if (isOver && canDrop) {
+      return `${baseClasses} bg-blue-50 border-blue-400`;
     } else if (canDrop) {
-      baseClasses += " bg-grey-lightest border-grey-lightest border-dashed grid-background";
+      return `${baseClasses} bg-grey-lightest border-grey-lightest`;
     } else {
-      baseClasses += " bg-white border-grey-lightest grid-background";
+      return `${baseClasses} bg-white border-grey-lightest`;
     }
-    
-    return baseClasses;
   };
 
   return (
@@ -97,12 +99,9 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
       id={id}
       ref={dropRef}
       className={getBinClasses()}
-      style={{
-        overflow: 'auto'
-      }}
     >
       {/* Drop zone indicator */}
-      {isOver && canDrop && !isSuggestedOrderBin && (
+      {isOver && canDrop && (
         <div className="absolute inset-0 flex items-center justify-center bg-blue-100 bg-opacity-75 rounded-lg border-2 border-dashed border-blue-400 z-10">
           <div className="text-blue-600 text-lg font-semibold">
             Drop image here
@@ -112,11 +111,7 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
 
       {/* Bin content */}
       <div className={
-        isSuggestedOrderBin 
-          ? "flex flex-wrap gap-2 grid-background" 
-          : id === 'story-bin' 
-            ? "flex flex-wrap gap-2 p-2  grid-background" 
-            : "relative w-full h-full  grid-background"
+          "flex flex-wrap gap-2 p-2 w-[200dvw] h-[200dvh] grid-background relative"
       }>
         {images.map((image) => (
           <DraggableCard
@@ -127,20 +122,18 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
             onDelete={onDelete}
             onTrash={onTrash}
             onUnTrash={onUnTrash}
-            draggable={!isSuggestedOrderBin} 
+            draggable={true} 
           />
         ))}
+        {/* Render children (groups and scaffolds) inside the scrollable container */}
+        {children}
       </div>
 
       {/* Empty state */}
       {images.length === 0 && !isOver && (
         <div className="absolute inset-0 flex items-center justify-center text-grey-dark">
           <div className="text-center">
-            {isSuggestedOrderBin ? (
-              <p>No suggested order available</p>
-            ) : (
-              <p></p>
-            )}
+            <p>Drag and drop images here</p>
           </div>
         </div>
       )}

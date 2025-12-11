@@ -218,15 +218,25 @@ const CauseEffect = ({
                 onPositionUpdate(finalX, finalY);
             }
         } else if (clientOffset && storyBinRef.current) {
-            const binRect = storyBinRef.current.getBoundingClientRect();
-            const wrapperWidth = 680; // Width for two groups side by side
+            // Find the actual bin element (scrollable container) within the wrapper
+            const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
+            if (!binElement) return;
+            
+            const binRect = binElement.getBoundingClientRect();
+            // Account for scroll position within the bin
+            const scrollLeft = binElement.scrollLeft;
+            const scrollTop = binElement.scrollTop;
+            
+            const wrapperWidth = 500; // Scaffold width
             const wrapperHeight = 300; // Approximate height
                 
-                let newX = clientOffset.x - binRect.left - item.offsetX;
-                let newY = clientOffset.y - binRect.top - item.offsetY;
+            let newX = clientOffset.x - binRect.left - item.offsetX + scrollLeft;
+            let newY = clientOffset.y - binRect.top - item.offsetY + scrollTop;
 
-                newX = Math.max(0, Math.min(newX, binRect.width - wrapperWidth));
-                newY = Math.max(0, Math.min(newY, binRect.height - wrapperHeight));
+            const contentWidth = binElement.scrollWidth;
+            const contentHeight = binElement.scrollHeight;
+            newX = Math.max(0, Math.min(newX, contentWidth - wrapperWidth));
+            newY = Math.max(0, Math.min(newY, contentHeight - wrapperHeight));
 
                 finalX = newX;
                 finalY = newY;
@@ -251,12 +261,20 @@ const CauseEffect = ({
         if (isDraggingDnd) return;
         if (!storyBinRef.current) return;
 
-        const binRect = storyBinRef.current.getBoundingClientRect();
+        // Find the actual bin element (scrollable container) within the wrapper
+        const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
+        if (!binElement) return;
+
+        const binRect = binElement.getBoundingClientRect();
+        // Account for scroll position within the bin
+        const scrollLeft = binElement.scrollLeft;
+        const scrollTop = binElement.scrollTop;
+        
         setIsDragging(true);
         dragStartPosition.current = { x: position.x, y: position.y };
         setDragOffset({
-            x: e.clientX - binRect.left - position.x,
-            y: e.clientY - binRect.top - position.y
+            x: e.clientX - binRect.left - position.x + scrollLeft,
+            y: e.clientY - binRect.top - position.y + scrollTop
         });
     };
 
@@ -269,15 +287,28 @@ const CauseEffect = ({
                 return;
             }
 
-            const binRect = storyBinRef.current.getBoundingClientRect();
-            const wrapperWidth = 680; // Width for two groups side by side
+            // Find the actual bin element (scrollable container) within the wrapper
+            const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
+            if (!binElement) {
+                setIsDragging(false);
+                return;
+            }
+
+            const binRect = binElement.getBoundingClientRect();
+            // Account for scroll position within the bin
+            const scrollLeft = binElement.scrollLeft;
+            const scrollTop = binElement.scrollTop;
+            
+            const wrapperWidth = 500; // Scaffold width
             const wrapperHeight = 300; // Approximate height
 
-            let newX = e.clientX - binRect.left - dragOffset.x;
-            let newY = e.clientY - binRect.top - dragOffset.y;
+            let newX = e.clientX - binRect.left - dragOffset.x + scrollLeft;
+            let newY = e.clientY - binRect.top - dragOffset.y + scrollTop;
 
-            newX = Math.max(0, Math.min(newX, binRect.width - wrapperWidth));
-            newY = Math.max(0, Math.min(newY, binRect.height - wrapperHeight));
+            const contentWidth = binElement.scrollWidth;
+            const contentHeight = binElement.scrollHeight;
+            newX = Math.max(0, Math.min(newX, contentWidth - wrapperWidth));
+            newY = Math.max(0, Math.min(newY, contentHeight - wrapperHeight));
 
             setPosition({ x: newX, y: newY });
         };

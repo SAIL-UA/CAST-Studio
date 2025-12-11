@@ -5,6 +5,7 @@ from functools import lru_cache
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
@@ -714,13 +715,269 @@ def generate_description_task(image_id):
         logger.error(f"Error generating description for image {image_id}: {e}")
         return f"Error generating description for image {image_id}: {e}"
 
+
+def _build_figure_dict(images_queryset, skip_missing_desc=True):
+    """
+    Build a dictionary of figures from an images queryset.
+    
+    Args:
+        images_queryset: QuerySet of ImageData objects
+        skip_missing_desc: If True, skip images without long_desc
+    
+    Returns:
+        Dict mapping filepath to {"description": str, "category": str}
+    """
+    figures = {}
+    for image in images_queryset:
+        if skip_missing_desc and not image.long_desc:
+            logger.warning(f"[BUILD_FIGURES] Image {image.filepath} has no long_desc, skipping")
+            continue
+        category = _categorize_figure(image.long_desc)
+        figures[image.filepath] = {
+            "description": image.long_desc,
+            "category": category
+        }
+    return figures
+
+
+def _build_group_structure(group, images_queryset):
+    """
+    Build a group structure with its figures.
+    
+    Args:
+        group: GroupData instance
+        images_queryset: QuerySet of ImageData objects (already filtered for this group)
+    
+    Returns:
+        Dict with "name", "description", "figures"
+    """
+    # images_queryset is already filtered for this group, no need to filter again
+    figures = _build_figure_dict(images_queryset)
+    
+    return {
+        "name": group.name or "",
+        "description": group.description or "",
+        "figures": figures
+    }
+
+
+def _build_scaffold_data(scaffold, all_groups, all_images):
+    """
+    Build the scaffold_data structure with elements, groups, and figures.
+    
+    Args:
+        scaffold: ScaffoldData instance
+        all_groups: QuerySet of all GroupData for user
+        all_images: QuerySet of all ImageData for user
+    
+    Returns:
+        Dict with scaffold structure or None if scaffold is None
+    """
+    if not scaffold:
+        return None
+    
+    # Filter groups that belong to this scaffold
+    scaffold_groups = all_groups.filter(scaffold_id=scaffold)
+    # Filter images that directly belong to scaffold (ungrouped images)
+    scaffold_images = all_images.filter(scaffold_id=scaffold)
+    
+    elements = []
+    
+    if not scaffold.valid_group_numbers:
+        logger.warning(f"[BUILD_SCAFFOLD] Scaffold has no valid_group_numbers")
+        return {
+            "name": scaffold.name,
+            "number": scaffold.number,
+            "description": scaffold.description or "",
+            "elements": []
+        }
+    
+    # Process each element number
+    for element_num in scaffold.valid_group_numbers:
+        # Groups in this element
+        element_groups = scaffold_groups.filter(scaffold_group_number=element_num)
+        
+        # Build groups list for this element
+        element_groups_list = []
+        for group in element_groups:
+            # FIX: Images in groups are found by group_id only (like frontend does)
+            # The group's scaffold_id determines scaffold membership, not the image's scaffold_id
+            group_images = all_images.filter(group_id=group)
+            element_groups_list.append(_build_group_structure(group, group_images))
+        
+        # Ungrouped images in this element (not in any group)
+        # Image must be in scaffold, not in any group, AND have scaffold_group_number matching element_num
+        element_ungrouped_images = scaffold_images.filter(
+            group_id__isnull=True,
+            scaffold_group_number=element_num
+        )
+        element_figures = _build_figure_dict(element_ungrouped_images)
+        
+        # Get element name (TODO: map from scaffold type if available)
+        element_name = f"Element {element_num}"
+        
+        elements.append({
+            "name": element_name,
+            "number": element_num,
+            "groups": element_groups_list,
+            "figures": element_figures
+        })
+    
+    return {
+        "name": scaffold.name,
+        "number": scaffold.number,
+        "description": scaffold.description or "",
+        "elements": elements
+    }
+
+
+def _build_group_data(non_scaffold_groups, all_images):
+    """
+    Build the group_data structure for groups not in scaffolds.
+    
+    Args:
+        non_scaffold_groups: QuerySet of GroupData not in scaffolds
+        all_images: QuerySet of all ImageData for user
+    
+    Returns:
+        List of group structures
+    """
+    
+    groups_list = []
+    for group in non_scaffold_groups:
+        # Only get images that are also not in scaffolds
+        group_images = all_images.filter(group_id=group, scaffold_id__isnull=True)
+        groups_list.append(_build_group_structure(group, group_images))
+    
+    return groups_list
+
+
+def _build_figure_data(ungrouped_images):
+    """
+    Build the figure_data structure for images not in scaffolds or groups.
+    
+    Args:
+        ungrouped_images: QuerySet of ImageData not in groups or scaffolds
+    
+    Returns:
+        Dict mapping filepath to figure info
+    """
+    return _build_figure_dict(ungrouped_images)
+
+
+def _fetch_all_storyboard_data(user, story_structure_id=None):
+    """
+    Fetch and organize all storyboard data (scaffolds, groups, images).
+    
+    Args:
+        user: User instance
+        story_structure_id: Optional scaffold number to filter by
+    
+    Returns:
+        Dict with scaffold_data, group_data, figure_data
+    """
+    ImageData = _get_model('api', 'ImageData')
+    GroupData = _get_model('api', 'GroupData')
+    ScaffoldData = _get_model('api', 'ScaffoldData')
+    
+    logger.info(f"[FETCH_DATA] Fetching storyboard data for user {user.id}, story_structure_id={story_structure_id}")
+    
+    # Initialize output
+    output_json = {
+        "scaffold_data": None,
+        "group_data": [],
+        "figure_data": {}
+    }
+    
+    # Fetch scaffolds
+    scaffolds = ScaffoldData.objects.filter(user=user, number=story_structure_id) if story_structure_id else ScaffoldData.objects.filter(user=user)
+    scaffold_count = scaffolds.count()
+    
+    logger.info(f"[FETCH_DATA] Found {scaffold_count} scaffold(s)")
+    
+    if scaffold_count > 1:
+        logger.warning(f"[FETCH_DATA] Multiple scaffolds found ({scaffold_count}), using first")
+        output_json["error"] = f"Multiple scaffolds found ({scaffold_count})"
+    
+    scaffold = scaffolds.first() if scaffold_count > 0 else None
+    
+    # Fetch all groups and images
+    all_groups = GroupData.objects.filter(user=user).prefetch_related('images')
+    all_images = ImageData.objects.filter(user=user, in_storyboard=True)
+    
+    logger.info(f"[FETCH_DATA] Total: {all_groups.count()} groups, {all_images.count()} storyboard images")
+    
+    # Detailed breakdown for debugging
+    logger.info(f"[FETCH_DATA] Image breakdown:")
+    logger.info(f"  Total storyboard images: {all_images.count()}")
+    logger.info(f"  Images with scaffold_id: {all_images.filter(scaffold_id__isnull=False).count()}")
+    logger.info(f"  Images without scaffold_id: {all_images.filter(scaffold_id__isnull=True).count()}")
+    logger.info(f"  Images with group_id: {all_images.filter(group_id__isnull=False).count()}")
+    logger.info(f"  Images without group_id: {all_images.filter(group_id__isnull=True).count()}")
+    logger.info(f"  Images with long_desc: {all_images.exclude(long_desc__exact='').count()}")
+    logger.info(f"  Images without long_desc: {all_images.filter(long_desc__exact='').count()}")
+    
+    if scaffold:
+        scaffold_images_all = all_images.filter(scaffold_id=scaffold)
+        logger.info(f"[FETCH_DATA] Scaffold '{scaffold.name}' image breakdown:")
+        logger.info(f"  Total images in scaffold: {scaffold_images_all.count()}")
+        logger.info(f"  Images in groups: {scaffold_images_all.filter(group_id__isnull=False).count()}")
+        logger.info(f"  Images not in groups: {scaffold_images_all.filter(group_id__isnull=True).count()}")
+        for img in scaffold_images_all:
+            logger.info(f"    Image: {img.filepath}, group_id={img.group_id}, scaffold_group_number={img.scaffold_group_number}, has_long_desc={bool(img.long_desc)}")
+    
+    # Build scaffold_data if scaffold exists
+    if scaffold:
+        output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images)
+        
+        # Non-scaffold groups
+        non_scaffold_groups = all_groups.filter(scaffold_id__isnull=True)
+        output_json["group_data"] = _build_group_data(non_scaffold_groups, all_images)
+        
+        # Ungrouped, non-scaffold images
+        ungrouped_non_scaffold = all_images.filter(
+            scaffold_id__isnull=True,
+            group_id__isnull=True
+        )
+        output_json["figure_data"] = _build_figure_data(ungrouped_non_scaffold)
+    else:
+        
+        # All groups are non-scaffold
+        output_json["group_data"] = _build_group_data(all_groups, all_images)
+        
+        # All ungrouped images
+        ungrouped_images = all_images.filter(group_id__isnull=True)
+        output_json["figure_data"] = _build_figure_data(ungrouped_images)
+    
+    # Validation summary
+    total_scaffold_figures = 0
+    if output_json["scaffold_data"]:
+        for element in output_json["scaffold_data"]["elements"]:
+            for group in element["groups"]:
+                total_scaffold_figures += len(group["figures"])
+            total_scaffold_figures += len(element["figures"])
+    
+    total_group_figures = sum(len(g["figures"]) for g in output_json["group_data"])
+    total_figure_data = len(output_json["figure_data"])
+    total_expected = all_images.exclude(long_desc__exact='').count()
+    
+    logger.info(f"[FETCH_DATA] SUMMARY:")
+    logger.info(f"  Scaffold figures: {total_scaffold_figures}")
+    logger.info(f"  Group figures: {total_group_figures}")
+    logger.info(f"  Ungrouped figures: {total_figure_data}")
+    logger.info(f"  Total: {total_scaffold_figures} scaffold figures + {total_group_figures} group figures + {total_figure_data} ungrouped figures = {total_scaffold_figures + total_group_figures + total_figure_data}")
+    logger.info(f"  Expected: {total_expected}")
+    
+    return output_json
+
+
 @shared_task
 def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
     User = get_user_model()
     ImageData = _get_model('api', 'ImageData')
     GroupData = _get_model('api', 'GroupData')
+    ScaffoldData = _get_model('api', 'ScaffoldData')
     NarrativeCache = _get_model('api', 'NarrativeCache')
-    from django.db import transaction
 
     try:
         user = User.objects.get(id=user_id)
@@ -814,6 +1071,10 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
         # Get story structure name for logging/caching
         story_structure_name = story_structure_id or "default"
         generation_mode = "grouped" if use_groups else "flat"
+
+        # Fetch all storyboard data
+        output_json = _fetch_all_storyboard_data(user, story_structure_id)
+        logger.info(f"[NARRATIVE] Output JSON: {json.dumps(output_json, indent=4)}")
 
         with transaction.atomic():
             cache, created = NarrativeCache.objects.get_or_create(

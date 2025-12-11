@@ -1,5 +1,5 @@
 // Import dependencies
-import { getImageDataAll, generateNarrativeAsync, getNarrativeCache } from '../services/api';
+import { getImageDataAll, generateNarrativeAsync, getNarrativeCache, deleteScaffold } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
 
 // Import components
@@ -17,6 +17,10 @@ type SelectNarrativeButtonProps = {
 const SelectNarrativeButton = ({ setSelectedPattern, value, setStoryLoading }: SelectNarrativeButtonProps) => {
     // Handle button click
     const handleSelectNarrative = async (e: React.MouseEvent, value: string) => {
+        // Delete current scaffold from backend
+        await deleteScaffold();
+
+        // Set selected pattern to the new value
         setSelectedPattern(value);
         logAction(e, { "narrative_pattern": value });
     }
