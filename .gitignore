@@ -18,6 +18,8 @@ backend/jupyterhub.sqlite
 *.sh
 !docker-down.sh
 !docker-up.sh
+ 
+*.txt
 
 # .sql files
 *.sql

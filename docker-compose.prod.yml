@@ -34,7 +34,7 @@ services:
     expose:
       - "8051"
     volumes:
-      - /data/user_images:/data/user_images
+      - /data/CAST_ext/user_images:/data/CAST_ext/user_images
       - static:/app/staticfiles
     networks:
       - cast-network
@@ -51,7 +51,6 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - REACT_APP_API_URL=http://localhost:8050
     volumes:
       - frontend_build:/shared-build  # Volume to share build with nginx
     depends_on:
@@ -70,7 +69,7 @@ services:
       - frontend_build:/var/www/html
       - static:/staticfiles:ro
       - nginx-logs:/var/log/nginx
-      - /data/user_images:/data/user_images:ro
+      - /data/CAST_ext/user_images:/data/CAST_ext/user_images:ro
       - ./nginx/ssl:/etc/letsencrypt  # certs live here
       - ./nginx/www:/var/www/certbot  # webroot for ACME challenge
     depends_on:
@@ -100,6 +99,7 @@ services:
     volumes:
       - /home/aii03admin/CAST_ext:/app
       - /data/user_images:/data/user_images
+      - /data/CAST_ext/users:/data/CAST_ext/users
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
     networks:
@@ -111,7 +111,7 @@ services:
     container_name: cast-celery
     restart: unless-stopped
     volumes:
-      - /data/CAST_ext:/data/CAST_ext
+      - /data/CAST_ext/user_images:/data/CAST_ext/user_images:ro
     env_file:
       - .env
     networks:
