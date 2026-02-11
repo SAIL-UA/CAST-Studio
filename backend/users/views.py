@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from django.contrib.auth.models import update_last_login
 from .serializers import UserSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer, PasswordResetCodeVerifySerializer
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
@@ -34,6 +35,7 @@ class LoginView(APIView):
       user = authenticate(request, username=username, password=password)
 
       if user is not None:
+        update_last_login(None, user)
         refresh = RefreshToken.for_user(user)
         request.session['DATA_PATH'] = settings.DATA_PATH
         os.makedirs(os.path.join(settings.USER_DIR, user.username, "workspace"), exist_ok=True)

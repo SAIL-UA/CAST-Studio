@@ -64,6 +64,8 @@ INSTALLED_APPS = [
   'django.contrib.sessions',
   'django.contrib.messages',
   'django.contrib.staticfiles',
+  'django_otp',
+  'django_otp.plugins.otp_totp',
   'corsheaders',
   'rest_framework',
   'users',
@@ -78,6 +80,7 @@ MIDDLEWARE = [
   'django.middleware.common.CommonMiddleware',
   'django.middleware.csrf.CsrfViewMiddleware',
   'django.contrib.auth.middleware.AuthenticationMiddleware',
+  'django_otp.middleware.OTPMiddleware',
   'django.contrib.messages.middleware.MessageMiddleware',
   'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -160,7 +163,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Stores sessions in the database
-SESSION_COOKIE_AGE = 900  # 15 minutes (adjust as needed)
+SESSION_COOKIE_AGE = 28800  # 8 hours
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SAMESITE = "Lax"
@@ -210,3 +213,6 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 
 # Frontend URL for password reset links
 FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:8075')
+
+# django-otp TOTP settings
+OTP_TOTP_ISSUER = 'CAST StoryStudio'
