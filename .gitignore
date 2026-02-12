@@ -25,4 +25,4 @@ backend/jupyterhub.sqlite
 *.sql
 package-lock.json
 
-**/ssl/*
+nginx/ssl/
