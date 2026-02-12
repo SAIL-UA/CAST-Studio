@@ -1,3 +1,4 @@
+import io
 import qrcode
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
@@ -12,6 +13,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('username', type=str, help='Username of the staff/admin user')
+        parser.add_argument('--url-only', action='store_true', help='Print only the otpauth:// URI (no QR code)')
 
     def handle(self, *args, **options):
         username = options['username']
@@ -39,6 +41,11 @@ class Command(BaseCommand):
         )
 
         config_url = device.config_url
+
+        if options['url_only']:
+            self.stdout.write(config_url)
+            return
+
         self.stdout.write('')
         self.stdout.write(f'TOTP device created for: {username} ({user.email})')
         self.stdout.write(f'URI: {config_url}')
@@ -46,13 +53,14 @@ class Command(BaseCommand):
         self.stdout.write('Scan this QR code with Google Authenticator:')
         self.stdout.write('')
 
-        # Print QR code to terminal
+        # Print QR code to terminal (buffered so it renders all at once)
         qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L)
         qr.add_data(config_url)
         qr.make(fit=True)
-        qr.print_ascii(out=self.stdout, invert=True)
+        buf = io.StringIO()
+        qr.print_ascii(out=buf, invert=True)
+        print(buf.getvalue())
 
-        self.stdout.write('')
-        self.stdout.write(self.style.SUCCESS(
+        print(self.style.SUCCESS(
             f'Done. {username} can now log into /admin/ using their password + authenticator code.'
         ))
