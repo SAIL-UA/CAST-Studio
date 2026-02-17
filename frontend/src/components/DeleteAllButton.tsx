@@ -1,23 +1,23 @@
 // Import dependencies
 import React, { useState } from 'react';
-import { updateImageData, deleteGroup, getGroups, getScaffolds, deleteScaffold } from '../services/api';
+import { deleteFigure, deleteGroup, getGroups, getScaffolds, deleteScaffold } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
 import { ImageData, GroupData, ScaffoldData } from '../types/types';
-import clearIcon from '../assets/images/clear.svg';
+import trashIcon from '../assets/images/trash.svg';
 
-type ClearAllButtonProps = {
+type DeleteAllButtonProps = {
     images: ImageData[];
-    onClearComplete: () => Promise<void>;
+    onDeleteComplete: () => Promise<void>;
     setImages?: React.Dispatch<React.SetStateAction<ImageData[]>>;
     setGroupDivs?: React.Dispatch<React.SetStateAction<GroupData[]>>;
     setScaffold?: React.Dispatch<React.SetStateAction<ScaffoldData | null>>;
     setSelectedPattern?: React.Dispatch<React.SetStateAction<string>>;
 }
 
-// ClearAll component
-const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setScaffold, setSelectedPattern }: ClearAllButtonProps) => {
+// DeleteAll component
+const DeleteAllButton = ({ images, onDeleteComplete, setImages, setGroupDivs, setScaffold, setSelectedPattern }: DeleteAllButtonProps) => {
     const [showModal, setShowModal] = useState<boolean>(false);
-    const [isClearing, setIsClearing] = useState<boolean>(false);
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const [groupCount, setGroupCount] = useState<number>(0);
     const [scaffoldCount, setScaffoldCount] = useState<number>(0);
 
@@ -47,10 +47,10 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
         setShowModal(false);
     };
 
-    // Handle clearing all: delete groups/scaffolds and move images to recycle bin
-    const handleClearAll = async (e: React.MouseEvent) => {
+    // Handle deleting all images and groups
+    const handleDeleteAll = async (e: React.MouseEvent) => {
         logAction(e);
-        setIsClearing(true);
+        setIsDeleting(true);
 
         try {
             // Delete all scaffolds
@@ -72,24 +72,27 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
                 }
             }
 
-            // Move all images to recycle bin (set in_storyboard to false)
+            // Delete all images (both in workspace and recycle bin)
             let successCount = 0;
             let failCount = 0;
 
             for (const image of images) {
                 try {
-                    await updateImageData(image.id, { in_storyboard: false });
-                    successCount++;
+                    const res = await deleteFigure(image.filepath);
+                    if (res.status === 'success') {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
                 } catch (error) {
-                    console.error(`Error moving image ${image.id} to recycle bin:`, error);
+                    console.error(`Error deleting image ${image.id}:`, error);
                     failCount++;
                 }
             }
 
-            // Immediately update state arrays to reflect changes
+            // Immediately update state arrays to reflect deletions
             if (setImages) {
-                // Update images to mark them as moved to recycle bin
-                setImages(prev => prev.map(img => ({ ...img, in_storyboard: false })));
+                setImages([]);
             }
             if (setGroupDivs) {
                 setGroupDivs([]);
@@ -101,13 +104,13 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
                 setSelectedPattern('');
             }
             // Refresh data from backend to ensure consistency
-            await onClearComplete();
+            await onDeleteComplete();
 
             // Show result message
             if (failCount === 0) {
-                window.alert(`Successfully moved ${successCount} image(s) to recycle bin, deleted ${groups?.length || 0} group(s), and ${scaffoldCount} scaffold(s)`);
+                window.alert(`Successfully deleted all ${successCount} image(s), ${groups?.length || 0} group(s), and ${scaffoldCount} scaffold(s)`);
             } else {
-                window.alert(`Clear complete: ${successCount} image(s) moved to recycle bin, ${failCount} failed. ${groups?.length || 0} group(s) and ${scaffoldCount} scaffold(s) deleted.`);
+                window.alert(`Deletion complete: ${successCount} image(s) succeeded, ${failCount} failed. ${groups?.length || 0} group(s) and ${scaffoldCount} scaffold(s) deleted.`);
             }
 
             setShowModal(false);
@@ -115,7 +118,7 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
             console.error('Error clearing all:', error);
             window.alert('An error occurred while clearing all items');
         } finally {
-            setIsClearing(false);
+            setIsDeleting(false);
         }
     };
 
@@ -130,16 +133,16 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
                     <div className="absolute inset-0 bg-black/50" onClick={handleCloseModal} />
                     <div className="relative bg-white rounded-lg shadow-xl p-4 w-[360px] max-w-[90vw]">
                         <div className="mb-3">
-                            <div className="text-sm font-semibold mb-2">Clear All Items</div>
+                            <div className="text-sm font-semibold mb-2">Delete All Items</div>
                             <div className="text-sm text-gray-600 mb-3">
-                                This will move all images to the recycle bin and permanently delete all groups and scaffolds. Groups and scaffolds cannot be recovered.
+                                Are you sure you want to permanently delete all images, groups, and scaffolds? This action cannot be undone.
                             </div>
                             <div className="text-sm text-gray-500 mb-3">
-                                This will:
+                                This will delete:
                                 <ul className="list-disc list-inside mt-1 ml-2">
-                                    <li>Move {imageCount} image(s) to recycle bin</li>
-                                    <li>Permanently delete {groupCount} group(s)</li>
-                                    <li>Permanently delete {scaffoldCount} scaffold(s)</li>
+                                    <li>{imageCount} image(s) from workspace and recycle bin</li>
+                                    <li>{groupCount} group(s)</li>
+                                    <li>{scaffoldCount} scaffold(s)</li>
                                 </ul>
                             </div>
                         </div>
@@ -147,24 +150,24 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
                             <button
                                 className="text-sm px-3 py-1 rounded border"
                                 onClick={handleCloseModal}
-                                disabled={isClearing}
+                                disabled={isDeleting}
                             >
                                 Cancel
                             </button>
                             <button
-                                log-id="clear-all-confirm-button"
+                                log-id="delete-all-confirm-button"
                                 className="bg-red-600 text-sm text-white rounded px-3 py-1 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                onClick={handleClearAll}
-                                disabled={isClearing}
+                                onClick={handleDeleteAll}
+                                disabled={isDeleting}
                             >
-                                {isClearing ? 'Clearing...' : 'Clear All'}
+                                {isDeleting ? 'Deleting...' : 'Delete All'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
             <button
-                log-id="clear-all-button"
+                log-id="delete-all-button"
                 className="w-auto h-auto rounded-full px-3 py-1 flex items-center justify-center gap-1 text-white font-bold text-sm transition-all duration-200"
                 style={{ 
                     cursor: 'pointer',
@@ -179,8 +182,8 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
                 onClick={handleOpenModal}
             >
                 <img
-                    src={clearIcon}
-                    alt="Clear"
+                    src={trashIcon}
+                    alt="Delete All"
                     className="w-4 h-4"
                 />
             </button>
@@ -188,4 +191,5 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
     );
 };
 
-export default ClearAllButton;
+export default DeleteAllButton;
+

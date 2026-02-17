@@ -11,6 +11,7 @@ import GroupButton from './GroupButton';
 import FeedbackButton from './FeedbackButton';
 import GroupDiv from './GroupDiv';
 import Bin from './Bin';
+import DeleteAllButton from './DeleteAllButton';
 import ClearAllButton from './ClearAllButton';
 
 // Import scaffolds
@@ -792,19 +793,33 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                         />
                     ))}
                 </Bin>
-                {/* ClearAll button - positioned in bottom left */}
-                <ClearAllButton 
-                    images={images}
-                    setImages={setImages}
-                    setGroupDivs={setGroupDivs}
-                    setScaffold={setScaffold}
-                    setSelectedPattern={setSelectedPattern}
-                    onClearComplete={async () => {
-                        await fetchUserData();
-                        const groups = await fetchGroups();
-                        await fetchScaffolds(groups);
-                    }}
-                />
+                {/* DeleteAll and ClearAll buttons - positioned in bottom left */}
+                <div className="absolute bottom-6 left-4 flex gap-2 z-[350]">
+                    <DeleteAllButton 
+                        images={images}
+                        setImages={setImages}
+                        setGroupDivs={setGroupDivs}
+                        setScaffold={setScaffold}
+                        setSelectedPattern={setSelectedPattern}
+                        onDeleteComplete={async () => {
+                            await fetchUserData();
+                            const groups = await fetchGroups();
+                            await fetchScaffolds(groups);
+                        }}
+                    />
+                    <ClearAllButton 
+                        images={images}
+                        setImages={setImages}
+                        setGroupDivs={setGroupDivs}
+                        setScaffold={setScaffold}
+                        setSelectedPattern={setSelectedPattern}
+                        onClearComplete={async () => {
+                            await fetchUserData();
+                            const groups = await fetchGroups();
+                            await fetchScaffolds(groups);
+                        }}
+                    />
+                </div>
             </div>
         </div>
     )
