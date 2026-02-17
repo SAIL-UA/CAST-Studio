@@ -14,9 +14,10 @@ import Bin from './Bin';
 import ClearAllButton from './ClearAllButton';
 
 // Import scaffolds
-import CauseEffect from './scaffolds/CauseEffect';
-import QuestionAnswer from './scaffolds/QuestionAnswer';
-import ProblemSolution from './scaffolds/ProblemSolution';
+// NOTE: Disable for demo
+// import CauseEffect from './scaffolds/CauseEffect';
+// import QuestionAnswer from './scaffolds/QuestionAnswer';
+// import ProblemSolution from './scaffolds/ProblemSolution';
 
 // Import types
 import { ImageData, GroupData, ScaffoldData } from '../types/types';
@@ -103,7 +104,6 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
             }
 
             // For now, assume one scaffold per user (or take the first one)
-            // You might want to handle multiple scaffolds differently
             const scaffoldData = fetchedScaffolds[0];
             
             // Derive cards from images array using scaffold_id
@@ -161,6 +161,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         loadData();
     }, [loading, images]);
 
+    /**
     // Handle creating scaffold when pattern is selected (if scaffold doesn't exist)
     useEffect(() => {
         const handleCreateScaffoldIfNeeded = async () => {
@@ -244,6 +245,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
         handleCreateScaffoldIfNeeded();
     }, [selectedPattern, scaffold]);
+    */
 
     // Handle description updates
     const handleDescriptionsUpdate = (id: string, newShortDesc: string, newLongDesc: string) => {
@@ -675,7 +677,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     onTrash={handleImageRecycle}
                     onUnTrash={handleImageRestore}
                 >
-                    {/* Render Cause and Effect scaffold when pattern is selected */}
+                    {/* Render Cause and Effect scaffold when pattern is selected
                     {selectedPattern === 'cause_and_effect' && scaffold && (
                         <CauseEffect
                             images={images}
@@ -701,7 +703,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={handleGroupUpdate}
                         />
                     )}
-                    {/* Render Question and Answer scaffold when pattern is selected */}
+                    */}
+                    {/* Render Question and Answer scaffold when pattern is selected 
                     {selectedPattern === 'question_answer' && scaffold && (
                         <QuestionAnswer
                             images={images}
@@ -727,7 +730,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={handleGroupUpdate}
                         />
                     )}
-                    {/* Render Problem and Solution scaffold when pattern is selected */}
+                    */}  
+                    {/* Render Problem and Solution scaffold when pattern is selected
                     {selectedPattern === 'problem_solution' && scaffold && (
                         <ProblemSolution
                             images={images}
@@ -753,6 +757,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={handleGroupUpdate}
                         />
                     )}
+                    */}
                     {/* Render groups directly in the scrollable container - only groups without scaffold */}
                     {mainStoryboardGroups.map(group => (
                         <GroupDiv 

@@ -83,7 +83,8 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
 
   // Dynamic styling based on drop state
   const getBinClasses = () => {
-    const baseClasses = "absolute inset-0 w-full h-full overflow-auto rounded-sm transition-colors duration-200 grid-background border border-dashed";
+    // change to overflow-auto for scroll
+    const baseClasses = "absolute inset-0 w-full h-full overflow-hidden rounded-sm transition-colors duration-200 grid-background border border-dashed";
     
     if (isOver && canDrop) {
       return `${baseClasses} bg-blue-50 border-blue-400`;
@@ -101,8 +102,9 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
       className={getBinClasses()}
     >
       {/* Drop zone indicator */}
+      {/* change to w=[200-dvh] and h-[200dvh] for scrolling */}
       {isOver && canDrop && (
-        <div className="absolute flex items-center justify-center bg-blue-100 bg-opacity-75 rounded-lg border-2 border-dashed border-blue-400 z-[50] w-[200dvw] h-[200dvh]">
+        <div className="absolute flex items-center justify-center bg-blue-100 bg-opacity-75 rounded-lg border-2 border-dashed border-blue-400 z-[50] w-full h-full">
           <div className="text-blue-600 text-lg font-semibold">
             Drop image here
           </div>
@@ -110,8 +112,9 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
       )}
 
       {/* Bin content */}
+      {/* change to w=[200-dvh] and h-[200dvh] for scrolling */}
       <div className={
-          "flex flex-wrap gap-2 p-2 w-[200dvw] h-[200dvh] grid-background relative"
+          "flex flex-wrap gap-2 p-2 w-full h-full grid-background relative"
       }>
         {images.map((image) => (
           <DraggableCard
