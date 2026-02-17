@@ -70,6 +70,8 @@ export interface BinProps {
   onDelete: (id: string) => void | Promise<void>;
   onTrash: (id: string) => void;
   onUnTrash: (id: string) => void;
+  /** Optional: when provided, card can request a refetch (e.g. after starting AI description) so parent updates images and card receives new props */
+  onRefetchRequested?: () => void | Promise<void>;
   children?: React.ReactNode;
 }
 
@@ -80,6 +82,8 @@ export interface DraggableCardProps {
   onDelete: (id: string) => void | Promise<void>;
   onTrash: (id: string) => void;
   onUnTrash: (id: string) => void;
+  /** Optional: request parent to refetch images so this card receives updated props (e.g. after AI description generation) */
+  onRefetchRequested?: () => void | Promise<void>;
   draggable?: boolean;
 }
 

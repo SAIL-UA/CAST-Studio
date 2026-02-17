@@ -17,7 +17,8 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
     const [showModal, setShowModal] = useState<boolean>(false);
 
     // Default metadata values
-    const shortDesc = "Placeholder short description";
+    const shortDesc = "Add a description for this visual.";
+    const longDesc = "Ask AI to create a description for this visual."
     const source = "Placeholder source";
 
     // Trigger file picker
@@ -59,6 +60,7 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
             formData.append('figure', file, file.name);
             // Use placeholder metadata
             formData.append('short_desc', shortDesc);
+            formData.append('long_desc', longDesc);
             formData.append('source', source);
 
             try {

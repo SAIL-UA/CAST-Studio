@@ -26,3 +26,5 @@ backend/jupyterhub.sqlite
 package-lock.json
 
 nginx/ssl/
+
+docker_cmds.md

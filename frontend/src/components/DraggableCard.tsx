@@ -49,6 +49,10 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     }
   }, [image.short_desc, editingShortDesc]);
 
+  // Sync tempLongDesc when image prop changes (e.g. after AI generates description and parent refetches)
+  useEffect(() => {
+    setTempLongDesc(image.long_desc || '');
+  }, [image.long_desc]);
 
   // React DnD hook for drag functionality
   const [{ isDragging }, drag] = useDrag(
@@ -154,6 +158,37 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
 
   const handleShow = async (e: React.MouseEvent) => {
     logAction(e, { image_metadata: imageMetadataRef.current });
+
+    try {
+      // Fetch the latest data for this image from the backend
+      const imagesFromApi = await getImageData(image.id);
+      const latest = Array.isArray(imagesFromApi) && imagesFromApi.length > 0
+        ? imagesFromApi[0]
+        : imagesFromApi;
+
+      if (latest) {
+        // Update local temp fields for the modal
+        setTempShortDesc(latest.short_desc || '');
+        setTempLongDesc(latest.long_desc || '');
+
+        // Optionally sync parent state so the card preview also updates
+        onDescriptionsUpdate(
+          latest.id,
+          latest.short_desc || '',
+          latest.long_desc || ''
+        );
+      } else {
+        // Fallback to current props
+        setTempShortDesc(image.short_desc || '');
+        setTempLongDesc(image.long_desc || '');
+      }
+    } catch (err) {
+      console.error('Error fetching latest image data for modal:', err);
+      // Fallback to current props if the fetch fails
+      setTempShortDesc(image.short_desc || '');
+      setTempLongDesc(image.long_desc || '');
+    }
+
     setShowModal(true);
     document.body.style.overflow = 'hidden';
   };
