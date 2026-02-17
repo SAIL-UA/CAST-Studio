@@ -5,8 +5,8 @@ import { useDrop } from 'react-dnd';
 import { BinProps, DragItem } from '../types/types';
 import DraggableCard from './DraggableCard';
 
-function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, children }: BinProps) {
-  const binRef = useRef<HTMLDivElement>(null);
+function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, children}: BinProps) {
+  const binRef = useRef<HTMLDivElement | null>(null);
 
   // React DnD hook for drop functionality
   const [{ isOver, canDrop }, drop] = useDrop(() => ({

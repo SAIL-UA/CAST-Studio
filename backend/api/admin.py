@@ -18,6 +18,25 @@ class ImageDataAdmin(admin.ModelAdmin):
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
     list_select_related = ("user",)
+
+    def export_image_data_ndjson(modeladmin, request, queryset):
+        """Export the selected image data as NDJSON."""
+        ts = now().strftime("%Y%m%dT%H%M%SZ")
+        fields = ["id", "user_id", "filepath", "short_desc", "long_desc", "long_desc_generating",
+                  "source", "in_storyboard", "x", "y", "group_id_id", "has_order", "order_num",
+                  "index", "last_saved", "created_at"]
+
+        def line_stream():
+            for obj in queryset.iterator(chunk_size=1000):
+                row = {f: getattr(obj, f, None) for f in fields}
+                yield json.dumps(row, ensure_ascii=False, default=str) + "\n"
+
+        resp = StreamingHttpResponse(line_stream(), content_type="application/x-ndjson")
+        resp["Content-Disposition"] = f'attachment; filename="image-data-{ts}.jsonl"'
+        return resp
+    export_image_data_ndjson.short_description = "Export image data (JSONL)"
+
+    actions = [export_image_data_ndjson]
     
     
 ### Jupyter Logs ###
@@ -90,7 +109,7 @@ class UserActionAdmin(admin.ModelAdmin):
     date_hierarchy = "timestamp"
     search_fields = ("user__username",)
     readonly_fields = ("pretty_action",)
-    
+
     def pretty_action(self, obj):
         try:
             body = json.dumps(obj.action, indent=2, ensure_ascii=False)
@@ -99,6 +118,23 @@ class UserActionAdmin(admin.ModelAdmin):
         return format_html("<pre style='white-space:pre-wrap;margin:0'>{}</pre>", body)
     pretty_action.short_description = "Action (pretty)"
 
+    def export_user_actions_ndjson(modeladmin, request, queryset):
+        """Export the selected user actions as NDJSON."""
+        ts = now().strftime("%Y%m%dT%H%M%SZ")
+        fields = ["id", "user_id", "action", "state_info", "element", "request_headers", "timestamp"]
+
+        def line_stream():
+            for obj in queryset.iterator(chunk_size=1000):
+                row = {f: getattr(obj, f, None) for f in fields}
+                yield json.dumps(row, ensure_ascii=False, default=str) + "\n"
+
+        resp = StreamingHttpResponse(line_stream(), content_type="application/x-ndjson")
+        resp["Content-Disposition"] = f'attachment; filename="user-actions-{ts}.jsonl"'
+        return resp
+    export_user_actions_ndjson.short_description = "Export user actions (JSONL)"
+
+    actions = [export_user_actions_ndjson]
+
 ### Narrative Cache ###
 @admin.register(NarrativeCache)
 class NarrativeCacheAdmin(admin.ModelAdmin):
@@ -106,7 +142,7 @@ class NarrativeCacheAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "theme", "narrative")
     list_select_related = ("user",)
     readonly_fields = ("pretty_order", "pretty_categories")
-    
+
     def pretty_order(self, obj):
         try:
             body = json.dumps(obj.order, indent=2, ensure_ascii=False)
@@ -114,7 +150,7 @@ class NarrativeCacheAdmin(admin.ModelAdmin):
             body = str(obj.order)
         return format_html("<pre style='white-space:pre-wrap;margin:0'>{}</pre>", body)
     pretty_order.short_description = "Order (pretty)"
-    
+
     def pretty_categories(self, obj):
         try:
             body = json.dumps(obj.categories, indent=2, ensure_ascii=False)
@@ -122,6 +158,23 @@ class NarrativeCacheAdmin(admin.ModelAdmin):
             body = str(obj.categories)
         return format_html("<pre style='white-space:pre-wrap;margin:0'>{}</pre>", body)
     pretty_categories.short_description = "Categories (pretty)"
+
+    def export_narrative_cache_ndjson(modeladmin, request, queryset):
+        """Export the selected narrative caches as NDJSON."""
+        ts = now().strftime("%Y%m%dT%H%M%SZ")
+        fields = ["user_id", "narrative", "order", "theme", "categories", "sequence_justification"]
+
+        def line_stream():
+            for obj in queryset.iterator(chunk_size=1000):
+                row = {f: getattr(obj, f, None) for f in fields}
+                yield json.dumps(row, ensure_ascii=False, default=str) + "\n"
+
+        resp = StreamingHttpResponse(line_stream(), content_type="application/x-ndjson")
+        resp["Content-Disposition"] = f'attachment; filename="narrative-cache-{ts}.jsonl"'
+        return resp
+    export_narrative_cache_ndjson.short_description = "Export narrative cache (JSONL)"
+
+    actions = [export_narrative_cache_ndjson]
 
 ### Users ###
 # Optional: show a user's images inline on the Users admin page
@@ -136,3 +189,21 @@ class UsersAdmin(admin.ModelAdmin):
     list_display = ("id", "username", "is_staff", "is_superuser")
     search_fields = ("username", "email")
     inlines = [ImageDataInline]
+
+    def export_users_ndjson(modeladmin, request, queryset):
+        """Export the selected users as NDJSON."""
+        ts = now().strftime("%Y%m%dT%H%M%SZ")
+        fields = ["id", "username", "email", "first_name", "last_name",
+                  "is_staff", "is_superuser", "is_active", "date_joined", "last_login"]
+
+        def line_stream():
+            for obj in queryset.iterator(chunk_size=1000):
+                row = {f: getattr(obj, f, None) for f in fields}
+                yield json.dumps(row, ensure_ascii=False, default=str) + "\n"
+
+        resp = StreamingHttpResponse(line_stream(), content_type="application/x-ndjson")
+        resp["Content-Disposition"] = f'attachment; filename="users-{ts}.jsonl"'
+        return resp
+    export_users_ndjson.short_description = "Export users (JSONL)"
+
+    actions = [export_users_ndjson]

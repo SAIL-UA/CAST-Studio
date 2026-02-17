@@ -42,7 +42,9 @@ const Home = () => {
     const [storyLoading, setStoryLoading] = useState(false);
 
     // Check authentication
-    handleAuthRequired(userAuthenticated, navigate);
+    useEffect(() => {
+        handleAuthRequired(userAuthenticated, navigate);
+    }, [userAuthenticated, navigate]);
 
     // Check screen size
     useEffect(() => {

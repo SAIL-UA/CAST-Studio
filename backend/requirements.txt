@@ -40,7 +40,9 @@ django
 djangorestframework
 django-cors-headers
 django-environ
+django-otp
 djangorestframework-simplejwt
+qrcode
 psycopg2-binary
 EditorConfig
 executing

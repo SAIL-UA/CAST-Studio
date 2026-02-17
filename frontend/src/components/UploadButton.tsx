@@ -1,7 +1,7 @@
 // Import dependencies
 import React, { useRef, useState } from 'react';
 import { uploadFigure } from '../services/api';
-import { logAction } from '../utils/userActionLogger';
+import { logAction, captureActionContext } from '../utils/userActionLogger';
 
 type UploadButtonProps = {
     onUploaded?: () => void | Promise<void>;
@@ -45,9 +45,12 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
             window.alert('Please select at least one file first');
             return;
         }
+        const ctx = captureActionContext(e);
 
         let successCount = 0;
         let failCount = 0;
+
+        let figDataArr = [];
 
         // Loop through each file and upload
         for (const file of selectedFiles) {
@@ -60,13 +63,13 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
 
             try {
                 const figResponse = await uploadFigure(formData);
-                console.log(figResponse);
-                logAction(e, { "image_data": figResponse?.fig_data || "No figure data returned from uploadFigure" });
+                figDataArr.push(figResponse?.fig_data || null);
                 successCount++;
             } catch (err: any) {
                 console.error('upload error', err?.response?.status, err?.response?.data || err);
                 failCount++;
             }
+            logAction(ctx, { "images": figDataArr });
         }
 
         // Show result message

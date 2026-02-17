@@ -20,7 +20,7 @@ import ResetPassword from './pages/ResetPassword';
 // Main App component
 function App() {
   // Contexts
-  const { userAuthenticated } = useAuth();
+  const { userAuthenticated, authLoading } = useAuth();
 
   // Start mouse tracking when app mounts
   useEffect(() => {
@@ -36,6 +36,18 @@ function App() {
       mouseTracker.stop();
     };
   }, [userAuthenticated]);
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-grey-lighter">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-dark"></div>
+          <p className="mt-4 text-grey-dark">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   //  Visible component
   return (
