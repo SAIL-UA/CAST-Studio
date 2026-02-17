@@ -1,4 +1,6 @@
 // TypeScript interfaces for drag and drop functionality
+import React from 'react';
+
 export interface ImageData {
   id: string;
   user: number;
@@ -15,8 +17,22 @@ export interface ImageData {
   last_saved: string;
   created_at: string;
   groupId?: string;
+  scaffoldId?: string;
   index: number;
   url: string;
+  scaffold_group_number?: number;
+}
+
+export interface ScaffoldData {
+  id: string;
+  name: string;
+  number: number;
+  description: string;
+  valid_group_numbers?: number[];
+  x: number;
+  y: number;
+  cards: ImageData[];
+  groups: GroupData[];
 }
 
 // Partial image data type for logging
@@ -29,6 +45,8 @@ export interface ImageMetadata {
   source: string;
   user: number;
   groupId?: string;
+  scaffoldId?: string;
+  scaffold_group_number?: number;
 }
 
 export interface DragItem {
@@ -38,7 +56,9 @@ export interface DragItem {
   oldY: number;
   offsetX: number;
   offsetY: number;
-  groupId?: string; // NEW: Which group this item belongs to (if any)
+  groupId?: string;
+  scaffoldId?: string;
+  scaffold_group_number?: number;
 }
 
 // Props interfaces for components
@@ -50,7 +70,7 @@ export interface BinProps {
   onDelete: (id: string) => void | Promise<void>;
   onTrash: (id: string) => void;
   onUnTrash: (id: string) => void;
-  isSuggestedOrderBin?: boolean;
+  children?: React.ReactNode;
 }
 
 export interface DraggableCardProps {
@@ -74,6 +94,8 @@ export interface GroupData {
   cards: ImageData[];
   created_at: string;
   last_modified: string;
+  scaffoldId?: string;  // camelCase for frontend consistency
+  scaffold_group_number?: number;
 }
 
 // NEW: Enhanced Group component props
@@ -92,6 +114,8 @@ export interface GroupDivProps {
   onDescriptionChange: (groupId: string, newDescription: string) => void;
   onGroupUpdate: (groupId: string, updates: { name?: string; description?: string }) => void;
   storyBinRef: React.RefObject<HTMLDivElement | null>;
+  scaffoldId?: string;  // Optional scaffoldId to include in drag item
+  disableDrag?: boolean;  // Disable dragging for groups inside scaffolds
 }
 
 // Lightweight metadata for logging

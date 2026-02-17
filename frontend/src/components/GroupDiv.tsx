@@ -22,7 +22,9 @@ const GroupDiv: React.FC<GroupDivProps> = ({
   onNameChange,
   onDescriptionChange,
   onGroupUpdate,
-  storyBinRef
+  storyBinRef,
+  scaffoldId,
+  disableDrag
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
@@ -107,10 +109,13 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     }),
   }), [id, onCardAdd, cards.length]);
 
-  // React DnD hook for drag functionality
+  // React DnD hook for drag functionality - conditionally disable if disableDrag is true
   const [{ isDraggingDnd }, drag] = useDrag(() => ({
     type: 'group',
+    canDrag: !disableDrag,  // Disable dragging if disableDrag is true
     item: () => {
+      if (disableDrag) return null;  // Return null if dragging is disabled
+      
       if (groupRef.current && storyBinRef.current) {
         const groupRect = groupRef.current.getBoundingClientRect();
         const binRect = storyBinRef.current.getBoundingClientRect();
@@ -126,6 +131,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
           oldY: position.y,
           offsetX,
           offsetY,
+          scaffoldId: scaffoldId,  // Include scaffoldId from props
         };
       }
       return {
@@ -135,6 +141,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         oldY: position.y,
         offsetX: 0,
         offsetY: 0,
+        scaffoldId: scaffoldId,  // Include scaffoldId from props
       };
     },
     end: (item, monitor) => {
@@ -164,17 +171,26 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       }
       // Otherwise calculate position (for drops outside valid targets)
       else if (clientOffset && storyBinRef.current) {
-        const binRect = storyBinRef.current.getBoundingClientRect();
+        // Find the actual bin element (scrollable container) within the wrapper
+        const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
+        if (!binElement) return;
+        
+        const binRect = binElement.getBoundingClientRect();
+        // Account for scroll position within the bin
+        const scrollLeft = binElement.scrollLeft;
+        const scrollTop = binElement.scrollTop;
 
-        // Calculate new position relative to container
-        let newX = clientOffset.x - binRect.left - item.offsetX;
-        let newY = clientOffset.y - binRect.top - item.offsetY;
+        // Calculate new position relative to scrollable content container
+        let newX = clientOffset.x - binRect.left - item.offsetX + scrollLeft;
+        let newY = clientOffset.y - binRect.top - item.offsetY + scrollTop;
 
-        // Constrain within container boundaries
+        // Constrain within content boundaries
         const groupWidth = 320; // 20rem = 320px
         const groupHeight = 256; // 16rem = 256px
-        newX = Math.max(0, Math.min(newX, binRect.width - groupWidth));
-        newY = Math.max(0, Math.min(newY, binRect.height - groupHeight));
+        const contentWidth = binElement.scrollWidth;
+        const contentHeight = binElement.scrollHeight;
+        newX = Math.max(0, Math.min(newX, contentWidth - groupWidth));
+        newY = Math.max(0, Math.min(newY, contentHeight - groupHeight));
 
         finalX = newX;
         finalY = newY;
@@ -204,7 +220,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     collect: (monitor) => ({
       isDraggingDnd: !!monitor.isDragging(),
     }),
-  }), [id, position, storyBinRef]);
+  }), [id, position, storyBinRef, scaffoldId, disableDrag]);
 
   const handleDragStart = (e: React.DragEvent) => {
     // Capture event context for logging at the end
@@ -219,18 +235,32 @@ const GroupDiv: React.FC<GroupDivProps> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Disable dragging if disableDrag is true - but allow event to bubble to scaffold
+    if (disableDrag) {
+      // Don't stop propagation - let the scaffold handle the drag
+      // Just prevent this component's drag behavior
+      return;
+    }
+    
     // Don't start custom drag if React DnD is already handling it
     if (isDraggingDnd) return;
 
     if (!storyBinRef.current) return;
 
-    const binRect = storyBinRef.current.getBoundingClientRect();
+    // Find the actual bin element (scrollable container) within the wrapper
+    const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
+    if (!binElement) return;
+
+    const binRect = binElement.getBoundingClientRect();
+    // Account for scroll position within the bin
+    const scrollLeft = binElement.scrollLeft;
+    const scrollTop = binElement.scrollTop;
 
     setIsDragging(true);
     dragStartPosition.current = { x: position.x, y: position.y }; // Store initial position
     setDragOffset({
-      x: e.clientX - binRect.left - position.x,
-      y: e.clientY - binRect.top - position.y
+      x: e.clientX - binRect.left - position.x + scrollLeft,
+      y: e.clientY - binRect.top - position.y + scrollTop
     });
   };
 
@@ -242,17 +272,29 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         return;
       }
 
-      const binRect = storyBinRef.current.getBoundingClientRect();
+      // Find the actual bin element (scrollable container) within the wrapper
+      const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
+      if (!binElement) {
+        setIsDragging(false);
+        return;
+      }
 
-      // Calculate new position relative to container
-      let newX = e.clientX - binRect.left - dragOffset.x;
-      let newY = e.clientY - binRect.top - dragOffset.y;
+      const binRect = binElement.getBoundingClientRect();
+      // Account for scroll position within the bin
+      const scrollLeft = binElement.scrollLeft;
+      const scrollTop = binElement.scrollTop;
 
-      // Constrain within container boundaries (similar to card constraints)
+      // Calculate new position relative to scrollable content container
+      let newX = e.clientX - binRect.left - dragOffset.x + scrollLeft;
+      let newY = e.clientY - binRect.top - dragOffset.y + scrollTop;
+
+      // Constrain within content boundaries
       const groupWidth = 320; // GroupDiv width
       const groupHeight = 256; // GroupDiv height
-      newX = Math.max(0, Math.min(newX, binRect.width - groupWidth));
-      newY = Math.max(0, Math.min(newY, binRect.height - groupHeight));
+      const contentWidth = binElement.scrollWidth;
+      const contentHeight = binElement.scrollHeight;
+      newX = Math.max(0, Math.min(newX, contentWidth - groupWidth));
+      newY = Math.max(0, Math.min(newY, contentHeight - groupHeight));
 
       const newPosition = { x: newX, y: newY };
       setPosition(newPosition);
@@ -459,7 +501,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     <div 
       log-id="group"
       ref={combinedRef}
-      className={`absolute w-80 h-64 bg-grey-lighter-2 select-none rounded-sm shadow-md border transition-all duration-200 ${
+      className={`absolute w-80 h-64 bg-grey-lighter-2 select-none rounded-sm shadow-md border transition-all duration-200 z-[200] ${
         isOverCard && canDropCard 
           ? 'border-blue-400 border-2 bg-blue-50' 
           : isOverCard && !canDropCard
@@ -471,14 +513,13 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       style={{
         left: containerPos.left,
         top: containerPos.top,
-        cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
+        cursor: disableDrag ? 'default' : (isDragging || isDraggingDnd ? 'grabbing' : 'grab'),
         opacity: isDraggingDnd ? 0.5 : 1,
-        zIndex: 50,
         pointerEvents: 'auto'
       }}
       onMouseDown={handleMouseDown}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+      onDragStart={disableDrag ? undefined : handleDragStart}
+      onDragEnd={disableDrag ? undefined : handleDragEnd}
     >
       {/* Header */}
       <div className="flex justify-between items-center p-2 bg-bama-crimson text-white">
@@ -517,7 +558,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
           {/* Edit button */}
           <button
             log-id="group-edit-button"
-            className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
+            className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200 z-[210]"
             onClick={handleShowEditModal}
             style={{ cursor: 'pointer' }}
             title="Edit group"
@@ -539,19 +580,28 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       </div>
       
       {/* Group content area */}
-      <div className="p-2 h-52 overflow-hidden">
+      <div className="p-2 h-52 overflow-hidden relative">
         {/* Drop zone indicator when empty and card is being dragged over */}
         {isOverCard && canDropCard && cards.length === 0 && (
-          <div className="flex items-center justify-center h-full border-2 border-dashed border-blue-400 rounded-lg bg-blue-50">
+          <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 z-[250] m-2">
             <div className="text-blue-600 text-sm font-medium">
               Drop card here
             </div>
           </div>
         )}
         
+        {/* Drop zone indicator when cards are present and card is being dragged over */}
+        {isOverCard && canDropCard && cards.length > 0 && cards.length < 3 && (
+          <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 z-[250] m-2">
+            <div className="text-blue-600 text-sm font-medium">
+              Drop here
+            </div>
+          </div>
+        )}
+        
         {/* Full group indicator when trying to drop on full group */}
         {isOverCard && !canDropCard && cards.length >= 3 && (
-          <div className="flex items-center justify-center h-full border-2 border-dashed border-red-400 rounded-lg bg-red-50">
+          <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-red-400 rounded-lg bg-red-50 z-[250] m-2">
             <div className="text-red-600 text-sm font-medium">
               Group is full (Max: 3 visuals)
             </div>
@@ -560,7 +610,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         
         {/* Card components - arranged in grid */}
         {cards.length > 0 ? (
-          <div className="grid grid-cols-3 gap-2 h-full">
+          <div className="grid grid-cols-3 gap-2 h-full relative">
             {cards.map((card) => (
               <div key={card.id} className="relative group h-fit">
                 <div className="transform scale-75 origin-top-left">
@@ -581,7 +631,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
                     e.stopPropagation();
                     handleCardRemove(e, card.id);
                   }}
-                  className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30 shadow-md"
+                  className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[205] shadow-md"
                   style={{
                     // Card is scaled to 75%, so 100px becomes 75px
                     // Position button more left and up from the top-right corner
@@ -607,7 +657,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       {/* Edit Modal */}
       {showEditModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]"
           onClick={handleCloseEditModal}
         >
           <div 

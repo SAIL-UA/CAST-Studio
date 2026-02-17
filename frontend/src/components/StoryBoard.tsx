@@ -1,6 +1,6 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
-import { updateImageData as updateImageDataAPI, createGroup, getGroups, updateGroup, deleteGroup } from '../services/api';
+import { updateImageData as updateImageDataAPI, createGroup, getGroups, updateGroup, deleteGroup, createScaffold, getScaffolds, updateScaffold, deleteScaffold } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
 
 // Import components
@@ -11,9 +11,17 @@ import GroupButton from './GroupButton';
 import FeedbackButton from './FeedbackButton';
 import GroupDiv from './GroupDiv';
 import Bin from './Bin';
+import ClearAllButton from './ClearAllButton';
+
+// Import scaffolds
+// NOTE: Disable for demo
+// import CauseEffect from './scaffolds/CauseEffect';
+// import QuestionAnswer from './scaffolds/QuestionAnswer';
+// import ProblemSolution from './scaffolds/ProblemSolution';
 
 // Import types
-import { ImageData, GroupData } from '../types/types';
+import { ImageData, GroupData, ScaffoldData } from '../types/types';
+import { SCAFFOLD_NUMBER_TO_PATTERN, SCAFFOLD_VALID_GROUP_NUMBERS } from '../types/scaffoldMappings';
 
 
 // Define props interface
@@ -37,57 +45,207 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
     // States
     const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
+    const [scaffold, setScaffold] = useState<ScaffoldData | null>(null);
     const [nextGroupNumber, setNextGroupNumber] = useState(1);
     
     // References
     const storyBinRef = useRef<HTMLDivElement>(null);
 
     // Fetch groups from backend
-    const fetchGroups = async () => {
+    const fetchGroups = async (): Promise<GroupData[]> => {
         try {
             const fetchedGroups = await getGroups();
             if (!fetchedGroups || fetchedGroups.length === 0) {
                 setGroupDivs([]);
-                return;
+                return [];
             }
-
-            // Convert backend format to frontend format
-            // Backend stores card IDs, frontend needs full ImageData objects
+    
+            // Derive cards from images array using group_id
             const groupsWithCards = fetchedGroups.map((group: any) => {
-                const cardIds = group.cards || [];
-
-                const fullCards = cardIds
-                    .map((cardId: string) => images.find(img => img.id === cardId))
-                    .filter((card: ImageData | undefined): card is ImageData => card !== undefined)
+                // Filter images that belong to this group
+                const fullCards = images
+                    .filter(img => img.groupId === group.id)
                     .map((card: ImageData) => ({
                         ...card,
-                        groupId: group.id
+                        groupId: group.id  // Ensure groupId is set
                     }));
-
+    
                 return {
                     ...group,
-                    cards: fullCards
+                    cards: fullCards,  // Derived from images state array
+                    scaffoldId: group.scaffold_id || undefined,  // Transform snake_case to camelCase
+                    scaffold_group_number: group.scaffold_group_number || undefined  // Preserve scaffold_group_number from backend
                 };
             });
-
+    
             setGroupDivs(groupsWithCards);
-
+    
             // Update nextGroupNumber to be max(group numbers) + 1
             const maxNumber = groupsWithCards.reduce((max: number, group: GroupData) =>
                 Math.max(max, group.number), 0);
             setNextGroupNumber(maxNumber + 1);
-
+    
+            return groupsWithCards;
+    
         } catch (error) {
             console.error('Error fetching groups:', error);
+            return [];
         }
     };
 
-    // Fetch groups after images are loaded
-    useEffect(() => {
-        if (!loading && images.length >= 0) {
-            fetchGroups();
+    // Fetch scaffolds from backend
+    const fetchScaffolds = async (groupsToUse?: GroupData[]) => {
+        try {
+            const fetchedScaffolds = await getScaffolds();
+            if (!fetchedScaffolds || fetchedScaffolds.length === 0) {
+                setSelectedPattern('');
+                setScaffold(null);
+                return;
+            }
+
+            // For now, assume one scaffold per user (or take the first one)
+            const scaffoldData = fetchedScaffolds[0];
+            
+            // Derive cards from images array using scaffold_id
+            const scaffoldCards = images
+                .filter(img => img.scaffoldId === scaffoldData.id)
+                .map((card: ImageData) => ({
+                    ...card,
+                    scaffoldId: scaffoldData.id
+                }));
+
+            // Use provided groups or fall back to state
+            const groups = groupsToUse || groupDivs;
+            
+            // Derive groups that belong to this scaffold
+            const scaffoldGroups = groups
+                .filter(group => group.scaffoldId === scaffoldData.id)
+                .map((group: GroupData) => ({
+                    ...group,
+                    cards: images
+                        .filter(img => img.groupId === group.id)
+                        .map((card: ImageData) => ({
+                            ...card,
+                            groupId: group.id
+                        }))
+                }));
+
+            const scaffoldWithCards: ScaffoldData = {
+                ...scaffoldData,
+                cards: scaffoldCards,
+                groups: scaffoldGroups  // Populate groups that belong to scaffold
+            };
+
+            setScaffold(scaffoldWithCards);
+            
+            // Set selectedPattern based on scaffold name/number
+            const pattern = SCAFFOLD_NUMBER_TO_PATTERN[scaffoldData.number];
+            if (pattern) {
+                setSelectedPattern(pattern);
+            }
+
+        } catch (error) {
+            console.error('Error fetching scaffolds:', error);
         }
-    }, [loading, images.length]);
+    };
+
+    // Fetch groups and scaffolds after images are loaded
+    useEffect(() => {
+        const loadData = async () => {
+            if (!loading && images.length > 0) {
+                // Fetch groups first, then scaffolds (scaffolds depend on groups)
+                const groups = await fetchGroups();
+                await fetchScaffolds(groups);
+            }
+        };
+        loadData();
+    }, [loading, images]);
+
+    /**
+    // Handle creating scaffold when pattern is selected (if scaffold doesn't exist)
+    useEffect(() => {
+        const handleCreateScaffoldIfNeeded = async () => {
+            // If no pattern selected, don't do anything
+            if (!selectedPattern || selectedPattern === '') {
+                return;
+            }
+
+            // Check if there's an existing scaffold
+            if (scaffold) {
+                // Get the pattern of the existing scaffold
+                const existingPattern = SCAFFOLD_NUMBER_TO_PATTERN[scaffold.number];
+                
+                // If the existing scaffold's pattern doesn't match the selected pattern, close it first
+                if (existingPattern !== selectedPattern) {
+                    try {
+                        // Store scaffold ID before deletion for cleanup
+                        const scaffoldIdToRemove = scaffold.id;
+
+                        // Delete scaffold from backend (backend will clear scaffold associations)
+                        await deleteScaffold();
+
+                        // Update local state: remove scaffold associations from images
+                        setImages(prev => prev.map(img =>
+                            img.scaffoldId === scaffoldIdToRemove
+                                ? { ...img, scaffoldId: undefined, scaffold_group_number: undefined }
+                                : img
+                        ));
+
+                        // Update local state: remove scaffold associations from groups
+                        setGroupDivs(prev => prev.map(group =>
+                            group.scaffoldId === scaffoldIdToRemove
+                                ? { ...group, scaffoldId: undefined, scaffold_group_number: undefined }
+                                : group
+                        ));
+
+                        // Clear scaffold state (but keep selectedPattern - don't clear it)
+                        setScaffold(null);
+
+                        // Refresh data from backend to ensure consistency
+                        await fetchUserData();
+                        await fetchGroups();
+                        
+                        // After closing, create the new scaffold
+                        // (This will happen on the next render cycle since scaffold is now null)
+                        return;
+                    } catch (error) {
+                        console.error('Error closing scaffold:', error);
+                        return;
+                    }
+                }
+                // If patterns match, scaffold already exists, don't create a new one
+                return;
+            }
+
+            // No scaffold exists, create a new one
+            try {
+                // Calculate initial position
+                let initialX = 50;
+                let initialY = 50;
+                
+                if (storyBinRef.current) {
+                    const rect = storyBinRef.current.getBoundingClientRect();
+                    initialX = rect.width / 2 - 250; // Center scaffold (assuming 500px width)
+                    initialY = 50;
+                }
+
+                const response = await createScaffold(selectedPattern, initialX, initialY);
+                if (response.scaffold) {
+                    const newScaffold: ScaffoldData = {
+                        ...response.scaffold,
+                        cards: [],
+                        groups: []
+                    };
+                    setScaffold(newScaffold);
+                }
+            } catch (error) {
+                console.error('Error creating scaffold:', error);
+            }
+        };
+
+        handleCreateScaffoldIfNeeded();
+    }, [selectedPattern, scaffold]);
+    */
 
     // Handle description updates
     const handleDescriptionsUpdate = (id: string, newShortDesc: string, newLongDesc: string) => {
@@ -102,8 +260,13 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
     // Handle image deletion
     const handleDelete = async (imageId: string) => {
-        await fetchUserData(); // Refresh data after deletion
-        await fetchGroups(); // Refresh groups
+        // Immediately remove from local state for instant UI update
+        setImages((prevImages) => prevImages.filter(img => img.id !== imageId));
+        
+        // Then refresh from backend to ensure consistency
+        await fetchUserData();
+        const groups = await fetchGroups();
+        await fetchScaffolds(groups);
     };
 
     // Handle creating new group div
@@ -190,6 +353,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 const remainingCount = groupDivs.filter(group => group.id !== groupId).length;
                 return remainingCount + 1;
             });
+
+            // If group was in a scaffold, also update scaffold state
+            const deletedGroup = groupDivs.find(g => g.id === groupId);
+            if (deletedGroup?.scaffoldId && scaffold && scaffold.id === deletedGroup.scaffoldId) {
+                setScaffold(prev => prev ? {
+                    ...prev,
+                    groups: prev.groups.filter(g => g.id !== groupId)
+                } : null);
+            }
         } catch (error) {
             console.error('Error closing group:', error);
         }
@@ -198,50 +370,43 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Handle adding card to group
     const handleCardAddToGroup = async (cardId: string, groupId: string) => {
         try {
-            // Find the card with complete image data
             const cardToAdd = images.find(img => img.id === cardId);
             if (!cardToAdd) return;
-
-            // Fetch current group from backend FIRST to get authoritative card list
-            // This prevents race conditions when adding multiple cards quickly
-            const currentGroupData = await getGroups(groupId);
-            if (!currentGroupData) return;
-
-            // Check if card is already in the group (ensure uniqueness)
-            const currentCardIds = currentGroupData.cards || [];
-            if (currentCardIds.includes(cardId)) {
+    
+            // Check if card is already in the group (using local state)
+            if (cardToAdd.groupId === groupId) {
                 console.log(`Card ${cardId} already in group ${groupId}, skipping`);
                 return;
             }
-
-            // Now update both image and group in parallel
-            const updatedCardIds = [...currentCardIds, cardId];
-            await Promise.all([
-                updateImageDataAPI(cardId, { group_id: groupId }),
-                updateGroup(groupId, { cards: updatedCardIds })
-            ]);
-
-            // Create card with served image URL for local state
-            const cardWithImage = {
-                ...cardToAdd,
-                groupId: groupId
-            };
-
+    
+            // Only update image's group_id - no need to update group.cards
+            await updateImageDataAPI(cardId, { group_id: groupId });
+    
             // Update local state: update the card's groupId (preserve index)
             setImages(prev => prev.map(img =>
                 img.id === cardId ? { ...img, groupId: groupId, index: img.index } : img
             ));
-
-            // Add card to group's cards array
-            setGroupDivs(prev => prev.map(group =>
-                group.id === groupId
-                    ? {
+    
+            // Update group's cards array by deriving from updated images
+            // The cards will be automatically updated when fetchGroups runs or we can derive here
+            setGroupDivs(prev => prev.map(group => {
+                if (group.id === groupId) {
+                    // Derive cards from images with this groupId
+                    const updatedCards = images
+                        .filter(img => img.id === cardId || img.groupId === groupId)
+                        .map(img => ({
+                            ...img,
+                            groupId: groupId
+                        }));
+                    
+                    return {
                         ...group,
-                        cards: [...group.cards, cardWithImage],
+                        cards: updatedCards,
                         last_modified: new Date().toISOString()
-                      }
-                    : group
-            ));
+                    };
+                }
+                return group;
+            }));
         } catch (error) {
             console.error('Error adding image to group:', error);
         }
@@ -250,36 +415,35 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Handle removing card from group
     const handleCardRemoveFromGroup = async (cardId: string, groupId: string) => {
         try {
-            // Update image's group_id to null in backend
+            // Only update image's group_id to null - no need to update group.cards
             await updateImageDataAPI(cardId, { group_id: null, in_storyboard: true });
-
-            // Fetch current group from backend to get authoritative card list
-            // This prevents race conditions when removing multiple cards quickly
-            const currentGroupData = await getGroups(groupId);
-            if (!currentGroupData) return;
-
-            // Update group's cards array in backend (remove the card ID)
-            const currentCardIds = currentGroupData.cards || [];
-            const updatedCardIds = currentCardIds.filter((id: string) => id !== cardId);
-            await updateGroup(groupId, { cards: updatedCardIds });
-
-            // Update local state: update the card's groupId to null and ensure it's in the storyboard (preserve index)
+    
+            // Update local state: update the card's groupId to null (preserve index)
             setImages(prev => prev.map(img =>
                 img.id === cardId
                     ? { ...img, groupId: undefined, in_storyboard: true, index: img.index }
                     : img
             ));
-
-            // Remove card from group's cards array
-            setGroupDivs(prev => prev.map(group =>
-                group.id === groupId
-                    ? {
+    
+            // Update group's cards array by deriving from updated images
+            setGroupDivs(prev => prev.map(group => {
+                if (group.id === groupId) {
+                    // Derive cards from images with this groupId (excluding the removed one)
+                    const updatedCards = images
+                        .filter(img => img.id !== cardId && img.groupId === groupId)
+                        .map(img => ({
+                            ...img,
+                            groupId: groupId
+                        }));
+                    
+                    return {
                         ...group,
-                        cards: group.cards.filter(card => card.id !== cardId),
+                        cards: updatedCards,
                         last_modified: new Date().toISOString()
-                      }
-                    : group
-            ));
+                    };
+                }
+                return group;
+            }));
         } catch (error) {
             console.error('Error removing card from group:', error);
         }
@@ -341,8 +505,138 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         }
     };
 
-    // Show only images that are in the storyboard (in_storyboard === true) and NOT in any group
-    const workspaceImages = images.filter(img => img.in_storyboard === true && !img.groupId);
+    // Handle scaffold close
+    const handleScaffoldClose = async () => {
+        try {
+            // Store scaffold ID before deletion for cleanup
+            const scaffoldIdToRemove = scaffold?.id;
+
+            // Delete scaffold from backend (backend will clear scaffold associations)
+            await deleteScaffold();
+
+            // Update local state: remove scaffold associations from images
+            setImages(prev => prev.map(img =>
+                img.scaffoldId === scaffoldIdToRemove
+                    ? { ...img, scaffoldId: undefined, scaffold_group_number: undefined }
+                    : img
+            ));
+
+            // Update local state: remove scaffold associations from groups
+            setGroupDivs(prev => prev.map(group =>
+                group.scaffoldId === scaffoldIdToRemove
+                    ? { ...group, scaffoldId: undefined, scaffold_group_number: undefined }
+                    : group
+            ));
+
+            // Clear scaffold state
+            setScaffold(null);
+            setSelectedPattern('');
+
+            // Refresh data from backend to ensure consistency
+            await fetchUserData();
+            await fetchGroups();
+        } catch (error) {
+            console.error('Error closing scaffold:', error);
+        }
+    };
+
+    // Handle group being dropped into scaffold
+    const handleGroupAddToScaffold = async (groupId: string, scaffoldId: string, scaffoldGroupNumber?: number) => {
+        try {
+            // Transform camelCase to snake_case for backend
+            const updateData: any = { 
+                scaffold_id: scaffoldId,
+                scaffold_group_number: scaffoldGroupNumber 
+            };
+            
+            // Update group's scaffold_id in backend
+            await updateGroup(groupId, updateData);
+
+            // Update local state and scaffold immediately
+            setGroupDivs(prev => {
+                const updatedGroups = prev.map(group =>
+                    group.id === groupId
+                        ? { ...group, scaffoldId: scaffoldId, scaffold_group_number: scaffoldGroupNumber, last_modified: new Date().toISOString() }
+                        : group
+                );
+
+                // Update scaffold state immediately with the updated groups
+                if (scaffold && scaffold.id === scaffoldId) {
+                    const updatedScaffoldGroups = updatedGroups
+                        .filter(group => group.scaffoldId === scaffoldId)
+                        .map((group: GroupData) => ({
+                            ...group,
+                            cards: images
+                                .filter(img => img.groupId === group.id)
+                                .map((card: ImageData) => ({
+                                    ...card,
+                                    groupId: group.id
+                                }))
+                        }));
+
+                    setScaffold(prev => prev ? {
+                        ...prev,
+                        groups: updatedScaffoldGroups
+                    } : null);
+                }
+
+                return updatedGroups;
+            });
+        } catch (error) {
+            console.error('Error adding group to scaffold:', error);
+        }
+    };
+
+    // Handle group being removed from scaffold
+    const handleGroupRemoveFromScaffold = async (groupId: string) => {
+        try {
+            // Store scaffold ID before removal for cleanup
+            const groupToRemove = groupDivs.find(g => g.id === groupId);
+            const scaffoldIdToRemove = groupToRemove?.scaffoldId;
+
+            // Transform camelCase to snake_case for backend
+            const updateData: any = { 
+                scaffold_id: null,
+                scaffold_group_number: null 
+            };
+            
+            // Update group's scaffold_id to null in backend
+            await updateGroup(groupId, updateData);
+
+            // Update local state and scaffold immediately
+            setGroupDivs(prev => {
+                const updatedGroups = prev.map(group =>
+                    group.id === groupId
+                        ? { ...group, scaffoldId: undefined, scaffold_group_number: undefined, last_modified: new Date().toISOString() }
+                        : group
+                );
+
+                // Update scaffold state immediately with the updated groups
+                if (scaffoldIdToRemove && scaffold && scaffold.id === scaffoldIdToRemove) {
+                    const updatedScaffoldGroups = updatedGroups
+                        .filter(group => group.scaffoldId === scaffoldIdToRemove)
+                        .map((group: GroupData) => ({
+                            ...group,
+                            cards: images
+                                .filter(img => img.groupId === group.id)
+                                .map((card: ImageData) => ({
+                                    ...card,
+                                    groupId: group.id
+                                }))
+                        }));
+
+                    setScaffold(prev => prev ? {
+                        ...prev,
+                        groups: updatedScaffoldGroups
+                    } : null);
+                }
+
+                return updatedGroups;
+            });
+        } catch (error) {
+            console.error('Error removing group from scaffold:', error);
+        }
+    };
 
     // Loading state
     if (loading) {
@@ -355,6 +649,13 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         );
     }
 
+    const workspaceImages = images.filter(img => 
+        img.in_storyboard === true && !img.groupId && !img.scaffoldId
+    );
+
+    // Filter groups: only show groups that don't belong to a scaffold in main storyboard
+    const mainStoryboardGroups = groupDivs.filter(group => !group.scaffoldId);
+
     // Visible component
     return (
         <div id="story-board-container" className="flex flex-col h-full w-full bg-white">
@@ -366,7 +667,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 <FeedbackButton />
 
             </div>
-            <div id = "story-bin-wrapper" className="flex-1 min-h-0 relative" ref={storyBinRef}>
+            <div id = "story-bin-wrapper" className="flex-1 min-h-0 relative overflow-hidden" ref={storyBinRef}>
                 <Bin
                     id="story-bin"
                     images={workspaceImages}
@@ -375,40 +676,135 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     onDelete={handleDelete}
                     onTrash={handleImageRecycle}
                     onUnTrash={handleImageRestore}
-                    isSuggestedOrderBin={false}
-                />
-                {/* Render groups directly in the scrollable container so they scroll with content */}
-                {groupDivs.map(group => (
-                    <GroupDiv 
-                        key={group.id}
-                        id={group.id}
-                        number={group.number}
-                        name={group.name}
-                        description={group.description}
-                        cards={group.cards}
-                        initialPosition={{ x: group.x, y: group.y }}
-                        onClose={handleCloseGroup}
-                        onPositionUpdate={async (newX, newY) => {
-                            try {
-                                // Update position in backend
-                                await updateGroup(group.id, { x: newX, y: newY });
+                >
+                    {/* Render Cause and Effect scaffold when pattern is selected
+                    {selectedPattern === 'cause_and_effect' && scaffold && (
+                        <CauseEffect
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
+                    */}
+                    {/* Render Question and Answer scaffold when pattern is selected 
+                    {selectedPattern === 'question_answer' && scaffold && (
+                        <QuestionAnswer
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
+                    */}  
+                    {/* Render Problem and Solution scaffold when pattern is selected
+                    {selectedPattern === 'problem_solution' && scaffold && (
+                        <ProblemSolution
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
+                    */}
+                    {/* Render groups directly in the scrollable container - only groups without scaffold */}
+                    {mainStoryboardGroups.map(group => (
+                        <GroupDiv 
+                            key={group.id}
+                            id={group.id}
+                            number={group.number}
+                            name={group.name}
+                            description={group.description}
+                            cards={group.cards}
+                            initialPosition={{ x: group.x, y: group.y }}
+                            onClose={handleCloseGroup}
+                            onPositionUpdate={async (newX, newY) => {
+                                try {
+                                    // Update position in backend
+                                    await updateGroup(group.id, { x: newX, y: newY });
 
-                                // Update local state
-                                setGroupDivs(prev => prev.map(g =>
-                                    g.id === group.id ? { ...g, x: newX, y: newY, last_modified: new Date().toISOString() } : g
-                                ));
-                            } catch (error) {
-                                console.error('Error updating group position:', error);
-                            }
-                        }}
-                        onCardAdd={handleCardAddToGroup}
-                        onCardRemove={handleCardRemoveFromGroup}
-                        onNameChange={handleGroupNameChange}
-                        onDescriptionChange={handleGroupDescriptionChange}
-                        onGroupUpdate={handleGroupUpdate}
-                        storyBinRef={storyBinRef}
-                    />
-                ))}
+                                    // Update local state
+                                    setGroupDivs(prev => prev.map(g =>
+                                        g.id === group.id ? { ...g, x: newX, y: newY, last_modified: new Date().toISOString() } : g
+                                    ));
+                                } catch (error) {
+                                    console.error('Error updating group position:', error);
+                                }
+                            }}
+                            onCardAdd={handleCardAddToGroup}
+                            onCardRemove={handleCardRemoveFromGroup}
+                            onNameChange={handleGroupNameChange}
+                            onDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                            storyBinRef={storyBinRef}
+                            scaffoldId={group.scaffoldId}
+                        />
+                    ))}
+                </Bin>
+                {/* ClearAll button - positioned in bottom left */}
+                <ClearAllButton 
+                    images={images}
+                    setImages={setImages}
+                    setGroupDivs={setGroupDivs}
+                    setScaffold={setScaffold}
+                    setSelectedPattern={setSelectedPattern}
+                    onClearComplete={async () => {
+                        await fetchUserData();
+                        const groups = await fetchGroups();
+                        await fetchScaffolds(groups);
+                    }}
+                />
             </div>
         </div>
     )

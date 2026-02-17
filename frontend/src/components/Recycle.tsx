@@ -4,6 +4,7 @@ import { getImageDataAll, updateImageData as updateImageDataAPI } from '../servi
 
 // Import components
 import Bin from './Bin';
+import ClearAllButton from './ClearAllButton';
 
 // Import types
 import { ImageData } from '../types/types';
@@ -56,11 +57,11 @@ const RecycleBoard = ({ images, setImages, loading, fetchUserData, updateImageDa
     return (
         <div id="trash-container" className="flex flex-col w-full h-full">
 
-            {/* Trash Content - Single Data Story Bin */}
-            <div id="trash-content" className="flex flex-col w-full h-full mt-4">
+            {/* Trash Content - Single Trash Bin */}
+            <div id="trash-content" className="flex flex-col w-full h-full max-w-full max-h-full mt-4">
                 
-                {/* Data Story Bin */}
-                <div className="flex flex-col h-full">
+                {/* Trash Bin */}
+                <div className="flex flex-col h-full relative">
                     <Bin
                         id="trash-bin"
                         images={trashImages}
@@ -69,7 +70,14 @@ const RecycleBoard = ({ images, setImages, loading, fetchUserData, updateImageDa
                         onDelete={handleDelete}
                         onTrash={handleImageRecycle}
                         onUnTrash={handleImageRestore}
-                        isSuggestedOrderBin={false}
+                    />
+                    {/* ClearAll button - positioned in bottom left */}
+                    <ClearAllButton 
+                        images={images}
+                        setImages={setImages}
+                        onClearComplete={async () => {
+                            await fetchUserData();
+                        }}
                     />
                 </div>
             </div>

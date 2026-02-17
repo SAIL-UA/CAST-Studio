@@ -38,14 +38,14 @@ from config.celery import app as celery_app
 from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
-  JupyterLog, MousePositionLog, ScrollLog, GroupData
+  JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData
 )
 
 # Serializers
 from .serializers import (
   ImageDataSerializer, NarrativeCacheSerializer,
   JupyterLogsSerializer, MousePositionLogSerializer,
-  UserActionSerializer, ScrollLogSerializer, GroupDataSerializer
+  UserActionSerializer, ScrollLogSerializer, GroupDataSerializer, ScaffoldDataSerializer
 )
 
 # Tasks
@@ -53,12 +53,78 @@ from .tasks import generate_description_task, generate_narrative_task, generate_
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
+# Scaffold mapping constant (shared across views)
+SCAFFOLD_MAPPING = {
+  'cause_and_effect': {
+    'name': 'Cause and Effect',
+    'number': 1,
+    'description': 'How a variable or event influences another.',
+    'valid_group_numbers': [1, 2] # 1=causes, 2=effects
+  },
+  'question_answer': {
+    'name': 'Question and Answer',
+    'number': 2,
+    'description': 'A central question, followed by evidence to support the answer.',
+    'valid_group_numbers': [1, 2] # 1=question, 2=answer
+  },
+  'time_based': {
+    'name': 'Timeline',
+    'number': 3,
+    'description': 'A sequence of events in time to highlight patterns and trends.',
+    'valid_group_numbers': [1, 2, 3] # 1=event 1, 2=event 2, 3=event 3, user can add more events as needed but this is default
+  },
+  'factor_analysis': {
+    'name': 'Factor Analysis',
+    'number': 4,
+    'description': 'A breakdown of a phenomenon into influencing factors.',
+    'valid_group_numbers': [1, 2, 3] # 1=factor 1, 2=factor 2, 3=factor 3, user can add more factors as needed but this is default
+  },
+  'overview_to_detail': {
+    'name': 'Overview To Detail',
+    'number': 5,
+    'description': 'A broad snapshot of a phenomenon, followed by finer details.',
+    'valid_group_numbers': [1, 2, 3, 4] # 1=overview, 2=detail 1, 3=detail 2, 4=detail 3, user can add more details as needed but this is default
+  },
+  'problem_solution': {
+    'name': 'Problem and Solution',
+    'number': 6,
+    'description': 'A challenge, followed by evidence for a solution.',
+    'valid_group_numbers': [1, 2] # 1=problem, 2=solution
+  },
+  'comparative': {
+    'name': 'Comparative Analysis',
+    'number': 7,
+    'description': 'A side-by-side view of events to reveal similarities and differences.',
+    'valid_group_numbers': [1, 2] # 1=item 1, 2=item 2
+  },
+  'workflow_process': {
+    'name': 'Workflow or Process',
+    'number': 8,
+    'description': 'Discusses the key stages of a system or pipeline.',
+    'valid_group_numbers': [1, 2, 3] # 1=stage 1, 2=stage 2, 3=stage 3, user can add more stages as needed but this is default
+  },
+  'shock_lead': {
+    'name': 'Shock and Lead',
+    'number': 9,
+    'description': 'A striking fact, followed by analysis of explanatory factors.',
+    'valid_group_numbers': [1, 2] # 1=shock fact, 2=explanatory factors
+  },
+}
+
+# Reverse mapping: scaffold number -> pattern name
+SCAFFOLD_NUMBER_TO_PATTERN = {info['number']: pattern for pattern, info in SCAFFOLD_MAPPING.items()}
+
+# Reverse mapping: scaffold number -> valid group numbers
+SCAFFOLD_NUMBER_TO_VALID_GROUPS = {info['number']: info['valid_group_numbers'] for _, info in SCAFFOLD_MAPPING.items()}
+
 class BurstRateThrottle(UserRateThrottle):
   rate = '10/min'
-  
+
+
 class LogsExportRateThrottle(UserRateThrottle):
   rate = '5/hr'    
-    
+
+
 class LogActionView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -92,7 +158,8 @@ class LogActionView(APIView):
       return Response({
         "error": f"Failed to log action: {str(e)}"
       }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-  
+
+
 class LogMousePositionView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -158,6 +225,8 @@ class LogScrollView(APIView):
       return Response({
         "error": f"Failed to log scroll data: {str(e)}"
       }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class UploadJupyterLogView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -169,7 +238,8 @@ class UploadJupyterLogView(APIView):
       return Response({"message": "Jupyter log uploaded successfully"}, status=status.HTTP_200_OK)
     else:
       return Response({"message": "Jupyter log upload failed", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 class ExportJupyterLogsView(APIView):
   permission_classes = [IsAuthenticated]
   throttle_classes = [LogsExportRateThrottle]
@@ -219,7 +289,6 @@ class ExportJupyterLogsView(APIView):
     response["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
     response["Access-Control-Allow-Credentials"] = "true"
     return response
-
   
   
 class ImageDataView(APIView):
@@ -368,6 +437,7 @@ class DeleteFigureView(APIView):
       else:
         return Response({"status": "error", "message": f"Image record not found for filename: {filename} (base_name: {base_name})"}, status=status.HTTP_404_NOT_FOUND)
 
+
 class UpdateImageDataView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request, image_id=None):
@@ -411,6 +481,7 @@ class GetGroupView(APIView):
     
     return Response({"groups": serialized_group_data.data}, status=status.HTTP_200_OK)
 
+
 class CreateGroupView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -426,7 +497,8 @@ class CreateGroupView(APIView):
         return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
       return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
+
 class UpdateGroupView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request, group_id=None):
@@ -471,8 +543,6 @@ class DeleteGroupView(APIView):
       return Response({"message": "Group deleted successfully"}, status=status.HTTP_200_OK)
     except GroupData.DoesNotExist:
       return Response({"message": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
-    
-
 
 
 class GenerateNarrativeAsyncView(APIView):
@@ -499,7 +569,6 @@ class GenerateNarrativeAsyncView(APIView):
 
     except Exception as e:
       return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
     
 
 class GetNarrativeCacheView(APIView):
@@ -543,7 +612,8 @@ class UpdateNarrativeCacheView(APIView):
       return Response({"status": "success"}, status=status.HTTP_200_OK)
     else:
       return Response({'status': 'error', 'message': 'Invalid data'}, status=status.HTTP_400_BAD_REQUEST)
-  
+
+
 class ClearNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -553,7 +623,8 @@ class ClearNarrativeCacheView(APIView):
     except ObjectDoesNotExist:
       pass
     return Response({"status": "success"}, status=status.HTTP_200_OK)
-  
+
+
 class GenerateDescriptionsView(APIView):
   permission_classes = [IsAuthenticated]
   throttle_classes = [BurstRateThrottle]
@@ -585,6 +656,7 @@ class GenerateDescriptionsView(APIView):
         {"message": f"Began generating descriptions for {len(images)} images"},
         status=status.HTTP_202_ACCEPTED,
       )
+
   
 class GenerateNarrativeView(APIView):
   permission_classes = [IsAuthenticated]
@@ -672,6 +744,7 @@ class RequestFeedbackView(APIView):
       return Response({"status": res.state.lower(), "error": str(res.result)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
       return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class ExportStoryView(APIView):
   permission_classes = [IsAuthenticated]
@@ -886,3 +959,161 @@ class ExportStoryView(APIView):
       return response
     except Exception as e:
       return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CreateScaffoldView(APIView):
+  permission_classes = [IsAuthenticated]
+  
+  def post(self, request):
+    """
+    Create a scaffold instance.
+    Expected body: {
+      "pattern": "cause_and_effect",
+      "x": 0.0 (optional, defaults to 0.0),
+      "y": 0.0 (optional, defaults to 0.0)
+    }
+    """
+    try:
+      # Get scaffold pattern from request
+      scaffold_pattern = request.data.get('pattern', '')
+      
+      # Validate pattern
+      if not scaffold_pattern:
+        return Response({
+          "error": "'pattern' field is required"
+        }, status=status.HTTP_400_BAD_REQUEST)
+      
+      if scaffold_pattern not in SCAFFOLD_MAPPING:
+        return Response({
+          "error": f"Invalid pattern '{scaffold_pattern}'. Must be one of: {', '.join(SCAFFOLD_MAPPING.keys())}"
+        }, status=status.HTTP_400_BAD_REQUEST)
+      
+      # Get scaffold info from mapping
+      scaffold_info = SCAFFOLD_MAPPING[scaffold_pattern]
+
+      # Get any current scaffolds for user
+      current_scaffolds = ScaffoldData.objects.filter(user=request.user)
+
+      # If current scaffold is same as new scaffold, return error
+      if current_scaffolds.count() == 1 and current_scaffolds[0].name == scaffold_info['name']:
+        return Response({
+          "message": "Scaffold already created"
+        }, status=status.HTTP_200_OK)
+
+      # If different scaffold, delete all current scaffolds
+      if current_scaffolds.count() > 0:
+        # Delete all current scaffolds
+        for scaffold in current_scaffolds:
+          scaffold.delete()
+
+        # Update images to not have a scaffold_id or scaffold_group_number
+        images = ImageData.objects.filter(user=request.user)
+        for image in images:
+          image.scaffold_id = None
+          image.scaffold_group_number = None
+          image.save()
+
+        # Update groups to not have a scaffold_id or scaffold_group_number
+        groups = GroupData.objects.filter(user=request.user)
+        for group in groups:
+          group.scaffold_id = None
+          group.scaffold_group_number = None
+          group.save()
+      
+      # Create new scaffold
+      scaffold_data = {
+        'user': request.user.id,
+        'name': scaffold_info['name'],
+        'number': scaffold_info['number'],
+        'description': scaffold_info['description'],
+        'valid_group_numbers': scaffold_info['valid_group_numbers'],  # Add this line
+        'x': request.data.get('x', 0.0),
+        'y': request.data.get('y', 0.0),
+      }
+      
+      serializer = ScaffoldDataSerializer(data=scaffold_data)
+      if serializer.is_valid():
+        serializer.save()
+        return Response({
+          "message": "Scaffold created successfully",
+          "scaffold": serializer.data
+        }, status=status.HTTP_201_CREATED)
+      else:
+        return Response({
+          "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
+    except Exception as e:
+      return Response({
+        "error": str(e)
+      }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GetScaffoldView(APIView):
+  permission_classes = [IsAuthenticated]
+  def get(self, request):
+    scaffold_id = request.query_params.get("scaffold_id")
+    if scaffold_id: # single scaffold
+      scaffold_data = ScaffoldData.objects.get(id=scaffold_id, user=request.user)
+    else: # all scaffolds for user
+      scaffold_data = ScaffoldData.objects.filter(user=request.user)
+    
+    if not scaffold_data:
+      return Response({"message": "No scaffold data found"}, status=status.HTTP_204_NO_CONTENT)
+      
+    serialized_scaffold_data = ScaffoldDataSerializer(scaffold_data, many=False if scaffold_id else True)
+    
+    return Response({"scaffolds": serialized_scaffold_data.data}, status=status.HTTP_200_OK)
+
+
+class UpdateScaffoldView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request, scaffold_id=None):
+    try:
+      scaffold_id = scaffold_id or request.data.get('scaffold_id')
+      if not scaffold_id:
+        return Response({"message": "No scaffold ID provided"}, status=status.HTTP_400_BAD_REQUEST)
+      
+      update_data = request.data.get('data')
+      
+      existing_scaffold = ScaffoldData.objects.get(id=scaffold_id, user=request.user)
+      
+      serializer = ScaffoldDataSerializer(existing_scaffold, data=update_data, partial=True)
+      
+      if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Scaffold updated successfully", "scaffold": serializer.data}, status=status.HTTP_200_OK)
+      else:
+        return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except ScaffoldData.DoesNotExist:
+      return Response({"message": "Scaffold not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DeleteScaffoldView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request):
+    try:
+      # Since only one scaffold per user is allowed, just delete all scaffolds
+      scaffolds = ScaffoldData.objects.filter(user=request.user)
+      for scaffold in scaffolds:
+        scaffold.delete()
+      
+      # Update images to not have a scaffold_id or scaffold_group_number
+      images = ImageData.objects.filter(user=request.user)
+      for image in images:
+        image.scaffold_id = None
+        image.scaffold_group_number = None
+        image.save()
+
+      # Update groups to not have a scaffold_id or scaffold_group_number
+      groups = GroupData.objects.filter(user=request.user)
+      for group in groups:
+        group.scaffold_id = None
+        group.scaffold_group_number = None
+        group.save()
+
+      return Response({"message": "All scaffolds deleted successfully"}, status=status.HTTP_200_OK)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
