@@ -16,7 +16,7 @@ You are an expert in data storytelling. Your task is to build a comprehensive an
 2. Ensure the story is clear, logical, and flows naturally, connecting the figures in the given order to communicate the overall theme and objective.  
 3. Insert `[FIGURE: filename]` placeholders at appropriate points where each figure should be displayed.
 4. Include the following elements in the story:
-   - **Introduction**: Provide context and set up the theme or objective of the story.
+   - **Introduction**: Provide context and set up the theme or objective of the story. Must include the story structure.
    - **Main Body**: Explain the sequence of figures, highlighting insights, trends, or relationships as they appear in order. Insert figure placeholders after describing each figure.
    - **Conclusion**: Summarize the key takeaways and discuss any final insights or implications.
 

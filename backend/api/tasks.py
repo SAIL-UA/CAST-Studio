@@ -6,7 +6,9 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 from openai import OpenAI
+from .pydandtic import STORY_SCAFFOLDS
 
 logger = logging.getLogger(__name__)
 
@@ -124,8 +126,88 @@ Descriptions of figures:
         return f"Error understanding theme and objective: {e}"
 
 
-def _sequence_figures(fig_descriptions_category: dict, theme: str, story_structure_id: str = None) -> str:
-    """Generate a recommended figure sequence given per-figure categories and the theme."""
+def _choose_story_structure_id(all_descriptions_text: str) -> str:
+    """
+    Ask the LLM to choose the best story structure id for the given figures.
+
+    The returned id will always be one of the keys in STORY_SCAFFOLDS.
+    """
+    # Build prompt using the shared story_definition reference
+    story_definitions = _load_prompt("story_definition.txt")
+    allowed_ids = list(STORY_SCAFFOLDS.keys())
+
+    prompt = f"""
+### Input
+Descriptions of figures for this story:
+{all_descriptions_text}
+
+Reference narrative structures:
+{story_definitions}
+
+### Task
+Choose the single most appropriate narrative structure *id* for this story.
+You must pick exactly one id from this list:
+{", ".join(allowed_ids)}
+
+Respond ONLY with a JSON object of the form:
+{{"id": "<one_of_the_ids_above>"}}
+""".strip()
+
+    try:
+        client = _openai_client()
+
+        schema = {
+            "name": "story_structure_choice",
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "enum": allowed_ids,
+                    }
+                },
+                "required": ["id"],
+            },
+            "strict": True,
+        }
+
+        resp = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,
+            timeout=30,
+            response_format={"type": "json_schema", "json_schema": schema},
+        )
+
+        choice = None
+        try:
+            parsed = resp.choices[0].message.parsed
+        except Exception:
+            parsed = None
+
+        if not parsed:
+            content = (resp.choices[0].message.content or "").strip()
+            parsed = _extract_json_object(content)
+
+        if isinstance(parsed, dict) and isinstance(parsed.get("id"), str):
+            candidate = parsed["id"].strip()
+            if candidate in STORY_SCAFFOLDS:
+                return candidate
+
+        # Fallback: default to the first known id
+        return allowed_ids[0]
+    except Exception as e:
+        logger.error(f"Error choosing story structure id: {e}")
+        # Fallback: default to the first known id
+        return list(STORY_SCAFFOLDS.keys())[0]
+
+
+def _sequence_figures(fig_descriptions_category: dict, theme: str, story_structure_id: str) -> str:
+    """Generate a recommended figure sequence given per-figure categories, theme, and the provided story structure."""
     base_prompt = f"""
 ### Input
 Descriptions and categories of figures:
@@ -137,19 +219,20 @@ Topic theme and objective:
 {_load_prompt('sequence_figures.txt')}
 """.strip()
 
-    # Add story structure guidance if provided
-    if story_structure_id:
-        story_structures = _load_prompt('story_definition.txt')
-        structure_prompt = f"""
+    # Append the provided story structure (from STORY_SCAFFOLDS filename mapping)
+    structure_info = STORY_SCAFFOLDS.get(story_structure_id)
+    structure_name = structure_info["name"]
+    structure_description = _load_prompt(structure_info["filename"])
 
-### Story Structure to Follow
-Use the following narrative structure as guidance:
-{story_structure_id}
+    structure_prompt = f"""
 
-Reference from available structures:
-{story_structures}
+### Provided Story Structure (use this structure)
+Use the following story structure. Its description is given below.
+**{structure_name}**:
+{structure_description}
+
 """
-        base_prompt += structure_prompt
+    base_prompt += structure_prompt
 
     try:
         client = _openai_client()
@@ -198,7 +281,7 @@ Sequence:
         return f"Error building story: {e}"
 
 
-def _sequence_figures_with_groups(groups_data: list, ungrouped_data: dict, theme: str, story_structure_id: str = None) -> str:
+def _sequence_figures_with_groups(groups_data: list, ungrouped_data: dict, theme: str, story_structure_id: str) -> str:
     """
     Sequence figures considering both groups and ungrouped figures.
 
@@ -206,7 +289,7 @@ def _sequence_figures_with_groups(groups_data: list, ungrouped_data: dict, theme
         groups_data: List of dicts with group info and figures
         ungrouped_data: Dict of ungrouped figures with descriptions/categories
         theme: Overall theme and objective
-        story_structure_id: Optional story structure ID
+        story_structure_id: Story structure ID
     """
     # Format groups for the prompt
     groups_text = ""
@@ -233,19 +316,20 @@ Topic theme and objective:
 {_load_prompt('sequence_figures_with_groups.txt')}
 """.strip()
 
-    # Add story structure guidance if provided
-    if story_structure_id:
-        story_structures = _load_prompt('story_definition.txt')
-        structure_prompt = f"""
+    # Append the provided story structure (from STORY_SCAFFOLDS filename mapping)
+    structure_info = STORY_SCAFFOLDS.get(story_structure_id)
+    structure_name = structure_info["name"]
+    structure_description = _load_prompt(structure_info["filename"])
 
-### Story Structure to Follow
-Use the following narrative structure as guidance:
-{story_structure_id}
+    structure_prompt = f"""
 
-Reference from available structures:
-{story_structures}
+### Provided Story Structure (use this structure)
+Use the following story structure. Its description is given below.
+**{structure_name}**:
+{structure_description}
+
 """
-        base_prompt += structure_prompt
+    base_prompt += structure_prompt
 
     try:
         client = _openai_client()
@@ -890,7 +974,17 @@ def _fetch_all_storyboard_data(user, story_structure_id=None):
     }
     
     # Fetch scaffolds
-    scaffolds = ScaffoldData.objects.filter(user=user, number=story_structure_id) if story_structure_id else ScaffoldData.objects.filter(user=user)
+    # Map story_structure_id (string like 'cause_and_effect') to its number before filtering
+    scaffold_number = None
+    if story_structure_id:
+        scaffold_info = STORY_SCAFFOLDS.get(story_structure_id)
+        if scaffold_info:
+            scaffold_number = scaffold_info['number']
+        else:
+            logger.warning(f"[FETCH_DATA] Unknown story_structure_id '{story_structure_id}', filtering without number")
+    
+    logger.info(f"[SCAFFOLD_NUMBER]: {scaffold_number}")
+    scaffolds = ScaffoldData.objects.filter(user=user, number=scaffold_number) if scaffold_number else ScaffoldData.objects.filter(user=user)
     scaffold_count = scaffolds.count()
     
     logger.info(f"[FETCH_DATA] Found {scaffold_count} scaffold(s)")
@@ -908,23 +1002,24 @@ def _fetch_all_storyboard_data(user, story_structure_id=None):
     logger.info(f"[FETCH_DATA] Total: {all_groups.count()} groups, {all_images.count()} storyboard images")
     
     # Detailed breakdown for debugging
-    logger.info(f"[FETCH_DATA] Image breakdown:")
-    logger.info(f"  Total storyboard images: {all_images.count()}")
-    logger.info(f"  Images with scaffold_id: {all_images.filter(scaffold_id__isnull=False).count()}")
-    logger.info(f"  Images without scaffold_id: {all_images.filter(scaffold_id__isnull=True).count()}")
-    logger.info(f"  Images with group_id: {all_images.filter(group_id__isnull=False).count()}")
-    logger.info(f"  Images without group_id: {all_images.filter(group_id__isnull=True).count()}")
-    logger.info(f"  Images with long_desc: {all_images.exclude(long_desc__exact='').count()}")
-    logger.info(f"  Images without long_desc: {all_images.filter(long_desc__exact='').count()}")
+    # logger.info(f"[FETCH_DATA] Image breakdown:")
+    # logger.info(f"  Total storyboard images: {all_images.count()}")
+    # logger.info(f"  Images with scaffold_id: {all_images.filter(scaffold_id__isnull=False).count()}")
+    # logger.info(f"  Images without scaffold_id: {all_images.filter(scaffold_id__isnull=True).count()}")
+    # logger.info(f"  Images with group_id: {all_images.filter(group_id__isnull=False).count()}")
+    # logger.info(f"  Images without group_id: {all_images.filter(group_id__isnull=True).count()}")
+    # logger.info(f"  Images with long_desc: {all_images.exclude(long_desc__exact='').count()}")
+    # logger.info(f"  Images without long_desc: {all_images.filter(long_desc__exact='').count()}")
     
     if scaffold:
         scaffold_images_all = all_images.filter(scaffold_id=scaffold)
-        logger.info(f"[FETCH_DATA] Scaffold '{scaffold.name}' image breakdown:")
-        logger.info(f"  Total images in scaffold: {scaffold_images_all.count()}")
-        logger.info(f"  Images in groups: {scaffold_images_all.filter(group_id__isnull=False).count()}")
-        logger.info(f"  Images not in groups: {scaffold_images_all.filter(group_id__isnull=True).count()}")
+        # logger.info(f"[FETCH_DATA] Scaffold '{scaffold.name}' image breakdown:")
+        # logger.info(f"  Total images in scaffold: {scaffold_images_all.count()}")
+        # logger.info(f"  Images in groups: {scaffold_images_all.filter(group_id__isnull=False).count()}")
+        # logger.info(f"  Images not in groups: {scaffold_images_all.filter(group_id__isnull=True).count()}")
         for img in scaffold_images_all:
-            logger.info(f"    Image: {img.filepath}, group_id={img.group_id}, scaffold_group_number={img.scaffold_group_number}, has_long_desc={bool(img.long_desc)}")
+            pass
+            # logger.info(f"    Image: {img.filepath}, group_id={img.group_id}, scaffold_group_number={img.scaffold_group_number}, has_long_desc={bool(img.long_desc)}")
     
     # Build scaffold_data if scaffold exists
     if scaffold:
@@ -979,9 +1074,47 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
     ScaffoldData = _get_model('api', 'ScaffoldData')
     NarrativeCache = _get_model('api', 'NarrativeCache')
 
+    logger.info(f"Generating story with structure: {story_structure_id}")
+
     try:
+
+        # Make sure all images in storyboard have a description
         user = User.objects.get(id=user_id)
-        storyboard_images = ImageData.objects.filter(user=user, in_storyboard=True).exclude(long_desc__exact="")
+
+        # Ensure all storyboard images have non-placeholder descriptions before generating.
+        PLACEHOLDER = "Ask AI to create a description for this visual."
+
+        storyboard_qs = ImageData.objects.filter(user=user, in_storyboard=True)
+
+        images_needing_desc = storyboard_qs.filter(
+            Q(long_desc__isnull=True)
+            | Q(long_desc__exact="")
+            | Q(long_desc__exact=PLACEHOLDER)
+        )
+
+        for image in images_needing_desc:
+            if image.long_desc_generating:
+                logger.info(
+                    f"[NARRATIVE] Skipping {image.filepath} - description already generating"
+                )
+                continue
+
+            logger.info(
+                f"[NARRATIVE] Generating missing description for {image.filepath}"
+            )
+            image.long_desc_generating = True
+            image.save(update_fields=["long_desc_generating"])
+
+            # Run description generation synchronously (blocking)
+            generate_description_task(image.id)
+
+        # Recompute storyboard images to only include visuals with real descriptions.
+        storyboard_images = storyboard_qs.exclude(
+            Q(long_desc__isnull=True)
+            | Q(long_desc__exact="")
+            | Q(long_desc__exact=PLACEHOLDER)
+        )
+
         if not storyboard_images.exists():
             return "No storyboard images with descriptions found."
 
@@ -1034,9 +1167,16 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
 
             all_descriptions_text = "\n".join(all_descriptions)
 
+            # If no story structure was provided, choose one based on the figures
+            if not story_structure_id:
+                story_structure_id = _choose_story_structure_id(all_descriptions_text)
+                logger.info(f"AI chose story structure: {story_structure_id}")
+
             # Generate narrative with groups
             theme = _understand_theme_objective(all_descriptions_text)
-            sequence = _sequence_figures_with_groups(groups_data, ungrouped_data, theme, story_structure_id)
+            sequence = _sequence_figures_with_groups(
+                groups_data, ungrouped_data, theme, story_structure_id
+            )
             story = _build_story_with_groups(groups_data, ungrouped_data, sequence)
             recommended_order = extract_figure_filenames(sequence)
 
@@ -1053,13 +1193,24 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
             fig_descriptions_category, all_descriptions = {}, []
             for image in storyboard_images:
                 category = _categorize_figure(image.long_desc)
-                fig_descriptions_category[image.filepath] = {"description": image.long_desc, "category": category}
+                fig_descriptions_category[image.filepath] = {
+                    "description": image.long_desc,
+                    "category": category,
+                }
                 all_descriptions.append(f"{image.filepath}: {image.long_desc}")
 
             all_descriptions_text = "\n".join(all_descriptions)
 
+            # If no story structure was provided, choose one based on the figures
+            if not story_structure_id:
+                story_structure_id = _choose_story_structure_id(all_descriptions_text)
+                logger.info(f"AI chose story structure: {story_structure_id}")
+
+
             theme = _understand_theme_objective(all_descriptions_text)
-            sequence = _sequence_figures(fig_descriptions_category, theme, story_structure_id)
+            sequence = _sequence_figures(
+                fig_descriptions_category, theme, story_structure_id
+            )
             story = _build_story(fig_descriptions_category, sequence)
             recommended_order = extract_figure_filenames(sequence)
 

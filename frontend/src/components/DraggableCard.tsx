@@ -522,7 +522,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
               <div className="space-y-4">
                 <div>
                   <label htmlFor="shortDesc" className="block text-sm font-medium text-grey-darkest mb-2">
-                    Short Description
+                    Add a description for this visual. 
                   </label>
                   <textarea
                     id="shortDesc"
@@ -535,7 +535,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
 
                 <div>
                   <label htmlFor="longDesc" className="block text-sm font-medium text-grey-darkest mb-2">
-                    Long Description
+                    Ask AI to create a description for this visual.
                   </label>
                   {loadingGenDesc ? <GeneratingPlaceholder contentName="description" lines={5} /> : (
                   <textarea

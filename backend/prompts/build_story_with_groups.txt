@@ -33,7 +33,7 @@ You will receive:
 - Insert figure placeholders: `[FIGURE: filename]`
 
 **Narrative Elements:**
-1. **Introduction**: Set up the overall theme, mention that the story uses organized groups and additional context
+1. **Introduction**: Set up the overall theme, mention that the story uses organized groups and additional context. Must include the story structure.
 2. **Main Body**:
    - Present groups as sections/chapters
    - Integrate ungrouped figures naturally

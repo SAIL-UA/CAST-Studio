@@ -68,3 +68,22 @@
 * **Figure 1 (Posing the Question):** A bar chart shows monthly cloud service costs for the past year. The bars are relatively stable until the most recent month, which is a dramatic, alarming spike. The chart is explicitly titled with the central question.
 * **Figure 2 (Exploring the Drivers):** The total cost is broken down by service (e.g., computing, storage, data transfer) in a stacked area chart. This immediately reveals that the spike is not from storage or computing, but almost entirely from "Data Transfer" costs. The investigation is now focused.
 * **Figure 3 (The Answer):** A final visual, perhaps a data table or a geographic map, breaks down the data transfer costs by region. It shows that 95% of the cost originated from a newly deployed feature that was accidentally configured to transfer large backup files between data centers in Europe and Asia multiple times a day instead of once a week. This provides a clear, actionable answer to the initial question.
+
+---
+
+When you are explicitly asked to *choose* a narrative structure for a story, you must select exactly one **structure id** from the following list and return it in JSON form:
+
+- `time_based`
+- `overview_to_detail`
+- `cause_and_effect`
+- `workflow_process`
+- `comparative`
+- `factor_analysis`
+- `problem_solution`
+- `question_answer`
+
+Your response in that case **must** be:
+
+```json
+{"id": "<one_of_the_ids_above>"}
+```

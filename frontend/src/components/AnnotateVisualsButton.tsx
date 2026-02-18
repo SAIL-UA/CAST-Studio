@@ -39,21 +39,14 @@ const AnnotateVisualsButton = ({ images, onDescriptionsUpdated }: AnnotateVisual
     setMenuOpen(false);
     logAction(e, { annotate_mode: 'ai_descriptions' });
 
-    const targets = images.filter(
-      (img) =>
-        img.in_storyboard &&
-        (!img.long_desc || img.long_desc.trim() === 'Ask AI to create a description for this visual.' || img.long_desc.trim() === '') &&
-        !img.long_desc_generating
-    );
-
-    if (targets.length === 0) {
+    if (images.length === 0) {
       alert('All storyboard visuals already have descriptions.');
       return;
     }
 
     setAiRunning(true);
     try {
-      for (const image of targets) {
+      for (const image of images) {
         try {
           await generateDescription(image.id);
         } catch (err) {
@@ -61,8 +54,8 @@ const AnnotateVisualsButton = ({ images, onDescriptionsUpdated }: AnnotateVisual
         }
       }
       alert(
-        `Started AI description generation for ${targets.length} visual${
-          targets.length > 1 ? 's' : ''
+        `Started AI description generation for ${images.length} visual${
+          images.length > 1 ? 's' : ''
         }. Descriptions will appear as they finish.`
       );
     } finally {
