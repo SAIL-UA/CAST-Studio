@@ -1077,7 +1077,6 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
     logger.info(f"Generating story with structure: {story_structure_id}")
 
     try:
-
         # Make sure all images in storyboard have a description
         user = User.objects.get(id=user_id)
 
