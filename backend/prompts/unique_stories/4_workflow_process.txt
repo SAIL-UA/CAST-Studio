@@ -1,0 +1,7 @@
+### 4. Workflow/Process (Sequential Explanation)
+**Description**: This narrative structure organizes visualizations to mirror the **sequential steps of a process**, data pipeline, or methodology. It's particularly useful for explaining *how* a result was achieved, making a complex analysis transparent and understandable. Each visual represents a distinct stage in the workflow, guiding the audience from the raw input to the final, polished output.
+
+**Trend Example: The Data Pipeline for Image Classification**
+* **Figure 1 (Raw Data Input):** A gallery of raw, unedited images of various dry fruits (e.g., almonds, walnuts, dates) is shown. The images have inconsistent lighting, backgrounds, and orientations, highlighting the initial challenge.
+* **Figure 2 (Data Preprocessing & Augmentation):** This visual shows the same images after being processed. They are now cropped, standardized to a uniform size and resolution, and augmented (e.g., rotated, flipped) to create a robust training dataset. The "before" and "after" clearly illustrates the value of this stage.
+* **Figure 3 (Final Classification Results):** The final visual is a confusion matrix of the trained model's performance on a test set. It shows high accuracy along the diagonal, demonstrating the model can successfully distinguish between different fruits, representing the successful outcome of the entire workflow.

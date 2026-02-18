@@ -1,0 +1,7 @@
+### 2. Overview to Detail (Drill-Down)
+**Description**: This narrative follows the principle of *"Overview first, zoom and filter, then details-on-demand."* It begins by presenting a **broad, high-level summary** of the data to establish context and orient the audience. Subsequent visuals then progressively drill down into more granular components or specific segments. This approach is excellent for navigating complex datasets, as it allows the audience to understand the big picture before exploring the specific details that contribute to it, preventing them from getting lost in the data.
+
+**Trend Example: Analyzing Annual E-commerce Sales Performance**
+* **Figure 1 (The Overview):** A single, large card or bar chart shows total global revenue for the last fiscal year, with a headline metric like "$150M in Sales, a 15% Year-Over-Year Growth." This sets a positive, high-level context.
+* **Figure 2 (Zoom and Filter by Category):** A treemap visualizes the revenue breakdown by product category. It immediately shows that "Electronics" is the largest single category (40% of sales), but a color-coded metric reveals that "Home Goods" has the highest growth rate (35% YoY).
+* **Figure 3 (Details-on-Demand):** A detailed line chart focuses exclusively on the high-growth "Home Goods" category. It plots monthly sales of specific sub-categories (e.g., kitchen appliances, furniture, decor), uncovering that a viral marketing campaign for smart coffee makers in Q3 was the primary driver of the category's exceptional growth.

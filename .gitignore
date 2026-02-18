@@ -18,8 +18,11 @@ backend/jupyterhub.sqlite
 *.sh
 !docker-down.sh
 !docker-up.sh
- 
+
+# Allow .txt files in prompts
 *.txt
+!**/prompts/*.txt
+!**/prompts/unique_stories/*.txt
 
 # .sql files
 *.sql

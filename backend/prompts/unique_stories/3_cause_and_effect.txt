@@ -1,0 +1,7 @@
+### 3. Cause-and-Effect (Explanatory Story)
+**Description**: This structure is used to build a compelling argument for a **causal relationship** between two or more variables. The narrative is constructed by first presenting data on a potential cause (the independent variable) and then showing the corresponding data for the effect (the dependent variable). The story is solidified with a final visual that directly plots the relationship between the two, often supported by a correlation metric or regression line.
+
+**Trend Example: Measuring the Impact of Digital Ad Campaigns on Product Sales**
+* **Figure 1 (The Cause):** A timeline chart visualizes advertising spend over the last six months. It clearly marks three distinct peaks where spending was tripled for major campaigns focused on social media, influencer partnerships, and search engine marketing.
+* **Figure 2 (The Effect):** A corresponding line chart shows daily product sales over the same six-month period. The audience can see three dramatic spikes in sales that align perfectly with the timing of the high-spend marketing campaigns.
+* **Figure 3 (The Relationship):** A scatter plot provides the final proof. Each point represents a day, with ad spend on the x-axis and product sales on the y-axis. A clear positive trend and a calculated correlation coefficient (e.g., $R^2 = 0.85$) are displayed, visually and statistically confirming that higher ad spending is strongly associated with increased sales.

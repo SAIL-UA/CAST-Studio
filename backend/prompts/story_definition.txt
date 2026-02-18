@@ -69,6 +69,14 @@
 * **Figure 2 (Exploring the Drivers):** The total cost is broken down by service (e.g., computing, storage, data transfer) in a stacked area chart. This immediately reveals that the spike is not from storage or computing, but almost entirely from "Data Transfer" costs. The investigation is now focused.
 * **Figure 3 (The Answer):** A final visual, perhaps a data table or a geographic map, breaks down the data transfer costs by region. It shows that 95% of the cost originated from a newly deployed feature that was accidentally configured to transfer large backup files between data centers in Europe and Asia multiple times a day instead of once a week. This provides a clear, actionable answer to the initial question.
 
+
+### 9. Shock and Lead (Attention-Then-Explanation Story)
+**Description**: This narrative structure opens with a **single, striking fact or data point** designed to capture attention and create urgency. The audience is immediately confronted with a surprising, alarming, or counterintuitive finding. The story then **leads** into a set of visuals that explain the drivers, context, or factors behind that shock—turning the initial reaction into understanding. This approach is highly effective for making a memorable impact and then grounding it in evidence, avoiding sensationalism without explanation.
+
+**Trend Example: "Employee Turnover Reached 47% in Our Engineering Division Last Year"**
+* **Figure 1 (The Shock Fact):** A single KPI or headline chart displays the striking statistic—e.g., "47% Annual Turnover" or a bar comparing the division to industry benchmark (15%)—immediately establishing urgency and surprise.
+* **Figure 2 (Explanatory Factors):** Subsequent visuals break down the drivers: a stacked bar or treemap showing turnover by tenure band (e.g., highest among 0–2 year employees), a heat map of exit reasons (compensation, growth, manager), or a timeline of policy changes. Together they explain *why* the shock occurred and set up actionable insights.
+
 ---
 
 When you are explicitly asked to *choose* a narrative structure for a story, you must select exactly one **structure id** from the following list and return it in JSON form:
@@ -81,6 +89,7 @@ When you are explicitly asked to *choose* a narrative structure for a story, you
 - `factor_analysis`
 - `problem_solution`
 - `question_answer`
+- `shock_lead`
 
 Your response in that case **must** be:
 

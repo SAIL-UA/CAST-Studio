@@ -75,7 +75,7 @@ STORY_SCAFFOLDS = {
     "shock_lead": {
         "id": "shock_lead",
         "name": "Shock and Lead",
-        "filename": None,  # TODO
+        "filename": "unique_stories/9_shock_and_lead.txt",
         "number": 9,
         "description": "A striking fact, followed by analysis of explanatory factors.",
         "valid_group_numbers": [1, 2],  # 1=shock fact, 2=explanatory factors
