@@ -9,8 +9,10 @@ import GenerateStoryButton from './GenerateStoryButton';
 import CraftStoryButton from './CraftStoryButton';
 import GroupButton from './GroupButton';
 import FeedbackButton from './FeedbackButton';
+import AnnotateVisualsButton from './AnnotateVisualsButton';
 import GroupDiv from './GroupDiv';
 import Bin from './Bin';
+import DeleteAllButton from './DeleteAllButton';
 import ClearAllButton from './ClearAllButton';
 
 // Import scaffolds
@@ -661,9 +663,24 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         <div id="story-board-container" className="flex flex-col h-full w-full bg-white">
             <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start p-2 flex-shrink-0 grid-background">
                 <UploadButton onUploaded={fetchUserData}/>
+                <AnnotateVisualsButton
+                    images={images}
+                    onDescriptionsUpdated={async () => {
+                        // Refresh images and any derived group/scaffold state
+                        await fetchUserData();
+                        const groups = await fetchGroups();
+                        await fetchScaffolds(groups);
+                    }}
+                />
                 <GroupButton onClick={handleCreateGroup} />
                 <GenerateStoryButton setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} />
-                <CraftStoryButton images={workspaceImages} storyLoading={storyLoading} setStoryLoading={setStoryLoading} hasGroups={groupDivs.length > 0} />
+                <CraftStoryButton
+                    images={workspaceImages}
+                    storyLoading={storyLoading}
+                    setStoryLoading={setStoryLoading}
+                    hasGroups={groupDivs.length > 0}
+                    selectedPattern={selectedPattern}
+                />
                 <FeedbackButton />
 
             </div>
@@ -792,19 +809,33 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                         />
                     ))}
                 </Bin>
-                {/* ClearAll button - positioned in bottom left */}
-                <ClearAllButton 
-                    images={images}
-                    setImages={setImages}
-                    setGroupDivs={setGroupDivs}
-                    setScaffold={setScaffold}
-                    setSelectedPattern={setSelectedPattern}
-                    onClearComplete={async () => {
-                        await fetchUserData();
-                        const groups = await fetchGroups();
-                        await fetchScaffolds(groups);
-                    }}
-                />
+                {/* DeleteAll and ClearAll buttons - positioned in bottom left */}
+                <div className="absolute bottom-6 left-4 flex gap-2 z-[350]">
+                    <DeleteAllButton 
+                        images={images}
+                        setImages={setImages}
+                        setGroupDivs={setGroupDivs}
+                        setScaffold={setScaffold}
+                        setSelectedPattern={setSelectedPattern}
+                        onDeleteComplete={async () => {
+                            await fetchUserData();
+                            const groups = await fetchGroups();
+                            await fetchScaffolds(groups);
+                        }}
+                    />
+                    <ClearAllButton 
+                        images={images}
+                        setImages={setImages}
+                        setGroupDivs={setGroupDivs}
+                        setScaffold={setScaffold}
+                        setSelectedPattern={setSelectedPattern}
+                        onClearComplete={async () => {
+                            await fetchUserData();
+                            const groups = await fetchGroups();
+                            await fetchScaffolds(groups);
+                        }}
+                    />
+                </div>
             </div>
         </div>
     )

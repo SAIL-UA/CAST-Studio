@@ -1,0 +1,7 @@
+### 5. Comparative Analysis (Side-by-Side Story)
+**Description**: This narrative structure focuses on **drawing direct comparisons** between two or more distinct groups, products, strategies, or time periods. The visualizations are intentionally designed to place these items side-by-side, making it easy for the audience to identify differences, similarities, and patterns. The story builds from this direct comparison to a logical conclusion, such as identifying a top performer or highlighting a critical trade-off.
+
+**Trend Example: Choosing Between Two Machine Learning Models**
+* **Figure 1 (Head-to-Head Performance):** A grouped bar chart directly compares key performance metrics (Accuracy, Precision, Recall) for "Model A: CNN" and "Model B: Ensemble." The chart clearly shows that Model B outperforms Model A across all three metrics.
+* **Figure 2 (Error Analysis):** Two confusion matrices are placed side-by-side. This deeper comparison reveals *why* Model B is better. For instance, it might show that Model A frequently misclassifies "Pecans" as "Walnuts," while Model B is much more accurate with these confusing classes.
+* **Figure 3 (Resource Cost Trade-off):** A final comparative bar chart shows the non-performance costs: training time and inference speed. This might reveal that while Model B is more accurate, its training time is 5x longer, presenting a clear trade-off between performance and computational cost that is critical for decision-making.

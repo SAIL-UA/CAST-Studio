@@ -11,10 +11,11 @@ type CraftStoryButtonProps = {
     storyLoading: boolean;
     setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
     hasGroups?: boolean;  // New prop to indicate if groups exist
+    selectedPattern: string;
 }
 
 // Upload button component
-const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroups = false }: CraftStoryButtonProps) => {
+const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroups = false, selectedPattern }: CraftStoryButtonProps) => {
 
         // Generate descriptions for images that don't have them
         const generateMissingDescriptions = async () => {
@@ -106,7 +107,8 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
             // Step 3: Generate the story (async with polling)
             console.log('Step 3: Generating story...');
             console.log('Using groups:', hasGroups);
-            const taskResponse = await generateNarrativeAsync(undefined, hasGroups);
+            console.log('Selected pattern:', selectedPattern);
+            const taskResponse = await generateNarrativeAsync(selectedPattern || undefined, hasGroups);
             
             if (taskResponse.status === 'success' && taskResponse.task_id) {
                 console.log('Story generation task started, task_id:', taskResponse.task_id);

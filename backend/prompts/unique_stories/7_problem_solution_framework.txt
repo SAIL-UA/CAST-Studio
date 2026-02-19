@@ -1,0 +1,7 @@
+### 7. Problem-Solution Framework (Resolution Story)
+**Description**: This is a powerful narrative that follows a classic and compelling arc. It begins by using data to **clearly define a problem** or challenge. It then transitions to a diagnostic phase, presenting visuals that explore the **root causes** of the issue. The story culminates by presenting a proposed or implemented solution and, most importantly, showing data that **validates its effectiveness** and demonstrates its positive impact.
+
+**Trend Example: Tackling Declining User Engagement in a Mobile App**
+* **Figure 1 (The Problem):** A line chart titled "Daily Active Users Have Dropped 40% in Q3" immediately establishes the problem. A KPI widget shows the average session time has also fallen from 12 minutes to 5 minutes, adding urgency.
+* **Figure 2 (The Diagnosis):** A funnel analysis visualizes the user journey within the app. It reveals a massive 75% drop-off rate at the new, complex registration screen that was introduced in Q3, identifying it as the likely root cause.
+* **Figure 3 (The Solution's Impact):** An A/B test result is shown. A new, simplified one-click registration process (Variant B) is compared against the old one (Variant A). A bar chart clearly shows that Variant B has an 80% higher completion rate, and a follow-up line chart shows that daily active users have recovered and even surpassed previous levels since its full implementation.

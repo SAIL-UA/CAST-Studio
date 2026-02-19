@@ -1,5 +1,4 @@
 // Import dependencies
-import { useNavigate } from 'react-router-dom';
 import { logAction } from '../utils/userActionLogger';
 
 // Import images
@@ -7,15 +6,6 @@ import home from '../assets/images/home.svg';
 
 // Footer component
 const Footer = () => {
-
-    // Navigation
-    const navigate = useNavigate();
-
-    // Handle dropdown selections
-    const handleDropdownSelection = (e: React.MouseEvent) => {
-        logAction(e);
-        navigate(`/construction`);
-    }
 
     // Visible component
     return (
@@ -26,11 +16,10 @@ const Footer = () => {
                 <br />
                 <ul className="text-sm space-y-2 font-sans">
                     <li className="cursor-pointer hover:font-roboto-semibold"
-                    log-id="footer-cast-home-link"
-                    onClick={handleDropdownSelection}>
+                    log-id="footer-cast-home-link">
                         <span className="flex items-center justify-start">
                             <img src={home} alt="JupyterHub" className="w-4 h-4 mr-2" />
-                            Visit CAST Home
+                            <a href="https://hassan.taha-526.workers.dev/castdemo/" target="_blank">Visit CAST Home</a>
                         </span>
                     </li>
                     <li className="cursor-pointer hover:font-roboto-semibold"
