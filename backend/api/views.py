@@ -290,7 +290,7 @@ class UploadFigureView(APIView):
       "user": request.user.id,
       "filepath": f"{figure_id}{ext}",
       "short_desc": request.data.get('short_desc') or "Add a description for this visual.",
-      "long_desc": request.data.get('long_desc') or "Ask AI to create a description for this visual.",
+      "long_desc": request.data.get('long_desc') or "Ask AI to generate a description for this visual.",
       "source": request.data.get('source') or "",
       "in_storyboard": True,
       "x": 0,

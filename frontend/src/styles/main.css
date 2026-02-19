@@ -45,11 +45,11 @@
 }
 
 .text-somewhat-tiny {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
 }
 
 .text-somewhat-tiny-bold {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 500;
 }
 
@@ -59,7 +59,7 @@
 }
 
 .card-width {
-  width: 100px;
+  width: 130px;
 }
 
 .image-height{
