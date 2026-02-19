@@ -506,8 +506,6 @@ const GroupDiv: React.FC<GroupDivProps> = ({
           ? 'border-blue-400 border-2 bg-blue-50' 
           : isOverCard && !canDropCard
           ? 'border-red-400 border-2 bg-red-50'
-          : cards.length >= 3
-          ? 'border-grey-dark border-2'
           : 'border-grey-lightest'
       }`}
       style={{
@@ -624,7 +622,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
                     draggable={false}
                   />
                 </div>
-                {/* Remove button overlay - positioned on the top-right of the scaled image */}
+                {/* Remove button overlay - aligned with scaled image (75%) top-right */}
                 <button
                 log-id="group-remove-card-button"
                   onClick={(e) => {
@@ -633,10 +631,8 @@ const GroupDiv: React.FC<GroupDivProps> = ({
                   }}
                   className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[205] shadow-md"
                   style={{
-                    // Card is scaled to 75%, so 100px becomes 75px
-                    // Position button more left and up from the top-right corner
-                    top: '-2px', 
-                    right: '8px'
+                    top: '-2px',
+                    right: '-8px'
                   }}
                   title="Remove from group"
                 >

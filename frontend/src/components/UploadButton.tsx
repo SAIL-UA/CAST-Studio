@@ -18,7 +18,7 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
 
     // Default metadata values
     const shortDesc = "Add a description for this visual.";
-    const longDesc = "Ask AI to create a description for this visual."
+    const longDesc = "Ask AI to create a description for this visual.";
     const source = "Placeholder source";
 
     // Trigger file picker
