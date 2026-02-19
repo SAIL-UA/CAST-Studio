@@ -12,7 +12,6 @@ You are an expert in analyzing figures and generating detailed descriptions for 
 3. If the figure is compound, describe its sub-parts individually, then summarize the overall purpose.
 
 ### Example Output:
-- **Description**:
 The figure titled "{figure_name}" illustrates {{summary of the figure's purpose}}. The extracted text from the figure indicates {{key insights from text}}. Based on the related code script, the figure likely represents {{connection to the script or methodology used}}. The visualization is {{single/compound}}, and {{if compound, describe sub-regions briefly}}. Overall, the figure demonstrates {{key message or insight}}.
 
 ### Example
