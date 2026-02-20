@@ -411,7 +411,7 @@ const DataStories = () => {
                         ) : isProcessingImages ? (
                             <GeneratingPlaceholder contentName="processing images" lines={4} />
                         ) : storyData?.narrative ? (
-                            <div className="bg-white p-4 rounded-lg border border-grey-lightest">
+                            <div className="p-4 rounded-lg">
                                 <div className="prose max-w-none text-grey-darkest leading-relaxed text-base">
                                     <ReactMarkdown
                                         components={imageComponents}
