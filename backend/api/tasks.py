@@ -1,6 +1,6 @@
 # backend/api/tasks.py
 from celery import shared_task
-import os, base64, re, logging, json, mimetypes
+import os, base64, re, logging, json, mimetypes, time
 from functools import lru_cache
 from django.apps import apps
 from django.conf import settings
@@ -797,6 +797,13 @@ def generate_description_task(image_id):
         return f"Successfully generated description for image {image_id}"
     except Exception as e:
         logger.error(f"Error generating description for image {image_id}: {e}")
+        # Prevent permanent "generating" state on failures.
+        try:
+            ImageData.objects.filter(id=image_id).update(long_desc_generating=False)
+        except Exception as reset_err:
+            logger.error(
+                f"Error clearing long_desc_generating for image {image_id}: {reset_err}"
+            )
         return f"Error generating description for image {image_id}: {e}"
 
 
@@ -1106,6 +1113,38 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
 
             # Run description generation synchronously (blocking)
             generate_description_task(image.id)
+
+        # Wait for all descriptions to finish generating
+        wait_timeout_seconds = 180
+        poll_interval_seconds = 1
+        wait_deadline = time.time() + wait_timeout_seconds
+
+        while True:
+            pending_desc_qs = storyboard_qs.filter(
+                long_desc_generating=True
+            ).filter(
+                Q(long_desc__isnull=True)
+                | Q(long_desc__exact="")
+                | Q(long_desc__exact=PLACEHOLDER)
+            )
+            pending_count = pending_desc_qs.count()
+
+            if pending_count == 0:
+                break
+
+            if time.time() >= wait_deadline:
+                pending_files = list(
+                    pending_desc_qs.values_list("filepath", flat=True)[:5]
+                )
+                logger.warning(
+                    "[NARRATIVE] Timeout waiting for %s description task(s) "
+                    "to finish (including externally-started tasks). Sample: %s",
+                    pending_count,
+                    pending_files,
+                )
+                break
+
+            time.sleep(poll_interval_seconds)
 
         # Recompute storyboard images to only include visuals with real descriptions.
         storyboard_images = storyboard_qs.exclude(

@@ -37,13 +37,14 @@ type StoryBoardProps = {
     setImages: React.Dispatch<React.SetStateAction<ImageData[]>>;
     loading: boolean;
     fetchUserData: () => Promise<void>;
+    refreshImageDataAfterStoryGeneration: () => Promise<void>;
     updateImageData: (imageId: string, data: Partial<ImageData>) => void;
     handleImageRecycle: (imageId: string) => void;
     handleImageRestore: (imageId: string) => void;
 }
 
 // StoryBoard component
-const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, images, setImages, loading, fetchUserData, updateImageData, handleImageRecycle, handleImageRestore }: StoryBoardProps) => {
+const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, images, setImages, loading, fetchUserData, refreshImageDataAfterStoryGeneration, updateImageData, handleImageRecycle, handleImageRestore }: StoryBoardProps) => {
 
     // States
     const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
@@ -680,6 +681,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     setStoryLoading={setStoryLoading}
                     hasGroups={groupDivs.length > 0}
                     selectedPattern={selectedPattern}
+                    onStoryGenerated={refreshImageDataAfterStoryGeneration}
                 />
                 <FeedbackButton />
 

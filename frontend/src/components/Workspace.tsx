@@ -74,6 +74,11 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
         });
     };
 
+    // Refresh workspace images after async backend jobs (e.g., story generation)
+    const refreshImageDataAfterStoryGeneration = async () => {
+        await fetchUserData();
+    };
+
     // Update image data (position, status, etc.)
     const updateImageData = async (imageId: string, data: Partial<ImageData>) => {
         try {
@@ -163,6 +168,7 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
                         setImages={setImages}
                         loading={loading}
                         fetchUserData={fetchUserData}
+                        refreshImageDataAfterStoryGeneration={refreshImageDataAfterStoryGeneration}
                         updateImageData={updateImageData}
                         handleImageRecycle={handleImageRecycle}
                         handleImageRestore={handleImageRestore}
