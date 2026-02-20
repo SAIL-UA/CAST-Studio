@@ -72,7 +72,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
 
                 // Poll for task completion
                 const pollForCompletion = async () => {
-                    const maxAttempts = 120; // 5 minutes with 2.5-second intervals
+                    const maxAttempts = 192; // 8 minutes with 2.5-second intervals
                     let attempts = 0;
                     
                     while (attempts < maxAttempts) {
