@@ -666,6 +666,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 <UploadButton onUploaded={fetchUserData}/>
                 <AnnotateVisualsButton
                     images={images}
+                    storyLoading={storyLoading}
                     onDescriptionsUpdated={async () => {
                         // Refresh images and any derived group/scaffold state
                         await fetchUserData();

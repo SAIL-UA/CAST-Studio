@@ -1257,8 +1257,13 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
                 for fn, info in fig_descriptions_category.items()
             ]
 
-        # Get story structure name for logging/caching
-        story_structure_name = story_structure_id or "default"
+        # Get display name from mapping for logging/caching
+        structure_info = STORY_SCAFFOLDS.get(story_structure_id or "")
+        story_structure_name = (
+            structure_info.get("name")
+            if structure_info and structure_info.get("name")
+            else (story_structure_id or "default")
+        )
         generation_mode = "grouped" if use_groups else "flat"
 
         # Fetch all storyboard data
@@ -1269,6 +1274,7 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
             cache, created = NarrativeCache.objects.get_or_create(
                 user=user,
                 defaults={
+                    'story_structure_id': story_structure_id or "",
                     'narrative': story,
                     'order': recommended_order,
                     'theme': theme,
@@ -1277,6 +1283,7 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
                 }
             )
             if not created:
+                cache.story_structure_id = story_structure_id or ""
                 cache.narrative = story
                 cache.order = recommended_order
                 cache.theme = theme

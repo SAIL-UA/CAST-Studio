@@ -14,6 +14,7 @@ import FeedbackButton from './FeedbackButton';
 
 // Story data interface
 interface StoryData {
+    story_structure_id?: string;
     narrative?: string;
     recommended_order?: string[];
     categorize_figures_response?: string;
@@ -21,12 +22,8 @@ interface StoryData {
     sequence_response?: string;
 }
 
-interface DataStoriesProps {
-    selectedPattern: string;
-}
-
 // DataStories component
-const DataStories = ({ selectedPattern }: DataStoriesProps) => {
+const DataStories = () => {
 
     // State
     const [narrativeSelected, setNarrativeSelected] = useState(true);
@@ -39,7 +36,6 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
     const [processedSequence, setProcessedSequence] = useState<string>('');
     const [isProcessingImages, setIsProcessingImages] = useState(false);
     const [processedRecommended, setProcessedRecommended] = useState<string[]>([]);
-    const [processedPattern, setProcessedPattern] = useState<string>('');
 
     // Check for existing cached narrative on component mount
     const loadCachedNarrative = async () => {
@@ -48,6 +44,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
             if (response.data && response.data.data) {
                 const cacheData = response.data.data;
                 setStoryData({
+                    story_structure_id: cacheData.story_structure_id,
                     narrative: cacheData.narrative,
                     recommended_order: cacheData.order,
                     categorize_figures_response: cacheData.categories,
@@ -161,7 +158,6 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 setProcessedCategories('');
                 setProcessedSequence('');
                 setProcessedRecommended([]);
-                setProcessedPattern('');
                 return;
             }
 
@@ -197,7 +193,6 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 setProcessedCategories(processedCategoriesText);
                 setProcessedSequence(processedSequenceText);
                 setProcessedRecommended(processedRecommendedList);
-                setProcessedPattern(selectedPattern || '');
             } catch (error) {
                 console.error('Error processing images:', error);
             } finally {
@@ -207,6 +202,17 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
 
         processAllContent();
     }, [storyData]);
+
+    const formatStoryStructureName = (structureId?: string) => {
+        if (!structureId) return '';
+        return structureId
+            .split('_')
+            .filter(Boolean)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    };
+
+    const headerPattern = formatStoryStructureName(storyData?.story_structure_id);
 
     // Unified image components for all ReactMarkdown sections
     const imageComponents = {
@@ -312,7 +318,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 {narrativeSelected ? (
                     // Narrative Structuring Content
                     <div className="w-full space-y-6">
-                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structure{processedPattern ? `: ${processedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structure{headerPattern ? `: ${headerPattern}` : ''}</h3>
                         
                         {isGenerating ? (
                             <GeneratingPlaceholder contentName="narrative analysis" lines={6} />
@@ -398,7 +404,7 @@ const DataStories = ({ selectedPattern }: DataStoriesProps) => {
                 ) : (
                     // Generated Story Content (when storySelected is true)
                     <div className="w-full">
-                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story{processedPattern ? `: ${processedPattern.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}` : ''}</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story{headerPattern ? `: ${headerPattern}` : ''}</h3>
                         
                         {isGenerating ? (
                             <GeneratingPlaceholder contentName="data story" lines={8} />

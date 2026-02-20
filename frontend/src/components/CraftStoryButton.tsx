@@ -98,6 +98,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                                 // Story generation complete with new content
                                 const storyEvent = new CustomEvent('storyGenerated', {
                                     detail: {
+                                        story_structure_id: cacheData.story_structure_id,
                                         narrative: cacheData.narrative,
                                         recommended_order: cacheData.order,
                                         categorize_figures_response: cacheData.categories,

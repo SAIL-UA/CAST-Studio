@@ -162,6 +162,7 @@ class NarrativeCache(models.Model):
   Narrative cache.
   """
   user = models.OneToOneField(User, on_delete=models.CASCADE, db_column='user_id', unique=True, related_name='narrative_cache')
+  story_structure_id = models.CharField(max_length=64, default="")
   narrative = models.TextField(default="")
   order = models.JSONField(default=list)
   theme = models.TextField(default="")

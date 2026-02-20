@@ -6,6 +6,7 @@ import type { ImageData } from '../types/types';
 
 type AnnotateVisualsButtonProps = {
   images: ImageData[];
+  storyLoading?: boolean;
   /**
    * Optional callback to refresh image data from the backend
    * after AI description generation completes.
@@ -13,15 +14,17 @@ type AnnotateVisualsButtonProps = {
   onDescriptionsUpdated?: () => void | Promise<void>;
 };
 
-const AnnotateVisualsButton = ({ images, onDescriptionsUpdated }: AnnotateVisualsButtonProps) => {
+const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpdated }: AnnotateVisualsButtonProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [aiRunning, setAiRunning] = useState(false);
+  const isDisabled = aiRunning || storyLoading;
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = () => {
+    if (isDisabled) return;
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -30,6 +33,7 @@ const AnnotateVisualsButton = ({ images, onDescriptionsUpdated }: AnnotateVisual
   };
 
   const handleMouseLeave = () => {
+    if (isDisabled) return;
     timeoutRef.current = setTimeout(() => {
       setMenuOpen(false);
     }, 150);
@@ -96,7 +100,7 @@ const AnnotateVisualsButton = ({ images, onDescriptionsUpdated }: AnnotateVisual
           className="flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          disabled={aiRunning}
+          disabled={isDisabled}
         >
           <span className="flex items-center justify-center gap-2">
             {aiRunning ? 'Annotating...' : 'Annotate Visuals'}
@@ -112,7 +116,7 @@ const AnnotateVisualsButton = ({ images, onDescriptionsUpdated }: AnnotateVisual
           </span>
         </button>
 
-        {menuOpen && (
+        {menuOpen && !isDisabled && (
           <div
             className="absolute top-full z-[400] left-0 mt-1 shadow-lg bg-transparent overflow-hidden m-1"
             onMouseEnter={handleMouseEnter}
@@ -122,15 +126,16 @@ const AnnotateVisualsButton = ({ images, onDescriptionsUpdated }: AnnotateVisual
               log-id="annotate-visuals-ai-option"
               className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleCreateWithAI}
-              disabled={aiRunning}
+              disabled={isDisabled}
             >
               Create with AI
             </button>
 
             <button
               log-id="annotate-visuals-manual-option"
-              className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+              className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleCreateManually}
+              disabled={isDisabled}
             >
               Create Manually
             </button>

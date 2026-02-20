@@ -612,6 +612,7 @@ class GenerateNarrativeView(APIView):
         narrative_cache = NarrativeCache.objects.get(user=request.user)
         return Response({
           "status": "success",
+          "story_structure_id": narrative_cache.story_structure_id,
           "narrative": narrative_cache.narrative,
           "recommended_order": narrative_cache.order,
           "theme": narrative_cache.theme,
