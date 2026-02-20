@@ -101,7 +101,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         try {
             const fetchedScaffolds = await getScaffolds();
             if (!fetchedScaffolds || fetchedScaffolds.length === 0) {
-                setSelectedPattern('');
+                // setSelectedPattern('');
                 setScaffold(null);
                 return;
             }
@@ -533,7 +533,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
             // Clear scaffold state
             setScaffold(null);
-            setSelectedPattern('');
+            // setSelectedPattern('');
 
             // Refresh data from backend to ensure consistency
             await fetchUserData();

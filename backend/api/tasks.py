@@ -206,6 +206,36 @@ Respond ONLY with a JSON object of the form:
         return list(STORY_SCAFFOLDS.keys())[0]
 
 
+def _resolve_story_structure_id(story_structure_id: str | None, all_descriptions_text: str) -> str:
+    """
+    Resolve the final story structure id used for generation.
+
+    Keeps a valid caller-provided id, otherwise auto-selects one.
+    """
+    normalized_id = (story_structure_id or "").strip()
+    if normalized_id in STORY_SCAFFOLDS:
+        return normalized_id
+
+    # Explicit AI-autoselect signals from UI and empty values.
+    if normalized_id.lower() not in {"", "ai assistance"}:
+        logger.warning(
+            "[NARRATIVE] Unknown story_structure_id '%s'; auto-selecting a valid scaffold.",
+            story_structure_id,
+        )
+
+    chosen = _choose_story_structure_id(all_descriptions_text)
+    if chosen in STORY_SCAFFOLDS:
+        return chosen
+
+    fallback_id = next(iter(STORY_SCAFFOLDS))
+    logger.warning(
+        "[NARRATIVE] Auto-selected invalid scaffold '%s'; falling back to '%s'.",
+        chosen,
+        fallback_id,
+    )
+    return fallback_id
+
+
 def _sequence_figures(fig_descriptions_category: dict, theme: str, story_structure_id: str) -> str:
     """Generate a recommended figure sequence given per-figure categories, theme, and the provided story structure."""
     base_prompt = f"""
@@ -221,6 +251,14 @@ Topic theme and objective:
 
     # Append the provided story structure (from STORY_SCAFFOLDS filename mapping)
     structure_info = STORY_SCAFFOLDS.get(story_structure_id)
+    if not structure_info:
+        fallback_id = next(iter(STORY_SCAFFOLDS))
+        logger.warning(
+            "[NARRATIVE] _sequence_figures received invalid story_structure_id '%s'; using '%s'.",
+            story_structure_id,
+            fallback_id,
+        )
+        structure_info = STORY_SCAFFOLDS[fallback_id]
     structure_name = structure_info["name"]
     structure_description = _load_prompt(structure_info["filename"])
 
@@ -318,6 +356,14 @@ Topic theme and objective:
 
     # Append the provided story structure (from STORY_SCAFFOLDS filename mapping)
     structure_info = STORY_SCAFFOLDS.get(story_structure_id)
+    if not structure_info:
+        fallback_id = next(iter(STORY_SCAFFOLDS))
+        logger.warning(
+            "[NARRATIVE] _sequence_figures_with_groups received invalid story_structure_id '%s'; using '%s'.",
+            story_structure_id,
+            fallback_id,
+        )
+        structure_info = STORY_SCAFFOLDS[fallback_id]
     structure_name = structure_info["name"]
     structure_description = _load_prompt(structure_info["filename"])
 
@@ -1205,10 +1251,11 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
 
             all_descriptions_text = "\n".join(all_descriptions)
 
-            # If no story structure was provided, choose one based on the figures
-            if not story_structure_id:
-                story_structure_id = _choose_story_structure_id(all_descriptions_text)
-                logger.info(f"AI chose story structure: {story_structure_id}")
+            story_structure_id = _resolve_story_structure_id(
+                story_structure_id,
+                all_descriptions_text,
+            )
+            logger.info(f"Using story structure: {story_structure_id}")
 
             # Generate narrative with groups
             theme = _understand_theme_objective(all_descriptions_text)
@@ -1239,10 +1286,11 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
 
             all_descriptions_text = "\n".join(all_descriptions)
 
-            # If no story structure was provided, choose one based on the figures
-            if not story_structure_id:
-                story_structure_id = _choose_story_structure_id(all_descriptions_text)
-                logger.info(f"AI chose story structure: {story_structure_id}")
+            story_structure_id = _resolve_story_structure_id(
+                story_structure_id,
+                all_descriptions_text,
+            )
+            logger.info(f"Using story structure: {story_structure_id}")
 
 
             theme = _understand_theme_objective(all_descriptions_text)
@@ -1296,6 +1344,6 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
     except User.DoesNotExist:
         logger.error(f"User with id {user_id} not found")
         return f"User with id {user_id} not found"
-    except Exception as e:
-        logger.error(f"Error generating narrative: {e}")
-        return f"Error generating narrative: {e}"
+    except Exception:
+        logger.exception("Error generating narrative")
+        raise
