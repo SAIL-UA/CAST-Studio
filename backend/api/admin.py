@@ -79,10 +79,7 @@ class JupyterLogsAdmin(admin.ModelAdmin):
         return request.user.is_superuser  # viewable but not editable for staff
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        if request.user.is_superuser:
-            return qs
-        return qs.filter(user=request.user)  # staff only sees their own logs
+        return super().get_queryset(request)
     
 
     def export_logs_ndjson(modeladmin, request, queryset):
