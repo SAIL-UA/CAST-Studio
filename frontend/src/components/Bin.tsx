@@ -83,8 +83,8 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
 
   // Dynamic styling based on drop state
   const getBinClasses = () => {
-    // change to overflow-auto for scroll
-    const baseClasses = "absolute inset-0 w-full h-full overflow-hidden rounded-sm transition-colors duration-200 grid-background border border-dashed";
+    // Use overflow-auto for scrollable storyboard; overflow-hidden to disable scroll
+    const baseClasses = "absolute inset-0 w-full h-full overflow-auto rounded-sm transition-colors duration-200 grid-background border border-dashed";
     
     if (isOver && canDrop) {
       return `${baseClasses} bg-blue-50 border-blue-400`;
