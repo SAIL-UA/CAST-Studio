@@ -680,7 +680,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 <GroupButton onClick={handleCreateGroup} />
                 <GenerateStoryButton setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} />
                 <CraftStoryButton
-                    images={workspaceImages}
+                    images={images}
                     storyLoading={storyLoading}
                     setStoryLoading={setStoryLoading}
                     hasGroups={groupDivs.length > 0}

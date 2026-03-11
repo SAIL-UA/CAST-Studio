@@ -25,8 +25,12 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
         // Generate story with selected pattern
         setStoryLoading(true);
 
-        // Make sure there are images present
-        if (!images || images.length === 0) {
+        // Consider any images that are currently in the storyboard,
+        // including those inside groups or scaffolds.
+        const storyboardImages = (images || []).filter(img => img.in_storyboard);
+
+        // Make sure there are storyboard images present
+        if (!storyboardImages || storyboardImages.length === 0) {
             setStoryLoading(false);
             alert('Please add images before generating a story.');
             return;
