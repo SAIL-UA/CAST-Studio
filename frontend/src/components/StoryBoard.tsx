@@ -19,6 +19,7 @@ import ClearAllButton from './ClearAllButton';
 import CauseEffect from './scaffolds/CauseEffect';
 import QuestionAnswer from './scaffolds/QuestionAnswer';
 import ProblemSolution from './scaffolds/ProblemSolution';
+import TimeBased from './scaffolds/TimeBased';
 
 // Import types
 import { ImageData, GroupData, ScaffoldData } from '../types/types';
@@ -749,6 +750,31 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     {/* Render Problem and Solution scaffold when pattern is selected */}
                     {selectedPattern === 'problem_solution' && scaffold && (
                         <ProblemSolution
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
+                    {selectedPattern === 'time_based' && scaffold && (
+                        <TimeBased
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}

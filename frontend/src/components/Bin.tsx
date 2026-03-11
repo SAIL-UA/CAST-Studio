@@ -112,9 +112,9 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
       )}
 
       {/* Bin content */}
-      {/* change to w=[200-dvh] and h-[200dvh] for scrolling */}
+      {/* change to w=[200dvh] and h-[200dvh] for scrolling */}
       <div className={
-          "flex flex-wrap gap-2 p-2 w-full h-full grid-background relative"
+          "flex flex-wrap gap-2 p-2 w-[200dvh] h-[200dvh] grid-background relative"
       }>
         {images.map((image) => (
           <DraggableCard
