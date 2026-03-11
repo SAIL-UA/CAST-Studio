@@ -15,6 +15,53 @@ logger = logging.getLogger(__name__)
 # Guardrail against oversized payloads when attaching image data.
 MAX_FEEDBACK_IMAGES = 12
 
+# Human-readable scaffold element metadata keyed by story structure id.
+# These labels are used when building scaffold_data for the storyboard and narrative.
+SCAFFOLD_ELEMENT_LABELS: dict[str, dict[int, dict[str, str]]] = {
+    "cause_and_effect": {
+        1: {"id": "cause", "label": "Cause"},
+        2: {"id": "effect", "label": "Effect"},
+    },
+    "question_answer": {
+        1: {"id": "question", "label": "Question"},
+        2: {"id": "answer", "label": "Answer"},
+    },
+    "time_based": {
+        1: {"id": "event_1", "label": "Event 1"},
+        2: {"id": "event_2", "label": "Event 2"},
+        3: {"id": "event_3", "label": "Event 3"},
+        4: {"id": "event_4", "label": "Event 4"},
+    },
+    "factor_analysis": {
+        1: {"id": "factor_1", "label": "Factor 1"},
+        2: {"id": "factor_2", "label": "Factor 2"},
+        3: {"id": "factor_3", "label": "Factor 3"},
+    },
+    "overview_to_detail": {
+        1: {"id": "overview", "label": "Overview"},
+        2: {"id": "detail_1", "label": "Detail 1"},
+        3: {"id": "detail_2", "label": "Detail 2"},
+        4: {"id": "detail_3", "label": "Detail 3"},
+    },
+    "problem_solution": {
+        1: {"id": "problem", "label": "Problem"},
+        2: {"id": "solution", "label": "Solution"},
+    },
+    "comparative": {
+        1: {"id": "item_1", "label": "Item 1"},
+        2: {"id": "item_2", "label": "Item 2"},
+    },
+    "workflow_process": {
+        1: {"id": "stage_1", "label": "Stage 1"},
+        2: {"id": "stage_2", "label": "Stage 2"},
+        3: {"id": "stage_3", "label": "Stage 3"},
+    },
+    "shock_lead": {
+        1: {"id": "shock_fact", "label": "Shock Fact"},
+        2: {"id": "explanatory_factors", "label": "Explanatory Factors"},
+    },
+}
+
 def _openai_client():
     # create lazily to avoid creating clients during import/migrations
     return OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -443,6 +490,175 @@ Sequence:
     except Exception as e:
         logger.error(f"Error building story with groups: {e}")
         return f"Error building story with groups: {e}"
+
+
+def _sequence_figures_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, theme: str, story_structure_id: str) -> str:
+    """
+    Sequence figures considering scaffold elements, their groups, and any extra non-scaffold groups/figures.
+
+    Args:
+        scaffold_data: Dict with scaffold structure as returned by _build_scaffold_data
+        extra_groups: List of non-scaffold group dicts (same shape as _build_group_data output)
+        extra_figures: Dict of non-scaffold, ungrouped figures
+        theme: Overall theme and objective
+        story_structure_id: Story structure ID
+    """
+    elements_text = ""
+    for element in scaffold_data.get("elements", []):
+        element_name = element.get("name") or f"Element {element.get('number')}"
+        elements_text += f"\n### Scaffold Element: {element_name}\n"
+        elements_text += "Groups in this element:\n"
+        for group in element.get("groups", []):
+            elements_text += f"- Group: {group.get('name', '')}\n"
+            elements_text += f"  Description: {group.get('description', '')}\n"
+            elements_text += "  Figures:\n"
+            for fig_file, fig_info in group.get("figures", {}).items():
+                elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+        element_figs = element.get("figures", {})
+        if element_figs:
+            elements_text += "Ungrouped figures in this element:\n"
+            for fig_file, fig_info in element_figs.items():
+                elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+
+    extra_groups_text = ""
+    if extra_groups:
+        extra_groups_text += "\n### Additional Non-Scaffold Groups:\n"
+        for group in extra_groups:
+            extra_groups_text += f"- Group: {group.get('name', '')}\n"
+            extra_groups_text += f"  Description: {group.get('description', '')}\n"
+            extra_groups_text += "  Figures:\n"
+            for fig_file, fig_info in group.get("figures", {}).items():
+                extra_groups_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+
+    extra_figs_text = ""
+    if extra_figures:
+        extra_figs_text += "\n### Additional Ungrouped Figures (Non-Scaffold):\n"
+        for fig_file, fig_info in extra_figures.items():
+            extra_figs_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+
+    base_prompt = f"""
+### Input
+Scaffold structure (elements, groups, and figures):
+{elements_text}
+{extra_groups_text}
+{extra_figs_text}
+
+Topic theme and objective:
+{theme}
+
+{_load_prompt('sequence_figures_with_scaffolds.txt')}
+""".strip()
+
+    structure_info = STORY_SCAFFOLDS.get(story_structure_id)
+    if not structure_info:
+        fallback_id = next(iter(STORY_SCAFFOLDS))
+        logger.warning(
+            "[NARRATIVE] _sequence_figures_with_scaffolds received invalid story_structure_id '%s'; using '%s'.",
+            story_structure_id,
+            fallback_id,
+        )
+        structure_info = STORY_SCAFFOLDS[fallback_id]
+    structure_name = structure_info["name"]
+    structure_description = _load_prompt(structure_info["filename"])
+
+    structure_prompt = f"""
+
+### Provided Story Structure (use this structure)
+Use the following story structure. Its description is given below.
+**{structure_name}**:
+{structure_description}
+
+"""
+    base_prompt += structure_prompt
+
+    try:
+        client = _openai_client()
+        resp = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": base_prompt},
+            ],
+            temperature=0.1,
+            timeout=30,
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        logger.error(f"Error sequencing figures with scaffolds: {e}")
+        return f"Error sequencing figures with scaffolds: {e}"
+
+
+def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, sequence: str) -> str:
+    """
+    Build a narrative that explicitly reflects scaffold elements, their groups, and any extra groups/figures.
+
+    Args:
+        scaffold_data: Dict with scaffold structure as returned by _build_scaffold_data
+        extra_groups: List of non-scaffold group dicts
+        extra_figures: Dict of non-scaffold, ungrouped figures
+        sequence: Recommended sequence from sequencing step
+    """
+    elements_text = ""
+    for element in scaffold_data.get("elements", []):
+        element_name = element.get("name") or f"Element {element.get('number')}"
+        elements_text += f"\n### Scaffold Element: {element_name}\n"
+        elements_text += "Groups in this element:\n"
+        for group in element.get("groups", []):
+            elements_text += f"- Group: {group.get('name', '')}\n"
+            elements_text += f"  Description: {group.get('description', '')}\n"
+            elements_text += "  Figures:\n"
+            for fig_file, fig_info in group.get("figures", {}).items():
+                elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+        element_figs = element.get("figures", {})
+        if element_figs:
+            elements_text += "Ungrouped figures in this element:\n"
+            for fig_file, fig_info in element_figs.items():
+                elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+
+    extra_groups_text = ""
+    if extra_groups:
+        extra_groups_text += "\n### Additional Non-Scaffold Groups:\n"
+        for group in extra_groups:
+            extra_groups_text += f"- Group: {group.get('name', '')}\n"
+            extra_groups_text += f"  Description: {group.get('description', '')}\n"
+            extra_groups_text += "  Figures:\n"
+            for fig_file, fig_info in group.get("figures", {}).items():
+                extra_groups_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+
+    extra_figs_text = ""
+    if extra_figures:
+        extra_figs_text += "\n### Additional Ungrouped Figures (Non-Scaffold):\n"
+        for fig_file, fig_info in extra_figures.items():
+            extra_figs_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+
+    prompt = f"""
+### Input
+Scaffold structure (elements, groups, and figures):
+{elements_text}
+{extra_groups_text}
+{extra_figs_text}
+
+Sequence:
+{sequence}
+
+{_load_prompt('build_story_with_scaffolds.txt')}
+""".strip()
+
+    try:
+        client = _openai_client()
+        resp = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,
+            timeout=30,
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        logger.error(f"Error building story with scaffolds: {e}")
+        return f"Error building story with scaffolds: {e}"
 
 
 def extract_figure_filenames(sequence_response: str) -> list[str]:
@@ -898,7 +1114,7 @@ def _build_group_structure(group, images_queryset):
     }
 
 
-def _build_scaffold_data(scaffold, all_groups, all_images):
+def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: str | None = None):
     """
     Build the scaffold_data structure with elements, groups, and figures.
     
@@ -912,23 +1128,35 @@ def _build_scaffold_data(scaffold, all_groups, all_images):
     """
     if not scaffold:
         return None
-    
+
+    # Attempt to resolve a stable story_structure_id for this scaffold.
+    resolved_structure_id: str | None = None
+    if story_structure_id and story_structure_id in STORY_SCAFFOLDS:
+        resolved_structure_id = story_structure_id
+    else:
+        # Fallback: infer from scaffold.number
+        for sid, info in STORY_SCAFFOLDS.items():
+            if info.get("number") == scaffold.number:
+                resolved_structure_id = sid
+                break
+
     # Filter groups that belong to this scaffold
     scaffold_groups = all_groups.filter(scaffold_id=scaffold)
     # Filter images that directly belong to scaffold (ungrouped images)
     scaffold_images = all_images.filter(scaffold_id=scaffold)
-    
+
     elements = []
-    
+
     if not scaffold.valid_group_numbers:
-        logger.warning(f"[BUILD_SCAFFOLD] Scaffold has no valid_group_numbers")
+        logger.warning("[BUILD_SCAFFOLD] Scaffold has no valid_group_numbers")
         return {
             "name": scaffold.name,
             "number": scaffold.number,
+            "story_structure_id": resolved_structure_id or "",
             "description": scaffold.description or "",
-            "elements": []
+            "elements": [],
         }
-    
+
     # Process each element number
     for element_num in scaffold.valid_group_numbers:
         # Groups in this element
@@ -946,25 +1174,37 @@ def _build_scaffold_data(scaffold, all_groups, all_images):
         # Image must be in scaffold, not in any group, AND have scaffold_group_number matching element_num
         element_ungrouped_images = scaffold_images.filter(
             group_id__isnull=True,
-            scaffold_group_number=element_num
+            scaffold_group_number=element_num,
         )
         element_figures = _build_figure_dict(element_ungrouped_images)
-        
-        # Get element name (TODO: map from scaffold type if available)
-        element_name = f"Element {element_num}"
-        
-        elements.append({
-            "name": element_name,
-            "number": element_num,
-            "groups": element_groups_list,
-            "figures": element_figures
-        })
-    
+
+        # Resolve element metadata (stable id + human label)
+        element_id = f"element_{element_num}"
+        element_label = f"Element {element_num}"
+        if resolved_structure_id:
+            per_structure = SCAFFOLD_ELEMENT_LABELS.get(resolved_structure_id, {})
+            if isinstance(per_structure, dict):
+                meta = per_structure.get(element_num)
+                if isinstance(meta, dict):
+                    element_id = meta.get("id", element_id)
+                    element_label = meta.get("label", element_label)
+
+        elements.append(
+            {
+                "id": element_id,
+                "name": element_label,
+                "number": element_num,
+                "groups": element_groups_list,
+                "figures": element_figures,
+            }
+        )
+
     return {
         "name": scaffold.name,
         "number": scaffold.number,
+        "story_structure_id": resolved_structure_id or "",
         "description": scaffold.description or "",
-        "elements": elements
+        "elements": elements,
     }
 
 
@@ -1076,7 +1316,7 @@ def _fetch_all_storyboard_data(user, story_structure_id=None):
     
     # Build scaffold_data if scaffold exists
     if scaffold:
-        output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images)
+        output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id)
         
         # Non-scaffold groups
         non_scaffold_groups = all_groups.filter(scaffold_id__isnull=True)
@@ -1111,10 +1351,19 @@ def _fetch_all_storyboard_data(user, story_structure_id=None):
     
     logger.info(f"[FETCH_DATA] SUMMARY:")
     logger.info(f"  Scaffold figures: {total_scaffold_figures}")
-    logger.info(f"  Group figures: {total_group_figures}")
-    logger.info(f"  Ungrouped figures: {total_figure_data}")
-    logger.info(f"  Total: {total_scaffold_figures} scaffold figures + {total_group_figures} group figures + {total_figure_data} ungrouped figures = {total_scaffold_figures + total_group_figures + total_figure_data}")
-    logger.info(f"  Expected: {total_expected}")
+    logger.info(f"  Group figures (non-scaffold): {total_group_figures}")
+    logger.info(f"  Ungrouped figures (non-scaffold): {total_figure_data}")
+    logger.info(
+        "  Total figures counted: %s (expected with descriptions: %s)",
+        total_scaffold_figures + total_group_figures + total_figure_data,
+        total_expected,
+    )
+    if total_scaffold_figures + total_group_figures + total_figure_data != total_expected:
+        logger.warning(
+            "[FETCH_DATA] MISMATCH between counted figures (%s) and expected with descriptions (%s)",
+            total_scaffold_figures + total_group_figures + total_figure_data,
+            total_expected,
+        )
     
     return output_json
 
@@ -1161,7 +1410,7 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
             generate_description_task(image.id)
 
         # Wait for all descriptions to finish generating
-        wait_timeout_seconds = 180
+        wait_timeout_seconds = 300
         poll_interval_seconds = 1
         wait_deadline = time.time() + wait_timeout_seconds
 
@@ -1202,16 +1451,84 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
         if not storyboard_images.exists():
             return "No storyboard images with descriptions found."
 
-        # Branch based on use_groups parameter
-        if use_groups:
-            # NEW: Group-aware narrative generation
-            groups = GroupData.objects.filter(user=user).prefetch_related('images')
+        # Build a flat list of descriptions for structure resolution and theme
+        flat_figures: dict[str, dict[str, str]] = {}
+        all_descriptions: list[str] = []
+        for image in storyboard_images:
+            if not image.long_desc:
+                continue
+            category = _categorize_figure(image.long_desc)
+            flat_figures[image.filepath] = {
+                "description": image.long_desc,
+                "category": category,
+            }
+            all_descriptions.append(f"{image.filepath}: {image.long_desc}")
 
-            # Separate grouped and ungrouped images
+        all_descriptions_text = "\n".join(all_descriptions)
+
+        story_structure_id = _resolve_story_structure_id(
+            story_structure_id,
+            all_descriptions_text,
+        )
+        logger.info(f"Using story structure: {story_structure_id}")
+
+        # Fetch all storyboard data (scaffolds, groups, figures) using the resolved structure id
+        storyboard_data = _fetch_all_storyboard_data(user, story_structure_id)
+        logger.info(f"[NARRATIVE] Storyboard data: {json.dumps(storyboard_data, indent=4)}")
+
+        scaffold_data = storyboard_data.get("scaffold_data")
+        non_scaffold_groups = storyboard_data.get("group_data") or []
+        non_scaffold_figures = storyboard_data.get("figure_data") or {}
+
+        # Branch based on presence of scaffold data first, then use_groups flag, to keep backwards compatibility.
+        if scaffold_data:
+            theme = _understand_theme_objective(all_descriptions_text)
+            sequence = _sequence_figures_with_scaffolds(
+                scaffold_data,
+                non_scaffold_groups,
+                non_scaffold_figures,
+                theme,
+                story_structure_id,
+            )
+            story = _build_story_with_scaffolds(
+                scaffold_data,
+                non_scaffold_groups,
+                non_scaffold_figures,
+                sequence,
+            )
+            recommended_order = extract_figure_filenames(sequence)
+
+            # Build categories from scaffold elements + any non-scaffold groups/figures
+            categories = []
+            for element in scaffold_data.get("elements", []):
+                for group in element.get("groups", []):
+                    for fig_file, fig_info in group.get("figures", {}).items():
+                        categories.append(
+                            {"filename": fig_file, "category": fig_info.get("category", "")}
+                        )
+                for fig_file, fig_info in element.get("figures", {}).items():
+                    categories.append(
+                        {"filename": fig_file, "category": fig_info.get("category", "")}
+                    )
+            for group in non_scaffold_groups:
+                for fig_file, fig_info in group.get("figures", {}).items():
+                    categories.append(
+                        {"filename": fig_file, "category": fig_info.get("category", "")}
+                    )
+            for fig_file, fig_info in non_scaffold_figures.items():
+                categories.append(
+                    {"filename": fig_file, "category": fig_info.get("category", "")}
+                )
+
+            generation_mode = "scaffold"
+
+        elif use_groups:
+            # Group-aware narrative generation without scaffolds (existing behavior)
+            groups = GroupData.objects.filter(user=user).prefetch_related("images")
+
             grouped_images = storyboard_images.filter(group_id__isnull=False)
             ungrouped_images = storyboard_images.filter(group_id__isnull=True)
 
-            # Build groups data structure
             groups_data = []
             for group in groups:
                 group_images = grouped_images.filter(group_id=group)
@@ -1223,87 +1540,71 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
                     category = _categorize_figure(image.long_desc)
                     group_figures[image.filepath] = {
                         "description": image.long_desc,
-                        "category": category
+                        "category": category,
                     }
 
-                groups_data.append({
-                    "name": group.name,
-                    "description": group.description,
-                    "figures": group_figures
-                })
+                groups_data.append(
+                    {
+                        "name": group.name,
+                        "description": group.description,
+                        "figures": group_figures,
+                    }
+                )
 
-            # Build ungrouped data structure
             ungrouped_data = {}
             for image in ungrouped_images:
                 category = _categorize_figure(image.long_desc)
                 ungrouped_data[image.filepath] = {
                     "description": image.long_desc,
-                    "category": category
+                    "category": category,
                 }
 
-            # Combine all descriptions for theme
-            all_descriptions = []
+            all_descriptions_grouped = []
             for group in groups_data:
-                for fig_file, fig_info in group['figures'].items():
-                    all_descriptions.append(f"{fig_file}: {fig_info['description']}")
+                for fig_file, fig_info in group["figures"].items():
+                    all_descriptions_grouped.append(f"{fig_file}: {fig_info['description']}")
             for fig_file, fig_info in ungrouped_data.items():
-                all_descriptions.append(f"{fig_file}: {fig_info['description']}")
+                all_descriptions_grouped.append(f"{fig_file}: {fig_info['description']}")
 
-            all_descriptions_text = "\n".join(all_descriptions)
+            all_descriptions_grouped_text = "\n".join(all_descriptions_grouped)
 
-            story_structure_id = _resolve_story_structure_id(
-                story_structure_id,
-                all_descriptions_text,
-            )
-            logger.info(f"Using story structure: {story_structure_id}")
-
-            # Generate narrative with groups
-            theme = _understand_theme_objective(all_descriptions_text)
+            theme = _understand_theme_objective(all_descriptions_grouped_text)
             sequence = _sequence_figures_with_groups(
                 groups_data, ungrouped_data, theme, story_structure_id
             )
             story = _build_story_with_groups(groups_data, ungrouped_data, sequence)
             recommended_order = extract_figure_filenames(sequence)
 
-            # Build categories list for cache
             categories = []
             for group in groups_data:
-                for fig_file, fig_info in group['figures'].items():
-                    categories.append({"filename": fig_file, "category": fig_info['category']})
+                for fig_file, fig_info in group["figures"].items():
+                    categories.append(
+                        {"filename": fig_file, "category": fig_info["category"]}
+                    )
             for fig_file, fig_info in ungrouped_data.items():
-                categories.append({"filename": fig_file, "category": fig_info['category']})
+                categories.append(
+                    {"filename": fig_file, "category": fig_info["category"]}
+                )
+
+            generation_mode = "grouped"
 
         else:
-            # ORIGINAL: Flat narrative generation (backward compatible)
-            fig_descriptions_category, all_descriptions = {}, []
-            for image in storyboard_images:
-                category = _categorize_figure(image.long_desc)
-                fig_descriptions_category[image.filepath] = {
-                    "description": image.long_desc,
-                    "category": category,
-                }
-                all_descriptions.append(f"{image.filepath}: {image.long_desc}")
-
-            all_descriptions_text = "\n".join(all_descriptions)
-
-            story_structure_id = _resolve_story_structure_id(
-                story_structure_id,
-                all_descriptions_text,
-            )
-            logger.info(f"Using story structure: {story_structure_id}")
-
-
+            # Flat narrative generation (backward compatible)
             theme = _understand_theme_objective(all_descriptions_text)
             sequence = _sequence_figures(
-                fig_descriptions_category, theme, story_structure_id
+                flat_figures,
+                theme,
+                story_structure_id,
             )
-            story = _build_story(fig_descriptions_category, sequence)
+            story = _build_story(flat_figures, sequence)
             recommended_order = extract_figure_filenames(sequence)
 
             categories = [
                 {"filename": fn, "category": info["category"]}
-                for fn, info in fig_descriptions_category.items()
+                for fn, info in flat_figures.items()
             ]
+
+            generation_mode = "flat"
 
         # Get display name from mapping for logging/caching
         structure_info = STORY_SCAFFOLDS.get(story_structure_id or "")
@@ -1312,11 +1613,6 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
             if structure_info and structure_info.get("name")
             else (story_structure_id or "default")
         )
-        generation_mode = "grouped" if use_groups else "flat"
-
-        # Fetch all storyboard data
-        output_json = _fetch_all_storyboard_data(user, story_structure_id)
-        logger.info(f"[NARRATIVE] Output JSON: {json.dumps(output_json, indent=4)}")
 
         with transaction.atomic():
             cache, created = NarrativeCache.objects.get_or_create(

@@ -1,0 +1,24 @@
+You are given a storyboard organized using a narrative scaffold.
+The scaffold is broken into clearly labeled elements (such as "Cause", "Effect", "Problem", "Solution", etc.).
+Each element may contain one or more groups and/or ungrouped figures.
+You are also given a recommended sequence of figures.
+
+Your task is to write a cohesive narrative that:
+- Follows the recommended sequence.
+- Explicitly reflects the scaffold elements in the structure of the story.
+- Uses the element labels (for example, "Cause", "Effect") as section headings or clear transitions in the narrative.
+- Weaves in the group descriptions and figure descriptions in a natural, reader‑friendly way.
+- **IMPORTANT**: Whenever you refer to a specific figure, insert a figure placeholder immediately after the relevant sentence using the format `[FIGURE: filename]`, where `filename` is the exact filename from the input.
+
+Guidelines:
+- Keep the overall tone explanatory and accessible to an educated reader.
+- For each scaffold element, summarize what is happening in that part of the story and reference the most important groups and figures in that element.
+- When there are additional non‑scaffold groups or ungrouped figures, treat them as context, setup, or follow‑up insights around the main scaffolded story.
+- Do not simply restate the raw descriptions; synthesize them into a smooth narrative.
+
+Output format:
+- Write the story as markdown‑style text.
+- Use level‑3 headings (e.g. "### Cause", "### Effect") or clearly marked sections for each scaffold element, in the same order the elements were provided.
+- Between sections, add brief transitions so the story feels continuous.
+- Ensure all figures that appear in the recommended sequence are referenced at least once with `[FIGURE: filename]` placeholders.
+
