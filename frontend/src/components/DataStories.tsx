@@ -1,7 +1,7 @@
 // Import dependencies
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { getNarrativeCache } from '../services/api';
+import { getNarrativeCache, getImageDataAll } from '../services/api';
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 import { logAction } from '../utils/userActionLogger';
 import { getImageUrl } from '../utils/imageUtils';
@@ -36,6 +36,7 @@ const DataStories = () => {
     const [processedSequence, setProcessedSequence] = useState<string>('');
     const [isProcessingImages, setIsProcessingImages] = useState(false);
     const [processedRecommended, setProcessedRecommended] = useState<string[]>([]);
+    const [imageDescriptions, setImageDescriptions] = useState<Record<string, string>>({});
 
     // Check for existing cached narrative on component mount
     const loadCachedNarrative = async () => {
@@ -58,7 +59,24 @@ const DataStories = () => {
         }
     };
 
-    
+    // Fetch image descriptions to use as captions
+    const loadImageDescriptions = async () => {
+        try {
+            const response = await getImageDataAll();
+            if (response.data && response.data.images) {
+                const descMap: Record<string, string> = {};
+                for (const img of response.data.images) {
+                    if (img.filepath && img.long_desc) {
+                        descMap[img.filepath] = img.long_desc;
+                    }
+                }
+                setImageDescriptions(descMap);
+            }
+        } catch (error) {
+            console.log('Error loading image descriptions:', error);
+        }
+    };
+
     // Effect
     useEffect(() => {
         setNarrativeSelected(true)
@@ -66,6 +84,7 @@ const DataStories = () => {
 
         // Check for cached narrative and load it (if it exists) on mount
         loadCachedNarrative();
+        loadImageDescriptions();
 
         // Listen for story generation events
         const handleStoryGenerated = (event: Event) => {
@@ -76,6 +95,7 @@ const DataStories = () => {
 
             // Story data already has processed figures from GenerateStoryButton
             setStoryData(data);
+            loadImageDescriptions();
         };
 
         // Listen for story generation start events
@@ -131,8 +151,13 @@ const DataStories = () => {
             try {
                 const imageUrl = getImageUrl(filename);
                 console.log('Generated image URL:', imageUrl);
+                // Build caption from long_desc if available
+                const desc = imageDescriptions[filename];
+                const caption = desc
+                    ? `Figure: ${desc.slice(0, 100)}${desc.length > 100 ? '...' : ''}`
+                    : 'Figure';
                 // Replace with markdown image syntax using image URL
-                const replacement = `![Figure](${imageUrl})`;
+                const replacement = `![${caption}](${imageUrl})`;
                 processedText = processedText.replace(fullMatch, replacement);
                 console.log('Replacement made:', { fullMatch, replacement });
             } catch (error) {
@@ -201,7 +226,7 @@ const DataStories = () => {
         };
 
         processAllContent();
-    }, [storyData]);
+    }, [storyData, imageDescriptions]);
 
     const formatStoryStructureName = (structureId?: string) => {
         if (!structureId) return '';
@@ -276,14 +301,15 @@ const DataStories = () => {
 
     // Visible component
     return (
-        <div id="data-stories-container" className="flex flex-col w-full h-full">
+        <div id="data-stories-container" className="flex flex-col w-full">
             {/* Header */}
-            <div id="data-stories-header" className="flex w-full">
-                <div id="data-stories-header-left" className="flex w-full h-full items-end justify-start">
-                    <h3 className="text-2xl">Data Stories&nbsp;</h3>
+            <div id="data-stories-header" className="flex w-full items-center bg-grey-lighter-2 rounded-t-lg p-3">
+                <div id="data-stories-header-left" className="flex items-center gap-3">
+                    <span className="bg-bama-crimson text-white text-lg font-roboto-semibold px-3 py-1.5 rounded-lg">Data Stories</span>
+                    <ExportButton storyData={storyData} />
                 </div>
-                <div id="data-stories-header-right" className="flex w-1/2 h-full items-end justify-end text-sm">
-                    
+                <div id="data-stories-header-right" className="flex flex-1 items-center justify-end text-sm">
+
                     <button id="story-button"
                     log-id="data-stories-story-button"
                     className={`underline-animate ${storySelected ? 'active' : ''} mx-3`}
@@ -307,14 +333,9 @@ const DataStories = () => {
             <div
                 id="data-stories-content"
                 log-id="data-stories-content"
-                className="flex flex-col w-full flex-1 mt-4 rounded-sm p-4 overflow-y-auto min-h-0"
+                className="flex flex-col w-full rounded-sm p-4 bg-grey-lighter-2"
                 onScroll={handleScroll}
             >
-            <div className="w-full mb-4">
-                    <ExportButton storyData={storyData} />
-                    {/* <FeedbackButton /> */}
-            </div>
-
                 {narrativeSelected ? (
                     // Narrative Structuring Content
                     <div className="w-full space-y-6">
@@ -418,7 +439,11 @@ const DataStories = () => {
                                         urlTransform={urlTransform}
                                         skipHtml={false}
                                     >
-                                        {processedNarrative}
+                                        {processedNarrative
+                                            .replace(/^#{1,3}\s*(Introduction|Main Body|Conclusion)\s*:?\s*$/gim, '\n')
+                                            .replace(/^\s*-?\s*\*\*(Introduction|Main Body|Conclusion)\*\*\s*:?\s*$/gim, '\n')
+                                            .replace(/^\s*(Introduction|Main Body|Conclusion)\s*:?\s*$/gim, '\n')
+                                        }
                                     </ReactMarkdown>
                                 </div>
                             </div>

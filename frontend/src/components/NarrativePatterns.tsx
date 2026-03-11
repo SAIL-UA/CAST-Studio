@@ -36,25 +36,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
         <div id="narrative-patterns" className="p-0 m-0">
             <div className="flex flex-row w-full">
 
-                <p className={`${center ? 'text-2xl mb-4 mt-2' : 'text-sm text-gray-500 font-regular ml-4 w-3/4'}`}>Narrative Structures</p>
-                {!center && (
-                    <div
-                    className="flex items-center justify-end"
-                    >
-                        <svg
-                        log-id="narrative-patterns-close-button"
-                        className="w-4 h-4 ml-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        onClick={(e) => {
-                            setRightNarrativePatternsOpen(false);
-                            logAction(e);
-                        }}>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </div>
-                )}
+                <p className={`${center ? 'text-2xl mb-4 mt-2' : 'text-sm text-gray-500 font-regular ml-4'}`}>Narrative Structures</p>
             </div>
                 
             <div className={`grid grid-cols-1 ${center ? 'min-lg:grid-cols-2' : ''} auto-rows-min gap-2 grid-rows-5 items-center`}>

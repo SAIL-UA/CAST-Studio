@@ -30,6 +30,7 @@ import { useLocation } from 'react-router-dom'
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import NavDropdown from '../components/NavDropdown';
+import CompactSidebar from '../components/CompactSidebar';
 
 
 // Visible component
@@ -38,6 +39,7 @@ const Tutorials = () => {
 //States
   const [centerNarrativePatternsOpen, setCenterNarrativePatternsOpen] = useState(false);
   const [rightNarrativePatternsOpen, setRightNarrativePatternsOpen] = useState(false);
+  const [leftMenuOpen, setLeftMenuOpen] = useState(false);
 
   const scroll_location = useLocation();
 
@@ -53,22 +55,37 @@ const Tutorials = () => {
 // Visible Component
   return (
     <>
-    <Header />
+    <Header onMenuOpen={() => setLeftMenuOpen(prev => !prev)} floating menuOpen={leftMenuOpen} subtitle="Docs" />
     <div id="home-container" className="flex w-full font-roboto-light">
-        
-        {/* Left Home */}
-        <div id="left-home" className="w-1/5 px-3 max-xl:hidden">
-            <div id="nav-dropdown" className="ml-2">
-                <NavDropdown setCenterNarrativePatternsOpen={setCenterNarrativePatternsOpen} />
-            </div>
 
-            <div id="footer" className="flex flex-col justify-start items-start">
-                <Footer />
+        {/* Left Panel — overlay menu, only visible when hamburger is clicked */}
+        {leftMenuOpen && (
+            <>
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-30 z-[400]"
+                    onClick={() => setLeftMenuOpen(false)}
+                />
+                <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[256px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto">
+                    <div className="flex justify-end p-2">
+                        <button
+                            className="w-7 h-7 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
+                            onClick={() => setLeftMenuOpen(false)}
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <CompactSidebar setCenterNarrativePatternsOpen={(val: boolean) => {
+                        setCenterNarrativePatternsOpen(val);
+                        setLeftMenuOpen(false);
+                    }} />
+                    <div id="footer" className="flex flex-col justify-start items-start">
+                        <Footer />
+                    </div>
+                </div>
+            </>
+        )}
 
-            </div>
-        
-        </div>
-      <div id="middle-home" className="w-4/5 max-xl:w-full px-4 flex flex-col border-l border-1 border-grey-light">
+      <div id="middle-home" className="w-full px-4 flex flex-col mt-14">
         <div className="w-full min-h-screen p-4">
           <br />
           <h1 className="text-2xl" id="tutorial_one">1. Getting Started</h1>

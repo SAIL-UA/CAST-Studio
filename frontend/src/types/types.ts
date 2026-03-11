@@ -72,6 +72,11 @@ export interface BinProps {
   onUnTrash: (id: string) => void;
   /** Optional: when provided, card can request a refetch (e.g. after starting AI description) so parent updates images and card receives new props */
   onRefetchRequested?: () => void | Promise<void>;
+  zoomLevel?: number;
+  panOffset?: { x: number; y: number };
+  onPanOffsetChange?: (offset: { x: number; y: number }) => void;
+  onZoomLevelChange?: (zoom: number) => void;
+  scrollable?: boolean;
   children?: React.ReactNode;
 }
 
@@ -120,6 +125,8 @@ export interface GroupDivProps {
   storyBinRef: React.RefObject<HTMLDivElement | null>;
   scaffoldId?: string;  // Optional scaffoldId to include in drag item
   disableDrag?: boolean;  // Disable dragging for groups inside scaffolds
+  zoomLevel?: number;  // Zoom level for coordinate compensation
+  panOffset?: { x: number; y: number };  // Pan offset for coordinate compensation
 }
 
 // Lightweight metadata for logging
