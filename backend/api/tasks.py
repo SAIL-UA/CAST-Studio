@@ -714,6 +714,45 @@ def extract_figure_filenames(sequence_response: str) -> list[str]:
     return found
 
 
+def _normalize_figure_token(token: str) -> str:
+    """
+    Normalize a figure token like '[FIGURE: filename.png]' back to 'filename.png'.
+    """
+    if not token:
+        return ""
+    token = token.strip()
+    if token.startswith("[FIGURE:") and token.endswith("]"):
+        return token[len("[FIGURE:"):-1]
+    return token
+
+
+def _ensure_all_figures_in_order(
+    recommended_order: list[str], categories: list[dict]
+) -> list[str]:
+    """
+    Ensure that every figure present in categories appears in the final recommended_order.
+
+    - recommended_order: list of '[FIGURE: filename]' tokens parsed from the LLM sequence.
+    - categories: list of {'filename': <filepath>, 'category': <str>} dicts that represent
+      all figures participating in this narrative mode.
+    """
+    # Start with existing tokens and track which raw filenames are already present.
+    final_order: list[str] = list(recommended_order)
+    present: set[str] = {_normalize_figure_token(tok) for tok in recommended_order}
+
+    for cat in categories:
+        filename = (cat or {}).get("filename")
+        if not filename:
+            continue
+        if filename in present:
+            continue
+        # Append any missing figure at the end, preserving its raw filename.
+        final_order.append(f"[FIGURE:{filename}]")
+        present.add(filename)
+
+    return final_order
+
+
 def _extract_json_object(text: str) -> dict | None:
     """Best-effort extraction of a top-level JSON object from model content.
 
@@ -1520,6 +1559,9 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
                     {"filename": fig_file, "category": fig_info.get("category", "")}
                 )
 
+            # Ensure every figure in the scaffold + extra groups/figures is represented in order.
+            recommended_order = _ensure_all_figures_in_order(recommended_order, categories)
+
             generation_mode = "scaffold"
 
         elif use_groups:
@@ -1586,6 +1628,9 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
                     {"filename": fig_file, "category": fig_info["category"]}
                 )
 
+            # Ensure every grouped/ungrouped figure is represented in order.
+            recommended_order = _ensure_all_figures_in_order(recommended_order, categories)
+
             generation_mode = "grouped"
 
         else:
@@ -1603,6 +1648,9 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
                 {"filename": fn, "category": info["category"]}
                 for fn, info in flat_figures.items()
             ]
+
+            # Ensure every flat figure is represented in order.
+            recommended_order = _ensure_all_figures_in_order(recommended_order, categories)
 
             generation_mode = "flat"
 

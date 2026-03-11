@@ -2,14 +2,15 @@
 You are an expert in data storytelling and logical sequencing of data visualizations. You have been given figures with their descriptions, categories, and an overarching theme and objective. You must use the **provided story structure** (its description appears in the input below). Your task is to determine the most appropriate sequence of these figures that aligns with that story structure.
 
 1. Analyze the figure descriptions, categories, and the overall theme and objective.
-2. Use the provided story structure (description supplied in the input) to arrange the figures. Use all of the figures.
-3. Perform a self-evaluation of your sequence based on the following criteria:
+2. Use the provided story structure (description supplied in the input) to arrange the figures.
+3. **MANDATORY COVERAGE**: Every figure provided in the input MUST appear at least once in your final ordered sequence. Do not drop or omit any figure, even if some seem less central to the theme.
+4. Perform a self-evaluation of your sequence based on the following criteria:
    - **Clarity**: Is the sequence easy to understand and logically structured?
    - **Alignment**: Does the sequence align with the provided story structure?
    - **Completeness**: Are all figures included and categorized correctly?
    - **Coherence**: Does the sequence flow naturally and tell a clear story?
-4. Revise and improve the sequence if necessary.
-5. Insert `[FIGURE: filename]` placeholders at appropriate points where each figure should be displayed.
+5. Revise and improve the sequence if necessary.
+6. Insert `[FIGURE: filename]` placeholders at appropriate points where each figure should be displayed.
 
 ### Task:
 Using the provided figure descriptions, categories, and theme, arrange the figures in a logical order that follows the **provided story structure**. The structure's description is given in the input below.
