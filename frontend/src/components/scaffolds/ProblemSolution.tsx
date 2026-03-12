@@ -5,6 +5,7 @@ import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types'
 import { SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 import GroupDiv from '../GroupDiv';
+import { logAction } from '../../utils/userActionLogger';
 
 // Define props interface
 type ProblemSolutionProps = {
@@ -144,6 +145,11 @@ const ProblemSolution = ({
                 return newSet;
             });
         }
+
+        logAction(
+            { actionType: 'drop', elementId: 'scaffold-card-add' },
+            { card_id: cardId, group_id: groupId, scaffold_id: scaffold.id, scaffold_group_number: scaffoldGroupNumber }
+        );
     };
 
     // Updated handler: now calls backend to clear scaffold_group_number
@@ -171,6 +177,11 @@ const ProblemSolution = ({
                 return newSet;
             });
         }
+
+        logAction(
+            { actionType: 'click', elementId: 'scaffold-card-remove' },
+            { card_id: cardId, group_id: groupId, scaffold_id: scaffold.id }
+        );
     };
 
     // React DnD hook for drag functionality (wrapper)
@@ -246,6 +257,10 @@ const ProblemSolution = ({
                     onPositionUpdate(finalX, finalY);
                 }
             }
+            logAction(
+                { actionType: 'drag', elementId: 'scaffold-drag' },
+                { scaffold_id: scaffold?.id, scaffold_type: 'problem-solution', old_position: { x: item.oldX, y: item.oldY }, new_position: { x: finalX, y: finalY } }
+            );
         },
         collect: (monitor) => ({
             isDraggingDnd: !!monitor.isDragging(),
@@ -324,6 +339,10 @@ const ProblemSolution = ({
                     if (positionChanged) {
                         onPositionUpdate(position.x, position.y);
                     }
+                    logAction(
+                        { actionType: 'drag', elementId: 'scaffold-drag' },
+                        { scaffold_id: scaffold?.id, scaffold_type: 'problem-solution', old_position: dragStartPosition.current, new_position: { x: position.x, y: position.y } }
+                    );
                 }
                 dragStartPosition.current = null;
             }
@@ -384,6 +403,7 @@ const ProblemSolution = ({
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
+                        logAction(e, { scaffold_id: scaffold?.id, scaffold_type: 'problem-solution' });
                         if (onClose) {
                             onClose();
                         } else {
