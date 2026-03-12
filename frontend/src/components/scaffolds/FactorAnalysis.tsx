@@ -5,6 +5,7 @@ import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types'
 import { SCAFFOLD_VALID_GROUP_NUMBERS, SCAFFOLD_GROUP_LABELS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 import GroupDiv from '../GroupDiv';
+import { logAction } from '../../utils/userActionLogger';
 
 const SCAFFOLD_NUMBER = 4;
 const MIN_SLOTS = 2;
@@ -138,6 +139,10 @@ const FactorAnalysis = ({
             }
             return next;
         });
+        logAction(
+            { actionType: 'drop', elementId: 'scaffold-card-add' },
+            { card_id: cardId, group_id: groupId, scaffold_id: scaffold.id, scaffold_group_number: factor }
+        );
     };
 
     const handleCardRemove = async (cardId: string, groupId: string) => {
@@ -157,10 +162,18 @@ const FactorAnalysis = ({
             }
             return next;
         });
+        logAction(
+            { actionType: 'click', elementId: 'scaffold-card-remove' },
+            { card_id: cardId, group_id: groupId, scaffold_id: scaffold.id }
+        );
     };
 
     const handleAddFactor = () => {
         setDisplaySlotCount((prev) => Math.min(MAX_SLOTS, prev + 1));
+        logAction(
+            { actionType: 'click', elementId: 'scaffold-add-column' },
+            { scaffold_id: scaffold?.id, scaffold_type: 'factor-analysis', new_count: Math.min(MAX_SLOTS, displaySlotCount + 1) }
+        );
     };
 
     const handleRemoveFactor = async () => {
@@ -185,6 +198,10 @@ const FactorAnalysis = ({
             return next;
         });
         setDisplaySlotCount((prev) => Math.max(MIN_SLOTS, prev - 1));
+        logAction(
+            { actionType: 'click', elementId: 'scaffold-remove-column' },
+            { scaffold_id: scaffold?.id, scaffold_type: 'factor-analysis', removed_factor: removedFactor }
+        );
     };
 
     // React DnD drag for wrapper
@@ -247,6 +264,10 @@ const FactorAnalysis = ({
                         if (onPositionUpdate) onPositionUpdate(finalX, finalY);
                     }
                 }
+                logAction(
+                    { actionType: 'drag', elementId: 'scaffold-drag' },
+                    { scaffold_id: scaffold?.id, scaffold_type: 'factor-analysis', old_position: { x: (item as { oldX: number; oldY: number }).oldX, y: (item as { oldX: number; oldY: number }).oldY }, new_position: { x: finalX, y: finalY } }
+                );
             },
             collect: (monitor) => ({ isDraggingDnd: !!monitor.isDragging() })
         }),
@@ -302,6 +323,10 @@ const FactorAnalysis = ({
                         Math.abs(position.x - dragStartPosition.current.x) > 1 ||
                         Math.abs(position.y - dragStartPosition.current.y) > 1;
                     if (positionChanged) onPositionUpdate(position.x, position.y);
+                    logAction(
+                        { actionType: 'drag', elementId: 'scaffold-drag' },
+                        { scaffold_id: scaffold?.id, scaffold_type: 'factor-analysis', old_position: dragStartPosition.current, new_position: { x: position.x, y: position.y } }
+                    );
                 }
                 dragStartPosition.current = null;
             }
@@ -379,6 +404,7 @@ const FactorAnalysis = ({
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
+                            logAction(e, { scaffold_id: scaffold?.id, scaffold_type: 'factor-analysis' });
                             onClose();
                         }}
                         className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
