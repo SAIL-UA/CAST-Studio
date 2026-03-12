@@ -98,15 +98,15 @@ const Home = () => {
 
                     {/* DataStories — bottom-anchored overlay */}
                     <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-1/2 z-[300] flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
-                        dataStoriesExpanded ? 'max-h-[75vh]' : 'max-h-[48px]'
+                        dataStoriesExpanded ? 'max-h-[75vh]' : 'max-h-[32px]'
                     }`}>
                         {/* Collapse/Expand toggle bar */}
                         <button
-                            className="flex items-center justify-center gap-2 px-4 py-3 text-sm text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 flex-shrink-0"
+                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 flex-shrink-0"
                             onClick={() => setDataStoriesExpanded(!dataStoriesExpanded)}
                         >
                             <svg
-                                className={`w-4 h-4 transition-transform duration-300 ${dataStoriesExpanded ? 'rotate-180' : ''}`}
+                                className={`w-3 h-3 transition-transform duration-300 ${dataStoriesExpanded ? 'rotate-180' : ''}`}
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />

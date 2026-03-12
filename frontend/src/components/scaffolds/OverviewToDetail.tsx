@@ -181,8 +181,8 @@ const OverviewToDetail = ({
                     const scrollLeft = binElement.scrollLeft;
                     const scrollTop = binElement.scrollTop;
 
-                    const wrapperWidth = 500;
-                    const wrapperHeight = 300;
+                    const wrapperWidth = 650;
+                    const wrapperHeight = 390;
 
                     let newX = clientOffset.x - binRect.left - (item as any).offsetX + scrollLeft;
                     let newY = clientOffset.y - binRect.top - (item as any).offsetY + scrollTop;
@@ -238,8 +238,8 @@ const OverviewToDetail = ({
             const scrollLeft = binElement.scrollLeft;
             const scrollTop = binElement.scrollTop;
 
-            const wrapperWidth = 500;
-            const wrapperHeight = 300;
+            const wrapperWidth = 650;
+            const wrapperHeight = 390;
 
             let newX = e.clientX - binRect.left - dragOffset.x + scrollLeft;
             let newY = e.clientY - binRect.top - dragOffset.y + scrollTop;
@@ -296,8 +296,8 @@ const OverviewToDetail = ({
             style={{
                 left: containerPos.left,
                 top: containerPos.top,
-                width: '500px',
-                minHeight: '250px',
+                width: '650px',
+                minHeight: '325px',
                 cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
@@ -450,7 +450,7 @@ const TwoColumnGroup = ({
                     ? 'border-grey-dark border-2'
                     : 'border-grey-lightest'
             }`}
-            style={{ minHeight: '200px', width: '500px' }}
+            style={{ minHeight: '260px', width: '650px' }}
         >
             <div className="flex justify-between items-center mb-2 pb-2 border-b border-grey-light">
                 <h4 className="text-xs font-bold text-grey-darkest">{title}</h4>
@@ -539,10 +539,10 @@ const TwoColumnGroup = ({
             )}
 
             {cards.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 h-full">
+                <div className="flex flex-wrap gap-1 w-full">
                     {cards.map((card) => (
-                        <div key={card.id} className="relative group h-fit">
-                            <div className="transform scale-75 origin-top-left">
+                        <div key={card.id} className="relative group" style={{ width: 91, height: 130 }}>
+                            <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: 130 }}>
                                 <DraggableCard
                                     image={card}
                                     index={card.index}

@@ -9,8 +9,8 @@ import GroupDiv from '../GroupDiv';
 const SCAFFOLD_NUMBER = 3;
 const MIN_SLOTS = 2;
 const MAX_SLOTS = 4;
-const BASE_WIDTH = 500;
-const SLOT_WIDTH = 220;
+const BASE_WIDTH = 650;
+const SLOT_WIDTH = 286;
 
 // Define props interface
 type TimeBasedProps = {
@@ -233,7 +233,7 @@ const TimeBased = ({
                         const scrollLeft = binElement.scrollLeft;
                         const scrollTop = binElement.scrollTop;
                         const wrapperWidth = BASE_WIDTH + (displaySlotCount - 2) * SLOT_WIDTH;
-                        const wrapperHeight = 300;
+                        const wrapperHeight = 390;
                         let newX = clientOffset.x - binRect.left - (item as { offsetX: number }).offsetX + scrollLeft;
                         let newY = clientOffset.y - binRect.top - (item as { offsetY: number }).offsetY + scrollTop;
                         const contentWidth = binElement.scrollWidth;
@@ -283,7 +283,7 @@ const TimeBased = ({
             const scrollLeft = binElement.scrollLeft;
             const scrollTop = binElement.scrollTop;
             const wrapperWidth = BASE_WIDTH + (displaySlotCount - 2) * SLOT_WIDTH;
-            const wrapperHeight = 300;
+            const wrapperHeight = 390;
             let newX = e.clientX - binRect.left - dragOffset.x + scrollLeft;
             let newY = e.clientY - binRect.top - dragOffset.y + scrollTop;
             const contentWidth = binElement.scrollWidth;
@@ -341,7 +341,7 @@ const TimeBased = ({
                 left: containerPos.left,
                 top: containerPos.top,
                 width: `${scaffoldWidth}px`,
-                minHeight: '250px',
+                minHeight: '325px',
                 cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
@@ -502,7 +502,7 @@ const TimeBasedPeriod = ({
                     ? 'border-grey-dark border-2'
                     : 'border-grey-lightest'
             }`}
-            style={{ minHeight: '200px' }}
+            style={{ minHeight: '260px' }}
         >
             <div className="flex justify-between items-center mb-2 pb-2 border-b border-grey-light">
                 <h4 className="text-xs font-bold text-grey-darkest">{title}</h4>
@@ -591,10 +591,10 @@ const TimeBasedPeriod = ({
             )}
 
             {cards.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 h-full">
+                <div className="flex flex-wrap gap-1 w-full">
                     {cards.map((card) => (
-                        <div key={card.id} className="relative group h-fit">
-                            <div className="transform scale-75 origin-top-left">
+                        <div key={card.id} className="relative group" style={{ width: 91, height: 130 }}>
+                            <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: 130 }}>
                                 <DraggableCard
                                     image={card}
                                     index={card.index}
