@@ -587,6 +587,8 @@ class GenerateDescriptionsView(APIView):
       images = ImageData.objects.all()
 
       for image in images:
+        if not image.in_storyboard:
+          continue
         image.long_desc_generating = True
         image.save()
         generate_description_task.delay(image.id)

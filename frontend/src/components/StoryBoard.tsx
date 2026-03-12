@@ -18,10 +18,15 @@ import ClearAllButton from './ClearAllButton';
 import RecycleBoard from './Recycle';
 
 // Import scaffolds
-// NOTE: Disable for demo
-// import CauseEffect from './scaffolds/CauseEffect';
-// import QuestionAnswer from './scaffolds/QuestionAnswer';
-// import ProblemSolution from './scaffolds/ProblemSolution';
+import CauseEffect from './scaffolds/CauseEffect';
+import QuestionAnswer from './scaffolds/QuestionAnswer';
+import ProblemSolution from './scaffolds/ProblemSolution';
+import TimeBased from './scaffolds/TimeBased';
+import FactorAnalysis from './scaffolds/FactorAnalysis';
+import OverviewToDetail from './scaffolds/OverviewToDetail';
+import Comparative from './scaffolds/Comparative';
+import ShockLead from './scaffolds/ShockLead';
+import WorkflowProcess from './scaffolds/WorkflowProcess';
 
 // Import types
 import { ImageData, GroupData, ScaffoldData } from '../types/types';
@@ -185,7 +190,6 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         return () => window.removeEventListener('openRecycleBin', handleOpenRecycleBin);
     }, []);
 
-    /**
     // Handle creating scaffold when pattern is selected (if scaffold doesn't exist)
     useEffect(() => {
         const handleCreateScaffoldIfNeeded = async () => {
@@ -269,7 +273,6 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
         handleCreateScaffoldIfNeeded();
     }, [selectedPattern, scaffold]);
-    */
 
     // Handle description updates
     const handleDescriptionsUpdate = (id: string, newShortDesc: string, newLongDesc: string) => {
@@ -546,9 +549,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     : group
             ));
 
-            // Clear scaffold state
+            // Clear scaffold state and reset pattern to default (AI Assistance)
             setScaffold(null);
-            // setSelectedPattern('');
+            setSelectedPattern('AI Assistance');
 
             // Refresh data from backend to ensure consistency
             await fetchUserData();
@@ -706,7 +709,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 <GroupButton onClick={handleCreateGroup} />
                 <GenerateStoryButton setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} />
                 <CraftStoryButton
-                    images={workspaceImages}
+                    images={images}
                     storyLoading={storyLoading}
                     setStoryLoading={setStoryLoading}
                     hasGroups={groupDivs.length > 0}
@@ -729,7 +732,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     onPanOffsetChange={setPanOffset}
                     onZoomLevelChange={setZoomLevel}
                 >
-                    {/* Render Cause and Effect scaffold when pattern is selected
+                    {/* Render Cause and Effect scaffold when pattern is selected */}
                     {selectedPattern === 'cause_and_effect' && scaffold && (
                         <CauseEffect
                             images={images}
@@ -755,8 +758,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={handleGroupUpdate}
                         />
                     )}
-                    */}
-                    {/* Render Question and Answer scaffold when pattern is selected 
+                    {/* Render Question and Answer scaffold when pattern is selected */}
                     {selectedPattern === 'question_answer' && scaffold && (
                         <QuestionAnswer
                             images={images}
@@ -781,9 +783,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupDescriptionChange={handleGroupDescriptionChange}
                             onGroupUpdate={handleGroupUpdate}
                         />
-                    )}
-                    */}  
-                    {/* Render Problem and Solution scaffold when pattern is selected
+                    )}  
+                    {/* Render Problem and Solution scaffold when pattern is selected */}
                     {selectedPattern === 'problem_solution' && scaffold && (
                         <ProblemSolution
                             images={images}
@@ -809,7 +810,156 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={handleGroupUpdate}
                         />
                     )}
-                    */}
+                    {selectedPattern === 'time_based' && scaffold && (
+                        <TimeBased
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
+                    {selectedPattern === 'factor_analysis' && scaffold && (
+                        <FactorAnalysis
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
+                    {selectedPattern === 'overview_to_detail' && scaffold && (
+                        <OverviewToDetail
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
+                    {selectedPattern === 'comparative' && scaffold && (
+                        <Comparative
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
+                    {selectedPattern === 'shock_lead' && scaffold && (
+                        <ShockLead
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
+                    {selectedPattern === 'workflow_process' && scaffold && (
+                        <WorkflowProcess
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={handleScaffoldClose}
+                            onGroupAdd={handleGroupAddToScaffold}
+                            onGroupRemove={handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={handleCardAddToGroup}
+                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
+                            onGroupNameChange={handleGroupNameChange}
+                            onGroupDescriptionChange={handleGroupDescriptionChange}
+                            onGroupUpdate={handleGroupUpdate}
+                        />
+                    )}
                     {/* Render groups directly in the scrollable container - only groups without scaffold */}
                     {mainStoryboardGroups.map(group => (
                         <GroupDiv 

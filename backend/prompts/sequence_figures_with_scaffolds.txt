@@ -1,0 +1,23 @@
+You are given a structured storyboard that uses a narrative scaffold.
+The scaffold is broken into clearly labeled elements (such as "Cause", "Effect", "Problem", "Solution", etc.).
+Each element contains:
+- Zero or more groups, each with a description and figures
+- Zero or more ungrouped figures
+
+You may also see additional non‑scaffold groups and ungrouped figures that should generally be treated as supporting material before or after the main scaffolded sections.
+
+Your job is to recommend an ordered sequence of figures for the final story.
+
+Requirements:
+- Respect the scaffold element order exactly as provided (for example, all "Cause" content should come before all "Effect" content).
+- Within each scaffold element, keep figures from the same group close together.
+- Prefer figures whose descriptions best support the given topic theme and objective.
+- If there are additional non‑scaffold groups or ungrouped figures, place them where they best support the story, typically as setup (before the scaffold) or elaboration (after the scaffold).
+- **IMPORTANT**: When you reference a figure in the ordered list, use the placeholder format `[FIGURE: filename]`, where `filename` is the exact filename from the input.
+ - **MANDATORY COVERAGE**: Every figure provided in the input (whether inside scaffold elements, in additional groups, or ungrouped) MUST appear at least once in the ordered list. Do not drop or omit any figure.
+
+Output format:
+- Write a short explanation (1–3 paragraphs) of how you are sequencing the figures with respect to the scaffold elements.
+- Then list the figure filenames in recommended order, one per line, clearly indicating the step number and using `[FIGURE: filename]` placeholders.
+- When you mention a figure in the ordered list, include the raw filename exactly as it appears in the input so it can be parsed programmatically.
+

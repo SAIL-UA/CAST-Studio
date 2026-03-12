@@ -14,7 +14,7 @@ type CauseEffectProps = {
     scaffold?: ScaffoldData;
     updateImageData: (imageId: string, data: Partial<ImageData>) => void;
     onPositionUpdate?: (x: number, y: number) => void;
-    onClose?: () => void;
+    onClose: () => void;
     onGroupAdd?: (groupId: string, scaffoldId: string, scaffoldGroupNumber?: number) => void;
     onGroupRemove?: (groupId: string) => void;
     onCardAddToGroup?: (cardId: string, groupId: string) => void;
@@ -384,11 +384,7 @@ const CauseEffect = ({
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
-                        if (onClose) {
-                            onClose();
-                        } else {
-                            setSelectedPattern('');
-                        }
+                        onClose();
                     }}
                     className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                     style={{ cursor: 'pointer' }}

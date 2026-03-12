@@ -60,13 +60,6 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
         // Generate story with selected pattern
         setStoryLoading(true);
 
-        // Make sure there are images present
-        if (!images || images.length === 0) {
-            setStoryLoading(false);
-            alert('Please add images before generating a story.');
-            return;
-        }
-        
         // Dispatch event to indicate story generation has started
         const startEvent = new CustomEvent('storyGenerationStarted');
         window.dispatchEvent(startEvent);
