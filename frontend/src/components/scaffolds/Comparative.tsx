@@ -5,6 +5,7 @@ import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types'
 import { SCAFFOLD_GROUP_LABELS, SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 import GroupDiv from '../GroupDiv';
+import { logAction } from '../../utils/userActionLogger';
 
 type ComparativeProps = {
     images: ImageData[];
@@ -112,6 +113,11 @@ const Comparative = ({
                 return next;
             });
         }
+
+        logAction(
+            { actionType: 'drop', elementId: 'scaffold-card-add' },
+            { card_id: cardId, group_id: groupId, scaffold_id: scaffold.id, scaffold_group_number: scaffoldGroupNumber }
+        );
     };
 
     const handleCardRemove = async (cardId: string, groupId: string) => {
@@ -131,6 +137,11 @@ const Comparative = ({
                 return next;
             });
         }
+
+        logAction(
+            { actionType: 'click', elementId: 'scaffold-card-remove' },
+            { card_id: cardId, group_id: groupId, scaffold_id: scaffold.id }
+        );
     };
 
     const [{ isDraggingDnd }, drag] = useDrag(
@@ -197,6 +208,10 @@ const Comparative = ({
                     setPosition({ x: finalX, y: finalY });
                     if (onPositionUpdate) onPositionUpdate(finalX, finalY);
                 }
+                logAction(
+                    { actionType: 'drag', elementId: 'scaffold-drag' },
+                    { scaffold_id: scaffold?.id, scaffold_type: 'comparative', old_position: { x: (item as any).oldX, y: (item as any).oldY }, new_position: { x: finalX, y: finalY } }
+                );
             },
             collect: (monitor) => ({ isDraggingDnd: !!monitor.isDragging() })
         }),
@@ -260,6 +275,10 @@ const Comparative = ({
                         Math.abs(position.x - dragStartPosition.current.x) > 1 ||
                         Math.abs(position.y - dragStartPosition.current.y) > 1;
                     if (positionChanged) onPositionUpdate(position.x, position.y);
+                    logAction(
+                        { actionType: 'drag', elementId: 'scaffold-drag' },
+                        { scaffold_id: scaffold?.id, scaffold_type: 'comparative', old_position: dragStartPosition.current, new_position: { x: position.x, y: position.y } }
+                    );
                 }
                 dragStartPosition.current = null;
             }
@@ -309,6 +328,7 @@ const Comparative = ({
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
+                        logAction(e, { scaffold_id: scaffold?.id, scaffold_type: 'comparative' });
                         onClose();
                     }}
                     className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
