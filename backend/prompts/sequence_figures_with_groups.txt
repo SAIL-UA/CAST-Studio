@@ -20,6 +20,7 @@ You will receive:
    - Integrated: Mix groups and ungrouped figures based on narrative flow
    - Context-driven: Place ungrouped figures where they best support the story
 4. Insert figure placeholders: `[FIGURE: filename]`
+5. **MANDATORY COVERAGE**: Every figure provided in the input (in any group or ungrouped) MUST appear at least once in the final sequence. Do not drop or omit any figure.
 
 ### Sequencing Guidelines:
 1. **Group Coherence**: Keep figures within a group together when they tell a connected story

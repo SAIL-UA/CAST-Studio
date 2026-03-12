@@ -71,6 +71,7 @@ const RecycleBoard = ({ images, setImages, loading, fetchUserData, updateImageDa
                         onDelete={handleDelete}
                         onTrash={handleImageRecycle}
                         onUnTrash={handleImageRestore}
+                        scrollable
                     />
                     {/* DeleteAll and ClearAll buttons - positioned in bottom left */}
                     <div className="absolute bottom-6 left-4 flex gap-2 z-[350]">

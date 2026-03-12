@@ -1,13 +1,11 @@
 // Import dependencies
 import { useEffect, useState } from 'react';
-import { logAction } from '../utils/userActionLogger';
 import { getImageDataAll, updateImageData as updateImageDataAPI } from '../services/api';
 import { ImageData } from '../types/types';
 import { getImageUrl } from '../utils/imageUtils';
 
 // Import components
 import StoryBoard from './StoryBoard';
-import RecycleBoard from './Recycle';
 
 // Define props interface
 type WorkspaceProps = {
@@ -22,22 +20,8 @@ type WorkspaceProps = {
 const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading }: WorkspaceProps) => {
 
     // States
-    const [recycleBinSelected, setRecycleBinSelected] = useState(false);
     const [images, setImages] = useState<ImageData[]>([]);
     const [loading, setLoading] = useState(true);
-
-
-    // Handle storyboard selection
-    const handleSelectStoryboard = (e: React.MouseEvent) => {
-        setRecycleBinSelected(false);
-        logAction(e);
-    }
-
-    // Handle recycle bin selection
-    const handleSelectRecycle = (e: React.MouseEvent) => {
-        setRecycleBinSelected(true);
-        logAction(e);
-    }
 
     // Fetch user data from backend
     const fetchUserData = async () => {
@@ -125,56 +109,21 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
     // Visible component
     return (
         <div id="workspace" className="flex flex-col h-full w-full">
-            <div id="workspace-header" className="flex w-full h-auto">
-                <div id="workspace-header-left" className="flex w-full h-full items-end justify-start">
-                    <h3 className="text-2xl">Workspace&nbsp;</h3>
-                </div>
-                <div id="workspace-header-right" className="flex w-1/2 h-full items-end justify-end gap-2 text-sm">
-                <button id="narrative-button"
-                    log-id="storyboard-button"
-                    className={`underline-animate ${recycleBinSelected ? '' : 'active'} mx-3`}
-                    onClick={handleSelectStoryboard}
-                    >
-                    Storyboard
-                    </button>
-
-                    <button id="story-button"
-                    log-id="recycle-bin-button"
-                    className={`underline-animate ${recycleBinSelected ? 'active' : ''} mx-3`}
-                    onClick={handleSelectRecycle}>
-                    Recycle Bin
-                    </button>
-                </div>
-            </div>
-            <div className='w-full h-full mt-4 pb-2'>
-                {recycleBinSelected ? 
-                    <RecycleBoard
-                        images={images}
-                        setImages={setImages}
-                        loading={loading}
-                        fetchUserData={fetchUserData}
-                        updateImageData={updateImageData}
-                        handleImageRecycle={handleImageRecycle}
-                        handleImageRestore={handleImageRestore}
-                    />
-                : 
-                    <StoryBoard
-                        setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
-                        setSelectedPattern={setSelectedPattern}
-                        selectedPattern={selectedPattern}
-                        storyLoading={storyLoading}
-                        setStoryLoading={setStoryLoading}
-                        images={images}
-                        setImages={setImages}
-                        loading={loading}
-                        fetchUserData={fetchUserData}
-                        refreshImageDataAfterStoryGeneration={refreshImageDataAfterStoryGeneration}
-                        updateImageData={updateImageData}
-                        handleImageRecycle={handleImageRecycle}
-                        handleImageRestore={handleImageRestore}
-                    />
-                }
-            </div>
+            <StoryBoard
+                setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                setSelectedPattern={setSelectedPattern}
+                selectedPattern={selectedPattern}
+                storyLoading={storyLoading}
+                setStoryLoading={setStoryLoading}
+                images={images}
+                setImages={setImages}
+                loading={loading}
+                fetchUserData={fetchUserData}
+                refreshImageDataAfterStoryGeneration={refreshImageDataAfterStoryGeneration}
+                updateImageData={updateImageData}
+                handleImageRecycle={handleImageRecycle}
+                handleImageRestore={handleImageRestore}
+            />
         </div>
     )
 }

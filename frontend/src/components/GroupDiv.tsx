@@ -1,5 +1,6 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useDrag, useDrop } from 'react-dnd';
 import { GroupDivProps, DragItem } from '../types/types';
 import DraggableCard from './DraggableCard';
@@ -24,7 +25,9 @@ const GroupDiv: React.FC<GroupDivProps> = ({
   onGroupUpdate,
   storyBinRef,
   scaffoldId,
-  disableDrag
+  disableDrag,
+  zoomLevel = 1,
+  panOffset = { x: 0, y: 0 }
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
@@ -180,17 +183,13 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         const scrollLeft = binElement.scrollLeft;
         const scrollTop = binElement.scrollTop;
 
-        // Calculate new position relative to scrollable content container
-        let newX = clientOffset.x - binRect.left - item.offsetX + scrollLeft;
-        let newY = clientOffset.y - binRect.top - item.offsetY + scrollTop;
+        // Calculate new position relative to scrollable content container (zoom + pan compensated)
+        let newX = (clientOffset.x - binRect.left - panOffset.x) / zoomLevel - item.offsetX;
+        let newY = (clientOffset.y - binRect.top - panOffset.y) / zoomLevel - item.offsetY;
 
-        // Constrain within content boundaries
-        const groupWidth = 320; // 20rem = 320px
-        const groupHeight = 256; // 16rem = 256px
-        const contentWidth = binElement.scrollWidth;
-        const contentHeight = binElement.scrollHeight;
-        newX = Math.max(0, Math.min(newX, contentWidth - groupWidth));
-        newY = Math.max(0, Math.min(newY, contentHeight - groupHeight));
+        // Constrain: only prevent negative positions, allow free placement otherwise
+        newX = Math.max(0, newX);
+        newY = Math.max(0, newY);
 
         finalX = newX;
         finalY = newY;
@@ -220,7 +219,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     collect: (monitor) => ({
       isDraggingDnd: !!monitor.isDragging(),
     }),
-  }), [id, position, storyBinRef, scaffoldId, disableDrag]);
+  }), [id, position, storyBinRef, scaffoldId, disableDrag, zoomLevel, panOffset]);
 
   const handleDragStart = (e: React.DragEvent) => {
     // Capture event context for logging at the end
@@ -259,8 +258,8 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     setIsDragging(true);
     dragStartPosition.current = { x: position.x, y: position.y }; // Store initial position
     setDragOffset({
-      x: e.clientX - binRect.left - position.x + scrollLeft,
-      y: e.clientY - binRect.top - position.y + scrollTop
+      x: (e.clientX - binRect.left - panOffset.x) / zoomLevel - position.x,
+      y: (e.clientY - binRect.top - panOffset.y) / zoomLevel - position.y
     });
   };
 
@@ -284,17 +283,13 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       const scrollLeft = binElement.scrollLeft;
       const scrollTop = binElement.scrollTop;
 
-      // Calculate new position relative to scrollable content container
-      let newX = e.clientX - binRect.left - dragOffset.x + scrollLeft;
-      let newY = e.clientY - binRect.top - dragOffset.y + scrollTop;
+      // Calculate new position relative to scrollable content container (zoom + pan compensated)
+      let newX = (e.clientX - binRect.left - panOffset.x) / zoomLevel - dragOffset.x;
+      let newY = (e.clientY - binRect.top - panOffset.y) / zoomLevel - dragOffset.y;
 
-      // Constrain within content boundaries
-      const groupWidth = 320; // GroupDiv width
-      const groupHeight = 256; // GroupDiv height
-      const contentWidth = binElement.scrollWidth;
-      const contentHeight = binElement.scrollHeight;
-      newX = Math.max(0, Math.min(newX, contentWidth - groupWidth));
-      newY = Math.max(0, Math.min(newY, contentHeight - groupHeight));
+      // Constrain: only prevent negative positions, allow free placement otherwise
+      newX = Math.max(0, newX);
+      newY = Math.max(0, newY);
 
       const newPosition = { x: newX, y: newY };
       setPosition(newPosition);
@@ -650,13 +645,13 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         )}
       </div>
 
-      {/* Edit Modal */}
-      {showEditModal && (
-        <div 
+      {/* Edit Modal — portaled to body to escape parent stacking context */}
+      {showEditModal && ReactDOM.createPortal(
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]"
           onClick={handleCloseEditModal}
         >
-          <div 
+          <div
             className="bg-white rounded-lg shadow-xl w-96 max-w-[90vw] max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
@@ -741,7 +736,8 @@ const GroupDiv: React.FC<GroupDivProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

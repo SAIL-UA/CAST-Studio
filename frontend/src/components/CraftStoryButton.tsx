@@ -4,6 +4,7 @@ import { generateDescription, generateNarrativeAsync, getImageDataAll, getNarrat
 
 // Import types
 import { ImageData } from '../types/types';
+const DESCRIPTION_PLACEHOLDER = 'Ask AI to create a description for this visual.';
 
 // Props interface
 type CraftStoryButtonProps = {
@@ -21,17 +22,44 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
     // Handle upload
     const handleCraft = async (e: React.MouseEvent) => {
         const ctx = captureActionContext(e);
+
+                  // --- Validation checks ---
+        const missing: string[] = [];
+
+        // 1. Check for visuals on the storyboard
+        const storyboardImages = images.filter(img => img.in_storyboard);
+        if (storyboardImages.length === 0) {
+            missing.push('Upload visuals to the workspace and annotate them');
+        }
+
+          // 2. Check that all storyboard images have annotations (either long_desc or short_desc)                                             
+        if (storyboardImages.length > 0) {
+            const SHORT_DESC_PLACEHOLDER = 'Add a description for this visual.';
+            const hasValidDescription = (img: ImageData) => {
+                const longValid = img.long_desc && img.long_desc.trim() !== '' && img.long_desc !== DESCRIPTION_PLACEHOLDER;
+                const shortValid = img.short_desc && img.short_desc.trim() !== '' && img.short_desc !== SHORT_DESC_PLACEHOLDER;
+                return longValid || shortValid;
+            };
+            const unannotated = storyboardImages.filter(img => !hasValidDescription(img));
+            if (unannotated.length > 0) {
+                missing.push(`Annotate all visuals (${unannotated.length} image(s) missing descriptions)`);
+            }
+        }
+
+        // 3. Check that a narrative pattern has been selected
+        if (!selectedPattern || selectedPattern === '') {
+            missing.push('Select a narrative structure (with AI or manually)');
+        }
+
+        // If any checks failed, show a single prompt and return
+        if (missing.length > 0) {
+            alert('Before generating a story, please:\n\n' + missing.map(m => `• ${m}`).join('\n'));
+            return;
+        }
         
         // Generate story with selected pattern
         setStoryLoading(true);
 
-        // Make sure there are images present
-        if (!images || images.length === 0) {
-            setStoryLoading(false);
-            alert('Please add images before generating a story.');
-            return;
-        }
-        
         // Dispatch event to indicate story generation has started
         const startEvent = new CustomEvent('storyGenerationStarted');
         window.dispatchEvent(startEvent);

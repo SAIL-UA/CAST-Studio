@@ -25,20 +25,7 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ items, onClose }) => {
     <div className="w-full p-3">
       {/* Panel header */}
       <div className="flex flex-row w-full">
-        <h3 className="text-lg mb-2 mt-4 w-3/4 ml-2">Feedback</h3>
-        {onClose && (
-          <div className="flex items-center justify-end w-1/4">
-            <svg
-              className="w-6 h-6 cursor-pointer"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              onClick={onClose}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-        )}
+        <h3 className="text-lg mb-2 mt-4 ml-2">Feedback</h3>
       </div>
 
       <div className="space-y-3">

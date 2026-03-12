@@ -30,7 +30,7 @@ STORY_SCAFFOLDS = {
         "filename": "unique_stories/1_time_based_progression.txt",
         "number": 3,
         "description": "A sequence of events in time to highlight patterns and trends.",
-        "valid_group_numbers": [1, 2, 3],  # 1=event 1, 2=event 2, 3=event 3
+        "valid_group_numbers": [1, 2, 3, 4],  # 1=event 1, 2=event 2, 3=event 3, 4=event 4
     },
     "factor_analysis": {
         "id": "factor_analysis",

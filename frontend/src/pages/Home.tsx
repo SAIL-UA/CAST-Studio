@@ -7,16 +7,13 @@ import { useAuth } from '../contexts/Auth';
 
 // Import components
 import Header from '../components/Header';
-import NavDropdown from '../components/NavDropdown';
 import DataStories from '../components/DataStories';
-import RecommendedNarratives from '../components/RecommendedNarratives';
 import FeedbackPanel, { FeedbackCardData } from '../components/FeedbackPanel';
-import Footer from '../components/Footer';
 import NarrativePatterns from '../components/NarrativePatterns'
 import Workspace from '../components/Workspace'
 import NarrativeExamples from '../components/NarrativeExamples'
-
-// Import images
+import CompactSidebar from '../components/CompactSidebar'
+import Footer from '../components/Footer'
 
 // Import utils
 import { handleAuthRequired } from '../utils/utils';
@@ -30,9 +27,6 @@ const Home = () => {
     const { userAuthenticated } = useAuth();
 
     // State
-    const [screenLarge, setScreenLarge] = useState(true);
-    const [rightOpen, setRightOpen] = useState(false);
-    // const [leftOpen, setLeftOpen] = useState(false);
     const [centerNarrativePatternsOpen, setCenterNarrativePatternsOpen] = useState(false);
     const [rightNarrativePatternsOpen, setRightNarrativePatternsOpen] = useState(false);
     const [rightFeedbackOpen, setRightFeedbackOpen] = useState(false);
@@ -41,20 +35,26 @@ const Home = () => {
     const [selectedPattern, setSelectedPattern] = useState('');
     const [storyLoading, setStoryLoading] = useState(false);
 
+    const [leftMenuOpen, setLeftMenuOpen] = useState(false);
+    const [dataStoriesExpanded, setDataStoriesExpanded] = useState(false);
+
+    // Derived: right panel is open when feedback or narrative patterns are active
+    const rightPanelOpen = rightFeedbackOpen || rightNarrativePatternsOpen;
+
     // Check authentication
     useEffect(() => {
         handleAuthRequired(userAuthenticated, navigate);
     }, [userAuthenticated, navigate]);
 
-    // Check screen size
+    // Auto-expand DataStories when story generation starts or completes
     useEffect(() => {
-        const width = window.matchMedia('(min-width: 1200px)'); // Make sure px matches tailwind config
-        const handler = (e: MediaQueryListEvent) => {
-            setScreenLarge(e.matches);
-        }
-        setScreenLarge(width.matches); // Set initial state
-        width.addEventListener('change', handler); // Event listener for all screen size changes
-        return () => width.removeEventListener('change', handler); // Cleanup
+        const handleExpand = () => setDataStoriesExpanded(true);
+        window.addEventListener('storyGenerated', handleExpand);
+        window.addEventListener('storyGenerationStarted', handleExpand);
+        return () => {
+            window.removeEventListener('storyGenerated', handleExpand);
+            window.removeEventListener('storyGenerationStarted', handleExpand);
+        };
     }, []);
 
     // Feedback event handler
@@ -65,7 +65,6 @@ const Home = () => {
             if (items.length > 0) {
                 setFeedbackItems(items);
                 setRightFeedbackOpen(true);
-                setRightOpen(true); // ensure sidebar visible
                 setRightNarrativePatternsOpen(false);
             }
         };
@@ -73,41 +72,17 @@ const Home = () => {
         return () => window.removeEventListener('showFeedbackPanel', onShowFeedback as EventListener);
     }, []);
 
-    // Collapse sidebars when screen size changes
-    useEffect(() => {
-        if (screenLarge) {
-            setRightOpen(true);
-            // setLeftOpen(true);
-        } else {
-            setRightOpen(false);
-            // setLeftOpen(false);
-        }
-    }, [screenLarge]);
-
     // Visible component
     return (
         <>
-            <Header />
+            <Header onMenuOpen={() => setLeftMenuOpen(prev => !prev)} floating menuOpen={leftMenuOpen} subtitle="Workspace" onRecycleBinOpen={() => window.dispatchEvent(new CustomEvent('openRecycleBin'))} />
             <div id="home-container" className="flex w-full font-roboto-light">
-        
-                {/* Left Home */}
-                <div id="left-home" className="w-1/5 px-3 max-xl:hidden">
-                    <div id="nav-dropdown" className="ml-2">
-                        <NavDropdown setCenterNarrativePatternsOpen={setCenterNarrativePatternsOpen} />
-                    </div>
 
-                    <div id="footer" className="flex flex-col justify-start items-start">
-                        <Footer />
+                {/* Middle Home — workspace takes full width, edgeless */}
+                <div id="middle-home" className="flex-1 w-full flex flex-col">
 
-                    </div>
-                
-                </div>
-
-                {/* Middle Home */}
-                <div id="middle-home" className="w-3/5 max-xl:w-full px-4 flex flex-col border-l border-1 border-grey-light">
-                    
                     {centerNarrativePatternsOpen ? (
-                        <div id="narrative-patterns" className="min-h-[75vh] flex flex-col mt-6 pr-4 pl-4">
+                        <div id="narrative-patterns" className="min-h-[75vh] flex flex-col mt-6 px-4">
                             <NarrativePatterns
                             setSelectedPattern={setSelectedPattern}
                             setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
@@ -116,92 +91,113 @@ const Home = () => {
                             setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} />
                         </div>
                     ) : (
-                        <>
-                            <div className="h-[75vh] mt-10 mb-6 pr-4 pl-4">
-                                <Workspace setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
-                            </div>
-                            <div className="h-[75vh] mt-6 mb-6 pl-4 pr-4">
+                        <div className="h-screen">
+                            <Workspace setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
+                        </div>
+                    )}
+
+                    {/* DataStories — bottom-anchored overlay */}
+                    <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-1/2 z-[300] flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
+                        dataStoriesExpanded ? 'max-h-[75vh]' : 'max-h-[32px]'
+                    }`}>
+                        {/* Collapse/Expand toggle bar */}
+                        <button
+                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 flex-shrink-0"
+                            onClick={() => setDataStoriesExpanded(!dataStoriesExpanded)}
+                        >
+                            <svg
+                                className={`w-3 h-3 transition-transform duration-300 ${dataStoriesExpanded ? 'rotate-180' : ''}`}
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                            {dataStoriesExpanded ? 'Collapse' : 'Expand'} Story
+                        </button>
+                        {/* DataStories content — always mounted, hidden when collapsed */}
+                        <div className={`flex-1 min-h-0 overflow-y-auto px-1 pb-1 ${dataStoriesExpanded ? '' : 'hidden'}`}>
+                            <div className="bg-grey-lighter-2 rounded-lg px-4 pb-4">
                                 <DataStories />
                             </div>
-                        </>
-                    )}
+                        </div>
+                    </div>
                 </div>
 
-                {/* Right Home */}
-                {screenLarge || rightOpen ? (
+                {/* Left Panel — overlay menu, only visible when hamburger is clicked */}
+                {leftMenuOpen && (
                     <>
-                        {/* Background for sidebar open on small screens */}
-                        {!screenLarge && (
-                            <div id="right-sidebar-background" className="fixed top-0 right-0 h-screen w-screen bg-indigo-darkest opacity-50 z-10"></div>
-                        )}
-                        
-                        {/* Right home */}
-                        <div id="right-home" className={`${screenLarge ? 'w-1/5' : 'w-1/2'} px-3 bg-grey-lighter-2 z-5`}>
-                            {!screenLarge && (
-                            <div id="right-home-collapsed" className="w-[5%] bg-grey-lighter-2 items-start">
-                                {/* Right Open */}
-                                {rightOpen && (
-                                    <button 
-                                        id="toggle-right-home"
-                                        className="w-full pt-2"
-                                        onClick={() => setRightOpen(false)}
-                                    >
-                                        <svg className="fill-current h-4 w-4 transition-transform duration-300 ease-in rotate-[-90deg]"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 20 20">
-                                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
-                                        </svg>
-                                    </button>
-                                )}
+                        <div
+                            className="fixed inset-0 bg-black bg-opacity-30 z-[400]"
+                            onClick={() => setLeftMenuOpen(false)}
+                        />
+                        <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[256px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto">
+                            <div className="flex justify-end p-2">
+                                <button
+                                    className="w-7 h-7 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
+                                    onClick={() => setLeftMenuOpen(false)}
+                                >
+                                    ×
+                                </button>
                             </div>
-                            )}
-                            {/* Right top */}
-                            <div id="right-top" className="min-h-[46vh] mt-8">
-                                {/* Right bottom */}
-                                <div id="right-top-bottom" className="flex w-full min-h-1/2">
-                                    {rightFeedbackOpen ? (
-                                        <FeedbackPanel items={feedbackItems} onClose={() => setRightFeedbackOpen(false)} />
-                                    ) : rightNarrativePatternsOpen ? (
-                                        rightNarrativeExamplesOpen ? (
-                                            <NarrativeExamples
-                                            selectedPattern={selectedPattern}
-                                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
-                                            />
-                                        ) : (
-                                        <NarrativePatterns
+                            <CompactSidebar setCenterNarrativePatternsOpen={(val: boolean) => {
+                                setCenterNarrativePatternsOpen(val);
+                                setLeftMenuOpen(false);
+                            }} />
+                            <div id="footer" className="flex flex-col justify-start items-start">
+                                <Footer />
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* Right Panel — overlay on top of workspace, only visible when needed */}
+                {rightPanelOpen && (
+                    <>
+                        {/* Backdrop */}
+                        <div
+                            className="fixed inset-0 bg-black bg-opacity-30 z-[500]"
+                            onClick={() => {
+                                setRightFeedbackOpen(false);
+                                setRightNarrativePatternsOpen(false);
+                                setRightNarrativeExamplesOpen(false);
+                            }}
+                        />
+                        {/* Panel */}
+                        <div id="right-home" className="fixed top-0 right-0 bottom-0 w-[320px] max-w-[90vw] bg-grey-lighter-2 shadow-xl z-[501] overflow-y-auto">
+                            {/* Close button */}
+                            <div className="flex justify-end p-2">
+                                <button
+                                    className="w-7 h-7 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
+                                    onClick={() => {
+                                        setRightFeedbackOpen(false);
+                                        setRightNarrativePatternsOpen(false);
+                                        setRightNarrativeExamplesOpen(false);
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            {/* Panel content */}
+                            <div className="px-3 pb-6">
+                                {rightFeedbackOpen ? (
+                                    <FeedbackPanel items={feedbackItems} onClose={() => setRightFeedbackOpen(false)} />
+                                ) : rightNarrativeExamplesOpen ? (
+                                    <NarrativeExamples
+                                        selectedPattern={selectedPattern}
+                                        setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                                    />
+                                ) : (
+                                    <NarrativePatterns
                                         center={false}
                                         setSelectedPattern={setSelectedPattern}
                                         setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
                                         setStoryLoading={setStoryLoading}
-                                        setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} />
-                                        )
-                                    ) : (
-                                        <RecommendedNarratives />
-                                    )}
-                                </div>
+                                        setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                                    />
+                                )}
                             </div>
                         </div>
-                        </>
-                        ) : (
-                        <>
-                        <div id="right-home-collapsed" className="w-[5%] bg-grey-lighter-2 items-start">
-                            {!rightOpen && (
-                                <button 
-                                    id="toggle-right-home"
-                                    className="w-full pt-2 flex flex-col"
-                                    onClick={() => setRightOpen(true)}
-                                >
-                                    <svg className="fill-current h-4 w-4 transition-transform duration-300 ease-in rotate-90"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 20 20">
-                                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
-                                    </svg>
-                                </button>
-                            )}
-                        </div>
                     </>
-                    )
-                }
+                )}
             </div>
         </>
     )

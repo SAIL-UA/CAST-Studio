@@ -2,12 +2,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
-import { SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
+import { SCAFFOLD_GROUP_LABELS, SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 import GroupDiv from '../GroupDiv';
 
-// Define props interface
-type CauseEffectProps = {
+type ComparativeProps = {
     images: ImageData[];
     storyBinRef: React.RefObject<HTMLDivElement | null>;
     setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;
@@ -22,10 +21,9 @@ type CauseEffectProps = {
     onGroupNameChange?: (groupId: string, newName: string) => void;
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
-}
+};
 
-// Cause and Effect Scaffold component
-const CauseEffect = ({
+const Comparative = ({
     images,
     storyBinRef,
     setSelectedPattern,
@@ -40,236 +38,181 @@ const CauseEffect = ({
     onGroupNameChange,
     onGroupDescriptionChange,
     onGroupUpdate
-}: CauseEffectProps) => {
-    // Use scaffold position if provided, otherwise default
-    const [position, setPosition] = useState({ 
-        x: scaffold?.x || 50, 
-        y: scaffold?.y || 50 
+}: ComparativeProps) => {
+    const scaffoldNumber = scaffold?.number || 7;
+    const validGroupNumbers = SCAFFOLD_VALID_GROUP_NUMBERS[scaffoldNumber] || [1, 2];
+    const LEFT_GROUP_NUMBER = validGroupNumbers[0];
+    const RIGHT_GROUP_NUMBER = validGroupNumbers[1];
+    const labels = SCAFFOLD_GROUP_LABELS[scaffoldNumber] || { 1: 'Item 1', 2: 'Item 2' };
+
+    const leftGroupId = 'comparative-left';
+    const rightGroupId = 'comparative-right';
+
+    const [position, setPosition] = useState({
+        x: scaffold?.x || 50,
+        y: scaffold?.y || 50
     });
-    
-    // Update position when scaffold changes
+
     useEffect(() => {
-        if (scaffold) {
-            setPosition({ x: scaffold.x, y: scaffold.y });
-        }
+        if (scaffold) setPosition({ x: scaffold.x, y: scaffold.y });
     }, [scaffold]);
-    
+
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    const causesGroupId = 'cause-effect-causes';
-    const effectsGroupId = 'cause-effect-effects';
-    
-    // Get scaffold group numbers from mappings using scaffold number
-    const scaffoldNumber = scaffold?.number || 1;
-    const validGroupNumbers = SCAFFOLD_VALID_GROUP_NUMBERS[scaffoldNumber] || [1, 2];
-    const CAUSES_GROUP_NUMBER = validGroupNumbers[0];  // scaffold_group_number for causes
-    const EFFECTS_GROUP_NUMBER = validGroupNumbers[1];  // scaffold_group_number for effects
+    const [leftCardIds, setLeftCardIds] = useState<Set<string>>(new Set());
+    const [rightCardIds, setRightCardIds] = useState<Set<string>>(new Set());
 
-    // Local state to track which cards are in which group
-    const [causesCardIds, setCausesCardIds] = useState<Set<string>>(new Set());
-    const [effectsCardIds, setEffectsCardIds] = useState<Set<string>>(new Set());
-
-    // Initialize local state from images that already have scaffold_group_number set
     useEffect(() => {
         if (!scaffold) return;
-        
-        const causesIds = new Set<string>();
-        const effectsIds = new Set<string>();
-        
-        images.forEach(img => {
+        const leftIds = new Set<string>();
+        const rightIds = new Set<string>();
+
+        images.forEach((img) => {
             if (img.scaffoldId === scaffold.id) {
-                if (img.scaffold_group_number === CAUSES_GROUP_NUMBER) {
-                    causesIds.add(img.id);
-                } else if (img.scaffold_group_number === EFFECTS_GROUP_NUMBER) {
-                    effectsIds.add(img.id);
-                }
+                if (img.scaffold_group_number === LEFT_GROUP_NUMBER) leftIds.add(img.id);
+                else if (img.scaffold_group_number === RIGHT_GROUP_NUMBER) rightIds.add(img.id);
             }
         });
-        
-        setCausesCardIds(causesIds);
-        setEffectsCardIds(effectsIds);
-    }, [scaffold, images]);
 
-    // Get cards for each group from local state
-    const causesCards = images.filter(img => causesCardIds.has(img.id));
-    const effectsCards = images.filter(img => effectsCardIds.has(img.id));
+        setLeftCardIds(leftIds);
+        setRightCardIds(rightIds);
+    }, [scaffold, images, LEFT_GROUP_NUMBER, RIGHT_GROUP_NUMBER]);
 
-    // Get groups that belong to this scaffold, separated by scaffold_group_number
+    const leftCards = images.filter((img) => leftCardIds.has(img.id));
+    const rightCards = images.filter((img) => rightCardIds.has(img.id));
+
     const scaffoldGroups = scaffold?.groups || [];
-    const causesGroups = scaffoldGroups.filter(group => group.scaffold_group_number === CAUSES_GROUP_NUMBER);
-    const effectsGroups = scaffoldGroups.filter(group => group.scaffold_group_number === EFFECTS_GROUP_NUMBER);
+    const leftGroups = scaffoldGroups.filter((g) => g.scaffold_group_number === LEFT_GROUP_NUMBER);
+    const rightGroups = scaffoldGroups.filter((g) => g.scaffold_group_number === RIGHT_GROUP_NUMBER);
 
-    // Updated handler: now calls backend to persist scaffold_group_number
     const handleCardAdd = async (cardId: string, groupId: string) => {
         if (!scaffold) return;
-        
-        // Determine scaffold_group_number based on groupId
-        const scaffoldGroupNumber = groupId === causesGroupId 
-            ? CAUSES_GROUP_NUMBER 
-            : EFFECTS_GROUP_NUMBER;
-        
-        // Update backend with scaffoldId and scaffold_group_number
-        // Note: Use camelCase (scaffoldId) to match types.ts - updateImageData will transform to snake_case for API
+        const scaffoldGroupNumber = groupId === leftGroupId ? LEFT_GROUP_NUMBER : RIGHT_GROUP_NUMBER;
+
         await updateImageData(cardId, {
             scaffoldId: scaffold.id,
             scaffold_group_number: scaffoldGroupNumber
         } as any);
-        
-        // Update local state
-        if (groupId === causesGroupId) {
-            setCausesCardIds(prev => {
-                const newSet = new Set(prev);
-                newSet.add(cardId);
-                return newSet;
+
+        if (groupId === leftGroupId) {
+            setLeftCardIds((prev) => new Set(prev).add(cardId));
+            setRightCardIds((prev) => {
+                const next = new Set(prev);
+                next.delete(cardId);
+                return next;
             });
-            // Remove from effects if it was there
-            setEffectsCardIds(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(cardId);
-                return newSet;
-            });
-        } else if (groupId === effectsGroupId) {
-            setEffectsCardIds(prev => {
-                const newSet = new Set(prev);
-                newSet.add(cardId);
-                return newSet;
-            });
-            // Remove from causes if it was there
-            setCausesCardIds(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(cardId);
-                return newSet;
+        } else {
+            setRightCardIds((prev) => new Set(prev).add(cardId));
+            setLeftCardIds((prev) => {
+                const next = new Set(prev);
+                next.delete(cardId);
+                return next;
             });
         }
     };
 
-    // Updated handler: now calls backend to clear scaffold_group_number
     const handleCardRemove = async (cardId: string, groupId: string) => {
         if (!scaffold) return;
-        
-        // Update backend to clear scaffoldId and scaffold_group_number
-        // Note: Use camelCase (scaffoldId) to match types.ts - updateImageData will transform to snake_case for API
-        await updateImageData(cardId, {
-            scaffoldId: undefined,
-            scaffold_group_number: undefined
-        } as any);
-        
-        // Update local state
-        if (groupId === causesGroupId) {
-            setCausesCardIds(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(cardId);
-                return newSet;
+        await updateImageData(cardId, { scaffoldId: undefined, scaffold_group_number: undefined } as any);
+
+        if (groupId === leftGroupId) {
+            setLeftCardIds((prev) => {
+                const next = new Set(prev);
+                next.delete(cardId);
+                return next;
             });
-        } else if (groupId === effectsGroupId) {
-            setEffectsCardIds(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(cardId);
-                return newSet;
+        } else {
+            setRightCardIds((prev) => {
+                const next = new Set(prev);
+                next.delete(cardId);
+                return next;
             });
         }
     };
 
-    // React DnD hook for drag functionality (wrapper)
-    const [{ isDraggingDnd }, drag] = useDrag(() => ({
-        type: 'group',
-        item: () => {
-            if (wrapperRef.current && storyBinRef.current) {
-                const wrapperRect = wrapperRef.current.getBoundingClientRect();
-                const event = window.event as MouseEvent;
-                const offsetX = event.clientX - wrapperRect.left;
-                const offsetY = event.clientY - wrapperRect.top;
-                
+    const [{ isDraggingDnd }, drag] = useDrag(
+        () => ({
+            type: 'group',
+            item: () => {
+                if (wrapperRef.current && storyBinRef.current) {
+                    const wrapperRect = wrapperRef.current.getBoundingClientRect();
+                    const event = window.event as MouseEvent;
+                    const offsetX = event.clientX - wrapperRect.left;
+                    const offsetY = event.clientY - wrapperRect.top;
+                    return {
+                        id: 'comparative-scaffold',
+                        type: 'group',
+                        oldX: position.x,
+                        oldY: position.y,
+                        offsetX,
+                        offsetY
+                    };
+                }
                 return {
-                    id: 'cause-effect-scaffold',
+                    id: 'comparative-scaffold',
                     type: 'group',
                     oldX: position.x,
                     oldY: position.y,
-                    offsetX,
-                    offsetY,
+                    offsetX: 0,
+                    offsetY: 0
                 };
-            }
-        return {
-            id: 'cause-effect-scaffold',
-            type: 'group',
-            oldX: position.x,
-            oldY: position.y,
-            offsetX: 0,
-            offsetY: 0,
-        };
-    },
-        end: (item, monitor) => {
-        const dropResult = monitor.getDropResult();
-        const clientOffset = monitor.getClientOffset();
+            },
+            end: (item, monitor) => {
+                const dropResult = monitor.getDropResult();
+                const clientOffset = monitor.getClientOffset();
 
-        let finalX = item.oldX;
-        let finalY = item.oldY;
+                let finalX = (item as any).oldX;
+                let finalY = (item as any).oldY;
 
-        if (dropResult && typeof dropResult === 'object' && 'x' in dropResult && 'y' in dropResult) {
-            const newPosition = dropResult as { x: number; y: number };
-            finalX = newPosition.x;
-            finalY = newPosition.y;
-            setPosition({ x: finalX, y: finalY });
-            // Call onPositionUpdate if provided
-            if (onPositionUpdate) {
-                onPositionUpdate(finalX, finalY);
-            }
-        } else if (clientOffset && storyBinRef.current) {
-            // Find the actual bin element (scrollable container) within the wrapper
-            const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
-            if (!binElement) return;
-            
-            const binRect = binElement.getBoundingClientRect();
-            // Account for scroll position within the bin
-            const scrollLeft = binElement.scrollLeft;
-            const scrollTop = binElement.scrollTop;
-            
-            const wrapperWidth = 650;
-            const wrapperHeight = 390;
-                
-            let newX = clientOffset.x - binRect.left - item.offsetX + scrollLeft;
-            let newY = clientOffset.y - binRect.top - item.offsetY + scrollTop;
+                if (dropResult && typeof dropResult === 'object' && 'x' in dropResult && 'y' in dropResult) {
+                    const newPosition = dropResult as { x: number; y: number };
+                    finalX = newPosition.x;
+                    finalY = newPosition.y;
+                    setPosition({ x: finalX, y: finalY });
+                    if (onPositionUpdate) onPositionUpdate(finalX, finalY);
+                } else if (clientOffset && storyBinRef.current) {
+                    const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
+                    if (!binElement) return;
 
-            const contentWidth = binElement.scrollWidth;
-            const contentHeight = binElement.scrollHeight;
-            newX = Math.max(0, Math.min(newX, contentWidth - wrapperWidth));
-            newY = Math.max(0, Math.min(newY, contentHeight - wrapperHeight));
+                    const binRect = binElement.getBoundingClientRect();
+                    const scrollLeft = binElement.scrollLeft;
+                    const scrollTop = binElement.scrollTop;
 
-                finalX = newX;
-                finalY = newY;
-                setPosition({ x: finalX, y: finalY });
-                // Call onPositionUpdate if provided
-                if (onPositionUpdate) {
-                    onPositionUpdate(finalX, finalY);
+                    const wrapperWidth = 650;
+                    const wrapperHeight = 390;
+
+                    let newX = clientOffset.x - binRect.left - (item as any).offsetX + scrollLeft;
+                    let newY = clientOffset.y - binRect.top - (item as any).offsetY + scrollTop;
+
+                    const contentWidth = binElement.scrollWidth;
+                    const contentHeight = binElement.scrollHeight;
+                    newX = Math.max(0, Math.min(newX, contentWidth - wrapperWidth));
+                    newY = Math.max(0, Math.min(newY, contentHeight - wrapperHeight));
+
+                    finalX = newX;
+                    finalY = newY;
+                    setPosition({ x: finalX, y: finalY });
+                    if (onPositionUpdate) onPositionUpdate(finalX, finalY);
                 }
-            }
-        },
-        collect: (monitor) => ({
-            isDraggingDnd: !!monitor.isDragging(),
+            },
+            collect: (monitor) => ({ isDraggingDnd: !!monitor.isDragging() })
         }),
-    }), [position, storyBinRef, onPositionUpdate]);
+        [position, storyBinRef, onPositionUpdate]
+    );
 
-    // Handle mouse drag for wrapper
     const handleMouseDown = (e: React.MouseEvent) => {
-        // Don't start drag if clicking on close button or header buttons
-        if ((e.target as HTMLElement).closest('button')) {
-            return;
-        }
-        if (isDraggingDnd) return;
-        if (!storyBinRef.current) return;
+        if ((e.target as HTMLElement).closest('button')) return;
+        if (isDraggingDnd || !storyBinRef.current) return;
 
-        // Find the actual bin element (scrollable container) within the wrapper
         const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
         if (!binElement) return;
-
         const binRect = binElement.getBoundingClientRect();
-        // Account for scroll position within the bin
         const scrollLeft = binElement.scrollLeft;
         const scrollTop = binElement.scrollTop;
-        
+
         setIsDragging(true);
         dragStartPosition.current = { x: position.x, y: position.y };
         setDragOffset({
@@ -281,13 +224,10 @@ const CauseEffect = ({
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (!isDragging || !storyBinRef.current || isDraggingDnd) {
-                if (isDragging) {
-                    setIsDragging(false);
-                }
+                if (isDragging) setIsDragging(false);
                 return;
             }
 
-            // Find the actual bin element (scrollable container) within the wrapper
             const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
             if (!binElement) {
                 setIsDragging(false);
@@ -295,10 +235,9 @@ const CauseEffect = ({
             }
 
             const binRect = binElement.getBoundingClientRect();
-            // Account for scroll position within the bin
             const scrollLeft = binElement.scrollLeft;
             const scrollTop = binElement.scrollTop;
-            
+
             const wrapperWidth = 650;
             const wrapperHeight = 390;
 
@@ -316,14 +255,11 @@ const CauseEffect = ({
         const handleMouseUp = () => {
             if (isDragging) {
                 setIsDragging(false);
-                // Call onPositionUpdate when drag ends if position changed
                 if (dragStartPosition.current && onPositionUpdate) {
                     const positionChanged =
                         Math.abs(position.x - dragStartPosition.current.x) > 1 ||
                         Math.abs(position.y - dragStartPosition.current.y) > 1;
-                    if (positionChanged) {
-                        onPositionUpdate(position.x, position.y);
-                    }
+                    if (positionChanged) onPositionUpdate(position.x, position.y);
                 }
                 dragStartPosition.current = null;
             }
@@ -340,22 +276,12 @@ const CauseEffect = ({
         };
     }, [isDragging, dragOffset, isDraggingDnd, storyBinRef, position, onPositionUpdate]);
 
-    // Stop custom dragging when React DnD starts
     useEffect(() => {
-        if (isDraggingDnd && isDragging) {
-            setIsDragging(false);
-        }
+        if (isDraggingDnd && isDragging) setIsDragging(false);
     }, [isDraggingDnd, isDragging]);
 
-    // Calculate container position relative to story bin
-    const containerPos = storyBinRef.current
-        ? {
-            left: position.x,
-            top: position.y,
-          }
-        : { left: 0, top: 0 };
+    const containerPos = storyBinRef.current ? { left: position.x, top: position.y } : { left: 0, top: 0 };
 
-    // Combine refs for drag functionality
     const combinedRef = (element: HTMLDivElement | null) => {
         if (element) {
             drag(element);
@@ -378,9 +304,8 @@ const CauseEffect = ({
             }}
             onMouseDown={handleMouseDown}
         >
-            {/* Header */}
             <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-sm">
-                <h3 className="text-sm font-bold">Cause and Effects</h3>
+                <h3 className="text-sm font-bold">Comparative</h3>
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
@@ -388,61 +313,55 @@ const CauseEffect = ({
                     }}
                     className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                     style={{ cursor: 'pointer' }}
-                    title="Close Cause and Effects scaffold"
+                    title="Close Comparative scaffold"
                 >
                     ×
                 </button>
             </div>
 
-            {/* Groups Container - Horizontal Layout */}
             <div className="flex flex-row gap-4 p-2">
-            {/* Causes Group */}
-            <CauseEffectGroup
-                id={causesGroupId}
-                title="Causes"
-                cards={causesCards}
-                onCardAdd={handleCardAdd}
-                onCardRemove={handleCardRemove}
-                scaffoldId={scaffold?.id}
-                scaffoldGroupNumber={CAUSES_GROUP_NUMBER}
-                groups={causesGroups}
-                onGroupAdd={onGroupAdd}
-                onGroupRemove={onGroupRemove}
-                onCardAddToGroup={onCardAddToGroup}
-                onCardRemoveFromGroup={onCardRemoveFromGroup}
-                onGroupNameChange={onGroupNameChange}
-                onGroupDescriptionChange={onGroupDescriptionChange}
-                onGroupUpdate={onGroupUpdate}
-                storyBinRef={storyBinRef}
-            />
-
-            {/* Effects Group */}
-            <CauseEffectGroup
-                id={effectsGroupId}
-                title="Effects"
-                cards={effectsCards}
-                onCardAdd={handleCardAdd}
-                onCardRemove={handleCardRemove}
-                scaffoldId={scaffold?.id}
-                scaffoldGroupNumber={EFFECTS_GROUP_NUMBER}
-                groups={effectsGroups}
-                onGroupAdd={onGroupAdd}
-                onGroupRemove={onGroupRemove}
-                onCardAddToGroup={onCardAddToGroup}
-                onCardRemoveFromGroup={onCardRemoveFromGroup}
-                onGroupNameChange={onGroupNameChange}
-                onGroupDescriptionChange={onGroupDescriptionChange}
-                onGroupUpdate={onGroupUpdate}
-                storyBinRef={storyBinRef}
-            />
+                <ComparativeGroup
+                    id={leftGroupId}
+                    title={labels[LEFT_GROUP_NUMBER] || 'Item 1'}
+                    cards={leftCards}
+                    onCardAdd={handleCardAdd}
+                    onCardRemove={handleCardRemove}
+                    scaffoldId={scaffold?.id}
+                    scaffoldGroupNumber={LEFT_GROUP_NUMBER}
+                    groups={leftGroups}
+                    onGroupAdd={onGroupAdd}
+                    onGroupRemove={onGroupRemove}
+                    onCardAddToGroup={onCardAddToGroup}
+                    onCardRemoveFromGroup={onCardRemoveFromGroup}
+                    onGroupNameChange={onGroupNameChange}
+                    onGroupDescriptionChange={onGroupDescriptionChange}
+                    onGroupUpdate={onGroupUpdate}
+                    storyBinRef={storyBinRef}
+                />
+                <ComparativeGroup
+                    id={rightGroupId}
+                    title={labels[RIGHT_GROUP_NUMBER] || 'Item 2'}
+                    cards={rightCards}
+                    onCardAdd={handleCardAdd}
+                    onCardRemove={handleCardRemove}
+                    scaffoldId={scaffold?.id}
+                    scaffoldGroupNumber={RIGHT_GROUP_NUMBER}
+                    groups={rightGroups}
+                    onGroupAdd={onGroupAdd}
+                    onGroupRemove={onGroupRemove}
+                    onCardAddToGroup={onCardAddToGroup}
+                    onCardRemoveFromGroup={onCardRemoveFromGroup}
+                    onGroupNameChange={onGroupNameChange}
+                    onGroupDescriptionChange={onGroupDescriptionChange}
+                    onGroupUpdate={onGroupUpdate}
+                    storyBinRef={storyBinRef}
+                />
             </div>
-
         </div>
     );
 };
 
-// Custom group component for cause/effect groups
-type CauseEffectGroupProps = {
+type ComparativeGroupProps = {
     id: string;
     title: string;
     cards: ImageData[];
@@ -461,11 +380,11 @@ type CauseEffectGroupProps = {
     storyBinRef: React.RefObject<HTMLDivElement | null>;
 };
 
-const CauseEffectGroup = ({ 
-    id, 
-    title, 
-    cards, 
-    onCardAdd, 
+const ComparativeGroup = ({
+    id,
+    title,
+    cards,
+    onCardAdd,
     onCardRemove,
     scaffoldId,
     scaffoldGroupNumber,
@@ -478,60 +397,36 @@ const CauseEffectGroup = ({
     onGroupDescriptionChange,
     onGroupUpdate,
     storyBinRef
-}: CauseEffectGroupProps) => {
+}: ComparativeGroupProps) => {
     const groupRef = useRef<HTMLDivElement>(null);
 
-    // React DnD hook for drop functionality - accepts both images and groups
-    const [{ isOver, canDrop }, drop] = useDrop(() => ({
-        accept: ['image', 'group'],
-        drop: (item: DragItem, monitor) => {
-            // Don't process drops from the scaffold itself
-            if (item.id === 'cause-effect-scaffold') {
-                return { droppedInGroup: false };
-            }
-            // Handle image drops
-            if (item.type !== 'group' && item.groupId !== id && cards.length < 3) {
-                console.log(`Card ${item.id} dropped into ${id}`);
-                onCardAdd(item.id, id);
-                return {
-                    droppedInGroup: true,
-                    groupId: id,
-                };
-            }
-            // Handle group drops
-            if (item.type === 'group' && scaffoldId && scaffoldGroupNumber !== undefined && onGroupAdd) {
-                // Check if group doesn't already belong to this scaffold
-                if (item.scaffoldId !== scaffoldId) {
-                    console.log(`Group ${item.id} dropped into ${id} (scaffold group ${scaffoldGroupNumber})`);
-                    onGroupAdd(item.id, scaffoldId, scaffoldGroupNumber);
-                    return {
-                        droppedInScaffoldGroup: true,
-                        scaffoldId: scaffoldId,
-                        scaffoldGroupNumber: scaffoldGroupNumber,
-                    };
+    const [{ isOver, canDrop }, drop] = useDrop(
+        () => ({
+            accept: ['image', 'group'],
+            drop: (item: DragItem) => {
+                if (item.id === 'comparative-scaffold') return { droppedInGroup: false };
+                if (item.type !== 'group' && item.groupId !== id && cards.length < 3) {
+                    onCardAdd(item.id, id);
+                    return { droppedInGroup: true, groupId: id };
                 }
-            }
-            return { droppedInGroup: false };
-        },
-        canDrop: (item: DragItem) => {
-            // Don't accept the scaffold itself (it has id 'cause-effect-scaffold')
-            if (item.id === 'cause-effect-scaffold') {
-                return false;
-            }
-            // For images: can drop if not already in this group and group has less than 3 cards
-            if (item.type !== 'group') {
-                return item.groupId !== id && cards.length < 3;
-            }
-            // For groups: can drop if it's a group and doesn't already belong to this scaffold
-            return item.type === 'group' && item.scaffoldId !== scaffoldId;
-        },
-        collect: (monitor) => ({
-            isOver: monitor.isOver(),
-            canDrop: monitor.canDrop(),
+                if (item.type === 'group' && scaffoldId && scaffoldGroupNumber !== undefined && onGroupAdd) {
+                    if (item.scaffoldId !== scaffoldId) {
+                        onGroupAdd(item.id, scaffoldId, scaffoldGroupNumber);
+                        return { droppedInScaffoldGroup: true, scaffoldId, scaffoldGroupNumber };
+                    }
+                }
+                return { droppedInGroup: false };
+            },
+            canDrop: (item: DragItem) => {
+                if (item.id === 'comparative-scaffold') return false;
+                if (item.type !== 'group') return item.groupId !== id && cards.length < 3;
+                return item.type === 'group' && item.scaffoldId !== scaffoldId;
+            },
+            collect: (monitor) => ({ isOver: monitor.isOver(), canDrop: monitor.canDrop() })
         }),
-    }), [id, onCardAdd, cards.length, scaffoldId, scaffoldGroupNumber, onGroupAdd]);
+        [id, onCardAdd, cards.length, scaffoldId, scaffoldGroupNumber, onGroupAdd]
+    );
 
-    // Combine refs
     const combinedRef = (element: HTMLDivElement | null) => {
         if (element) {
             drop(element);
@@ -551,12 +446,10 @@ const CauseEffectGroup = ({
             }`}
             style={{ minHeight: '260px', width: '650px' }}
         >
-            {/* Group Header */}
             <div className="flex justify-between items-center mb-2 pb-2 border-b border-grey-light">
                 <h4 className="text-xs font-bold text-grey-darkest">{title}</h4>
             </div>
 
-            {/* Drop zone indicator when dragging over */}
             {isOver && canDrop && (
                 <div className="flex items-center justify-center h-[80%] border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 absolute inset-0 z-[105]">
                     <div className="text-blue-600 text-sm font-medium">
@@ -565,36 +458,31 @@ const CauseEffectGroup = ({
                 </div>
             )}
 
-            {/* Full group indicator when trying to drop on full group */}
             {isOver && !canDrop && cards.length >= 3 && (
                 <div className="flex items-center justify-center h-[80%] border-2 border-dashed border-red-400 rounded-lg bg-red-50">
-                    <div className="text-red-600 text-sm font-medium">
-                        Group is full (Max: 3 visuals)
-                    </div>
+                    <div className="text-red-600 text-sm font-medium">Group is full (Max: 3 visuals)</div>
                 </div>
             )}
 
-            {/* Display groups that belong to this scaffold group */}
             {groups.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-grey-light">
                     <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto" style={{ position: 'relative' }}>
                         {groups.map((group, index) => {
-                            const scaledWidth = 160; // 320px * 0.5
-                            const scaledHeight = 128; // 256px * 0.5
-                            const gap = 8; // gap-2 = 8px
-                            
+                            const scaledWidth = 160;
+                            const scaledHeight = 128;
+                            const gap = 8;
                             return (
-                                <div 
+                                <div
                                     key={group.id}
                                     className="relative group"
                                     style={{
                                         width: `${scaledWidth}px`,
                                         height: `${scaledHeight}px`,
                                         marginRight: index < groups.length - 1 ? `${gap}px` : '0',
-                                        marginBottom: `${gap}px`,
+                                        marginBottom: `${gap}px`
                                     }}
                                 >
-                                    <div 
+                                    <div
                                         style={{
                                             transform: 'scale(0.5)',
                                             transformOrigin: 'top left',
@@ -602,7 +490,7 @@ const CauseEffectGroup = ({
                                             height: '256px',
                                             position: 'absolute',
                                             top: 0,
-                                            left: 0,
+                                            left: 0
                                         }}
                                     >
                                         <GroupDiv
@@ -613,7 +501,7 @@ const CauseEffectGroup = ({
                                             cards={group.cards}
                                             initialPosition={{ x: 0, y: 0 }}
                                             onClose={onGroupRemove ? () => onGroupRemove(group.id) : () => {}}
-                                            onPositionUpdate={() => {}}  // Disable position updates inside scaffold
+                                            onPositionUpdate={() => {}}
                                             onCardAdd={onCardAddToGroup || (() => {})}
                                             onCardRemove={onCardRemoveFromGroup || (() => {})}
                                             onNameChange={onGroupNameChange || (() => {})}
@@ -624,7 +512,6 @@ const CauseEffectGroup = ({
                                             disableDrag={true}
                                         />
                                     </div>
-                                    {/* Remove button overlay - similar to image remove button */}
                                     {onGroupRemove && (
                                         <button
                                             onClick={(e) => {
@@ -632,10 +519,7 @@ const CauseEffectGroup = ({
                                                 onGroupRemove(group.id);
                                             }}
                                             className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
-                                            style={{
-                                                top: '-3px',
-                                                right: '-9px'
-                                            }}
+                                            style={{ top: '-3px', right: '-9px' }}
                                             title="Remove group from scaffold"
                                         >
                                             ×
@@ -648,7 +532,6 @@ const CauseEffectGroup = ({
                 </div>
             )}
 
-            {/* Cards Grid */}
             {cards.length > 0 && (
                 <div className="flex flex-wrap gap-1 w-full">
                     {cards.map((card) => (
@@ -664,17 +547,13 @@ const CauseEffectGroup = ({
                                     draggable={false}
                                 />
                             </div>
-                            {/* Remove button overlay */}
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onCardRemove(card.id, id);
                                 }}
                                 className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
-                                style={{
-                                    top: '-2px',
-                                    right: '-8px'
-                                }}
+                                style={{ top: '-2px', right: '-8px' }}
                                 title="Remove from group"
                             >
                                 ×
@@ -684,7 +563,6 @@ const CauseEffectGroup = ({
                 </div>
             )}
 
-            {/* Empty state */}
             {cards.length === 0 && !isOver && (
                 <div className="flex items-center justify-center h-32 text-grey-dark text-sm">
                     <span className="text-xs">Drag a visual in here to begin.</span>
@@ -694,4 +572,5 @@ const CauseEffectGroup = ({
     );
 };
 
-export default CauseEffect;
+export default Comparative;
+

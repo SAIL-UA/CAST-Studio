@@ -227,8 +227,8 @@ const QuestionAnswer = ({
             const scrollLeft = binElement.scrollLeft;
             const scrollTop = binElement.scrollTop;
             
-            const wrapperWidth = 500; // Scaffold width
-            const wrapperHeight = 300; // Approximate height
+            const wrapperWidth = 650;
+            const wrapperHeight = 390;
                 
             let newX = clientOffset.x - binRect.left - item.offsetX + scrollLeft;
             let newY = clientOffset.y - binRect.top - item.offsetY + scrollTop;
@@ -299,8 +299,8 @@ const QuestionAnswer = ({
             const scrollLeft = binElement.scrollLeft;
             const scrollTop = binElement.scrollTop;
             
-            const wrapperWidth = 500; // Scaffold width
-            const wrapperHeight = 300; // Approximate height
+            const wrapperWidth = 650;
+            const wrapperHeight = 390;
 
             let newX = e.clientX - binRect.left - dragOffset.x + scrollLeft;
             let newY = e.clientY - binRect.top - dragOffset.y + scrollTop;
@@ -370,8 +370,8 @@ const QuestionAnswer = ({
             style={{
                 left: containerPos.left,
                 top: containerPos.top,
-                width: '500px', // Width for two groups side by side (320px each + gap)
-                minHeight: '250px',
+                width: '650px',
+                minHeight: '325px',
                 cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
@@ -551,11 +551,9 @@ const QuestionAnswerGroup = ({
                     ? 'border-blue-400 border-2 bg-blue-50'
                     : isOver && !canDrop
                     ? 'border-red-400 border-2 bg-red-50'
-                    : cards.length >= 3
-                    ? 'border-grey-dark border-2'
                     : 'border-grey-lightest'
             }`}
-            style={{ minHeight: '200px', width: '500px' }}
+            style={{ minHeight: '260px', width: '650px' }}
         >
             {/* Group Header */}
             <div className="flex justify-between items-center mb-2 pb-2 border-b border-grey-light">
@@ -639,8 +637,8 @@ const QuestionAnswerGroup = ({
                                             }}
                                             className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
                                             style={{
-                                                top: '-2px',
-                                                right: '8px'
+                                                top: '-3px',
+                                                right: '-9px'
                                             }}
                                             title="Remove group from scaffold"
                                         >
@@ -656,10 +654,10 @@ const QuestionAnswerGroup = ({
 
             {/* Cards Grid */}
             {cards.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 h-full">
+                <div className="flex flex-wrap gap-1 w-full">
                     {cards.map((card) => (
-                        <div key={card.id} className="relative group h-fit">
-                            <div className="transform scale-75 origin-top-left">
+                        <div key={card.id} className="relative group" style={{ width: 91, height: 130 }}>
+                            <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: 130 }}>
                                 <DraggableCard
                                     image={card}
                                     index={card.index}
@@ -679,7 +677,7 @@ const QuestionAnswerGroup = ({
                                 className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
                                 style={{
                                     top: '-2px',
-                                    right: '8px'
+                                    right: '-8px'
                                 }}
                                 title="Remove from group"
                             >

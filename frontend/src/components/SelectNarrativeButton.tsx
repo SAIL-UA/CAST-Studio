@@ -10,11 +10,12 @@ import { logAction } from '../utils/userActionLogger';
 type SelectNarrativeButtonProps = {
     setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;
     value: string;
-    setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    setRightNarrativeExamplesOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // Select narrative button component
-const SelectNarrativeButton = ({ setSelectedPattern, value, setStoryLoading }: SelectNarrativeButtonProps) => {
+const SelectNarrativeButton = ({ setSelectedPattern, value, setRightNarrativeExamplesOpen, setRightNarrativePatternsOpen }: SelectNarrativeButtonProps) => {
     // Handle button click
     const handleSelectNarrative = async (e: React.MouseEvent, value: string) => {
         // Delete current scaffold from backend
@@ -23,6 +24,8 @@ const SelectNarrativeButton = ({ setSelectedPattern, value, setStoryLoading }: S
         // Set selected pattern to the new value
         setSelectedPattern(value);
         logAction(e, { "narrative_pattern": value });
+        setRightNarrativeExamplesOpen(false);
+        setRightNarrativePatternsOpen(false);
     }
 
     return (
