@@ -498,8 +498,6 @@ const TimeBasedPeriod = ({
                     ? 'border-blue-400 border-2 bg-blue-50'
                     : isOver && !canDrop
                     ? 'border-red-400 border-2 bg-red-50'
-                    : cards.length >= 3
-                    ? 'border-grey-dark border-2'
                     : 'border-grey-lightest'
             }`}
             style={{ minHeight: '260px' }}
