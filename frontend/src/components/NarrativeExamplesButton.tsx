@@ -15,7 +15,7 @@ const NarrativeExamplesButton = ({ value, setRightNarrativeExamplesOpen, setSele
 
     const handleClick = (e: React.MouseEvent) => {
         logAction(e, { narrative_pattern: value });
-        setSelectedPattern(value);
+        // setSelectedPattern(value);
         setRightNarrativeExamplesOpen(true);
     }
 
