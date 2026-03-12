@@ -577,7 +577,7 @@ const TimeBasedPeriod = ({
                                                 onGroupRemove(group.id);
                                             }}
                                             className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
-                                            style={{ top: '-2px', right: '8px' }}
+                                            style={{ top: '-3px', right: '-9px' }}
                                             title="Remove group from scaffold"
                                         >
                                             ×
@@ -611,7 +611,7 @@ const TimeBasedPeriod = ({
                                     onCardRemove(card.id, id);
                                 }}
                                 className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
-                                style={{ top: '-2px', right: '8px' }}
+                                style={{ top: '-2px', right: '-8px' }}
                                 title="Remove from period"
                             >
                                 ×

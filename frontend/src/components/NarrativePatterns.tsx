@@ -57,9 +57,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
 
                         <SelectNarrativeButton
-                        setSelectedPattern={setSelectedPattern}
-                        value="cause_and_effect"
-                        setStoryLoading={setStoryLoading} />
+                            setSelectedPattern={setSelectedPattern}
+                            value="cause_and_effect"
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                            setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                        />
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
@@ -85,9 +87,10 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <p className="text-xs">A central question, followed by evidence to support the answer.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
-                        setSelectedPattern={setSelectedPattern}
-                        setStoryLoading={setStoryLoading}
-                        value="question_answer"
+                            setSelectedPattern={setSelectedPattern}
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                            setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                            value="question_answer"
                         />
                         {!center && (
 
@@ -116,9 +119,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <p className="text-xs">A sequence of events in time to highlight patterns and trends.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
-                        setSelectedPattern={setSelectedPattern}
-                        value="time_based"
-                        setStoryLoading={setStoryLoading} />
+                            setSelectedPattern={setSelectedPattern}
+                            value="time_based"
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                            setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                        />
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
@@ -144,9 +149,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <p className="text-xs">A breakdown of a phenomenon into influencing factors.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
-                        setSelectedPattern={setSelectedPattern}
-                        value="factor_analysis"
-                        setStoryLoading={setStoryLoading} />
+                            setSelectedPattern={setSelectedPattern}
+                            value="factor_analysis"
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                            setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                        />
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
@@ -172,9 +179,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <p className="text-xs">A broad snapshot of a phenomenon, followed by finer details.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
-                        setSelectedPattern={setSelectedPattern}
-                        value="overview_to_detail"
-                        setStoryLoading={setStoryLoading} />
+                            setSelectedPattern={setSelectedPattern}
+                            value="overview_to_detail"
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                            setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                        />
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
@@ -200,9 +209,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <p className="text-xs">A challenge, followed by evidence for a solution.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
-                        setSelectedPattern={setSelectedPattern}
-                        value="problem_solution"
-                        setStoryLoading={setStoryLoading} />
+                            setSelectedPattern={setSelectedPattern}
+                            value="problem_solution"
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                            setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                        />
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
@@ -228,9 +239,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <p className="text-xs">A side-by-side view of events to reveal similarities and differences.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
-                        setSelectedPattern={setSelectedPattern}
-                        value="comparative"
-                        setStoryLoading={setStoryLoading} />
+                            setSelectedPattern={setSelectedPattern}
+                            value="comparative"
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                            setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                        />
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
@@ -256,9 +269,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <p className="text-xs">Discusses the key stages of a system or pipeline.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
-                        setSelectedPattern={setSelectedPattern}
-                        value="workflow_process"
-                        setStoryLoading={setStoryLoading} />
+                            setSelectedPattern={setSelectedPattern}
+                            value="workflow_process"
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                            setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                        />
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
@@ -284,9 +299,11 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         <p className="text-xs">A striking fact, followed by analysis of explanatory factors.</p>
                         {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
                         <SelectNarrativeButton
-                        setSelectedPattern={setSelectedPattern}
-                        value="shock_lead"
-                        setStoryLoading={setStoryLoading} />
+                            setSelectedPattern={setSelectedPattern}
+                            value="shock_lead"
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                            setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
+                        />
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
