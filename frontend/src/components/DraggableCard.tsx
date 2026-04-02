@@ -49,6 +49,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     }
   }, [image.short_desc, editingShortDesc]);
 
+
   // Sync tempLongDesc when image prop changes (e.g. after AI generates description and parent refetches)
   useEffect(() => {
     setTempLongDesc(image.long_desc || '');
@@ -384,13 +385,11 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
           log-id={"draggable-card"}
           ref={cardRef}
           onDragEnd={handleDragEnd}
-          className={`card-width overflow-hidden rounded-sm shadow-md bg-grey-lighter-2 border-bama-crimson border-1 ${
-            image.long_desc?.trim() ? 'border border-grey-lightest' : 'border-2 border-red-500'
-          }`}
+          className="card-width overflow-hidden rounded-sm shadow-md bg-grey-lighter-2 border border-grey-lightest"
         >
           <div id="card-header" className="flex p-1 bg-bama-crimson text-tiny-bold">
-            <div id="card-header-left" className="flex justify-start w-1/2">
-              <p className="text-white font-sans">
+            <div id="card-header-left" className="flex justify-start w-1/2 cursor-pointer" onClick={handleShow}>
+              <p className="text-white font-sans hover:underline">
                 Visual {index + 1}
               </p>
             </div>
@@ -398,9 +397,11 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
               <button
                 log-id="edit-figure-button"
                 onClick={handleShow}
-                className="text-white font-roboto-medium hover:font-roboto-bold hover:underline transition-all duration-150"
+                className="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                style={{ fontSize: '0.5rem' }}
+                title="Edit figure"
               >
-                Edit
+                ✎
               </button>
             </div>
           </div>
@@ -453,60 +454,39 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
 
-              {/* Modal Footer */}
-              <div className="flex flex-col min-lg:flex-row items-center justify-center min-lg:justify-between gap-4">
-                {/* Storyboard action button */}
-                {image.in_storyboard ? (
-                  <button log-id="move-figure-to-recycle-bin-button"
-                    onClick={handleTrash}
-                    className="w-full min-lg:w-1/3 px-4 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-150"
+              {/* Modal Header — title + action buttons on one line */}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">Visual {index + 1}</h2>
+                <div className="flex items-center gap-1">
+                  {image.in_storyboard ? (
+                    <button log-id="move-figure-to-recycle-bin-button"
+                      onClick={handleTrash}
+                      className="bg-yellow-600 text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                    >
+                      Move to Recycle Bin
+                    </button>
+                  ) : (
+                    <button log-id="restore-figure-to-storyboard-button"
+                      onClick={handleUnTrash}
+                      className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                    >
+                      Restore to Storyboard
+                    </button>
+                  )}
+                  <button log-id="delete-figure-button"
+                    onClick={handleDelete}
+                    className="bg-red-700 text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
                   >
-                    Move to Recycle Bin
+                    Permanently Delete
                   </button>
-                ) : (
-                  <button log-id="restore-figure-to-storyboard-button"
-                    onClick={handleUnTrash}
-                    className="w-full min-lg:w-1/3 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-150"
+                  <button log-id="save-and-close-figure-button"
+                    onClick={(e) => handleClose(e)}
+                    className="text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                    style={{ backgroundColor: '#348b94' }}
                   >
-                    Restore to Storyboard
+                    Save & Close
                   </button>
-                )}
-                
-                {/* Delete button */}
-                <button log-id="delete-figure-button"
-                  onClick={handleDelete}
-                  className="w-full min-lg:w-1/3 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-150"
-                >
-                  Permanently Delete
-                </button>
-
-                {/* Save & Close button */}
-                <button log-id="save-and-close-figure-button"
-                  onClick={(e) => handleClose(e)}
-                  className="w-full min-lg:w-1/3 px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-150"
-                >
-                  Save & Close
-                </button>
-              </div>
-
-
-              <br/>
-              {/* Modal Header */}
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Editing: {image.id}</h2>
-                <button
-                  log-id="close-figure-edit-modal-button"
-                  onClick={(e) => {
-                    logAction(e, { image_metadata: imageMetadataRef.current });
-                    setShowModal(false);
-                    document.body.style.overflow = 'auto';
-                  }}
-                  className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full p-2 transition-all duration-150"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                </div>
               </div>
 
               {/* Image Display */}
@@ -521,43 +501,41 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
               {/* Form Fields */}
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="shortDesc" className="block text-sm font-medium text-grey-darkest mb-2">
-                    Add a description for this visual. 
-                  </label>
+                  <h4 className="text-base font-semibold text-grey-darkest mb-2">
+                    Add a description for this visual.
+                  </h4>
                   <textarea
                     id="shortDesc"
                     rows={2}
                     value={tempShortDesc}
                     onChange={(e) => setTempShortDesc(e.target.value)}
-                    className="w-full px-3 py-2 border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-xs border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="longDesc" className="block text-sm font-medium text-grey-darkest mb-2">
-                    Ask AI to create a description for this visual.
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-base font-semibold text-grey-darkest">
+                      Ask AI to create a description for this visual.
+                    </h4>
+                    <button log-id="generate-description-button"
+                      onClick={handleGenerateDescription}
+                      disabled={loadingGenDesc}
+                      className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loadingGenDesc ? 'Generating...' : 'Generate Description'}
+                    </button>
+                  </div>
                   {loadingGenDesc ? <GeneratingPlaceholder contentName="description" lines={5} /> : (
                   <textarea
                     id="longDesc"
                     rows={4}
                     value={tempLongDesc}
                     onChange={(e) => setTempLongDesc(e.target.value)}
-                    className="w-full px-3 py-2 border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-xs border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   )}
                 </div>
-              </div>
-
-              {/* Generate Description Button */}
-              <div className="mt-4 text-center">
-                <button log-id="generate-description-button"
-                  onClick={handleGenerateDescription}
-                  disabled={loadingGenDesc}
-                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
-                >
-                  {loadingGenDesc ? 'Generating...' : 'Generate Description'}
-                </button>
               </div>
 
 

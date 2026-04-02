@@ -239,24 +239,26 @@ const DataStories = () => {
 
     const headerPattern = formatStoryStructureName(storyData?.story_structure_id);
 
-    // Unified image components for all ReactMarkdown sections
-    const imageComponents = {
+    // Unified components for all ReactMarkdown sections
+    const markdownComponents = {
+        p: ({node, children, ...props}: any) => {
+            // If this paragraph contains an image, render as a div to avoid nesting issues
+            const hasImage = Array.isArray(children)
+                ? children.some((child: any) => child?.type?.name === 'img' || child?.props?.src)
+                : false;
+            if (hasImage) {
+                return <div {...props}>{children}</div>;
+            }
+            return <p className="mb-4" {...props}>{children}</p>;
+        },
         img: ({node, ...props}: any) => {
-            console.log('ReactMarkdown img component received props:', props);
-            console.log('Image src:', props.src);
-            
             return (
-                <div className="my-6 flex flex-col items-center justify-center w-full h-[35dvh]">
+                <div className="flex flex-col items-center justify-center w-full h-[35dvh]" style={{ marginTop: '2.5rem', marginBottom: '1rem' }}>
                     <img
                         {...props}
                         className="w-auto h-full object-contain rounded-md shadow-sm m-0 p-0"
-                        onLoad={() => console.log('Image loaded successfully:', props.src)}
-                        onError={(e) => {
-                            console.error('Image failed to load:', props.src, e);
-                            console.log('Image error target:', e.target);
-                        }}
                     />
-                    <p className="text-sm text-grey-dark mt-2 italic">
+                    <p className="text-sm text-grey-dark mt-2 italic" style={{ marginBottom: '2rem' }}>
                         {props.alt || 'Figure'}
                     </p>
                 </div>
@@ -353,7 +355,7 @@ const DataStories = () => {
                                         <h4 className="font-semibold text-grey-darkest mb-2">Theme and Objective</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
                                             <ReactMarkdown 
-                                                components={imageComponents}
+                                                components={markdownComponents}
                                                 urlTransform={urlTransform}
                                                 skipHtml={false}
                                             >
@@ -369,7 +371,7 @@ const DataStories = () => {
                                         <h4 className="font-semibold text-grey-darkest mb-2">Figure Categories</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
                                             <ReactMarkdown 
-                                                components={imageComponents}
+                                                components={markdownComponents}
                                                 urlTransform={urlTransform}
                                                 skipHtml={false}
                                             >
@@ -385,7 +387,7 @@ const DataStories = () => {
                                         <h4 className="font-semibold text-grey-darkest mb-2">Sequence Justification</h4>
                                         <div className="text-grey-darkest whitespace-pre-wrap">
                                             <ReactMarkdown 
-                                                components={imageComponents}
+                                                components={markdownComponents}
                                                 urlTransform={urlTransform}
                                                 skipHtml={false}
                                             >
@@ -403,7 +405,7 @@ const DataStories = () => {
                                             {processedRecommended.map((md, index) => (
                                                 <li key={index} className="mb-4">
                                                     <ReactMarkdown 
-                                                        components={imageComponents}
+                                                        components={markdownComponents}
                                                         urlTransform={urlTransform}
                                                         skipHtml={false}
                                                     >
@@ -435,7 +437,7 @@ const DataStories = () => {
                             <div className="p-4 rounded-lg">
                                 <div className="prose max-w-none text-grey-darkest leading-relaxed text-base">
                                     <ReactMarkdown
-                                        components={imageComponents}
+                                        components={markdownComponents}
                                         urlTransform={urlTransform}
                                         skipHtml={false}
                                     >

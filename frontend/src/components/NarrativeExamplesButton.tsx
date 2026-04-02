@@ -7,15 +7,15 @@ import { logAction } from '../utils/userActionLogger';
 type NarrativeExamplesButtonProps = {
     value: string;
     setRightNarrativeExamplesOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;
+    setExamplesPattern: React.Dispatch<React.SetStateAction<string>>;
 }
 
 // Narrative Examples Button Component
-const NarrativeExamplesButton = ({ value, setRightNarrativeExamplesOpen, setSelectedPattern }: NarrativeExamplesButtonProps) => {
+const NarrativeExamplesButton = ({ value, setRightNarrativeExamplesOpen, setExamplesPattern }: NarrativeExamplesButtonProps) => {
 
     const handleClick = (e: React.MouseEvent) => {
         logAction(e, { narrative_pattern: value });
-        setSelectedPattern(value);
+        setExamplesPattern(value);
         setRightNarrativeExamplesOpen(true);
     }
 

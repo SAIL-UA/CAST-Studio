@@ -38,7 +38,7 @@ from config.celery import app as celery_app
 from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
-  JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData
+  JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress
 )
 
 # Serializers
@@ -535,7 +535,33 @@ class GetNarrativeCacheView(APIView):
     
     return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
 
-  
+
+class TaskProgressView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    task_id = request.query_params.get('task_id')
+    if not task_id:
+      return Response({"error": "task_id required"}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+      progress = TaskProgress.objects.get(task_id=task_id, user=request.user)
+      return Response({
+        "current_stage": progress.current_stage,
+        "total_stages": progress.total_stages,
+        "stage_name": progress.stage_name,
+        "substage": progress.substage,
+        "error": progress.error,
+      })
+    except TaskProgress.DoesNotExist:
+      return Response({
+        "current_stage": 0,
+        "total_stages": 1,
+        "stage_name": "Starting...",
+        "substage": None,
+        "error": None,
+      })
+
+
 class UpdateNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
@@ -708,16 +734,16 @@ class ExportStoryView(APIView):
             "sequence_response": cache.sequence_justification,
           }
 
-      # Build structured sections for rendering
+      # Build structured sections for rendering — story first, then reasoning
       sections = []
+      if payload.get('narrative'):
+        sections.append(("Story", str(payload.get('narrative')).strip()))
       if payload.get('theme_response'):
         sections.append(("Theme & Objective", str(payload.get('theme_response')).strip()))
       if payload.get('categorize_figures_response'):
         sections.append(("Figure Categories", str(payload.get('categorize_figures_response')).strip()))
       if payload.get('sequence_response'):
         sections.append(("Sequence Justification", str(payload.get('sequence_response')).strip()))
-      if payload.get('narrative'):
-        sections.append(("Story", str(payload.get('narrative')).strip()))
       rec = payload.get('recommended_order') or []
       if isinstance(rec, list) and rec:
         rec_text = "\n".join([f"- {str(f)}" for f in rec])

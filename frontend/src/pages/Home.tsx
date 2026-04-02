@@ -33,6 +33,7 @@ const Home = () => {
     const [feedbackItems, setFeedbackItems] = useState<FeedbackCardData[]>([]);
     const [rightNarrativeExamplesOpen, setRightNarrativeExamplesOpen] = useState(false);
     const [selectedPattern, setSelectedPattern] = useState('');
+    const [examplesPattern, setExamplesPattern] = useState('');
     const [storyLoading, setStoryLoading] = useState(false);
 
     const [leftMenuOpen, setLeftMenuOpen] = useState(false);
@@ -88,7 +89,8 @@ const Home = () => {
                             setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
                             center={true}
                             setStoryLoading={setStoryLoading}
-                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} />
+                            setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                            setExamplesPattern={setExamplesPattern} />
                         </div>
                     ) : (
                         <div className="h-screen">
@@ -162,7 +164,7 @@ const Home = () => {
                             }}
                         />
                         {/* Panel */}
-                        <div id="right-home" className="fixed top-0 right-0 bottom-0 w-[320px] max-w-[90vw] bg-grey-lighter-2 shadow-xl z-[501] overflow-y-auto">
+                        <div id="right-home" className="fixed top-0 right-0 bottom-0 w-1/5 min-w-[256px] bg-grey-lighter-2 shadow-xl z-[501] overflow-y-auto">
                             {/* Close button */}
                             <div className="flex justify-end p-2">
                                 <button
@@ -182,7 +184,7 @@ const Home = () => {
                                     <FeedbackPanel items={feedbackItems} onClose={() => setRightFeedbackOpen(false)} />
                                 ) : rightNarrativeExamplesOpen ? (
                                     <NarrativeExamples
-                                        selectedPattern={selectedPattern}
+                                        examplesPattern={examplesPattern}
                                         setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
                                     />
                                 ) : (
@@ -192,6 +194,7 @@ const Home = () => {
                                         setRightNarrativePatternsOpen={setRightNarrativePatternsOpen}
                                         setStoryLoading={setStoryLoading}
                                         setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
+                                        setExamplesPattern={setExamplesPattern}
                                     />
                                 )}
                             </div>

@@ -4,8 +4,8 @@ import { getImageDataAll, updateImageData as updateImageDataAPI } from '../servi
 
 // Import components
 import Bin from './Bin';
-import ClearAllButton from './ClearAllButton';
 import DeleteAllButton from './DeleteAllButton';
+import RestoreAllButton from './RestoreAllButton';
 
 // Import types
 import { ImageData } from '../types/types';
@@ -82,10 +82,10 @@ const RecycleBoard = ({ images, setImages, loading, fetchUserData, updateImageDa
                                 await fetchUserData();
                             }}
                         />
-                        <ClearAllButton 
+                        <RestoreAllButton
                             images={images}
-                            setImages={setImages}
-                            onClearComplete={async () => {
+                            handleImageRestore={handleImageRestore}
+                            onRestoreComplete={async () => {
                                 await fetchUserData();
                             }}
                         />

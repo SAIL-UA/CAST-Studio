@@ -157,6 +157,32 @@ class ImageData(models.Model):
     managed = True
 
     
+class TaskProgress(models.Model):
+  """
+  Tracks progress of async Celery tasks (narrative generation, feedback, etc.)
+  """
+  user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='task_progress')
+  task_type = models.CharField(max_length=64)
+  task_id = models.CharField(max_length=255)
+  current_stage = models.IntegerField(default=0)
+  total_stages = models.IntegerField(default=1)
+  stage_name = models.CharField(max_length=255, default="")
+  substage = models.CharField(max_length=255, null=True, blank=True)
+  error = models.TextField(null=True, blank=True)
+  created_at = models.DateTimeField(auto_now_add=True)
+
+  def __str__(self):
+    return f"{self.user.username} - {self.task_type} - {self.task_id} - {self.current_stage}/{self.total_stages}"
+
+  class Meta:
+    db_table = 'task_progress'
+    managed = True
+    indexes = [
+      models.Index(fields=['task_id']),
+      models.Index(fields=['user', 'task_type']),
+    ]
+
+
 class NarrativeCache(models.Model):
   """
   Narrative cache.

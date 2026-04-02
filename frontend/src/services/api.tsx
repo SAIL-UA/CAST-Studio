@@ -214,6 +214,11 @@ export const getNarrativeCache = async() => {
   return response;
 };
 
+export const getTaskProgress = async (taskId: string) => {
+  const response = await API.get('/task/progress/', { params: { task_id: taskId } });
+  return response.data;
+};
+
 export const updateNarrativeCache = async(data: any) => {
   const response = await API.post('/narrative/cache/update/', { data })
   return response.data; 

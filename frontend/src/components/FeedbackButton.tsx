@@ -1,25 +1,47 @@
 // Import dependencies
+import { useState } from 'react';
 import { requestFeedback, requestFeedbackStatus } from '../services/api';
 import { logAction, captureActionContext } from '../utils/userActionLogger';
+import { useTaskProgress } from '../hooks/useTaskProgress';
+import ProgressButton from './ProgressButton';
 
 type FeedbackItem = { title: string; text: string };
 
 const FeedbackButton = () => {
+    const [taskId, setTaskId] = useState<string | null>(null);
+    const [feedbackLoading, setFeedbackLoading] = useState(false);
+    const { progress, stageName, error } = useTaskProgress(taskId);
+
+    // Handle error from progress tracking
+    if (error && feedbackLoading) {
+        alert(`Feedback generation failed during: ${stageName}\n\n${error}`);
+        setFeedbackLoading(false);
+        setTaskId(null);
+    }
+
     const handleFeedback = async (e: React.MouseEvent) => {
         const ctx = captureActionContext(e);
+        setFeedbackLoading(true);
+
         try {
             // Start background task
             const startResp = await requestFeedback({});
-            const taskId: string = startResp?.task_id;
-            if (!taskId) return;
+            const celeryTaskId: string = startResp?.task_id;
+            if (!celeryTaskId) {
+                setFeedbackLoading(false);
+                return;
+            }
+
+            // Start progress tracking
+            setTaskId(celeryTaskId);
 
             // Poll until complete
             const start = Date.now();
-            const timeoutMs = 60_000; // 60s safety timeout
+            const timeoutMs = 60_000;
             const intervalMs = 1500;
 
             const poll = async (): Promise<FeedbackItem[] | null> => {
-                const { status, data } = await requestFeedbackStatus(taskId);
+                const { status, data } = await requestFeedbackStatus(celeryTaskId);
                 if (status === 200 && Array.isArray(data)) {
                     return data as FeedbackItem[];
                 }
@@ -52,20 +74,26 @@ const FeedbackButton = () => {
                 logAction(ctx, { "feedback_items": items })
             }
         } catch (err) {
-            // Silent failure for now; optionally surface a toast later
             console.error('Feedback request failed:', err);
+        } finally {
+            setFeedbackLoading(false);
+            setTaskId(null);
         }
     };
 
     return (
-        <button
+        <ProgressButton
             id="feedback-button"
-            log-id="feedback-button"
-            className="bg-red-400 text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+            logId="feedback-button"
+            color="#f87171"
+            label="Request Feedback"
+            progress={progress}
+            isRunning={feedbackLoading}
             onClick={handleFeedback}
+            disabled={feedbackLoading}
         >
-            Request Feedback
-        </button>
+            {feedbackLoading ? (stageName || 'Generating...') : 'Request Feedback'}
+        </ProgressButton>
     );
 };
 

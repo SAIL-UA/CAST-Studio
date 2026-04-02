@@ -12,6 +12,23 @@ from .pydandtic import STORY_SCAFFOLDS
 
 logger = logging.getLogger(__name__)
 
+
+def update_progress(user_id, task_type, task_id, current_stage, total_stages, stage_name, substage=None, error=None):
+    """Update task progress in the database for frontend polling."""
+    TaskProgress = _get_model('api', 'TaskProgress')
+    TaskProgress.objects.update_or_create(
+        task_id=task_id,
+        defaults={
+            "user_id": user_id,
+            "task_type": task_type,
+            "current_stage": current_stage,
+            "total_stages": total_stages,
+            "stage_name": stage_name,
+            "substage": substage,
+            "error": error,
+        }
+    )
+
 # Guardrail against oversized payloads when attaching image data.
 MAX_FEEDBACK_IMAGES = 12
 
@@ -948,8 +965,8 @@ Attached images correspond to the figures listed above.
         return [{"title": "Error", "text": f"Error generating feedback: {e}"}]
 
 
-@shared_task
-def generate_feedback_task(user_id: str, storyboard_id: str | None = None) -> list[dict]:
+@shared_task(bind=True)
+def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None) -> list[dict]:
     """
     Generate lightweight feedback by inspecting the user's storyboard data.
 
@@ -966,7 +983,15 @@ def generate_feedback_task(user_id: str, storyboard_id: str | None = None) -> li
         "meta": { "storyboard_id": "...", "counts": {"groups": 2, "nongrouped_images": 5, "storyboard_images": 7} }
       }
     """
+    task_id = self.request.id
+    TOTAL_STAGES = 2
+
+    def _progress(stage, name, substage=None):
+        update_progress(user_id, "feedback", task_id, stage, TOTAL_STAGES, name, substage)
+
     try:
+        _progress(0, "Collating...")
+
         User = get_user_model()
         ImageData = _get_model('api', 'ImageData')
         GroupData = _get_model('api', 'GroupData')
@@ -1043,6 +1068,7 @@ def generate_feedback_task(user_id: str, storyboard_id: str | None = None) -> li
                 "text": "Add images to the storyboard to request AI feedback."
             }]
 
+        _progress(1, "Analyzing...")
         # Call OpenAI to generate feedback
         items = _generate_feedback(groups_data, ungrouped_data, counts)
         # Ensure items have the minimal shape expected by the GET mapper
@@ -1062,9 +1088,12 @@ def generate_feedback_task(user_id: str, storyboard_id: str | None = None) -> li
                 "title": "Storyboard summary",
                 "text": f"You have {groups_count} groups and {nongrouped_count} ungrouped images."
             }]
+        _progress(TOTAL_STAGES, "Complete")
         return safe_items
     except Exception as e:
         logger.error(f"Error generating feedback for user {user_id}: {e}")
+        if task_id:
+            update_progress(user_id, "feedback", task_id, -1, TOTAL_STAGES, "Error", error=str(e))
         return [{"title": "Error", "text": str(e)}]
 
 @shared_task
@@ -1407,17 +1436,25 @@ def _fetch_all_storyboard_data(user, story_structure_id=None):
     return output_json
 
 
-@shared_task
-def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
+@shared_task(bind=True)
+def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=False):
     User = get_user_model()
     ImageData = _get_model('api', 'ImageData')
     GroupData = _get_model('api', 'GroupData')
     ScaffoldData = _get_model('api', 'ScaffoldData')
     NarrativeCache = _get_model('api', 'NarrativeCache')
 
+    task_id = self.request.id
+    TOTAL_STAGES = 8
+
+    def _progress(stage, name, substage=None):
+        update_progress(user_id, "narrative", task_id, stage, TOTAL_STAGES, name, substage)
+
     logger.info(f"Generating story with structure: {story_structure_id}")
 
     try:
+        _progress(0, "Checking...")
+
         # Make sure all images in storyboard have a description
         user = User.objects.get(id=user_id)
 
@@ -1449,6 +1486,7 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
             generate_description_task(image.id)
 
         # Wait for all descriptions to finish generating
+        _progress(1, "Describing...")
         wait_timeout_seconds = 300
         poll_interval_seconds = 1
         wait_deadline = time.time() + wait_timeout_seconds
@@ -1466,6 +1504,10 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
             if pending_count == 0:
                 break
 
+            total_needing = images_needing_desc.count()
+            done_count = total_needing - pending_count
+            _progress(1, "Describing...")
+
             if time.time() >= wait_deadline:
                 pending_files = list(
                     pending_desc_qs.values_list("filepath", flat=True)[:5]
@@ -1479,6 +1521,8 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
                 break
 
             time.sleep(poll_interval_seconds)
+
+        _progress(2, "Categorizing...")
 
         # Recompute storyboard images to only include visuals with real descriptions.
         storyboard_images = storyboard_qs.exclude(
@@ -1505,12 +1549,14 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
 
         all_descriptions_text = "\n".join(all_descriptions)
 
+        _progress(3, "Structuring...")
         story_structure_id = _resolve_story_structure_id(
             story_structure_id,
             all_descriptions_text,
         )
         logger.info(f"Using story structure: {story_structure_id}")
 
+        _progress(4, "Fetching...")
         # Fetch all storyboard data (scaffolds, groups, figures) using the resolved structure id
         storyboard_data = _fetch_all_storyboard_data(user, story_structure_id)
         logger.info(f"[NARRATIVE] Storyboard data: {json.dumps(storyboard_data, indent=4)}")
@@ -1521,7 +1567,9 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
 
         # Branch based on presence of scaffold data first, then use_groups flag, to keep backwards compatibility.
         if scaffold_data:
+            _progress(5, "Theming...")
             theme = _understand_theme_objective(all_descriptions_text)
+            _progress(6, "Sequencing...")
             sequence = _sequence_figures_with_scaffolds(
                 scaffold_data,
                 non_scaffold_groups,
@@ -1529,6 +1577,7 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
                 theme,
                 story_structure_id,
             )
+            _progress(7, "Composing...")
             story = _build_story_with_scaffolds(
                 scaffold_data,
                 non_scaffold_groups,
@@ -1610,10 +1659,13 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
 
             all_descriptions_grouped_text = "\n".join(all_descriptions_grouped)
 
+            _progress(5, "Theming...")
             theme = _understand_theme_objective(all_descriptions_grouped_text)
+            _progress(6, "Sequencing...")
             sequence = _sequence_figures_with_groups(
                 groups_data, ungrouped_data, theme, story_structure_id
             )
+            _progress(7, "Composing...")
             story = _build_story_with_groups(groups_data, ungrouped_data, sequence)
             recommended_order = extract_figure_filenames(sequence)
 
@@ -1635,12 +1687,15 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
 
         else:
             # Flat narrative generation (backward compatible)
+            _progress(5, "Theming...")
             theme = _understand_theme_objective(all_descriptions_text)
+            _progress(6, "Sequencing...")
             sequence = _sequence_figures(
                 flat_figures,
                 theme,
                 story_structure_id,
             )
+            _progress(7, "Composing...")
             story = _build_story(flat_figures, sequence)
             recommended_order = extract_figure_filenames(sequence)
 
@@ -1683,11 +1738,18 @@ def generate_narrative_task(user_id, story_structure_id=None, use_groups=False):
                 cache.sequence_justification = sequence
                 cache.save()
 
+        # Mark progress complete AFTER cache is written
+        _progress(TOTAL_STAGES, "Complete")
+
         logger.info(f"Successfully generated {generation_mode} narrative for user {user.username} using structure: {story_structure_name}")
         return f"Successfully generated {generation_mode} narrative for user {user.username} using structure: {story_structure_name}"
     except User.DoesNotExist:
         logger.error(f"User with id {user_id} not found")
+        if task_id:
+            update_progress(user_id, "narrative", task_id, -1, TOTAL_STAGES, "Error", error=f"User with id {user_id} not found")
         return f"User with id {user_id} not found"
-    except Exception:
+    except Exception as e:
         logger.exception("Error generating narrative")
+        if task_id:
+            update_progress(user_id, "narrative", task_id, -1, TOTAL_STAGES, "Error", error=str(e))
         raise

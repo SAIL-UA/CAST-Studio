@@ -54,7 +54,7 @@
 }
 
 .text-tiny-bold {
-  font-size: 0.5rem;
+  font-size: 0.6rem;
   font-weight: 500;
 }
 
@@ -137,6 +137,10 @@ background-color: #eaf1f7;
   }
 
   #generate-story-button{
+    font-size: 0.75rem;
+  }
+
+  #craft-story-button{
     font-size: 0.75rem;
   }
 

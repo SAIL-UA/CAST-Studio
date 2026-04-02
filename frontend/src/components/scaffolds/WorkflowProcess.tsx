@@ -339,7 +339,7 @@ const WorkflowProcess = ({
             onMouseDown={handleMouseDown}
         >
             <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-sm">
-                <h3 className="text-sm font-bold">Workflow / Process</h3>
+                <h3 className="text-sm font-bold">Narrative Structure: Workflow / Process</h3>
                 <div className="flex items-center gap-1">
                     {displaySlotCount < MAX_SLOTS && (
                         <button
@@ -482,14 +482,14 @@ const WorkflowStage = ({
     return (
         <div
             ref={combinedRef}
-            className={`p-2 bg-white rounded border transition-all duration-200 flex-1 relative min-w-0 ${
+            className={`p-2 bg-[rgb(228,237,245)] rounded border transition-all duration-200 flex-1 relative min-w-0 ${
                 isOver && canDrop
                     ? 'border-blue-400 border-2 bg-blue-50'
                     : isOver && !canDrop
                     ? 'border-red-400 border-2 bg-red-50'
                     : cards.length >= 3
                     ? 'border-grey-dark border-2'
-                    : 'border-grey-lightest'
+                    : 'border-[rgb(218,230,236)]'
             }`}
             style={{ minHeight: '260px' }}
         >

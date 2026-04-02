@@ -1,16 +1,15 @@
 // Import dependencies
-import { useState, useRef } from 'react';
-import { generateDescription } from '../services/api';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { generateDescription, getImageDataAll } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
 import type { ImageData } from '../types/types';
+
+const DESCRIPTION_PLACEHOLDER = 'Ask AI to create a description for this visual.';
+const POLL_INTERVAL_MS = 2500;
 
 type AnnotateVisualsButtonProps = {
   images: ImageData[];
   storyLoading?: boolean;
-  /**
-   * Optional callback to refresh image data from the backend
-   * after AI description generation completes.
-   */
   onDescriptionsUpdated?: () => void | Promise<void>;
 };
 
@@ -18,10 +17,25 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
   const [menuOpen, setMenuOpen] = useState(false);
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [aiRunning, setAiRunning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [totalToDescribe, setTotalToDescribe] = useState(0);
   const isDisabled = aiRunning || storyLoading;
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
 
   const handleMouseEnter = () => {
     if (isDisabled) return;
@@ -43,39 +57,91 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
     setMenuOpen(false);
     logAction(e, { annotate_mode: 'ai_descriptions' });
 
-    const activeImageSet = images.filter(img => img.in_storyboard);
+    // Fetch fresh image data from backend to avoid stale prop state
+    let freshImages: ImageData[];
+    try {
+      const response = await getImageDataAll();
+      freshImages = response.data.images;
+    } catch (err) {
+      console.error('Error fetching image data:', err);
+      freshImages = images;
+    }
+
+    const activeImageSet = freshImages.filter((img: ImageData) => img.in_storyboard);
     if (activeImageSet.length === 0) {
       alert('Please add visuals to the storyboard before generating descriptions.');
       return;
-    
     }
-    setAiRunning(true);
-    try {
-      for (const image of activeImageSet) {
-        try {
-          await generateDescription(image.id);
-        } catch (err) {
-          console.error('Error starting description generation for image', image.id, err);
-        }
-      }
-      alert(
-        `Started AI description generation for ${activeImageSet.length} visual${
-          activeImageSet.length > 1 ? 's' : ''
-        }. Descriptions will appear as they finish.`
-      );
-    } finally {
-      // Stop showing the loading state first
-      setAiRunning(false);
 
-      // Then optionally refresh image data from the backend
-      if (onDescriptionsUpdated) {
-        try {
-          await onDescriptionsUpdated();
-        } catch (err) {
-          console.error('Error refreshing images after AI descriptions:', err);
-        }
+    // Count images that need descriptions
+    const needsDescription = (img: ImageData) => {
+      const desc = img.long_desc;
+      return !desc || desc.trim() === '' || desc === DESCRIPTION_PLACEHOLDER;
+    };
+    const imagesToDescribe = activeImageSet.filter(needsDescription);
+    let imagesToProcess = imagesToDescribe;
+
+    if (imagesToDescribe.length === 0) {
+      // All images already have descriptions — ask to redo
+      const redo = window.confirm('They already have descriptions, redo all?');
+      if (!redo) return;
+      imagesToProcess = activeImageSet;
+    }
+
+    const total = imagesToProcess.length;
+    setTotalToDescribe(total);
+    setProgress(10);
+    setAiRunning(true);
+
+    // Fire all description tasks
+    for (const image of imagesToProcess) {
+      try {
+        await generateDescription(image.id);
+      } catch (err) {
+        console.error('Error starting description generation for image', image.id, err);
       }
     }
+
+    // Poll for completion
+    pollRef.current = setInterval(async () => {
+      try {
+        const response = await getImageDataAll();
+        const backendImages: ImageData[] = response.data.images;
+        const storyboardImages = backendImages.filter((img: ImageData) => img.in_storyboard);
+
+        // Count how many of the original set now have descriptions
+        const describedCount = storyboardImages.filter((img: ImageData) => {
+          const desc = img.long_desc;
+          return desc && desc.trim() !== '' && desc !== DESCRIPTION_PLACEHOLDER;
+        }).length;
+
+        const totalStoryboard = storyboardImages.length;
+        const rawPct = totalStoryboard > 0 ? Math.round((describedCount / totalStoryboard) * 100) : 0;
+        setProgress(Math.max(10, rawPct));
+
+        // Check if all are done (no more generating)
+        const stillGenerating = storyboardImages.some((img: any) => img.long_desc_generating);
+        if (!stillGenerating || rawPct >= 100) {
+          stopPolling();
+          setProgress(100);
+
+          // Brief delay so the user sees 100% before reset
+          setTimeout(async () => {
+            setAiRunning(false);
+            setProgress(0);
+            if (onDescriptionsUpdated) {
+              try {
+                await onDescriptionsUpdated();
+              } catch (err) {
+                console.error('Error refreshing images after AI descriptions:', err);
+              }
+            }
+          }, 500);
+        }
+      } catch (err) {
+        console.error('Error polling for description progress:', err);
+      }
+    }, POLL_INTERVAL_MS);
   };
 
   const handleCreateManually = (e: React.MouseEvent) => {
@@ -91,6 +157,10 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
     setManualModalOpen(false);
   };
 
+  const baseColor = '#005c84'; // bama-crimson
+  const fillColor = '#005c84';
+  const bgColor = aiRunning ? '#005c8466' : baseColor;
+
   return (
     <>
       <div className="relative inline-block">
@@ -98,22 +168,43 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
           ref={buttonRef}
           id="annotate-visuals-button"
           log-id="annotate-visuals-button"
-          className="flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="relative overflow-hidden flex items-center text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ backgroundColor: bgColor }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           disabled={isDisabled}
         >
-          <span className="flex items-center justify-center gap-2">
-            {aiRunning ? 'Annotating...' : 'Annotate Visuals'}
-            <svg
-              className={`fill-current h-4 w-4 transition-transform duration-300 ease-in ${
-                menuOpen ? 'rotate-180' : 'rotate-0'
-              }`}
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-            >
+          {/* Progress fill */}
+          {aiRunning && (
+            <div
+              className="absolute top-0 left-0 h-full transition-[width] duration-500 ease-out"
+              style={{
+                width: `${progress}%`,
+                backgroundColor: fillColor,
+              }}
+            />
+          )}
+          {/* Invisible label for fixed width */}
+          <span className="invisible whitespace-nowrap flex items-center gap-2">
+            Annotate Visuals
+            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
               <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
             </svg>
+          </span>
+          {/* Visible centered content */}
+          <span className="absolute inset-0 flex items-center justify-center z-10 gap-2">
+            Annotate Visuals
+            {!aiRunning && (
+              <svg
+                className={`fill-current h-4 w-4 transition-transform duration-300 ease-in ${
+                  menuOpen ? 'rotate-180' : 'rotate-0'
+                }`}
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+              >
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
+              </svg>
+            )}
           </span>
         </button>
 
@@ -184,4 +275,3 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
 };
 
 export default AnnotateVisualsButton;
-

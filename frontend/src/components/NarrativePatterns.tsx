@@ -21,10 +21,11 @@ type NarrativePatternsProps = {
     setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
     setRightNarrativeExamplesOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    setExamplesPattern: React.Dispatch<React.SetStateAction<string>>;
 }
 
 // Narrative patterns component
-const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, center, setStoryLoading, setRightNarrativeExamplesOpen }: NarrativePatternsProps) => {
+const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, center, setStoryLoading, setRightNarrativeExamplesOpen, setExamplesPattern }: NarrativePatternsProps) => {
 
     // Reusable hover handler that captures pattern from data attribute
     const handleHover = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -63,7 +64,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
-                                setSelectedPattern={setSelectedPattern}
+                                setExamplesPattern={setExamplesPattern}
                                 value="cause_and_effect"
                                 />
                         )}
@@ -93,7 +94,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
 
                             <NarrativeExamplesButton
                             setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
-                            setSelectedPattern={setSelectedPattern}
+                            setExamplesPattern={setExamplesPattern}
                             value="question_answer"
                             />
 
@@ -122,7 +123,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
-                                setSelectedPattern={setSelectedPattern}
+                                setExamplesPattern={setExamplesPattern}
                                 value="time_based"
                                 />
                         )}
@@ -150,7 +151,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
-                                setSelectedPattern={setSelectedPattern}
+                                setExamplesPattern={setExamplesPattern}
                                 value="factor_analysis"
                                 />
                         )}
@@ -178,7 +179,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
-                                setSelectedPattern={setSelectedPattern}
+                                setExamplesPattern={setExamplesPattern}
                                 value="overview_to_detail"
                                 />
                         )}
@@ -206,7 +207,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
-                                setSelectedPattern={setSelectedPattern}
+                                setExamplesPattern={setExamplesPattern}
                                 value="problem_solution"
                                 />
                         )}
@@ -234,7 +235,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
-                                setSelectedPattern={setSelectedPattern}
+                                setExamplesPattern={setExamplesPattern}
                                 value="comparative"
                                 />
                         )}
@@ -262,7 +263,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
-                                setSelectedPattern={setSelectedPattern}
+                                setExamplesPattern={setExamplesPattern}
                                 value="workflow_process"
                                 />
                         )}
@@ -290,7 +291,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                         {!center && (
                                 <NarrativeExamplesButton
                                 setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
-                                setSelectedPattern={setSelectedPattern}
+                                setExamplesPattern={setExamplesPattern}
                                 value="shock_lead"
                                 />
                         )}

@@ -8,7 +8,8 @@ from .views import (
     ExportJupyterLogsView, RequestFeedbackView,
     CreateGroupView, GetGroupView, UpdateGroupView, DeleteGroupView,
     LogMousePositionView, LogScrollView,
-    ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView
+    ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView,
+    TaskProgressView
 )
 
 urlpatterns = [
@@ -17,6 +18,7 @@ urlpatterns = [
     path("log/mouse-batch/", LogMousePositionView.as_view(), name="log-mouse-position"),
     path("log/scroll-batch/", LogScrollView.as_view(), name="log-scroll-position"),
     path("actions/requestfeedback/", RequestFeedbackView.as_view(), name="request-feedback"),
+    path("task/progress/", TaskProgressView.as_view(), name="task-progress"),
 
     # Images
     path("images/", ImageDataView.as_view(), name="image-list"),  # GET list or single via query param

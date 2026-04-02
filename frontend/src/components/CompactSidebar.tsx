@@ -26,7 +26,7 @@ const CompactSidebar = ({ setCenterNarrativePatternsOpen }: CompactSidebarProps)
     };
 
     return (
-        <div id="nav-dropdown-container" className="flex flex-col mt-6 mx-8 font-roboto-regular text-indigo-darkest">
+        <div id="nav-dropdown-container" className="flex flex-col mt-10 mx-8 font-roboto-regular text-indigo-darkest">
             <ul className="space-y-4 text-sm font-sans">
                 <li log-id="compact-nav-home"
                 className="cursor-pointer hover:text-indigo"

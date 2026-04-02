@@ -16,6 +16,9 @@ class GroupDataSerializer(serializers.ModelSerializer):
     fields = '__all__'
 
 class ImageDataSerializer(serializers.ModelSerializer):
+  short_desc = serializers.CharField(allow_blank=True, required=False)
+  long_desc = serializers.CharField(allow_blank=True, required=False)
+
   class Meta:
     model = ImageData
     fields = '__all__'
