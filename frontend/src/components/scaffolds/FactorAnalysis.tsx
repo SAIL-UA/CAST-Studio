@@ -337,19 +337,19 @@ const FactorAnalysis = ({
     return (
         <div
             ref={combinedRef}
-            className="absolute bg-grey-lighter-2 select-none rounded-sm shadow-md border border-grey-lightest z-[100]"
+            className="absolute bg-grey-lighter-2 select-none rounded-lg shadow-md border border-grey-lightest z-[100]"
             style={{
                 left: containerPos.left,
                 top: containerPos.top,
                 width: `${scaffoldWidth}px`,
-                minHeight: '325px',
+                minHeight: '500px',
                 cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
             }}
             onMouseDown={handleMouseDown}
         >
-            <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-sm">
+            <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-lg">
                 <h3 className="text-sm font-bold">Narrative Structure: Factor Analysis</h3>
                 <div className="flex items-center gap-1">
                     {displaySlotCount < MAX_SLOTS && (
@@ -462,7 +462,7 @@ const FactorAnalysisFactor = ({
             accept: ['image', 'group'],
             drop: (item: DragItem, monitor) => {
                 if (item.id === 'factor-analysis-scaffold') return { droppedInGroup: false };
-                if (item.type !== 'group' && item.groupId !== id && cards.length < 3) {
+                if (item.type !== 'group' && item.groupId !== id && cards.length < 6) {
                     onCardAdd(item.id, id);
                     return { droppedInGroup: true, groupId: id };
                 }
@@ -476,7 +476,7 @@ const FactorAnalysisFactor = ({
             },
             canDrop: (item: DragItem) => {
                 if (item.id === 'factor-analysis-scaffold') return false;
-                if (item.type !== 'group') return item.groupId !== id && cards.length < 3;
+                if (item.type !== 'group') return item.groupId !== id && cards.length < 6;
                 return item.type === 'group' && item.scaffoldId !== scaffoldId;
             },
             collect: (monitor) => ({ isOver: monitor.isOver(), canDrop: monitor.canDrop() })
@@ -499,11 +499,9 @@ const FactorAnalysisFactor = ({
                     ? 'border-blue-400 border-2 bg-blue-50'
                     : isOver && !canDrop
                     ? 'border-red-400 border-2 bg-red-50'
-                    : cards.length >= 3
-                    ? 'border-grey-dark border-2'
                     : 'border-[rgb(218,230,236)]'
             }`}
-            style={{ minHeight: '260px' }}
+            style={{ minHeight: '450px' }}
         >
             <div className="flex justify-between items-center mb-2 pb-2 border-b border-grey-light">
                 <h4 className="text-xs font-bold text-grey-darkest">{title}</h4>
@@ -517,9 +515,9 @@ const FactorAnalysisFactor = ({
                 </div>
             )}
 
-            {isOver && !canDrop && cards.length >= 3 && (
+            {isOver && !canDrop && cards.length >= 6 && (
                 <div className="flex items-center justify-center h-[80%] border-2 border-dashed border-red-400 rounded-lg bg-red-50">
-                    <div className="text-red-600 text-sm font-medium">Group is full (Max: 3 visuals)</div>
+                    <div className="text-red-600 text-sm font-medium">Group is full (Max: 6 visuals)</div>
                 </div>
             )}
 
@@ -594,8 +592,8 @@ const FactorAnalysisFactor = ({
             {cards.length > 0 && (
                 <div className="flex flex-wrap gap-1 w-full">
                     {cards.map((card) => (
-                        <div key={card.id} className="relative group" style={{ width: 91, height: 130 }}>
-                            <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: 130 }}>
+                        <div key={card.id} className="relative group">
+                            <div style={{ zoom: 0.7 }}>
                                 <DraggableCard
                                     image={card}
                                     index={card.index}
@@ -611,8 +609,8 @@ const FactorAnalysisFactor = ({
                                     e.stopPropagation();
                                     onCardRemove(card.id, id);
                                 }}
-                                className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
-                                style={{ top: '-2px', right: '8px' }}
+                                className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[305] shadow-md"
+                                style={{ top: '2px', right: '2px' }}
                                 title="Remove from factor"
                             >
                                 ×

@@ -828,19 +828,21 @@ def _generate_feedback(groups_data: list, ungrouped_data: dict, counts: dict) ->
         groups_text += "Figures in this group:\n"
         for fig_file, fig_info in group.get('figures', {}).items():
             desc = fig_info.get('description', '')
+            title = fig_info.get('title', fig_file)
             data_url = fig_info.get('data_url')
-            groups_text += f"  - {fig_file}: {desc}\n"
+            groups_text += f"  - {title}: {desc}\n"
             caption_desc = desc if len(desc) <= 280 else f"{desc[:277]}..."
-            grouped_image_entries.append((group_name, fig_file, caption_desc, data_url))
+            grouped_image_entries.append((group_name, title, caption_desc, data_url))
 
     ungrouped_text = "\n### Ungrouped Figures:\n"
     ungrouped_image_entries: list[tuple[str, str, str, str | None]] = []
     for fig_file, fig_info in ungrouped_data.items():
         desc = fig_info.get('description', '')
+        title = fig_info.get('title', fig_file)
         data_url = fig_info.get('data_url')
-        ungrouped_text += f"  - {fig_file}: {desc}\n"
+        ungrouped_text += f"  - {title}: {desc}\n"
         caption_desc = desc if len(desc) <= 280 else f"{desc[:277]}..."
-        ungrouped_image_entries.append(("Ungrouped", fig_file, caption_desc, data_url))
+        ungrouped_image_entries.append(("Ungrouped", title, caption_desc, data_url))
 
     counts_text = (
         f"Total groups: {counts.get('groups', 0)}\n"
@@ -1036,9 +1038,10 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
 
             figures = {}
             for img in group_images:
-                desc = img.long_desc or img.short_desc or ""
+                desc = img.long_desc or ""
+                title = img.short_desc or f"Visual {img.index + 1}"
                 data_url = _image_to_data_url(img.filepath)
-                figure_payload = {"description": desc}
+                figure_payload = {"description": desc, "title": title}
                 if data_url:
                     figure_payload["data_url"] = data_url
                 figures[img.filepath] = figure_payload
@@ -1053,9 +1056,10 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
         ungrouped_images = storyboard_images_qs.filter(group_id__isnull=True)
         ungrouped_data = {}
         for img in ungrouped_images:
-            desc = img.long_desc or img.short_desc or ""
+            desc = img.long_desc or ""
+            title = img.short_desc or f"Visual {img.index + 1}"
             data_url = _image_to_data_url(img.filepath)
-            payload = {"description": desc}
+            payload = {"description": desc, "title": title}
             if data_url:
                 payload["data_url"] = data_url
             ungrouped_data[img.filepath] = payload
@@ -1151,10 +1155,12 @@ def _build_figure_dict(images_queryset, skip_missing_desc=True):
     figures = {}
     for image in images_queryset:
         if skip_missing_desc and not image.long_desc:
-            logger.warning(f"[BUILD_FIGURES] Image {image.filepath} has no long_desc, skipping")
+            logger.warning(f"[BUILD_FIGURES] Image {image.filepath or image.short_desc} has no long_desc, skipping")
             continue
+        # Notes use their title as key; images use filepath
+        key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
         category = _categorize_figure(image.long_desc)
-        figures[image.filepath] = {
+        figures[key] = {
             "description": image.long_desc,
             "category": category
         }
@@ -1463,7 +1469,9 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
         storyboard_qs = ImageData.objects.filter(user=user, in_storyboard=True)
 
-        images_needing_desc = storyboard_qs.filter(
+        images_needing_desc = storyboard_qs.exclude(
+            filepath__exact=""
+        ).filter(
             Q(long_desc__isnull=True)
             | Q(long_desc__exact="")
             | Q(long_desc__exact=PLACEHOLDER)
@@ -1540,12 +1548,13 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         for image in storyboard_images:
             if not image.long_desc:
                 continue
+            key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
             category = _categorize_figure(image.long_desc)
-            flat_figures[image.filepath] = {
+            flat_figures[key] = {
                 "description": image.long_desc,
                 "category": category,
             }
-            all_descriptions.append(f"{image.filepath}: {image.long_desc}")
+            all_descriptions.append(f"{key}: {image.long_desc}")
 
         all_descriptions_text = "\n".join(all_descriptions)
 
@@ -1578,10 +1587,27 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 story_structure_id,
             )
             _progress(7, "Composing...")
+            # Filter notes out of figures for story builder (no [FIGURE:] placeholders for notes)
+            story_non_scaffold_groups = [
+                {**g, "figures": {k: v for k, v in g.get("figures", {}).items() if '.' in k}}
+                for g in non_scaffold_groups
+            ]
+            story_non_scaffold_figures = {k: v for k, v in non_scaffold_figures.items() if '.' in k}
+            # Also filter notes from scaffold_data elements
+            story_scaffold_data = dict(scaffold_data)
+            story_scaffold_data["elements"] = []
+            for element in scaffold_data.get("elements", []):
+                new_element = dict(element)
+                new_element["figures"] = {k: v for k, v in element.get("figures", {}).items() if '.' in k}
+                new_element["groups"] = [
+                    {**g, "figures": {k: v for k, v in g.get("figures", {}).items() if '.' in k}}
+                    for g in element.get("groups", [])
+                ]
+                story_scaffold_data["elements"].append(new_element)
             story = _build_story_with_scaffolds(
-                scaffold_data,
-                non_scaffold_groups,
-                non_scaffold_figures,
+                story_scaffold_data,
+                story_non_scaffold_groups,
+                story_non_scaffold_figures,
                 sequence,
             )
             recommended_order = extract_figure_filenames(sequence)
@@ -1628,8 +1654,9 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
                 group_figures = {}
                 for image in group_images:
+                    key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
                     category = _categorize_figure(image.long_desc)
-                    group_figures[image.filepath] = {
+                    group_figures[key] = {
                         "description": image.long_desc,
                         "category": category,
                     }
@@ -1644,8 +1671,9 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
             ungrouped_data = {}
             for image in ungrouped_images:
+                key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
                 category = _categorize_figure(image.long_desc)
-                ungrouped_data[image.filepath] = {
+                ungrouped_data[key] = {
                     "description": image.long_desc,
                     "category": category,
                 }
@@ -1666,7 +1694,13 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 groups_data, ungrouped_data, theme, story_structure_id
             )
             _progress(7, "Composing...")
-            story = _build_story_with_groups(groups_data, ungrouped_data, sequence)
+            # Filter notes out of figures for story builder
+            story_groups_data = [
+                {**g, "figures": {k: v for k, v in g.get("figures", {}).items() if '.' in k}}
+                for g in groups_data
+            ]
+            story_ungrouped_data = {k: v for k, v in ungrouped_data.items() if '.' in k}
+            story = _build_story_with_groups(story_groups_data, story_ungrouped_data, sequence)
             recommended_order = extract_figure_filenames(sequence)
 
             categories = []
@@ -1696,7 +1730,9 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 story_structure_id,
             )
             _progress(7, "Composing...")
-            story = _build_story(flat_figures, sequence)
+            # Exclude notes (no file extension) from the story builder so AI doesn't generate [FIGURE:] for them
+            story_figures = {k: v for k, v in flat_figures.items() if '.' in k}
+            story = _build_story(story_figures, sequence)
             recommended_order = extract_figure_filenames(sequence)
 
             categories = [

@@ -366,12 +366,12 @@ const CauseEffect = ({
     return (
         <div
             ref={combinedRef}
-            className="absolute bg-grey-lighter-2 select-none rounded-sm shadow-md border border-grey-lightest z-[100]"
+            className="absolute bg-grey-lighter-2 select-none rounded-lg shadow-md border border-grey-lightest z-[100]"
             style={{
                 left: containerPos.left,
                 top: containerPos.top,
                 width: '650px',
-                minHeight: '325px',
+                minHeight: '500px',
                 cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
@@ -379,7 +379,7 @@ const CauseEffect = ({
             onMouseDown={handleMouseDown}
         >
             {/* Header */}
-            <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-sm">
+            <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-lg">
                 <h3 className="text-sm font-bold">Narrative Structure: Cause and Effects</h3>
                 <button
                     onClick={(e) => {
@@ -490,7 +490,7 @@ const CauseEffectGroup = ({
                 return { droppedInGroup: false };
             }
             // Handle image drops
-            if (item.type !== 'group' && item.groupId !== id && cards.length < 3) {
+            if (item.type !== 'group' && item.groupId !== id && cards.length < 6) {
                 console.log(`Card ${item.id} dropped into ${id}`);
                 onCardAdd(item.id, id);
                 return {
@@ -520,7 +520,7 @@ const CauseEffectGroup = ({
             }
             // For images: can drop if not already in this group and group has less than 3 cards
             if (item.type !== 'group') {
-                return item.groupId !== id && cards.length < 3;
+                return item.groupId !== id && cards.length < 6;
             }
             // For groups: can drop if it's a group and doesn't already belong to this scaffold
             return item.type === 'group' && item.scaffoldId !== scaffoldId;
@@ -547,11 +547,9 @@ const CauseEffectGroup = ({
                     ? 'border-blue-400 border-2 bg-blue-50'
                     : isOver && !canDrop
                     ? 'border-red-400 border-2 bg-red-50'
-                    : cards.length >= 3
-                    ? 'border-grey-dark border-2'
                     : 'border-[rgb(218,230,236)]'
             }`}
-            style={{ minHeight: '260px', width: '650px' }}
+            style={{ minHeight: '450px' }}
         >
             {/* Group Header */}
             <div className="flex justify-between items-center mb-2 pb-2 border-b border-grey-light">
@@ -568,10 +566,10 @@ const CauseEffectGroup = ({
             )}
 
             {/* Full group indicator when trying to drop on full group */}
-            {isOver && !canDrop && cards.length >= 3 && (
+            {isOver && !canDrop && cards.length >= 6 && (
                 <div className="flex items-center justify-center h-[80%] border-2 border-dashed border-red-400 rounded-lg bg-red-50">
                     <div className="text-red-600 text-sm font-medium">
-                        Group is full (Max: 3 visuals)
+                        Group is full (Max: 6 visuals)
                     </div>
                 </div>
             )}
@@ -654,8 +652,8 @@ const CauseEffectGroup = ({
             {cards.length > 0 && (
                 <div className="flex flex-wrap gap-1 w-full">
                     {cards.map((card) => (
-                        <div key={card.id} className="relative group" style={{ width: 91, height: 130 }}>
-                            <div style={{ transform: 'scale(0.7)', transformOrigin: 'top left', width: 130 }}>
+                        <div key={card.id} className="relative group">
+                            <div style={{ zoom: 0.7 }}>
                                 <DraggableCard
                                     image={card}
                                     index={card.index}
@@ -672,10 +670,10 @@ const CauseEffectGroup = ({
                                     e.stopPropagation();
                                     onCardRemove(card.id, id);
                                 }}
-                                className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
+                                className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[305] shadow-md"
                                 style={{
-                                    top: '-2px',
-                                    right: '8px'
+                                    top: '2px',
+                                    right: '2px'
                                 }}
                                 title="Remove from group"
                             >

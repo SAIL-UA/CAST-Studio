@@ -25,7 +25,7 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ items, onClose }) => {
     <div className="w-full p-3">
       {/* Panel header */}
       <div className="flex flex-row w-full">
-        <h3 className="text-lg mb-2 mt-0 ml-2">Feedback</h3>
+        <h3 className="text-sm text-gray-500 font-regular mb-2 mt-0">Feedback</h3>
       </div>
 
       <div className="space-y-3">

@@ -23,11 +23,12 @@ type CraftStoryButtonProps = {
 const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroups = false, selectedPattern, onStoryGenerated }: CraftStoryButtonProps) => {
 
     const [taskId, setTaskId] = useState<string | null>(null);
+    const [alertModal, setAlertModal] = useState<string | null>(null);
     const { progress, stageName, error, isComplete } = useTaskProgress(taskId);
 
     // Handle error from progress tracking
     if (error && storyLoading) {
-        alert(`Story generation failed during: ${stageName}\n\n${error}`);
+        setAlertModal(`Story generation failed during: ${stageName}\n\n${error}`);
         setStoryLoading(false);
         setTaskId(null);
     }
@@ -45,13 +46,10 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
             missing.push('Upload visuals to the workspace and annotate them');
         }
 
-        // 2. Check that all storyboard images have annotations
+        // 2. Check that all storyboard images have descriptions
         if (storyboardImages.length > 0) {
-            const SHORT_DESC_PLACEHOLDER = 'Add a description for this visual.';
             const hasValidDescription = (img: ImageData) => {
-                const longValid = img.long_desc && img.long_desc.trim() !== '' && img.long_desc !== DESCRIPTION_PLACEHOLDER;
-                const shortValid = img.short_desc && img.short_desc.trim() !== '' && img.short_desc !== SHORT_DESC_PLACEHOLDER;
-                return longValid || shortValid;
+                return img.long_desc && img.long_desc.trim() !== '' && img.long_desc !== DESCRIPTION_PLACEHOLDER;
             };
             const unannotated = storyboardImages.filter(img => !hasValidDescription(img));
             if (unannotated.length > 0) {
@@ -66,7 +64,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
 
         // If any checks failed, show a single prompt and return
         if (missing.length > 0) {
-            alert('Before generating a story, please:\n\n' + missing.map(m => `• ${m}`).join('\n'));
+            setAlertModal('Before generating a story, please:\n\n' + missing.map(m => `• ${m}`).join('\n'));
             return;
         }
 
@@ -155,7 +153,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
 
                     // Timeout reached
                     console.error('Story generation timed out');
-                    alert('Story generation is taking longer than expected. Please check back in a few minutes.');
+                    setAlertModal('Story generation is taking longer than expected. Please check back in a few minutes.');
                     setStoryLoading(false);
                     setTaskId(null);
                 };
@@ -164,12 +162,12 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
 
             } else {
                 console.error('Error starting story generation:', taskResponse.message);
-                alert(`Error starting story generation: ${taskResponse.message}`);
+                setAlertModal(`Error starting story generation: ${taskResponse.message}`);
                 setStoryLoading(false);
             }
         } catch (error) {
             console.error('Error generating story:', error);
-            alert('An error occurred while generating the story. Please try again.');
+            setAlertModal('An error occurred while generating the story. Please try again.');
             setStoryLoading(false);
         }
 
@@ -177,18 +175,39 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
 
     // Visible component
     return (
-        <ProgressButton
-            id="craft-story-button"
-            logId="craft-story-button"
-            color="#348b94"
-            label="Generate Story"
-            progress={progress}
-            isRunning={storyLoading}
-            onClick={handleCraft}
-            disabled={storyLoading}
-        >
-            {storyLoading ? (stageName || 'Generating...') : 'Generate Story'}
-        </ProgressButton>
+        <>
+            <ProgressButton
+                id="craft-story-button"
+                logId="craft-story-button"
+                color="#348b94"
+                label="Generate Story"
+                progress={progress}
+                isRunning={storyLoading}
+                onClick={handleCraft}
+                disabled={storyLoading}
+            >
+                {storyLoading ? (stageName || 'Generating...') : 'Generate Story'}
+            </ProgressButton>
+
+            {alertModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+                        <div className="text-sm text-grey-darkest whitespace-pre-wrap">
+                            {alertModal}
+                        </div>
+                        <div className="mt-6 text-right">
+                            <button
+                                log-id="craft-story-alert-ok-button"
+                                onClick={() => setAlertModal(null)}
+                                className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-150"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     )
 }
 

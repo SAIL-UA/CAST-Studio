@@ -72,7 +72,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     accept: 'image',
     drop: (item: DragItem, monitor) => {
       // Only handle if not already in this group and group isn't full
-      if (item.groupId !== id && cards.length < 3) {
+      if (item.groupId !== id && cards.length < 6) {
         console.log(`Card ${item.id} dropped into group ${id}`);
         onCardAdd(item.id, id);
 
@@ -103,8 +103,8 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       return { droppedInGroup: false };
     },
     canDrop: (item: DragItem) => {
-      // Can drop if: not already in this group AND group has less than 3 cards
-      return item.groupId !== id && cards.length < 3;
+      // Can drop if: not already in this group AND group has less than 6 cards
+      return item.groupId !== id && cards.length < 6;
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
@@ -496,7 +496,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     <div 
       log-id="group"
       ref={combinedRef}
-      className={`absolute w-80 h-64 bg-grey-lighter-2 select-none rounded-sm shadow-md border transition-all duration-200 z-[200] ${
+      className={`absolute w-[27rem] bg-grey-lighter-2 select-none rounded-lg overflow-hidden shadow-md border transition-all duration-200 z-[200] ${
         isOverCard && canDropCard 
           ? 'border-blue-400 border-2 bg-blue-50' 
           : isOverCard && !canDropCard
@@ -573,7 +573,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       </div>
       
       {/* Group content area */}
-      <div className="p-2 h-52 overflow-hidden relative">
+      <div className="p-2 pb-3 overflow-hidden relative" style={{ minHeight: '150px' }}>
         {/* Drop zone indicator when empty and card is being dragged over */}
         {isOverCard && canDropCard && cards.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 z-[250] m-2">
@@ -584,7 +584,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         )}
         
         {/* Drop zone indicator when cards are present and card is being dragged over */}
-        {isOverCard && canDropCard && cards.length > 0 && cards.length < 3 && (
+        {isOverCard && canDropCard && cards.length > 0 && cards.length < 6 && (
           <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 z-[250] m-2">
             <div className="text-blue-600 text-sm font-medium">
               Drop here
@@ -593,42 +593,39 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         )}
         
         {/* Full group indicator when trying to drop on full group */}
-        {isOverCard && !canDropCard && cards.length >= 3 && (
+        {isOverCard && !canDropCard && cards.length >= 6 && (
           <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-red-400 rounded-lg bg-red-50 z-[250] m-2">
             <div className="text-red-600 text-sm font-medium">
-              Group is full (Max: 3 visuals)
+              Group is full (Max: 6 visuals)
             </div>
           </div>
         )}
         
         {/* Card components - arranged in grid */}
         {cards.length > 0 ? (
-          <div className="grid grid-cols-3 gap-2 h-full relative">
+          <div className="flex flex-wrap gap-2 relative">
             {cards.map((card) => (
-              <div key={card.id} className="relative group h-fit">
-                <div className="transform scale-75 origin-top-left">
+              <div key={card.id} className="relative group">
+                <div style={{ zoom: 0.75 }}>
                   <DraggableCard
                     image={card}
                     index={card.index}
-                    onDescriptionsUpdate={() => {}} // Groups handle their own descriptions
-                    onDelete={() => {}} // Groups handle their own deletion
-                    onTrash={() => onCardRemove(card.id, id)} // Don't log here - DraggableCard already logs
+                    onDescriptionsUpdate={() => {}}
+                    onDelete={() => {}}
+                    onTrash={() => onCardRemove(card.id, id)}
                     onUnTrash={() => {}}
                     draggable={false}
                   />
                 </div>
-                {/* Remove button overlay - aligned with scaled image (75%) top-right */}
+                {/* Remove button overlay — outside zoom so it's full size and visible */}
                 <button
-                log-id="group-remove-card-button"
+                  log-id="group-remove-card-button"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleCardRemove(e, card.id);
                   }}
-                  className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[205] shadow-md"
-                  style={{
-                    top: '-2px',
-                    right: '-8px'
-                  }}
+                  className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[305] shadow-md"
+                  style={{ top: '2px', right: '2px' }}
                   title="Remove from group"
                 >
                   ×
@@ -639,7 +636,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         ) : !isOverCard && (
           <div className="flex items-top justify-top h-full text-grey-dark text-sm text-top">
             <div>
-              <span className="text-xs">Drag a visual in here to begin. <br/>You can include up to three visuals in a group.</span>
+              <span className="text-xs">Drag a visual in here to begin. <br/>You can include up to six visuals in a group.</span>
             </div>
           </div>
         )}

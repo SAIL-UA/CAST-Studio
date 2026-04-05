@@ -163,6 +163,11 @@ export const deleteFigure = async(filename: string) => {
   return response.data;
 };
 
+export const createNote = async() => {
+  const response = await API.post('/notes/create/', {});
+  return response.data;
+};
+
 export const updateImageData = async(imageId: string, data: any) => {
   const response = await API.post(`/images/${imageId}/update/`, { data })
   return response;

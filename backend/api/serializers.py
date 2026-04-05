@@ -18,6 +18,8 @@ class GroupDataSerializer(serializers.ModelSerializer):
 class ImageDataSerializer(serializers.ModelSerializer):
   short_desc = serializers.CharField(allow_blank=True, required=False)
   long_desc = serializers.CharField(allow_blank=True, required=False)
+  filepath = serializers.CharField(allow_blank=True, required=False)
+  source = serializers.CharField(allow_blank=True, required=False)
 
   class Meta:
     model = ImageData

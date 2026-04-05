@@ -9,11 +9,25 @@ import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 import { logAction, captureActionContext } from '../utils/userActionLogger';
 import { formatImageMetadata, getImageUrl } from '../utils/imageUtils';
 
+const OLD_SHORT_DESC_PLACEHOLDER = 'Add a description for this visual.';
+const OLD_LONG_DESC_PLACEHOLDER = 'Ask AI to create a description for this visual.';
+
+function getTitle(shortDesc: string | undefined, index: number): string {
+  if (!shortDesc || shortDesc === OLD_SHORT_DESC_PLACEHOLDER) return `Visual ${index + 1}`;
+  return shortDesc;
+}
+
+function getDesc(longDesc: string | undefined): string {
+  if (!longDesc || longDesc === OLD_LONG_DESC_PLACEHOLDER) return '';
+  return longDesc;
+}
+
 function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, draggable = true }: DraggableCardProps) {
   const [showModal, setShowModal] = useState(false);
-  const [editingShortDesc, setEditingShortDesc] = useState(false);
-  const [tempShortDesc, setTempShortDesc] = useState(image.short_desc || '');
-  const [tempLongDesc, setTempLongDesc] = useState(image.long_desc || '');
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [tempTitle, setTempTitle] = useState(getTitle(image.short_desc, index));
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [tempLongDesc, setTempLongDesc] = useState(getDesc(image.long_desc));
   const [loadingGenDesc, setLoadingGenDesc] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>('');
   const cardRef = useRef<HTMLDivElement>(null);
@@ -42,17 +56,17 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     };
   }, [image.filepath]);
 
-  // Sync tempShortDesc when image prop changes (but not while editing)
+  // Sync tempTitle when image prop changes (but not while editing)
   useEffect(() => {
-    if (!editingShortDesc) {
-      setTempShortDesc(image.short_desc || '');
+    if (!editingTitle) {
+      setTempTitle(getTitle(image.short_desc, index));
     }
-  }, [image.short_desc, editingShortDesc]);
+  }, [image.short_desc, editingTitle, index]);
 
 
   // Sync tempLongDesc when image prop changes (e.g. after AI generates description and parent refetches)
   useEffect(() => {
-    setTempLongDesc(image.long_desc || '');
+    setTempLongDesc(getDesc(image.long_desc));
   }, [image.long_desc]);
 
   // React DnD hook for drag functionality
@@ -168,26 +182,22 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
         : imagesFromApi;
 
       if (latest) {
-        // Update local temp fields for the modal
-        setTempShortDesc(latest.short_desc || '');
-        setTempLongDesc(latest.long_desc || '');
+        setTempTitle(getTitle(latest.short_desc, index));
+        setTempLongDesc(getDesc(latest.long_desc));
 
-        // Optionally sync parent state so the card preview also updates
         onDescriptionsUpdate(
           latest.id,
           latest.short_desc || '',
           latest.long_desc || ''
         );
       } else {
-        // Fallback to current props
-        setTempShortDesc(image.short_desc || '');
-        setTempLongDesc(image.long_desc || '');
+        setTempTitle(getTitle(image.short_desc, index));
+        setTempLongDesc(getDesc(image.long_desc));
       }
     } catch (err) {
       console.error('Error fetching latest image data for modal:', err);
-      // Fallback to current props if the fetch fails
-      setTempShortDesc(image.short_desc || '');
-      setTempLongDesc(image.long_desc || '');
+      setTempTitle(getTitle(image.short_desc, index));
+      setTempLongDesc(getDesc(image.long_desc));
     }
 
     setShowModal(true);
@@ -196,19 +206,19 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
 
   const handleClose = async (e: React.MouseEvent) => {
     const ctx = captureActionContext(e);
-    if (image.short_desc === tempShortDesc && image.long_desc === tempLongDesc) {
+    if (image.short_desc === tempTitle && image.long_desc === tempLongDesc) {
       logAction(ctx, { image_metadata: imageMetadataRef.current });
       setShowModal(false);
       document.body.style.overflow = 'auto';
       return;
     }
-    
+
     updateImageData(image.id, {
       ...image,
-      short_desc: tempShortDesc,
+      short_desc: tempTitle,
       long_desc: tempLongDesc,
     }).then(() => {
-      onDescriptionsUpdate(image.id, tempShortDesc, tempLongDesc);
+      onDescriptionsUpdate(image.id, tempTitle, tempLongDesc);
       setShowModal(false);
       document.body.style.overflow = 'auto';
     }).catch((error) => {
@@ -335,36 +345,34 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     document.body.style.overflow = 'auto';
   };
 
-  const handleShortDescSave = async (e: React.FocusEvent | React.KeyboardEvent) => {
-    setEditingShortDesc(false);
+  const handleTitleSave = async (e: React.FocusEvent | React.KeyboardEvent) => {
+    setEditingTitle(false);
 
-    // Only call API if description actually changed
-    if (tempShortDesc === image.short_desc) {
-      return; // No change, skip API call and logging
+    if (tempTitle === image.short_desc) {
+      return;
     }
 
-    const ctx = captureActionContext(e as React.SyntheticEvent);
-    const imageMetadataBefore = imageMetadataRef.current;
-
-    // Update the image data
     await updateImageData(image.id, {
       ...image,
-      short_desc: tempShortDesc,
+      short_desc: tempTitle,
     });
 
-    // Call the callback to update parent state
-    onDescriptionsUpdate(image.id, tempShortDesc, image.long_desc || '');
+    onDescriptionsUpdate(image.id, tempTitle, image.long_desc || '');
+  };
 
-    // Update metadata and log
-    const updatedImage = { ...image, short_desc: tempShortDesc };
-    const imageMetadataAfter = await formatImageMetadata(updatedImage);
+  const handleDescSave = async (e: React.FocusEvent | React.KeyboardEvent) => {
+    setEditingDesc(false);
 
-    logAction(ctx, {
-      image_metadata: imageMetadataBefore,
-      updated_image_metadata: imageMetadataAfter
+    if (tempLongDesc === image.long_desc) {
+      return;
+    }
+
+    await updateImageData(image.id, {
+      ...image,
+      long_desc: tempLongDesc,
     });
 
-    imageMetadataRef.current = imageMetadataAfter;
+    onDescriptionsUpdate(image.id, image.short_desc || '', tempLongDesc);
   };
 
   // Combine refs for draggable functionality
@@ -385,13 +393,41 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
           log-id={"draggable-card"}
           ref={cardRef}
           onDragEnd={handleDragEnd}
-          className="card-width overflow-hidden rounded-sm shadow-md bg-grey-lighter-2 border border-grey-lightest"
+          className={`card-width overflow-hidden rounded-lg shadow-md border border-grey-lightest ${image.filepath ? 'bg-grey-lighter-2' : 'bg-amber-50'}`}
         >
-          <div id="card-header" className="flex p-1 bg-bama-crimson text-tiny-bold">
-            <div id="card-header-left" className="flex justify-start w-1/2 cursor-pointer" onClick={handleShow}>
-              <p className="text-white font-sans hover:underline">
-                Visual {index + 1}
-              </p>
+          <div id="card-header" className={`flex p-1 text-tiny-bold ${image.filepath ? 'bg-bama-crimson' : 'bg-amber-400'}`}>
+            <div id="card-header-left" className="flex items-center overflow-hidden" style={{ width: 'calc(100% - 1.5rem)' }}>
+              {editingTitle ? (
+                <input
+                  log-id="visual-inline-title-input"
+                  type="text"
+                  value={tempTitle}
+                  onChange={(e) => setTempTitle(e.target.value)}
+                  onBlur={handleTitleSave}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleTitleSave(e);
+                    }
+                  }}
+                  className="text-white font-sans bg-transparent border-b border-white outline-none w-full"
+                  style={{ fontSize: 'inherit' }}
+                  placeholder="Add a title for this visual"
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <p
+                  className="text-white font-sans cursor-pointer hover:underline truncate"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTitle(true);
+                  }}
+                  title={tempTitle}
+                >
+                  {tempTitle}
+                </p>
+              )}
             </div>
             <div id="card-header-right" className="flex justify-end w-1/2">
               <button
@@ -405,43 +441,45 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
               </button>
             </div>
           </div>
-          <div id="card-body">
-            <img
-              src={imageUrl}
-              alt={image.id}
-              className="w-full image-height object-cover"
-            />
-          </div>
+          {image.filepath && (
+            <div id="card-body">
+              <img
+                src={imageUrl}
+                alt={image.id}
+                className="w-full image-height object-cover"
+              />
+            </div>
+          )}
           
-          <div id="card-footer" 
+          <div id="card-footer"
           className="p-2">
-            {editingShortDesc ? (
+            {editingDesc ? (
               <textarea
-                log-id="card-inline-short-desc-input"
-                value={tempShortDesc}
-                onChange={(e) => setTempShortDesc(e.target.value)}
-                onBlur={handleShortDescSave}
+                log-id="card-inline-desc-input"
+                value={tempLongDesc}
+                onChange={(e) => setTempLongDesc(e.target.value)}
+                onBlur={handleDescSave}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleShortDescSave(e);
+                    handleDescSave(e);
                   }
                 }}
                 className="text-somewhat-tiny text-grey-darkest w-full bg-transparent border-b border-grey-darkest outline-none resize-none"
-                placeholder="Short description"
+                placeholder={image.filepath ? 'Click to add description' : 'Click to add text'}
                 autoFocus
                 onClick={(e) => e.stopPropagation()}
                 rows={4}
               />
             ) : (
-              <p 
+              <p
                 className="text-somewhat-tiny text-grey-darkest overflow-hidden text-ellipsis line-clamp-4 cursor-pointer hover:underline"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setEditingShortDesc(true);
+                  setEditingDesc(true);
                 }}
               >
-                {image.short_desc || 'Click to add description'}
+                {getDesc(image.long_desc) || (image.filepath ? 'Click to add description' : 'Click to add text')}
               </p>
             )}
           </div>
@@ -452,36 +490,36 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
       {showModal && ReactDOM.createPortal(
         
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: '#eaf1f7' }}>
 
               {/* Modal Header — title + action buttons on one line */}
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Visual {index + 1}</h2>
-                <div className="flex items-center gap-1">
+              <div className="flex items-center justify-between mb-6 gap-4">
+                <h2 className="text-xl font-bold truncate min-w-0" style={{ maxWidth: '250px' }} title={tempTitle}>{tempTitle}</h2>
+                <div className="flex items-center gap-1 flex-shrink-0">
                   {image.in_storyboard ? (
                     <button log-id="move-figure-to-recycle-bin-button"
                       onClick={handleTrash}
-                      className="bg-yellow-600 text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                      className="bg-yellow-600 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
                     >
                       Move to Recycle Bin
                     </button>
                   ) : (
                     <button log-id="restore-figure-to-storyboard-button"
                       onClick={handleUnTrash}
-                      className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                      className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
                     >
                       Restore to Storyboard
                     </button>
                   )}
                   <button log-id="delete-figure-button"
                     onClick={handleDelete}
-                    className="bg-red-700 text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                    className="bg-red-700 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
                   >
                     Permanently Delete
                   </button>
                   <button log-id="save-and-close-figure-button"
                     onClick={(e) => handleClose(e)}
-                    className="text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                    className="text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
                     style={{ backgroundColor: '#348b94' }}
                   >
                     Save & Close
@@ -489,50 +527,56 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
                 </div>
               </div>
 
-              {/* Image Display */}
-              <div className="text-center mb-4">
-                <img
-                  src={imageUrl}
-                  alt={image.id}
-                  className="w-4/5 h-auto mx-auto rounded-lg"
-                />
-              </div>
+              {/* Image Display — only for visuals, not notes */}
+              {image.filepath && (
+                <div className="text-center mb-4">
+                  <img
+                    src={imageUrl}
+                    alt={image.id}
+                    className="w-4/5 h-auto mx-auto rounded-lg"
+                  />
+                </div>
+              )}
 
               {/* Form Fields */}
               <div className="space-y-4">
                 <div>
                   <h4 className="text-base font-semibold text-grey-darkest mb-2">
-                    Add a description for this visual.
+                    Title
                   </h4>
-                  <textarea
-                    id="shortDesc"
-                    rows={2}
-                    value={tempShortDesc}
-                    onChange={(e) => setTempShortDesc(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  <input
+                    id="titleInput"
+                    type="text"
+                    value={tempTitle}
+                    onChange={(e) => setTempTitle(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: '#f4f7fa' }}
+                    placeholder="Add a title for this visual"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-base font-semibold text-grey-darkest">
-                      Ask AI to create a description for this visual.
+                      {image.filepath ? 'Description' : 'Text'}
                     </h4>
-                    <button log-id="generate-description-button"
-                      onClick={handleGenerateDescription}
-                      disabled={loadingGenDesc}
-                      className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {loadingGenDesc ? 'Generating...' : 'Generate Description'}
-                    </button>
+                    {image.filepath && (
+                      <button log-id="generate-description-button"
+                        onClick={handleGenerateDescription}
+                        disabled={loadingGenDesc}
+                        className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingGenDesc ? 'Generating...' : 'Generate Description'}
+                      </button>
+                    )}
                   </div>
                   {loadingGenDesc ? <GeneratingPlaceholder contentName="description" lines={5} /> : (
                   <textarea
                     id="longDesc"
-                    rows={4}
+                    rows={6}
                     value={tempLongDesc}
                     onChange={(e) => setTempLongDesc(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-xs border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: '#f4f7fa' }}
+                    placeholder="Click 'Generate Description' to create with AI, or type a description here."
                   />
                   )}
                 </div>

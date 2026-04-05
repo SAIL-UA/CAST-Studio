@@ -2,10 +2,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { generateDescription, getImageDataAll } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import type { ImageData } from '../types/types';
 
+// Legacy placeholder text — kept for backward compatibility with existing images
 const DESCRIPTION_PLACEHOLDER = 'Ask AI to create a description for this visual.';
 const POLL_INTERVAL_MS = 2500;
+
+const menuItemClass = "block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm !font-light rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 cursor-pointer outline-none text-left";
 
 type AnnotateVisualsButtonProps = {
   images: ImageData[];
@@ -14,15 +18,13 @@ type AnnotateVisualsButtonProps = {
 };
 
 const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpdated }: AnnotateVisualsButtonProps) => {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [manualModalOpen, setManualModalOpen] = useState(false);
+  const [alertModal, setAlertModal] = useState<string | null>(null);
   const [aiRunning, setAiRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [totalToDescribe, setTotalToDescribe] = useState(0);
   const isDisabled = aiRunning || storyLoading;
 
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = useCallback(() => {
@@ -32,68 +34,21 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
     }
   }, []);
 
-  // Clean up on unmount
   useEffect(() => {
     return () => stopPolling();
   }, [stopPolling]);
 
-  const handleMouseEnter = () => {
-    if (isDisabled) return;
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    setMenuOpen(true);
+  const needsDescription = (img: ImageData) => {
+    const desc = img.long_desc;
+    return !desc || desc.trim() === '' || desc === DESCRIPTION_PLACEHOLDER;
   };
 
-  const handleMouseLeave = () => {
-    if (isDisabled) return;
-    timeoutRef.current = setTimeout(() => {
-      setMenuOpen(false);
-    }, 150);
-  };
-
-  const handleCreateWithAI = async (e: React.MouseEvent) => {
-    setMenuOpen(false);
-    logAction(e, { annotate_mode: 'ai_descriptions' });
-
-    // Fetch fresh image data from backend to avoid stale prop state
-    let freshImages: ImageData[];
-    try {
-      const response = await getImageDataAll();
-      freshImages = response.data.images;
-    } catch (err) {
-      console.error('Error fetching image data:', err);
-      freshImages = images;
-    }
-
-    const activeImageSet = freshImages.filter((img: ImageData) => img.in_storyboard);
-    if (activeImageSet.length === 0) {
-      alert('Please add visuals to the storyboard before generating descriptions.');
-      return;
-    }
-
-    // Count images that need descriptions
-    const needsDescription = (img: ImageData) => {
-      const desc = img.long_desc;
-      return !desc || desc.trim() === '' || desc === DESCRIPTION_PLACEHOLDER;
-    };
-    const imagesToDescribe = activeImageSet.filter(needsDescription);
-    let imagesToProcess = imagesToDescribe;
-
-    if (imagesToDescribe.length === 0) {
-      // All images already have descriptions — ask to redo
-      const redo = window.confirm('They already have descriptions, redo all?');
-      if (!redo) return;
-      imagesToProcess = activeImageSet;
-    }
-
+  const runAiGeneration = async (imagesToProcess: ImageData[]) => {
     const total = imagesToProcess.length;
     setTotalToDescribe(total);
     setProgress(10);
     setAiRunning(true);
 
-    // Fire all description tasks
     for (const image of imagesToProcess) {
       try {
         await generateDescription(image.id);
@@ -102,14 +57,12 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
       }
     }
 
-    // Poll for completion
     pollRef.current = setInterval(async () => {
       try {
         const response = await getImageDataAll();
         const backendImages: ImageData[] = response.data.images;
         const storyboardImages = backendImages.filter((img: ImageData) => img.in_storyboard);
 
-        // Count how many of the original set now have descriptions
         const describedCount = storyboardImages.filter((img: ImageData) => {
           const desc = img.long_desc;
           return desc && desc.trim() !== '' && desc !== DESCRIPTION_PLACEHOLDER;
@@ -119,13 +72,11 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
         const rawPct = totalStoryboard > 0 ? Math.round((describedCount / totalStoryboard) * 100) : 0;
         setProgress(Math.max(10, rawPct));
 
-        // Check if all are done (no more generating)
         const stillGenerating = storyboardImages.some((img: any) => img.long_desc_generating);
         if (!stillGenerating || rawPct >= 100) {
           stopPolling();
           setProgress(100);
 
-          // Brief delay so the user sees 100% before reset
           setTimeout(async () => {
             setAiRunning(false);
             setProgress(0);
@@ -144,8 +95,49 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
     }, POLL_INTERVAL_MS);
   };
 
+  const fetchFreshImages = async (): Promise<ImageData[]> => {
+    try {
+      const response = await getImageDataAll();
+      return response.data?.images || [];
+    } catch (err) {
+      console.error('Error fetching image data:', err);
+      return images || [];
+    }
+  };
+
+  const handleAnnotateAll = async (e: React.MouseEvent) => {
+    logAction(e, { annotate_mode: 'ai_all' });
+
+    const freshImages = await fetchFreshImages();
+    const activeImageSet = freshImages.filter((img: ImageData) => img.in_storyboard && img.filepath);
+    if (activeImageSet.length === 0) {
+      setAlertModal('There are no images in the Workspace.');
+      return;
+    }
+
+    await runAiGeneration(activeImageSet);
+  };
+
+  const handleAnnotateMissing = async (e: React.MouseEvent) => {
+    logAction(e, { annotate_mode: 'ai_missing' });
+
+    const freshImages = await fetchFreshImages();
+    const activeImageSet = freshImages.filter((img: ImageData) => img.in_storyboard && img.filepath);
+    if (activeImageSet.length === 0) {
+      setAlertModal('There are no images in the Workspace.');
+      return;
+    }
+
+    const missing = activeImageSet.filter(needsDescription);
+    if (missing.length === 0) {
+      setAlertModal('All visuals already have descriptions.');
+      return;
+    }
+
+    await runAiGeneration(missing);
+  };
+
   const handleCreateManually = (e: React.MouseEvent) => {
-    setMenuOpen(false);
     logAction(e, { annotate_mode: 'manual' });
     setManualModalOpen(true);
   };
@@ -157,84 +149,122 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
     setManualModalOpen(false);
   };
 
-  const baseColor = '#005c84'; // bama-crimson
+  const baseColor = '#005c84';
   const fillColor = '#005c84';
   const bgColor = aiRunning ? '#005c8466' : baseColor;
 
   return (
     <>
-      <div className="relative inline-block">
-        <button
-          ref={buttonRef}
-          id="annotate-visuals-button"
-          log-id="annotate-visuals-button"
-          className="relative overflow-hidden flex items-center text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ backgroundColor: bgColor }}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          disabled={isDisabled}
-        >
-          {/* Progress fill */}
-          {aiRunning && (
-            <div
-              className="absolute top-0 left-0 h-full transition-[width] duration-500 ease-out"
-              style={{
-                width: `${progress}%`,
-                backgroundColor: fillColor,
-              }}
-            />
-          )}
-          {/* Invisible label for fixed width */}
-          <span className="invisible whitespace-nowrap flex items-center gap-2">
-            Annotate Visuals
-            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
-            </svg>
-          </span>
-          {/* Visible centered content */}
-          <span className="absolute inset-0 flex items-center justify-center z-10 gap-2">
-            Annotate Visuals
-            {!aiRunning && (
-              <svg
-                className={`fill-current h-4 w-4 transition-transform duration-300 ease-in ${
-                  menuOpen ? 'rotate-180' : 'rotate-0'
-                }`}
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-              >
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild disabled={isDisabled}>
+          <button
+            id="annotate-visuals-button"
+            log-id="annotate-visuals-button"
+            className="relative overflow-hidden flex items-center text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: bgColor }}
+            disabled={isDisabled}
+          >
+            {aiRunning && (
+              <div
+                className="absolute top-0 left-0 h-full transition-[width] duration-500 ease-out"
+                style={{
+                  width: `${progress}%`,
+                  backgroundColor: fillColor,
+                }}
+              />
+            )}
+            <span className="invisible whitespace-nowrap flex items-center gap-2">
+              Annotate Visuals
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                 <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
               </svg>
-            )}
-          </span>
-        </button>
+            </span>
+            <span className="absolute inset-0 flex items-center justify-center z-10 gap-2">
+              Annotate Visuals
+              {!aiRunning && (
+                <svg
+                  className="fill-current h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
+                </svg>
+              )}
+            </span>
+          </button>
+        </DropdownMenu.Trigger>
 
-        {menuOpen && !isDisabled && (
-          <div
-            className="absolute top-full z-[400] left-0 mt-1 shadow-lg bg-transparent overflow-hidden m-1"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            className="mt-1 ml-1 shadow-lg z-[400] overflow-visible"
+            sideOffset={4}
+            align="start"
+            onCloseAutoFocus={(e) => e.preventDefault()}
           >
-            <button
-              log-id="annotate-visuals-ai-option"
-              className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleCreateWithAI}
-              disabled={isDisabled}
-            >
-              Create with AI
-            </button>
+            {/* Create with AI — with submenu */}
+            <DropdownMenu.Sub>
+              <DropdownMenu.SubTrigger className={`${menuItemClass} flex items-center justify-between gap-2`}>
+                Create with AI
+                <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"></path>
+                </svg>
+              </DropdownMenu.SubTrigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.SubContent
+                  className="ml-1 shadow-lg z-[401] whitespace-nowrap"
+                  sideOffset={4}
+                >
+                  <DropdownMenu.Item
+                    className={menuItemClass}
+                    log-id="annotate-visuals-ai-all"
+                    onSelect={(e) => { e.preventDefault(); handleAnnotateAll(e as any); }}
+                  >
+                    All visuals
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className={menuItemClass}
+                    log-id="annotate-visuals-ai-missing"
+                    onSelect={(e) => { e.preventDefault(); handleAnnotateMissing(e as any); }}
+                  >
+                    Visuals missing descriptions
+                  </DropdownMenu.Item>
+                </DropdownMenu.SubContent>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Sub>
 
-            <button
+            {/* Create Manually */}
+            <DropdownMenu.Item
+              className={menuItemClass}
               log-id="annotate-visuals-manual-option"
-              className="block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleCreateManually}
-              disabled={isDisabled}
+              onSelect={(e) => { e.preventDefault(); handleCreateManually(e as any); }}
             >
               Create Manually
-            </button>
-          </div>
-        )}
-      </div>
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
 
+      {/* Alert Modal */}
+      {alertModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+            <div className="space-y-4 text-sm text-grey-darkest">
+              <p>{alertModal}</p>
+            </div>
+            <div className="mt-6 text-right">
+              <button
+                log-id="annotate-alert-ok-button"
+                onClick={() => setAlertModal(null)}
+                className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-150"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Modal */}
       {manualModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
           <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">

@@ -1,7 +1,10 @@
 // Import dependencies
 import React, { useRef, useState } from 'react';
-import { uploadFigure } from '../services/api';
+import { uploadFigure, createNote } from '../services/api';
 import { logAction, captureActionContext } from '../utils/userActionLogger';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+
+const menuItemClass = "block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm !font-light rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 cursor-pointer outline-none text-left";
 
 type UploadButtonProps = {
     onUploaded?: () => void | Promise<void>;
@@ -15,16 +18,7 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
     // Selected files state
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [showModal, setShowModal] = useState<boolean>(false);
-
-    // Default metadata values
-    const shortDesc = "Add a description for this visual.";
-    const longDesc = "Ask AI to create a description for this visual.";
-    const source = "Placeholder source";
-
-    // Trigger file picker
-    const handleUpload = () => {
-        setShowModal(true);
-    }
+    const [alertModal, setAlertModal] = useState<string | null>(null);
 
     // Handle file selection (does not upload yet)
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,25 +37,21 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
     // Handle actual upload on submit
     const handleSubmit = async (e: React.MouseEvent) => {
         if (selectedFiles.length === 0) {
-            window.alert('Please select at least one file first');
+            setAlertModal('Please select at least one file first.');
             return;
         }
         const ctx = captureActionContext(e);
 
         let successCount = 0;
         let failCount = 0;
-
         let figDataArr = [];
 
-        // Loop through each file and upload
         for (const file of selectedFiles) {
             const formData = new FormData();
-            // Include filename to help some backends/content sniffers
             formData.append('figure', file, file.name);
-            // Use placeholder metadata
-            formData.append('short_desc', shortDesc);
-            formData.append('long_desc', longDesc);
-            formData.append('source', source);
+            formData.append('short_desc', '');
+            formData.append('long_desc', '');
+            formData.append('source', '');
 
             try {
                 const figResponse = await uploadFigure(formData);
@@ -74,16 +64,14 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
             logAction(ctx, { "images": figDataArr });
         }
 
-        // Show result message
         if (failCount === 0) {
-            window.alert(`All ${successCount} figure(s) uploaded successfully`);
+            setAlertModal(`All ${successCount} figure(s) uploaded successfully.`);
         } else {
-            window.alert(`Upload complete: ${successCount} succeeded, ${failCount} failed`);
+            setAlertModal(`Upload complete: ${successCount} succeeded, ${failCount} failed.`);
         }
 
         setShowModal(false);
         setSelectedFiles([]);
-        // Reset input so the same file can be selected again if needed
         if (fileInputRef.current) fileInputRef.current.value = '';
         if (onUploaded) {
             try { await onUploaded(); } catch {}
@@ -97,9 +85,83 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
         if (fileInputRef.current) fileInputRef.current.value = '';
     }
 
+    // Handle upload from computer
+    const handleUploadFromComputer = () => {
+        setShowModal(true);
+    }
+
+    // Handle import from Jupyter
+    const handleImportFromJupyter = () => {
+        window.open('https://cast-storystudio.com/jupyterhub', '_blank');
+    }
+
+    // Handle add text note
+    const handleAddNote = async () => {
+        try {
+            await createNote();
+            if (onUploaded) {
+                try { await onUploaded(); } catch {}
+            }
+        } catch (err) {
+            console.error('Error creating note:', err);
+            setAlertModal('An error occurred while creating the note.');
+        }
+    }
+
     // Visible component
     return (
         <>
+        <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+                <button id="upload-button"
+                    className="bg-bama-crimson text-sm text-white rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                >
+                    <span className="flex items-center justify-center gap-2">
+                        Add Text or Visuals
+                        <svg
+                            className="fill-current h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                        >
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
+                        </svg>
+                    </span>
+                </button>
+            </DropdownMenu.Trigger>
+
+            <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                    className="mt-1 ml-1 shadow-lg z-[400]"
+                    sideOffset={4}
+                    align="start"
+                    onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                    <DropdownMenu.Item
+                        className={menuItemClass}
+                        log-id="upload-from-computer"
+                        onSelect={handleUploadFromComputer}
+                    >
+                        Upload Visuals from Computer
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                        className={menuItemClass}
+                        log-id="import-from-jupyter"
+                        onSelect={handleImportFromJupyter}
+                    >
+                        Import Visuals from Jupyter Notebook
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                        className={menuItemClass}
+                        log-id="add-text-note"
+                        onSelect={handleAddNote}
+                    >
+                        Add Text
+                    </DropdownMenu.Item>
+                </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+
+        {/* Upload Modal */}
         {showModal && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50" onClick={handleCancel} />
@@ -137,7 +199,7 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
                     >{selectedFiles.length > 0 ? 'Add More Files' : 'Select Files'}</button>
                     {selectedFiles.length > 0 && (
                         <button
-                            log-id="upload-button"
+                            log-id="upload-submit-button"
                             className="bg-bama-crimson text-sm text-white rounded px-3 py-1"
                             onClick={handleSubmit}
                         >Upload</button>
@@ -146,6 +208,7 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
             </div>
         </div>
         )}
+
         <input
             type="file"
             accept="image/*"
@@ -154,11 +217,26 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
             onChange={handleFileChange}
             style={{ display: 'none' }}
         />
-        <button id="upload-button"
-        className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-        onClick={handleUpload}>
-        Upload Visuals
-        </button>
+
+        {/* Alert Modal */}
+        {alertModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+                <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+                    <div className="text-sm text-grey-darkest whitespace-pre-wrap">
+                        {alertModal}
+                    </div>
+                    <div className="mt-6 text-right">
+                        <button
+                            log-id="upload-alert-ok-button"
+                            onClick={() => setAlertModal(null)}
+                            className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-150"
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
         </>
     )
 }

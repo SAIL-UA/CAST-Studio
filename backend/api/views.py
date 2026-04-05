@@ -289,8 +289,8 @@ class UploadFigureView(APIView):
       "id": figure_id,
       "user": request.user.id,
       "filepath": f"{figure_id}{ext}",
-      "short_desc": request.data.get('short_desc') or "Add a description for this visual.",
-      "long_desc": request.data.get('long_desc') or "Ask AI to create a description for this visual.",
+      "short_desc": request.data.get('short_desc') or f"Visual {first_available_index + 1}",
+      "long_desc": request.data.get('long_desc') or "",
       "source": request.data.get('source') or "",
       "in_storyboard": True,
       "x": 0,
@@ -309,6 +309,44 @@ class UploadFigureView(APIView):
       return Response({"message": "Figure uploaded successfully", "fig_data": fig_data }, status=status.HTTP_200_OK)
     else:
       return Response({"message": f"Figure upload failed: {serializer.errors}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CreateNoteView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    note_id = str(uuid.uuid4())
+
+    # Find the first available index for this user's images
+    user_images = ImageData.objects.filter(user=request.user)
+    used_indices = set(user_images.values_list('index', flat=True))
+    first_available_index = 0
+    while first_available_index in used_indices:
+      first_available_index += 1
+
+    serializer = ImageDataSerializer(data={
+      "id": note_id,
+      "user": request.user.id,
+      "filepath": "",
+      "short_desc": f"Note {first_available_index + 1}",
+      "long_desc": "",
+      "source": "",
+      "in_storyboard": True,
+      "x": 0,
+      "y": 0,
+      "has_order": False,
+      "order_num": 0,
+      "index": first_available_index,
+      "created_at": now,
+      "last_saved": now
+    })
+
+    if serializer.is_valid():
+      serializer.save()
+      return Response({"message": "Note created successfully", "note_data": serializer.data}, status=status.HTTP_200_OK)
+    else:
+      return Response({"message": f"Note creation failed: {serializer.errors}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class DeleteFigureView(APIView):
@@ -734,20 +772,16 @@ class ExportStoryView(APIView):
             "sequence_response": cache.sequence_justification,
           }
 
-      # Build structured sections for rendering — story first, then reasoning
-      sections = []
+      # Build structured sections for rendering — story first, then reasoning on new page
+      story_sections = []
       if payload.get('narrative'):
-        sections.append(("Story", str(payload.get('narrative')).strip()))
+        story_sections.append(("Story", str(payload.get('narrative')).strip()))
+
+      reasoning_sections = []
       if payload.get('theme_response'):
-        sections.append(("Theme & Objective", str(payload.get('theme_response')).strip()))
-      if payload.get('categorize_figures_response'):
-        sections.append(("Figure Categories", str(payload.get('categorize_figures_response')).strip()))
+        reasoning_sections.append(("Theme & Objective", str(payload.get('theme_response')).strip()))
       if payload.get('sequence_response'):
-        sections.append(("Sequence Justification", str(payload.get('sequence_response')).strip()))
-      rec = payload.get('recommended_order') or []
-      if isinstance(rec, list) and rec:
-        rec_text = "\n".join([f"- {str(f)}" for f in rec])
-        sections.append(("Recommended Order", rec_text))
+        reasoning_sections.append(("Sequence Justification", str(payload.get('sequence_response')).strip()))
 
       timestamp = now().strftime("%Y%m%dT%H%M%SZ")
 
@@ -897,6 +931,8 @@ class ExportStoryView(APIView):
         flush_list()
         return flow
 
+      from reportlab.platypus import PageBreak
+
       story = []
       # Title and metadata
       story.append(Paragraph("Data Story", ParagraphStyle(
@@ -906,13 +942,24 @@ class ExportStoryView(APIView):
         name="Meta", parent=styles["Normal"], fontName="Helvetica", fontSize=9, textColor=colors.grey)))
       story.append(Spacer(1, 12))
 
-      # Sections
-      for title, content in sections:
+      # Story sections
+      for title, content in story_sections:
         story.append(Paragraph(title, heading_style))
         story.extend(md_to_flowables(content))
         story.append(Spacer(1, 10))
 
-      if not sections:
+      # Reasoning sections on new page
+      if reasoning_sections:
+        story.append(PageBreak())
+        story.append(Paragraph("Reasoning", ParagraphStyle(
+          name="ReasoningTitle", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=16, leading=20)))
+        story.append(Spacer(1, 12))
+        for title, content in reasoning_sections:
+          story.append(Paragraph(title, heading_style))
+          story.extend(md_to_flowables(content))
+          story.append(Spacer(1, 10))
+
+      if not story_sections and not reasoning_sections:
         story.append(Paragraph("No story content provided.", body_style))
 
       doc.build(story)

@@ -32,7 +32,6 @@ const DataStories = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [processedNarrative, setProcessedNarrative] = useState<string>('');
     const [processedTheme, setProcessedTheme] = useState<string>('');
-    const [processedCategories, setProcessedCategories] = useState<string>('');
     const [processedSequence, setProcessedSequence] = useState<string>('');
     const [isProcessingImages, setIsProcessingImages] = useState(false);
     const [processedRecommended, setProcessedRecommended] = useState<string[]>([]);
@@ -180,42 +179,37 @@ const DataStories = () => {
             if (!storyData) {
                 setProcessedNarrative('');
                 setProcessedTheme('');
-                setProcessedCategories('');
                 setProcessedSequence('');
                 setProcessedRecommended([]);
                 return;
             }
 
             setIsProcessingImages(true);
-            
+
             try {
                 const processedNarrativeTextPromise = processNarrativeWithImages(storyData.narrative || '');
                 const processedThemeTextPromise = processNarrativeWithImages(storyData.theme_response || '');
-                const processedCategoriesTextPromise = processNarrativeWithImages(storyData.categorize_figures_response || '');
                 const processedSequenceTextPromise = processNarrativeWithImages(storyData.sequence_response || '');
-                
+
                 const recommendedList = storyData.recommended_order || [];
                 const processedRecommendedPromises = recommendedList.map((filename) =>
                     processNarrativeWithImages(`[FIGURE: ${filename}]`)
-            );
-            
-            const [
-                processedNarrativeText,
-                processedThemeText,
-                processedCategoriesText,
-                processedSequenceText,
+                );
+
+                const [
+                    processedNarrativeText,
+                    processedThemeText,
+                    processedSequenceText,
                     processedRecommendedList
                 ] = await Promise.all([
                     processedNarrativeTextPromise,
                     processedThemeTextPromise,
-                    processedCategoriesTextPromise,
                     processedSequenceTextPromise,
                     Promise.all(processedRecommendedPromises)
                 ]);
-                
+
                 setProcessedNarrative(processedNarrativeText);
                 setProcessedTheme(processedThemeText);
-                setProcessedCategories(processedCategoriesText);
                 setProcessedSequence(processedSequenceText);
                 setProcessedRecommended(processedRecommendedList);
             } catch (error) {
@@ -261,6 +255,21 @@ const DataStories = () => {
                     <p className="text-sm text-grey-dark mt-2 italic" style={{ marginBottom: '2rem' }}>
                         {props.alt || 'Figure'}
                     </p>
+                </div>
+            );
+        }
+    };
+
+    // Smaller image components for recommended figure order
+    const smallImageComponents = {
+        p: markdownComponents.p,
+        img: ({node, ...props}: any) => {
+            return (
+                <div className="flex flex-col items-center justify-center w-full" style={{ zoom: 0.5 }}>
+                    <img
+                        {...props}
+                        className="w-auto h-auto max-h-[35dvh] object-contain rounded-md shadow-sm m-0 p-0"
+                    />
                 </div>
             );
         }
@@ -353,8 +362,8 @@ const DataStories = () => {
                                 {storyData.theme_response && (
                                     <div className="p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Theme and Objective</h4>
-                                        <div className="text-grey-darkest whitespace-pre-wrap">
-                                            <ReactMarkdown 
+                                        <div className="text-grey-darkest">
+                                            <ReactMarkdown
                                                 components={markdownComponents}
                                                 urlTransform={urlTransform}
                                                 skipHtml={false}
@@ -365,28 +374,12 @@ const DataStories = () => {
                                     </div>
                                 )}
 
-                                {/* Figure Categories */}
-                                {storyData.categorize_figures_response && (
-                                    <div className="p-4 rounded-lg">
-                                        <h4 className="font-semibold text-grey-darkest mb-2">Figure Categories</h4>
-                                        <div className="text-grey-darkest whitespace-pre-wrap">
-                                            <ReactMarkdown 
-                                                components={markdownComponents}
-                                                urlTransform={urlTransform}
-                                                skipHtml={false}
-                                            >
-                                                {processedCategories}
-                                            </ReactMarkdown>
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* Sequence Justification */}
                                 {storyData.sequence_response && (
                                     <div className="p-4 rounded-lg">
                                         <h4 className="font-semibold text-grey-darkest mb-2">Sequence Justification</h4>
-                                        <div className="text-grey-darkest whitespace-pre-wrap">
-                                            <ReactMarkdown 
+                                        <div className="text-grey-darkest">
+                                            <ReactMarkdown
                                                 components={markdownComponents}
                                                 urlTransform={urlTransform}
                                                 skipHtml={false}
@@ -394,26 +387,6 @@ const DataStories = () => {
                                                 {processedSequence}
                                             </ReactMarkdown>
                                         </div>
-                                    </div>
-                                )}
-
-                                {/* Recommended Order */}
-                                {processedRecommended && processedRecommended.length > 0 && (
-                                    <div className="p-4 rounded-lg">
-                                        <h4 className="font-semibold text-grey-darkest mb-2">Recommended Figure Order</h4>
-                                        <ol className="list-decimal list-inside text-grey-darkest">
-                                            {processedRecommended.map((md, index) => (
-                                                <li key={index} className="mb-4">
-                                                    <ReactMarkdown 
-                                                        components={markdownComponents}
-                                                        urlTransform={urlTransform}
-                                                        skipHtml={false}
-                                                    >
-                                                        {md}
-                                                    </ReactMarkdown>
-                                                </li>
-                                            ))}
-                                        </ol>
                                     </div>
                                 )}
                             </>

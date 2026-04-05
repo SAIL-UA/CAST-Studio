@@ -29,8 +29,8 @@ const Home = () => {
     // State
     const [centerNarrativePatternsOpen, setCenterNarrativePatternsOpen] = useState(false);
     const [rightNarrativePatternsOpen, setRightNarrativePatternsOpen] = useState(false);
-    const [rightFeedbackOpen, setRightFeedbackOpen] = useState(false);
     const [feedbackItems, setFeedbackItems] = useState<FeedbackCardData[]>([]);
+    const [feedbackExpanded, setFeedbackExpanded] = useState(false);
     const [rightNarrativeExamplesOpen, setRightNarrativeExamplesOpen] = useState(false);
     const [selectedPattern, setSelectedPattern] = useState('');
     const [examplesPattern, setExamplesPattern] = useState('');
@@ -39,8 +39,8 @@ const Home = () => {
     const [leftMenuOpen, setLeftMenuOpen] = useState(false);
     const [dataStoriesExpanded, setDataStoriesExpanded] = useState(false);
 
-    // Derived: right panel is open when feedback or narrative patterns are active
-    const rightPanelOpen = rightFeedbackOpen || rightNarrativePatternsOpen;
+    // Derived: right panel is open when narrative patterns or examples are active
+    const rightPanelOpen = rightNarrativePatternsOpen;
 
     // Check authentication
     useEffect(() => {
@@ -65,8 +65,7 @@ const Home = () => {
             const items = Array.isArray(ce.detail?.items) ? ce.detail.items : [];
             if (items.length > 0) {
                 setFeedbackItems(items);
-                setRightFeedbackOpen(true);
-                setRightNarrativePatternsOpen(false);
+                setFeedbackExpanded(true);
             }
         };
         window.addEventListener('showFeedbackPanel', onShowFeedback as EventListener);
@@ -122,6 +121,36 @@ const Home = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Feedback — right-anchored collapsible panel */}
+                    {/* Feedback — right-anchored collapsible panel */}
+                    <div className="fixed top-1/2 -translate-y-1/2 right-0 z-[300] flex flex-row-reverse items-start transition-all duration-300">
+                        {/* Collapse/Expand toggle bar — vertical on the left edge */}
+                        <button
+                            className="flex items-center justify-center bg-bama-crimson text-xs text-white hover:brightness-110 rounded-l-xl transition-colors duration-150 flex-shrink-0 px-1.5 py-3 shadow-lg"
+                            onClick={() => setFeedbackExpanded(!feedbackExpanded)}
+                            style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+                        >
+                            <svg
+                                className={`w-3 h-3 mb-1.5 transition-transform duration-300 ${feedbackExpanded ? 'rotate-0' : 'rotate-180'}`}
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                            {feedbackExpanded ? 'Collapse' : 'Expand'} Feedback
+                        </button>
+                        {/* Feedback content — fixed height, scrollable */}
+                        <div
+                            className={`rounded-l-xl overflow-hidden shadow-2xl transition-all duration-300 ${
+                                feedbackExpanded ? 'w-[288px] opacity-100' : 'w-0 opacity-0'
+                            }`}
+                            style={{ height: '80vh' }}
+                        >
+                            <div className="h-full bg-grey-lighter-2 overflow-y-auto">
+                                <FeedbackPanel items={feedbackItems} onClose={() => setFeedbackExpanded(false)} />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Left Panel — overlay menu, only visible when hamburger is clicked */}
@@ -144,21 +173,20 @@ const Home = () => {
                                 setCenterNarrativePatternsOpen(val);
                                 setLeftMenuOpen(false);
                             }} />
-                            <div id="footer" className="flex flex-col justify-start items-start">
+                            <div id="footer" className="flex flex-col justify-start items-start mb-6">
                                 <Footer />
                             </div>
                         </div>
                     </>
                 )}
 
-                {/* Right Panel — overlay on top of workspace, only visible when needed */}
+                {/* Right Panel — overlay for narrative patterns/examples only */}
                 {rightPanelOpen && (
                     <>
                         {/* Backdrop */}
                         <div
                             className="fixed inset-0 bg-black bg-opacity-30 z-[500]"
                             onClick={() => {
-                                setRightFeedbackOpen(false);
                                 setRightNarrativePatternsOpen(false);
                                 setRightNarrativeExamplesOpen(false);
                             }}
@@ -170,7 +198,6 @@ const Home = () => {
                                 <button
                                     className="w-7 h-7 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
                                     onClick={() => {
-                                        setRightFeedbackOpen(false);
                                         setRightNarrativePatternsOpen(false);
                                         setRightNarrativeExamplesOpen(false);
                                     }}
@@ -180,9 +207,7 @@ const Home = () => {
                             </div>
                             {/* Panel content */}
                             <div className="px-3 pb-6">
-                                {rightFeedbackOpen ? (
-                                    <FeedbackPanel items={feedbackItems} onClose={() => setRightFeedbackOpen(false)} />
-                                ) : rightNarrativeExamplesOpen ? (
+                                {rightNarrativeExamplesOpen ? (
                                     <NarrativeExamples
                                         examplesPattern={examplesPattern}
                                         setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen}
