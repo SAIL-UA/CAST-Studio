@@ -245,7 +245,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     }
     logAction(ctx, { image_metadata: imageMetadataRef.current });
     try {
-      const res = await deleteFigure(image.filepath);
+      const res = await deleteFigure(image.filepath || image.id);
       if (res.status === 'success') {
         if (onDelete) {
           await onDelete(image.id);

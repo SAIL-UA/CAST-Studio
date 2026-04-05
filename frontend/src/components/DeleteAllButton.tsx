@@ -78,7 +78,7 @@ const DeleteAllButton = ({ images, onDeleteComplete, setImages, setGroupDivs, se
 
             for (const image of images) {
                 try {
-                    const res = await deleteFigure(image.filepath);
+                    const res = await deleteFigure(image.filepath || image.id);
                     if (res.status === 'success') {
                         successCount++;
                     } else {
