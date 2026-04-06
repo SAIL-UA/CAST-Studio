@@ -30,7 +30,7 @@ import WorkflowProcess from './scaffolds/WorkflowProcess';
 
 // Import types
 import { ImageData, GroupData, ScaffoldData } from '../types/types';
-import { SCAFFOLD_NUMBER_TO_PATTERN, SCAFFOLD_VALID_GROUP_NUMBERS } from '../types/scaffoldMappings';
+import { SCAFFOLD_NUMBER_TO_PATTERN, SCAFFOLD_PATTERN_TO_NUMBER, SCAFFOLD_VALID_GROUP_NUMBERS } from '../types/scaffoldMappings';
 
 
 // Define props interface
@@ -195,6 +195,11 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         const handleCreateScaffoldIfNeeded = async () => {
             // If no pattern selected, don't do anything
             if (!selectedPattern || selectedPattern === '') {
+                return;
+            }
+
+            // UI-only modes (e.g. "AI Assistance") are not backend scaffold pattern ids — never auto-create
+            if (!(selectedPattern in SCAFFOLD_PATTERN_TO_NUMBER)) {
                 return;
             }
 
