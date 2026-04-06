@@ -1331,7 +1331,7 @@ def _fetch_all_storyboard_data(user, story_structure_id=None):
     GroupData = _get_model('api', 'GroupData')
     ScaffoldData = _get_model('api', 'ScaffoldData')
     
-    logger.info(f"[FETCH_DATA] Fetching storyboard data for user {user.id}, story_structure_id={story_structure_id}")
+    # logger.info(f"[FETCH_DATA] Fetching storyboard data for user {user.id}, story_structure_id={story_structure_id}")
     
     # Initialize output
     output_json = {
@@ -1350,11 +1350,11 @@ def _fetch_all_storyboard_data(user, story_structure_id=None):
         else:
             logger.warning(f"[FETCH_DATA] Unknown story_structure_id '{story_structure_id}', filtering without number")
     
-    logger.info(f"[SCAFFOLD_NUMBER]: {scaffold_number}")
+    # logger.info(f"[SCAFFOLD_NUMBER]: {scaffold_number}")
     scaffolds = ScaffoldData.objects.filter(user=user, number=scaffold_number) if scaffold_number else ScaffoldData.objects.filter(user=user)
     scaffold_count = scaffolds.count()
     
-    logger.info(f"[FETCH_DATA] Found {scaffold_count} scaffold(s)")
+    # logger.info(f"[FETCH_DATA] Found {scaffold_count} scaffold(s)")
     
     if scaffold_count > 1:
         logger.warning(f"[FETCH_DATA] Multiple scaffolds found ({scaffold_count}), using first")
@@ -1366,7 +1366,7 @@ def _fetch_all_storyboard_data(user, story_structure_id=None):
     all_groups = GroupData.objects.filter(user=user).prefetch_related('images')
     all_images = ImageData.objects.filter(user=user, in_storyboard=True)
     
-    logger.info(f"[FETCH_DATA] Total: {all_groups.count()} groups, {all_images.count()} storyboard images")
+    # logger.info(f"[FETCH_DATA] Total: {all_groups.count()} groups, {all_images.count()} storyboard images")
     
     # Detailed breakdown for debugging
     # logger.info(f"[FETCH_DATA] Image breakdown:")
@@ -1423,15 +1423,15 @@ def _fetch_all_storyboard_data(user, story_structure_id=None):
     total_figure_data = len(output_json["figure_data"])
     total_expected = all_images.exclude(long_desc__exact='').count()
     
-    logger.info(f"[FETCH_DATA] SUMMARY:")
-    logger.info(f"  Scaffold figures: {total_scaffold_figures}")
-    logger.info(f"  Group figures (non-scaffold): {total_group_figures}")
-    logger.info(f"  Ungrouped figures (non-scaffold): {total_figure_data}")
-    logger.info(
-        "  Total figures counted: %s (expected with descriptions: %s)",
-        total_scaffold_figures + total_group_figures + total_figure_data,
-        total_expected,
-    )
+    # logger.info(f"[FETCH_DATA] SUMMARY:")
+    # logger.info(f"  Scaffold figures: {total_scaffold_figures}")
+    # logger.info(f"  Group figures (non-scaffold): {total_group_figures}")
+    # logger.info(f"  Ungrouped figures (non-scaffold): {total_figure_data}")
+    # logger.info(
+    #     "  Total figures counted: %s (expected with descriptions: %s)",
+    #     total_scaffold_figures + total_group_figures + total_figure_data,
+    #     total_expected,
+    # )
     if total_scaffold_figures + total_group_figures + total_figure_data != total_expected:
         logger.warning(
             "[FETCH_DATA] MISMATCH between counted figures (%s) and expected with descriptions (%s)",
@@ -1456,7 +1456,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
     def _progress(stage, name, substage=None):
         update_progress(user_id, "narrative", task_id, stage, TOTAL_STAGES, name, substage)
 
-    logger.info(f"Generating story with structure: {story_structure_id}")
+    # logger.info(f"Generating story with structure: {story_structure_id}")
 
     try:
         _progress(0, "Checking...")
@@ -1479,14 +1479,14 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
         for image in images_needing_desc:
             if image.long_desc_generating:
-                logger.info(
-                    f"[NARRATIVE] Skipping {image.filepath} - description already generating"
-                )
+                # logger.info(
+                #     f"[NARRATIVE] Skipping {image.filepath} - description already generating"
+                # )
                 continue
 
-            logger.info(
-                f"[NARRATIVE] Generating missing description for {image.filepath}"
-            )
+            # logger.info(
+            #     f"[NARRATIVE] Generating missing description for {image.filepath}"
+            # )
             image.long_desc_generating = True
             image.save(update_fields=["long_desc_generating"])
 
@@ -1563,12 +1563,12 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
             story_structure_id,
             all_descriptions_text,
         )
-        logger.info(f"Using story structure: {story_structure_id}")
+        # logger.info(f"Using story structure: {story_structure_id}")
 
         _progress(4, "Fetching...")
         # Fetch all storyboard data (scaffolds, groups, figures) using the resolved structure id
         storyboard_data = _fetch_all_storyboard_data(user, story_structure_id)
-        logger.info(f"[NARRATIVE] Storyboard data: {json.dumps(storyboard_data, indent=4)}")
+        # logger.info(f"[NARRATIVE] Storyboard data: {json.dumps(storyboard_data, indent=4)}")
 
         scaffold_data = storyboard_data.get("scaffold_data")
         non_scaffold_groups = storyboard_data.get("group_data") or []
@@ -1777,7 +1777,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         # Mark progress complete AFTER cache is written
         _progress(TOTAL_STAGES, "Complete")
 
-        logger.info(f"Successfully generated {generation_mode} narrative for user {user.username} using structure: {story_structure_name}")
+        # logger.info(f"Successfully generated {generation_mode} narrative for user {user.username} using structure: {story_structure_name}")
         return f"Successfully generated {generation_mode} narrative for user {user.username} using structure: {story_structure_name}"
     except User.DoesNotExist:
         logger.error(f"User with id {user_id} not found")
