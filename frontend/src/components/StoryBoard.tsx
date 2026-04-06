@@ -401,7 +401,6 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     
             // Check if card is already in the group (using local state)
             if (cardToAdd.groupId === groupId) {
-                console.log(`Card ${cardId} already in group ${groupId}, skipping`);
                 return;
             }
     

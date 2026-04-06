@@ -86,7 +86,7 @@ const DataStories = () => {
                 setRedoStack([]);
                 setLastSyncedKey(storySnapshotKey(mapped));
                 setSaveError(null);
-                console.log('Loaded cached narrative data:', cacheData);
+                // console.log('Loaded cached narrative data:', cacheData);
             }
         } catch (error) {
             console.log('No cached narrative found or error loading:', error);
@@ -125,7 +125,7 @@ const DataStories = () => {
             const customEvent = event as CustomEvent;
             const data = customEvent.detail as StoryData;
             setIsGenerating(false);
-            console.log('Story data received:', data);
+            // console.log('Story data received:', data);
 
             if (storyDataRef.current) {
                 setUndoStack((u) => [...u, cloneStoryData(storyDataRef.current!)]);
@@ -140,7 +140,7 @@ const DataStories = () => {
         // Listen for story generation start events
         const handleStoryGenerationStarted = () => {
             setIsGenerating(true);
-            console.log('Story generation started');
+            // console.log('Story generation started');
         };
 
         window.addEventListener('storyGenerated', handleStoryGenerated as EventListener);
@@ -161,7 +161,7 @@ const DataStories = () => {
     const processNarrativeWithImages = async (text: string): Promise<string> => {
         if (!text) return text;
         
-        console.log('Processing text:', text);
+        // console.log('Processing text:', text);
         
         // Find all figure placeholders - handle nested FIGURE tags
         const figurePattern = /\[FIGURE:\s*(?:\[FIGURE:\s*)?([^[\]]+\.(?:png|jpg|jpeg|gif|webp))\]?\]/gi;
@@ -171,7 +171,7 @@ const DataStories = () => {
             matches.push(match);
         }
         
-        console.log('Found matches:', matches);
+        // console.log('Found matches:', matches);
         
         if (matches.length === 0) return text;
         
@@ -185,11 +185,11 @@ const DataStories = () => {
             // Clean up any nested FIGURE tags in filename
             filename = filename.replace(/^\[FIGURE:\s*/, '').replace(/\]$/, '');
             
-            console.log('Processing match:', { fullMatch, filename });
+            // console.log('Processing match:', { fullMatch, filename });
             
             try {
                 const imageUrl = getImageUrl(filename);
-                console.log('Generated image URL:', imageUrl);
+                // console.log('Generated image URL:', imageUrl);
                 // Build caption from long_desc if available
                 const desc = imageDescriptions[filename];
                 const caption = desc
@@ -198,7 +198,7 @@ const DataStories = () => {
                 // Replace with markdown image syntax using image URL
                 const replacement = `![${caption}](${imageUrl})`;
                 processedText = processedText.replace(fullMatch, replacement);
-                console.log('Replacement made:', { fullMatch, replacement });
+                // console.log('Replacement made:', { fullMatch, replacement });
             } catch (error) {
                 if (process.env.NODE_ENV === 'development') {
                     console.error(`Error loading image ${filename}:`, error);
@@ -209,7 +209,7 @@ const DataStories = () => {
             }
         }
         
-        console.log('Final processed text:', processedText);
+        // console.log('Final processed text:', processedText);
         return processedText;
     };
 
@@ -317,7 +317,6 @@ const DataStories = () => {
 
     // URL transform function for all sections
     const urlTransform = (url: string) => {
-        console.log('URL transform called with:', url);
         return url;
     };
 

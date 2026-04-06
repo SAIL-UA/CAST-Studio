@@ -73,7 +73,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     drop: (item: DragItem, monitor) => {
       // Only handle if not already in this group and group isn't full
       if (item.groupId !== id && cards.length < 6) {
-        console.log(`Card ${item.id} dropped into group ${id}`);
+        // console.log(`Card ${item.id} dropped into group ${id}`);
         onCardAdd(item.id, id);
 
         // Generate metadata synchronously if ref is not initialized yet

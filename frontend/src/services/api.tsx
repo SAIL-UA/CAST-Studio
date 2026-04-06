@@ -114,7 +114,7 @@ export const login = async (credentials: { username: string; password: string })
     localStorage.setItem('refresh', response.data.refresh);
     API.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
     USER_API.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
-    console.log("set access and refresh tokens");
+    // console.log("set access and refresh tokens");
   }
   
   return response;

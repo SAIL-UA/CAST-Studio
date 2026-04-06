@@ -97,7 +97,7 @@ class ScrollTracker {
 
     try {
       await logScrollBatch(batch);
-      console.log(`Sent scroll batch with ${eventCount} events across ${batch.length} element(s)`);
+      // console.log(`Sent scroll batch with ${eventCount} events across ${batch.length} element(s)`);
     } catch (error) {
       console.error('Failed to send scroll batch:', error);
       // Optionally re-add sessions to retry later
