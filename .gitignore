@@ -31,3 +31,5 @@ package-lock.json
 nginx/ssl/
 
 docker_cmds.md
+
+**/scripts/generate_schema_sql.py
