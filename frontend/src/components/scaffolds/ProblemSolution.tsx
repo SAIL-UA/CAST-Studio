@@ -495,7 +495,6 @@ const ProblemSolutionGroup = ({
             }
             // Handle image drops
             if (item.type !== 'group' && item.groupId !== id && cards.length < 6) {
-                console.log(`Card ${item.id} dropped into ${id}`);
                 onCardAdd(item.id, id);
                 return {
                     droppedInGroup: true,
@@ -506,7 +505,7 @@ const ProblemSolutionGroup = ({
             if (item.type === 'group' && scaffoldId && scaffoldGroupNumber !== undefined && onGroupAdd) {
                 // Check if group doesn't already belong to this scaffold
                 if (item.scaffoldId !== scaffoldId) {
-                    console.log(`Group ${item.id} dropped into ${id} (scaffold group ${scaffoldGroupNumber})`);
+                    // console.log(`Group ${item.id} dropped into ${id} (scaffold group ${scaffoldGroupNumber})`);
                     onGroupAdd(item.id, scaffoldId, scaffoldGroupNumber);
                     return {
                         droppedInScaffoldGroup: true,

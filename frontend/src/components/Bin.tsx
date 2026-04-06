@@ -40,7 +40,7 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
         x_bin = Math.max(0, x_bin);
         y_bin = Math.max(0, y_bin);
 
-        console.log(`Group ${item.id} dropped on ${id} at (${x_bin}, ${y_bin})`);
+        // console.log(`Group ${item.id} dropped on ${id} at (${x_bin}, ${y_bin})`);
         return { x: x_bin, y: y_bin };
       }
       if (!clientOffset || !binRef.current) return;
@@ -53,7 +53,7 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
       x_bin = Math.max(0, x_bin);
       y_bin = Math.max(0, y_bin);
 
-      console.log(`Dropped ${item.id} into ${id} at (${x_bin}, ${y_bin})`);
+      // console.log(`Dropped ${item.id} into ${id} at (${x_bin}, ${y_bin})`);
 
       updateImageData(item.id, {
         in_storyboard: id === 'story-bin' ? true : id === 'storyboard-bin',

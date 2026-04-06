@@ -1,7 +1,8 @@
 // Import dependencies
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { getNarrativeCache, getImageDataAll } from '../services/api';
+import { getNarrativeCache, getImageDataAll, updateNarrativeCache } from '../services/api';
+import { storyDataToNarrativeCachePayload } from '../utils/narrativeCacheMapping';
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 import { logAction } from '../utils/userActionLogger';
 import { getImageUrl } from '../utils/imageUtils';
@@ -22,6 +23,25 @@ interface StoryData {
     sequence_response?: string;
 }
 
+function cloneStoryData(s: StoryData): StoryData {
+    return {
+        ...s,
+        recommended_order: s.recommended_order ? [...s.recommended_order] : undefined,
+    };
+}
+
+function storySnapshotKey(s: StoryData | null): string {
+    if (!s) return '';
+    return JSON.stringify({
+        story_structure_id: s.story_structure_id ?? '',
+        narrative: s.narrative ?? '',
+        recommended_order: s.recommended_order ?? [],
+        categorize_figures_response: s.categorize_figures_response ?? '',
+        theme_response: s.theme_response ?? '',
+        sequence_response: s.sequence_response ?? '',
+    });
+}
+
 // DataStories component
 const DataStories = () => {
 
@@ -29,6 +49,12 @@ const DataStories = () => {
     const [narrativeSelected, setNarrativeSelected] = useState(true);
     const [storySelected, setStorySelected] = useState(false);
     const [storyData, setStoryData] = useState<StoryData | null>(null);
+    const [undoStack, setUndoStack] = useState<StoryData[]>([]);
+    const [redoStack, setRedoStack] = useState<StoryData[]>([]);
+    const [lastSyncedKey, setLastSyncedKey] = useState('');
+    const [saveLoading, setSaveLoading] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const storyDataRef = useRef<StoryData | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [processedNarrative, setProcessedNarrative] = useState<string>('');
     const [processedTheme, setProcessedTheme] = useState<string>('');
@@ -37,21 +63,30 @@ const DataStories = () => {
     const [processedRecommended, setProcessedRecommended] = useState<string[]>([]);
     const [imageDescriptions, setImageDescriptions] = useState<Record<string, string>>({});
 
+    useEffect(() => {
+        storyDataRef.current = storyData;
+    }, [storyData]);
+
     // Check for existing cached narrative on component mount
     const loadCachedNarrative = async () => {
         try {
             const response = await getNarrativeCache();
             if (response.data && response.data.data) {
                 const cacheData = response.data.data;
-                setStoryData({
+                const mapped: StoryData = {
                     story_structure_id: cacheData.story_structure_id,
                     narrative: cacheData.narrative,
                     recommended_order: cacheData.order,
                     categorize_figures_response: cacheData.categories,
                     theme_response: cacheData.theme,
                     sequence_response: cacheData.sequence_justification
-                });
-                console.log('Loaded cached narrative data:', cacheData);
+                };
+                setStoryData(mapped);
+                setUndoStack([]);
+                setRedoStack([]);
+                setLastSyncedKey(storySnapshotKey(mapped));
+                setSaveError(null);
+                // console.log('Loaded cached narrative data:', cacheData);
             }
         } catch (error) {
             console.log('No cached narrative found or error loading:', error);
@@ -88,19 +123,24 @@ const DataStories = () => {
         // Listen for story generation events
         const handleStoryGenerated = (event: Event) => {
             const customEvent = event as CustomEvent;
-            const data = customEvent.detail;
+            const data = customEvent.detail as StoryData;
             setIsGenerating(false);
-            console.log('Story data received:', data);
+            // console.log('Story data received:', data);
 
-            // Story data already has processed figures from GenerateStoryButton
+            if (storyDataRef.current) {
+                setUndoStack((u) => [...u, cloneStoryData(storyDataRef.current!)]);
+            }
+            setRedoStack([]);
             setStoryData(data);
+            setLastSyncedKey(storySnapshotKey(data));
+            setSaveError(null);
             loadImageDescriptions();
         };
 
         // Listen for story generation start events
         const handleStoryGenerationStarted = () => {
             setIsGenerating(true);
-            console.log('Story generation started');
+            // console.log('Story generation started');
         };
 
         window.addEventListener('storyGenerated', handleStoryGenerated as EventListener);
@@ -121,7 +161,7 @@ const DataStories = () => {
     const processNarrativeWithImages = async (text: string): Promise<string> => {
         if (!text) return text;
         
-        console.log('Processing text:', text);
+        // console.log('Processing text:', text);
         
         // Find all figure placeholders - handle nested FIGURE tags
         const figurePattern = /\[FIGURE:\s*(?:\[FIGURE:\s*)?([^[\]]+\.(?:png|jpg|jpeg|gif|webp))\]?\]/gi;
@@ -131,7 +171,7 @@ const DataStories = () => {
             matches.push(match);
         }
         
-        console.log('Found matches:', matches);
+        // console.log('Found matches:', matches);
         
         if (matches.length === 0) return text;
         
@@ -145,11 +185,11 @@ const DataStories = () => {
             // Clean up any nested FIGURE tags in filename
             filename = filename.replace(/^\[FIGURE:\s*/, '').replace(/\]$/, '');
             
-            console.log('Processing match:', { fullMatch, filename });
+            // console.log('Processing match:', { fullMatch, filename });
             
             try {
                 const imageUrl = getImageUrl(filename);
-                console.log('Generated image URL:', imageUrl);
+                // console.log('Generated image URL:', imageUrl);
                 // Build caption from long_desc if available
                 const desc = imageDescriptions[filename];
                 const caption = desc
@@ -158,7 +198,7 @@ const DataStories = () => {
                 // Replace with markdown image syntax using image URL
                 const replacement = `![${caption}](${imageUrl})`;
                 processedText = processedText.replace(fullMatch, replacement);
-                console.log('Replacement made:', { fullMatch, replacement });
+                // console.log('Replacement made:', { fullMatch, replacement });
             } catch (error) {
                 if (process.env.NODE_ENV === 'development') {
                     console.error(`Error loading image ${filename}:`, error);
@@ -169,7 +209,7 @@ const DataStories = () => {
             }
         }
         
-        console.log('Final processed text:', processedText);
+        // console.log('Final processed text:', processedText);
         return processedText;
     };
 
@@ -277,7 +317,6 @@ const DataStories = () => {
 
     // URL transform function for all sections
     const urlTransform = (url: string) => {
-        console.log('URL transform called with:', url);
         return url;
     };
 
@@ -294,6 +333,48 @@ const DataStories = () => {
         setStorySelected(true)
 
     }
+
+    const handleUndo = (e: React.MouseEvent) => {
+        logAction(e);
+        if (undoStack.length === 0) return;
+        const prev = undoStack[undoStack.length - 1];
+        setUndoStack((u) => u.slice(0, -1));
+        setRedoStack((r) => (storyData ? [...r, cloneStoryData(storyData)] : r));
+        setStoryData(prev);
+    };
+
+    const handleRedo = (e: React.MouseEvent) => {
+        logAction(e);
+        if (redoStack.length === 0) return;
+        const next = redoStack[redoStack.length - 1];
+        setRedoStack((r) => r.slice(0, -1));
+        setUndoStack((u) => (storyData ? [...u, cloneStoryData(storyData)] : u));
+        setStoryData(next);
+    };
+
+    const handleSaveStory = async (e: React.MouseEvent) => {
+        logAction(e);
+        if (!storyData || saveLoading) return;
+        setSaveLoading(true);
+        setSaveError(null);
+        try {
+            const payload = storyDataToNarrativeCachePayload(storyData);
+            const result = await updateNarrativeCache(payload);
+            if (result?.status === 'success') {
+                setLastSyncedKey(storySnapshotKey(storyData));
+            } else {
+                setSaveError(
+                    typeof result?.message === 'string' ? result.message : 'Save failed'
+                );
+            }
+        } catch (err) {
+            setSaveError(err instanceof Error ? err.message : 'Save failed');
+        } finally {
+            setSaveLoading(false);
+        }
+    };
+
+    const storyDirty = Boolean(storyData && storySnapshotKey(storyData) !== lastSyncedKey);
 
     // Handle scroll events - batched and sent after 5 seconds of inactivity
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -315,9 +396,48 @@ const DataStories = () => {
         <div id="data-stories-container" className="flex flex-col w-full">
             {/* Header */}
             <div id="data-stories-header" className="flex w-full items-center bg-grey-lighter-2 rounded-t-lg p-3">
-                <div id="data-stories-header-left" className="flex items-center gap-3">
+                <div id="data-stories-header-left" className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <span className="bg-bama-crimson text-white text-lg font-roboto-semibold px-3 py-1.5 rounded-lg">Data Stories</span>
                     <ExportButton storyData={storyData} />
+                    <div className="flex items-center gap-1 border-l border-grey-dark/20 pl-2 sm:pl-3 ml-0 sm:ml-1">
+                        <button
+                            type="button"
+                            log-id="data-stories-undo-button"
+                            aria-label="Undo story version"
+                            disabled={undoStack.length === 0}
+                            onClick={handleUndo}
+                            className="p-1.5 rounded-md text-grey-darkest hover:bg-white/60 disabled:opacity-40 disabled:pointer-events-none"
+                            title="Undo"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            log-id="data-stories-redo-button"
+                            aria-label="Redo story version"
+                            disabled={redoStack.length === 0}
+                            onClick={handleRedo}
+                            className="p-1.5 rounded-md text-grey-darkest hover:bg-white/60 disabled:opacity-40 disabled:pointer-events-none"
+                            title="Redo"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            log-id="data-stories-save-button"
+                            aria-label="Save current story to server"
+                            disabled={!storyData || !storyDirty || saveLoading}
+                            onClick={handleSaveStory}
+                            className="text-sm font-roboto-semibold px-2.5 py-1 rounded-md border border-grey-dark/30 text-grey-darkest hover:bg-white/60 disabled:opacity-40 disabled:pointer-events-none"
+                            title={saveError || 'Save story to server'}
+                        >
+                            {saveLoading ? 'Saving…' : 'Save story'}
+                        </button>
+                    </div>
                 </div>
                 <div id="data-stories-header-right" className="flex flex-1 items-center justify-end text-sm">
 

@@ -26,7 +26,6 @@ const ExportButton = ({ storyData }: ExportButtonProps) => {
         try {
             const ctx = captureActionContext(e);
             const resp = await exportStory((storyData || {}) as StoryDataRaw);
-            console.log(storyData);
             const blob = new Blob([resp.data], { type: resp.headers['content-type'] || 'application/pdf' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');

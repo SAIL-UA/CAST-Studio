@@ -77,12 +77,12 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
 
         try {
             // Verify backend state before story generation
-            console.log('Verifying backend state...');
+            // console.log('Verifying backend state...');
             try {
                 const response = await getImageDataAll();
                 const backendImages = response.data.images;
                 const readyImages = backendImages.filter((img: any) => img.in_storyboard && img.long_desc && img.long_desc.trim());
-                console.log(`Images ready for story generation: ${readyImages.length}/${backendImages.length}`);
+                // console.log(`Images ready for story generation: ${readyImages.length}/${backendImages.length}`);
             } catch (error) {
                 console.error('Error verifying backend state:', error);
             }
@@ -138,7 +138,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                                 });
                                 window.dispatchEvent(storyEvent);
 
-                                console.log('New story generated successfully');
+                                // console.log('New story generated successfully');
                                 setStoryLoading(false);
                                 setTaskId(null);
                                 logAction(ctx, { "story_data": cacheData })

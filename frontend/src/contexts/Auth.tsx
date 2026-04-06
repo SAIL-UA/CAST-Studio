@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 // This gives the axios interceptor time to refresh the token
                 const refreshToken = localStorage.getItem('refresh');
                 if (refreshToken) {
-                    console.log('Refresh token exists, retrying auth check...');
+                    // console.log('Refresh token exists, retrying auth check...');
                     // Wait 1 second for token refresh to complete
                     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         const retryData = await checkAuth();
                         setUserAuthenticated(retryData.authenticated);
                         setUsername(retryData.user);
-                        console.log('Auth check succeeded after retry');
+                        // console.log('Auth check succeeded after retry');
                         setAuthLoading(false);
                         return;
                     } catch (retryError) {

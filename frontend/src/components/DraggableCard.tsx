@@ -314,7 +314,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
         pollForCompletion();
         
       } else {
-        console.log('Error generating single description:', res.message);
+        // console.log('Error generating single description:', res.message);
         alert('Failed to start description generation. Please try again.');
       }
     } catch (err) {
