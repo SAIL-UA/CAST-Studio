@@ -604,17 +604,36 @@ class UpdateNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
     cache_data = request.data.get('data')
-    
-    cache = NarrativeCache.objects.get(user=request.user)
-    if not cache:
+    if cache_data is None or not isinstance(cache_data, dict):
+      return Response(
+        {'status': 'error', 'message': 'Expected JSON object in "data"'},
+        status=status.HTTP_400_BAD_REQUEST,
+      )
+
+    try:
+      cache = NarrativeCache.objects.get(user=request.user)
+    except NarrativeCache.DoesNotExist:
       return Response({"status": "error", "message": "Cache not found"}, status=status.HTTP_404_NOT_FOUND)
-    
-    serializer = NarrativeCacheSerializer(cache, data={'data': cache_data}, partial=True)
+
+    allowed = {
+      'story_structure_id',
+      'narrative',
+      'order',
+      'theme',
+      'categories',
+      'sequence_justification',
+    }
+    filtered = {k: v for k, v in cache_data.items() if k in allowed}
+
+    serializer = NarrativeCacheSerializer(cache, data=filtered, partial=True)
     if serializer.is_valid():
       serializer.save()
       return Response({"status": "success"}, status=status.HTTP_200_OK)
     else:
-      return Response({'status': 'error', 'message': 'Invalid data'}, status=status.HTTP_400_BAD_REQUEST)
+      return Response(
+        {'status': 'error', 'message': 'Invalid data', 'errors': serializer.errors},
+        status=status.HTTP_400_BAD_REQUEST,
+      )
 
 
 class ClearNarrativeCacheView(APIView):
