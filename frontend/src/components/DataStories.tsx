@@ -30,6 +30,14 @@ function cloneStoryData(s: StoryData): StoryData {
     };
 }
 
+interface StoryInstance {
+    id: string;
+    label: string;
+    history: StoryData[];
+    historyIndex: number;
+    syncedKey: string;
+}
+
 function storySnapshotKey(s: StoryData | null): string {
     if (!s) return '';
     return JSON.stringify({
@@ -42,19 +50,23 @@ function storySnapshotKey(s: StoryData | null): string {
     });
 }
 
+function truncateDropdownLabel(text: string, maxLength = 15): string {
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, maxLength - 3)}...`;
+}
+
 // DataStories component
 const DataStories = () => {
 
     // State
     const [narrativeSelected, setNarrativeSelected] = useState(true);
     const [storySelected, setStorySelected] = useState(false);
-    const [storyData, setStoryData] = useState<StoryData | null>(null);
-    const [undoStack, setUndoStack] = useState<StoryData[]>([]);
-    const [redoStack, setRedoStack] = useState<StoryData[]>([]);
-    const [lastSyncedKey, setLastSyncedKey] = useState('');
+    const [storyInstances, setStoryInstances] = useState<StoryInstance[]>([]);
+    const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
     const [saveLoading, setSaveLoading] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
-    const storyDataRef = useRef<StoryData | null>(null);
+    const [persistedStoryId, setPersistedStoryId] = useState<string | null>(null);
+    const touchLastTapRef = useRef(0);
     const [isGenerating, setIsGenerating] = useState(false);
     const [processedNarrative, setProcessedNarrative] = useState<string>('');
     const [processedTheme, setProcessedTheme] = useState<string>('');
@@ -62,10 +74,13 @@ const DataStories = () => {
     const [isProcessingImages, setIsProcessingImages] = useState(false);
     const [processedRecommended, setProcessedRecommended] = useState<string[]>([]);
     const [imageDescriptions, setImageDescriptions] = useState<Record<string, string>>({});
+    const [isEditingContent, setIsEditingContent] = useState(false);
+    const [editNarrative, setEditNarrative] = useState('');
+    const [editTheme, setEditTheme] = useState('');
+    const [editSequence, setEditSequence] = useState('');
 
-    useEffect(() => {
-        storyDataRef.current = storyData;
-    }, [storyData]);
+    const selectedStory = storyInstances[selectedStoryIndex] || null;
+    const storyData = selectedStory ? selectedStory.history[selectedStory.historyIndex] : null;
 
     // Check for existing cached narrative on component mount
     const loadCachedNarrative = async () => {
@@ -81,12 +96,17 @@ const DataStories = () => {
                     theme_response: cacheData.theme,
                     sequence_response: cacheData.sequence_justification
                 };
-                setStoryData(mapped);
-                setUndoStack([]);
-                setRedoStack([]);
-                setLastSyncedKey(storySnapshotKey(mapped));
+                const instance: StoryInstance = {
+                    id: `saved-${Date.now()}`,
+                    label: 'Saved Story',
+                    history: [mapped],
+                    historyIndex: 0,
+                    syncedKey: storySnapshotKey(mapped),
+                };
+                setStoryInstances([instance]);
+                setSelectedStoryIndex(0);
+                setPersistedStoryId(instance.id);
                 setSaveError(null);
-                // console.log('Loaded cached narrative data:', cacheData);
             }
         } catch (error) {
             console.log('No cached narrative found or error loading:', error);
@@ -125,16 +145,26 @@ const DataStories = () => {
             const customEvent = event as CustomEvent;
             const data = customEvent.detail as StoryData;
             setIsGenerating(false);
-            // console.log('Story data received:', data);
-
-            if (storyDataRef.current) {
-                setUndoStack((u) => [...u, cloneStoryData(storyDataRef.current!)]);
-            }
-            setRedoStack([]);
-            setStoryData(data);
-            setLastSyncedKey(storySnapshotKey(data));
+            setIsEditingContent(false);
+            let generatedInstanceId = '';
+            setStoryInstances((prev) => {
+                const nextIndex = prev.length + 1;
+                const nextInstance: StoryInstance = {
+                    id: `generated-${Date.now()}-${nextIndex}`,
+                    label: formatStoryInstanceLabel(data.story_structure_id, nextIndex),
+                    history: [cloneStoryData(data)],
+                    historyIndex: 0,
+                    syncedKey: storySnapshotKey(data),
+                };
+                generatedInstanceId = nextInstance.id;
+                setSelectedStoryIndex(prev.length);
+                return [...prev, nextInstance];
+            });
             setSaveError(null);
             loadImageDescriptions();
+            if (generatedInstanceId) {
+                void persistStorySnapshot(generatedInstanceId, data, { markAsPersisted: true });
+            }
         };
 
         // Listen for story generation start events
@@ -271,7 +301,14 @@ const DataStories = () => {
             .join(' ');
     };
 
+    const formatStoryInstanceLabel = (structureId: string | undefined, index: number) => {
+        const patternName = formatStoryStructureName(structureId) || 'Story';
+        return truncateDropdownLabel(`${index}. ${patternName}`);
+    };
+
     const headerPattern = formatStoryStructureName(storyData?.story_structure_id);
+    const canGoBackInHistory = Boolean(selectedStory && selectedStory.historyIndex > 0);
+    const canGoForwardInHistory = Boolean(selectedStory && selectedStory.historyIndex < selectedStory.history.length - 1);
 
     // Unified components for all ReactMarkdown sections
     const markdownComponents = {
@@ -325,56 +362,195 @@ const DataStories = () => {
         logAction(e);
         setNarrativeSelected(true)
         setStorySelected(false)
+        setIsEditingContent(false);
     }
 
     const handleStory = (e: React.MouseEvent) => {
         logAction(e);
         setNarrativeSelected(false)
         setStorySelected(true)
+        setIsEditingContent(false);
 
     }
 
-    const handleUndo = (e: React.MouseEvent) => {
+    const handleHistoryBack = (e: React.MouseEvent) => {
         logAction(e);
-        if (undoStack.length === 0) return;
-        const prev = undoStack[undoStack.length - 1];
-        setUndoStack((u) => u.slice(0, -1));
-        setRedoStack((r) => (storyData ? [...r, cloneStoryData(storyData)] : r));
-        setStoryData(prev);
+        setStoryInstances((prev) => prev.map((instance, idx) => {
+            if (idx !== selectedStoryIndex) return instance;
+            if (instance.historyIndex <= 0) return instance;
+            return {
+                ...instance,
+                historyIndex: instance.historyIndex - 1,
+            };
+        }));
+        setIsEditingContent(false);
     };
 
-    const handleRedo = (e: React.MouseEvent) => {
+    const handleHistoryForward = (e: React.MouseEvent) => {
         logAction(e);
-        if (redoStack.length === 0) return;
-        const next = redoStack[redoStack.length - 1];
-        setRedoStack((r) => r.slice(0, -1));
-        setUndoStack((u) => (storyData ? [...u, cloneStoryData(storyData)] : u));
-        setStoryData(next);
+        setStoryInstances((prev) => prev.map((instance, idx) => {
+            if (idx !== selectedStoryIndex) return instance;
+            if (instance.historyIndex >= instance.history.length - 1) return instance;
+            return {
+                ...instance,
+                historyIndex: instance.historyIndex + 1,
+            };
+        }));
+        setIsEditingContent(false);
     };
 
-    const handleSaveStory = async (e: React.MouseEvent) => {
-        logAction(e);
-        if (!storyData || saveLoading) return;
+    const startEditing = () => {
+        if (!storyData) return;
+        setEditNarrative(storyData.narrative || '');
+        setEditTheme(storyData.theme_response || '');
+        setEditSequence(storyData.sequence_response || '');
+        setIsEditingContent(true);
+    };
+
+    const handleContentDoubleClick = () => {
+        startEditing();
+    };
+
+    const handleContentTouchEnd = () => {
+        const now = Date.now();
+        if (now - touchLastTapRef.current < 300) {
+            startEditing();
+            touchLastTapRef.current = 0;
+            return;
+        }
+        touchLastTapRef.current = now;
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditingContent(false);
+    };
+
+    const persistStorySnapshot = async (
+        instanceId: string,
+        dataToPersist: StoryData,
+        options?: { markAsPersisted?: boolean }
+    ) => {
         setSaveLoading(true);
         setSaveError(null);
         try {
-            const payload = storyDataToNarrativeCachePayload(storyData);
+            const payload = storyDataToNarrativeCachePayload(dataToPersist);
             const result = await updateNarrativeCache(payload);
             if (result?.status === 'success') {
-                setLastSyncedKey(storySnapshotKey(storyData));
-            } else {
-                setSaveError(
-                    typeof result?.message === 'string' ? result.message : 'Save failed'
-                );
+                const savedKey = storySnapshotKey(dataToPersist);
+                setStoryInstances((prev) => prev.map((instance) => instance.id === instanceId
+                    ? { ...instance, syncedKey: savedKey }
+                    : instance
+                ));
+                if (options?.markAsPersisted) {
+                    setPersistedStoryId(instanceId);
+                }
+                return true;
             }
+            setSaveError(typeof result?.message === 'string' ? result.message : 'Save failed');
+            return false;
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'Save failed');
+            return false;
         } finally {
             setSaveLoading(false);
         }
     };
 
-    const storyDirty = Boolean(storyData && storySnapshotKey(storyData) !== lastSyncedKey);
+    const handleApplyLocalEdit = (e: React.MouseEvent) => {
+        logAction(e);
+        if (!selectedStory || !storyData) return;
+        const updated: StoryData = cloneStoryData(storyData);
+        if (storySelected) {
+            updated.narrative = editNarrative;
+        } else {
+            updated.theme_response = editTheme;
+            updated.sequence_response = editSequence;
+        }
+        const shouldAutoPersistCurrentSaved = selectedStory.id === persistedStoryId;
+        setStoryInstances((prev) => prev.map((instance, idx) => {
+            if (idx !== selectedStoryIndex) return instance;
+            const sliced = instance.history.slice(0, instance.historyIndex + 1);
+            return {
+                ...instance,
+                history: [...sliced, updated],
+                historyIndex: sliced.length,
+            };
+        }));
+        setIsEditingContent(false);
+        if (shouldAutoPersistCurrentSaved) {
+            void persistStorySnapshot(selectedStory.id, updated, { markAsPersisted: true });
+        }
+    };
+
+    const handleSaveStory = async (e: React.MouseEvent) => {
+        logAction(e);
+        if (!storyData || !selectedStory || saveLoading) return;
+        await persistStorySnapshot(selectedStory.id, storyData, { markAsPersisted: true });
+    };
+
+    const storyDirty = Boolean(storyData && selectedStory && storySnapshotKey(storyData) !== selectedStory.syncedKey);
+    const storyEditPanel = isEditingContent && storyData && storySelected && (
+        <div className="p-4 rounded-lg border border-grey-dark/20 bg-white/70 mb-4">
+            <h4 className="font-semibold text-grey-darkest mb-2">Edit Story</h4>
+            <textarea
+                value={editNarrative}
+                onChange={(e) => setEditNarrative(e.target.value)}
+                className="w-full min-h-40 rounded-md border border-grey-dark/20 p-2 text-sm mb-3"
+            />
+            <div className="mt-3 flex items-center gap-2">
+                <button
+                    type="button"
+                    log-id="all-story-local-edit-apply"
+                    onClick={handleApplyLocalEdit}
+                    className="text-sm font-roboto-semibold px-2.5 py-1 rounded-md border border-grey-dark/30 text-grey-darkest hover:bg-white/60"
+                >
+                    Apply local edit
+                </button>
+                <button
+                    type="button"
+                    log-id="all-story-local-edit-cancel"
+                    onClick={handleCancelEdit}
+                    className="text-sm px-2.5 py-1 rounded-md border border-grey-dark/30 text-grey-darkest hover:bg-white/60"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+    const reasoningEditPanel = isEditingContent && storyData && narrativeSelected && (
+        <div className="p-4 rounded-lg border border-grey-dark/20 bg-white/70 mb-4">
+            <h4 className="font-semibold text-grey-darkest mb-2">Edit Theme and Objective</h4>
+            <textarea
+                value={editTheme}
+                onChange={(e) => setEditTheme(e.target.value)}
+                className="w-full min-h-24 rounded-md border border-grey-dark/20 p-2 text-sm mb-3"
+            />
+            <h4 className="font-semibold text-grey-darkest mb-2">Edit Sequence Justification</h4>
+            <textarea
+                value={editSequence}
+                onChange={(e) => setEditSequence(e.target.value)}
+                className="w-full min-h-24 rounded-md border border-grey-dark/20 p-2 text-sm"
+            />
+            <div className="mt-3 flex items-center gap-2">
+                <button
+                    type="button"
+                    log-id="reasoning-local-edit-apply"
+                    onClick={handleApplyLocalEdit}
+                    className="text-sm font-roboto-semibold px-2.5 py-1 rounded-md border border-grey-dark/30 text-grey-darkest hover:bg-white/60"
+                >
+                    Apply local edit
+                </button>
+                <button
+                    type="button"
+                    log-id="reasoning-local-edit-cancel"
+                    onClick={handleCancelEdit}
+                    className="text-sm px-2.5 py-1 rounded-md border border-grey-dark/30 text-grey-darkest hover:bg-white/60"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
 
     // Handle scroll events - batched and sent after 5 seconds of inactivity
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -400,14 +576,32 @@ const DataStories = () => {
                     <span className="bg-bama-crimson text-white text-lg font-roboto-semibold px-3 py-1.5 rounded-lg">Data Stories</span>
                     <ExportButton storyData={storyData} />
                     <div className="flex items-center gap-1 border-l border-grey-dark/20 pl-2 sm:pl-3 ml-0 sm:ml-1">
+                        <select
+                            id="story-instance-selector"
+                            log-id="story-instance-selector"
+                            className="text-sm rounded-md border border-grey-dark/30 bg-white px-2 py-1 text-grey-darkest"
+                            value={selectedStoryIndex}
+                            onChange={(e) => {
+                                setSelectedStoryIndex(Number(e.target.value));
+                                setIsEditingContent(false);
+                            }}
+                            disabled={storyInstances.length === 0}
+                            title="Switch generated story"
+                        >
+                            {storyInstances.map((instance, idx) => (
+                                <option key={instance.id} value={idx}>
+                                    {instance.label}
+                                </option>
+                            ))}
+                        </select>
                         <button
                             type="button"
                             log-id="data-stories-undo-button"
-                            aria-label="Undo story version"
-                            disabled={undoStack.length === 0}
-                            onClick={handleUndo}
+                            aria-label="Previous edit history entry"
+                            disabled={!canGoBackInHistory}
+                            onClick={handleHistoryBack}
                             className="p-1.5 rounded-md text-grey-darkest hover:bg-white/60 disabled:opacity-40 disabled:pointer-events-none"
-                            title="Undo"
+                            title="Previous version"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -416,11 +610,11 @@ const DataStories = () => {
                         <button
                             type="button"
                             log-id="data-stories-redo-button"
-                            aria-label="Redo story version"
-                            disabled={redoStack.length === 0}
-                            onClick={handleRedo}
+                            aria-label="Next edit history entry"
+                            disabled={!canGoForwardInHistory}
+                            onClick={handleHistoryForward}
                             className="p-1.5 rounded-md text-grey-darkest hover:bg-white/60 disabled:opacity-40 disabled:pointer-events-none"
-                            title="Redo"
+                            title="Next version"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -469,14 +663,18 @@ const DataStories = () => {
             >
                 {narrativeSelected ? (
                     // Narrative Structuring Content
-                    <div className="w-full space-y-6">
+                    <div
+                        className="w-full space-y-6"
+                        onDoubleClick={handleContentDoubleClick}
+                        onTouchEnd={handleContentTouchEnd}
+                    >
                         <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structure{headerPattern ? `: ${headerPattern}` : ''}</h3>
-                        
+                        {reasoningEditPanel}
                         {isGenerating ? (
                             <GeneratingPlaceholder contentName="narrative analysis" lines={6} />
                         ) : isProcessingImages ? (
                             <GeneratingPlaceholder contentName="processing images" lines={4} />
-                        ) : storyData ? (
+                        ) : isEditingContent ? null : storyData ? (
                             <>
                                 {/* Theme and Objective */}
                                 {storyData.theme_response && (
@@ -516,17 +714,24 @@ const DataStories = () => {
                                 <p className="text-sm mt-2">Click "Generate Story" to create narrative insights.</p>
                             </div>
                         )}
+                        {!isEditingContent && storyData && (
+                            <p className="text-xs text-grey-dark mt-2">Double-click (or double-tap on touch) to edit reasoning.</p>
+                        )}
                     </div>
                 ) : (
                     // Generated Story Content (when storySelected is true)
-                    <div className="w-full">
+                    <div
+                        className="w-full"
+                        onDoubleClick={handleContentDoubleClick}
+                        onTouchEnd={handleContentTouchEnd}
+                    >
                         <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story{headerPattern ? `: ${headerPattern}` : ''}</h3>
-                        
+                        {storyEditPanel}
                         {isGenerating ? (
                             <GeneratingPlaceholder contentName="data story" lines={8} />
                         ) : isProcessingImages ? (
                             <GeneratingPlaceholder contentName="processing images" lines={4} />
-                        ) : storyData?.narrative ? (
+                        ) : isEditingContent ? null : storyData?.narrative ? (
                             <div className="p-4 rounded-lg">
                                 <div className="prose max-w-none text-grey-darkest leading-relaxed text-base">
                                     <ReactMarkdown
@@ -547,6 +752,9 @@ const DataStories = () => {
                                 <p>No story generated yet.</p>
                                 <p className="text-sm mt-2">Click "Generate Story" to create your data story.</p>
                             </div>
+                        )}
+                        {!isEditingContent && storyData && (
+                            <p className="text-xs text-grey-dark mt-2">Double-click (or double-tap on touch) to edit story text.</p>
                         )}
                     </div>
                 )}
