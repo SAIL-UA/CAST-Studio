@@ -1,5 +1,8 @@
 import axios from 'axios';
-import { ImageData, StoryDataRaw } from '../types/types';
+import { ImageData } from '../types/types';
+import type { NarrativeCachePayload } from '../utils/narrativeCacheMapping';
+
+const IMAGE_IN_OUTPUT_GC_SESSION_KEY = 'cast_image_in_output_gc_v1';
 
 // === Create Axios instances ===
 const API = axios.create({
@@ -85,6 +88,9 @@ const refreshToken = async () => {
         } catch (err) {
           localStorage.removeItem('access');
           localStorage.removeItem('refresh');
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.removeItem(IMAGE_IN_OUTPUT_GC_SESSION_KEY);
+          }
           window.location.href = '/login';
           processQueue(err, null);
           return Promise.reject(err);
@@ -98,7 +104,17 @@ const refreshToken = async () => {
   );
 });
 
-
+/** Reconcile ImageData.in_output with persisted NarrativeCache; once per browser tab session. */
+export const runImageInOutputGcIfNeeded = async () => {
+  if (typeof sessionStorage === 'undefined') return;
+  if (sessionStorage.getItem(IMAGE_IN_OUTPUT_GC_SESSION_KEY)) return;
+  try {
+    await API.post('/images/gc/');
+    sessionStorage.setItem(IMAGE_IN_OUTPUT_GC_SESSION_KEY, '1');
+  } catch (e) {
+    console.warn('Image in_output GC failed:', e);
+  }
+};
 
 // user endpoints
 export const checkAuth = async() => {
@@ -129,6 +145,9 @@ export const register = async(userData: { username: string; email: string; passw
 export const logout = async () => {
   localStorage.removeItem('access');
   localStorage.removeItem('refresh');
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.removeItem(IMAGE_IN_OUTPUT_GC_SESSION_KEY);
+  }
 
   delete API.defaults.headers.common['Authorization'];
   delete USER_API.defaults.headers.common['Authorization'];
@@ -316,8 +335,8 @@ export const confirmPasswordReset = async(email: string, code: string, newPasswo
   return response;
 };
 
-export const exportStory = async(storyData: StoryDataRaw) => {
-  const response = await API.post('/export/', { storyData }, { responseType: 'blob' })
+export const exportStory = async (narrativeCachePayload: NarrativeCachePayload) => {
+  const response = await API.post('/export/', { storyData: narrativeCachePayload }, { responseType: 'blob' });
   return response;
 };
 

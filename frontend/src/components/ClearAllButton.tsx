@@ -72,13 +72,13 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
                 }
             }
 
-            // Move all images to recycle bin (set in_storyboard to false)
+            // Move all images to recycle bin
             let successCount = 0;
             let failCount = 0;
 
             for (const image of images) {
                 try {
-                    await updateImageData(image.id, { in_storyboard: false });
+                    await updateImageData(image.id, { in_storyboard: false, in_trash: true });
                     successCount++;
                 } catch (error) {
                     console.error(`Error moving image ${image.id} to recycle bin:`, error);
@@ -89,7 +89,7 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
             // Immediately update state arrays to reflect changes
             if (setImages) {
                 // Update images to mark them as moved to recycle bin
-                setImages(prev => prev.map(img => ({ ...img, in_storyboard: false })));
+                setImages(prev => prev.map(img => ({ ...img, in_storyboard: false, in_trash: true })));
             }
             if (setGroupDivs) {
                 setGroupDivs([]);

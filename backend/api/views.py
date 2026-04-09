@@ -51,6 +51,12 @@ from .serializers import (
 # Tasks
 from .tasks import generate_description_task, generate_narrative_task, generate_feedback_task
 
+from .figure_refs import (
+  export_story_payload_has_content,
+  normalize_export_story_payload,
+  sync_in_output_flags_for_user,
+)
+
 # Scaffold mappings (moved to pydandtic.py)
 from .pydandtic import STORY_SCAFFOLDS
 
@@ -353,7 +359,7 @@ class DeleteFigureView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request, **kwargs):
     """
-    Deletes the file and its corresponding DB record.
+    Soft-deletes image from frontend surfaces.
     Filename is taken from the URL pattern.
     """
     filename = kwargs.get('filename')
@@ -388,31 +394,44 @@ class DeleteFigureView(APIView):
         if other_user_image:
           return Response({"status": "error", "message": "Image belongs to another user"}, status=status.HTTP_403_FORBIDDEN)
 
-    # Remove image file if it exists
-    file_deleted = False
-    if os.path.exists(filepath):
-      try:
-        os.remove(filepath)
-        file_deleted = True
-      except Exception as e:
-        return Response({"status": "error", "message": f"Failed to delete file: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    else:
-      # Log warning but don't fail - file might have been manually deleted
-      print(f"Warning: File not found at {filepath}")
+    if not image_data:
+      return Response(
+        {"status": "error", "message": f"Image record not found for filename: {filename} (base_name: {base_name})"},
+        status=status.HTTP_404_NOT_FOUND
+      )
 
-    # Remove DB record if it exists
-    if image_data:
-      try:
-        image_data.delete()
-        return Response({"status": "success", "message": "Figure deleted successfully", "deleted_id": str(image_data.id), "deleted_filename": filename}, status=status.HTTP_200_OK)
-      except Exception as e:
-        return Response({"status": "error", "message": f"Failed to delete database record: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    else:
-      # If file was deleted but DB record doesn't exist, that's okay
-      if file_deleted:
-        return Response({"status": "success", "message": "File deleted but database record not found", "deleted_filename": filename}, status=status.HTTP_200_OK)
-      else:
-        return Response({"status": "error", "message": f"Image record not found for filename: {filename} (base_name: {base_name})"}, status=status.HTTP_404_NOT_FOUND)
+    try:
+      # Frontend-visible deletion: remove from storyboard/recycle-bin and detach relationships.
+      if image_data.in_storyboard:
+        image_data.in_storyboard = False
+        image_data.in_trash = False
+        image_data.group_id = None
+        image_data.scaffold_id = None
+        image_data.index = 0
+        image_data.save(
+          update_fields=[
+            "in_storyboard",
+            "in_trash",
+            "group_id",
+            "scaffold_id",
+            "index",
+            "last_saved",
+          ]
+        )
+    except Exception as e:
+      return Response({"status": "error", "message": f"Failed to update image state: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Keep physical file lifecycle separate. We intentionally do not hard-delete
+    # files here; in_output still governs permanent deletion elsewhere.
+    return Response(
+      {
+        "status": "success",
+        "message": "Figure removed from storyboard successfully",
+        "deleted_id": str(image_data.id),
+        "deleted_filename": filename,
+      },
+      status=status.HTTP_200_OK
+    )
 
 
 class UpdateImageDataView(APIView):
@@ -644,7 +663,16 @@ class ClearNarrativeCacheView(APIView):
       cache.delete()
     except ObjectDoesNotExist:
       pass
+    sync_in_output_flags_for_user(request.user)
     return Response({"status": "success"}, status=status.HTTP_200_OK)
+
+
+class ImageInOutputGcView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    updated = sync_in_output_flags_for_user(request.user)
+    return Response({"status": "success", "updated": updated}, status=status.HTTP_200_OK)
 
 
 class GenerateDescriptionsView(APIView):
@@ -777,19 +805,20 @@ class ExportStoryView(APIView):
 
   def post(self, request):
     try:
-      payload = (request.data or {}).get('storyData') or {}
+      raw = (request.data or {}).get("storyData")
+      if not isinstance(raw, dict):
+        return Response(
+          {"message": "storyData must be a JSON object with the active story to export."},
+          status=status.HTTP_400_BAD_REQUEST,
+        )
+      payload = raw
+      if not export_story_payload_has_content(payload):
+        return Response(
+          {"message": "storyData is empty; send the active story from the editor (no server-side story lookup)."},
+          status=status.HTTP_400_BAD_REQUEST,
+        )
 
-      # If no payload provided, attempt to pull latest from NarrativeCache
-      if not payload:
-        cache = NarrativeCache.objects.filter(user=request.user).first()
-        if cache:
-          payload = {
-            "narrative": cache.narrative,
-            "recommended_order": cache.order or [],
-            "categorize_figures_response": None,
-            "theme_response": cache.theme,
-            "sequence_response": cache.sequence_justification,
-          }
+      payload = normalize_export_story_payload(payload)
 
       # Build structured sections for rendering — story first, then reasoning on new page
       story_sections = []

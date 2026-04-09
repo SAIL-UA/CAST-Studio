@@ -40,8 +40,8 @@ const RecycleBoard = ({ images, setImages, loading, fetchUserData, updateImageDa
         await fetchUserData();
     };
 
-    // Show only images that are NOT in the storyboard (in_storyboard === false)
-    const trashImages = images.filter(img => img.in_storyboard === false);
+    // Show only images that are explicitly in recycle bin
+    const trashImages = images.filter(img => img.in_trash === true);
 
     // Loading state
     if (loading) {

@@ -255,9 +255,17 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
       } else {
         alert(res.message || 'Error deleting figure');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error deleting figure:', err);
-      alert('An error occurred while deleting the figure');
+      const ax = err as { response?: { status?: number; data?: { message?: string } } };
+      if (ax.response?.status === 409) {
+        alert(
+          ax.response?.data?.message ||
+            'This image is referenced by your saved story output and cannot be deleted yet.',
+        );
+      } else {
+        alert('An error occurred while deleting the figure');
+      }
     }
   };
 
@@ -328,7 +336,8 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     logAction(e, { image_metadata: imageMetadataRef.current });
     updateImageData(image.id, {
       ...image,
-      in_storyboard: false
+      in_storyboard: false,
+      in_trash: true
     });
     setShowModal(false);
     document.body.style.overflow = 'auto';
@@ -339,7 +348,8 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     logAction(e, { image_metadata: imageMetadataRef.current });
     updateImageData(image.id, {
       ...image,
-      in_storyboard: true
+      in_storyboard: true,
+      in_trash: false
     });
     setShowModal(false);
     document.body.style.overflow = 'auto';

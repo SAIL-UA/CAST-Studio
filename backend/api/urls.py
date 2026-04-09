@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    ImageDataView, UploadFigureView, CreateNoteView, DeleteFigureView,
+    ImageDataView, UploadFigureView, CreateNoteView, DeleteFigureView, ImageInOutputGcView,
     UpdateImageDataView, GenerateNarrativeAsyncView, GetNarrativeCacheView,
     UpdateNarrativeCacheView, ClearNarrativeCacheView,
     GenerateDescriptionsView, GenerateNarrativeView,
@@ -26,6 +26,7 @@ urlpatterns = [
     path("notes/create/", CreateNoteView.as_view(), name="note-create"),
     path("images/<uuid:image_id>/update/", UpdateImageDataView.as_view(), name="image-update"),
     path("images/<str:filename>/delete/", DeleteFigureView.as_view(), name="image-delete"),
+    path("images/gc/", ImageInOutputGcView.as_view(), name="image-in-output-gc"),
 
     # Groups
     path("groups/", GetGroupView.as_view(), name="group-list"),  # GET list or single via query param

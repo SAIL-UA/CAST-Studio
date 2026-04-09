@@ -10,6 +10,8 @@ export interface ImageData {
   long_desc_generating: boolean;
   source: string;
   in_storyboard: boolean;
+  in_trash?: boolean;
+  in_output?: boolean;
   x: number;
   y: number;
   has_order: boolean;
@@ -142,7 +144,7 @@ export interface GroupMetadata {
 export interface StoryDataRaw {
   narrative?: string;
   recommended_order?: string[];
-  categorize_figures_response?: string;
+  categorize_figures_response?: string | Array<{ filename: string; category: string }>;
   theme_response?: string;
   sequence_response?: string;
 }

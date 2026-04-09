@@ -1,8 +1,8 @@
 // Import dependencies
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { getNarrativeCache, getImageDataAll, updateNarrativeCache } from '../services/api';
-import { storyDataToNarrativeCachePayload } from '../utils/narrativeCacheMapping';
+import { storyDataToNarrativeCachePayload, type StoryDataForCache } from '../utils/narrativeCacheMapping';
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 import { logAction } from '../utils/userActionLogger';
 import { getImageUrl } from '../utils/imageUtils';
@@ -10,7 +10,6 @@ import { scrollTracker } from '../utils/scrollTracker';
 
 // Import components
 import ExportButton from './ExportButton';
-import FeedbackButton from './FeedbackButton';
 
 
 // Story data interface
@@ -55,6 +54,24 @@ function truncateDropdownLabel(text: string, maxLength = 15): string {
     return `${text.slice(0, maxLength - 3)}...`;
 }
 
+/** Story text as shown in the UI, including unsaved edit buffers. */
+function mergeDisplayedStoryForExport(
+    base: StoryData | null,
+    editing: boolean,
+    editNarrative: string,
+    editTheme: string,
+    editSequence: string,
+): StoryDataForCache | null {
+    if (!base) return null;
+    if (!editing) return cloneStoryData(base);
+    return {
+        ...cloneStoryData(base),
+        narrative: editNarrative,
+        theme_response: editTheme,
+        sequence_response: editSequence,
+    };
+}
+
 // DataStories component
 const DataStories = () => {
 
@@ -82,6 +99,17 @@ const DataStories = () => {
     const selectedStory = storyInstances[selectedStoryIndex] || null;
     const storyData = selectedStory ? selectedStory.history[selectedStory.historyIndex] : null;
 
+    const narrativeCacheForExport = useMemo(() => {
+        const merged = mergeDisplayedStoryForExport(
+            storyData,
+            isEditingContent,
+            editNarrative,
+            editTheme,
+            editSequence,
+        );
+        return merged ? storyDataToNarrativeCachePayload(merged) : null;
+    }, [storyData, isEditingContent, editNarrative, editTheme, editSequence]);
+
     // Check for existing cached narrative on component mount
     const loadCachedNarrative = async () => {
         try {
@@ -98,7 +126,7 @@ const DataStories = () => {
                 };
                 const instance: StoryInstance = {
                     id: `saved-${Date.now()}`,
-                    label: 'Saved Story',
+                    label: formatStoryInstanceLabel(mapped.story_structure_id, 1),
                     history: [mapped],
                     historyIndex: 0,
                     syncedKey: storySnapshotKey(mapped),
@@ -306,6 +334,14 @@ const DataStories = () => {
         return truncateDropdownLabel(`${index}. ${patternName}`);
     };
 
+    const getStoryTabLabel = (instance: StoryInstance, index: number) => {
+        if (persistedStoryId && instance.id === persistedStoryId) {
+            return 'Saved Story';
+        }
+        const currentSnapshot = instance.history[instance.historyIndex] || instance.history[0];
+        return formatStoryInstanceLabel(currentSnapshot?.story_structure_id, index + 1);
+    };
+
     const headerPattern = formatStoryStructureName(storyData?.story_structure_id);
     const canGoBackInHistory = Boolean(selectedStory && selectedStory.historyIndex > 0);
     const canGoForwardInHistory = Boolean(selectedStory && selectedStory.historyIndex < selectedStory.history.length - 1);
@@ -489,6 +525,15 @@ const DataStories = () => {
     };
 
     const storyDirty = Boolean(storyData && selectedStory && storySnapshotKey(storyData) !== selectedStory.syncedKey);
+    const canSaveSelectedStory = Boolean(
+        storyData &&
+        selectedStory &&
+        !saveLoading &&
+        (
+            storyDirty ||
+            selectedStory.id !== persistedStoryId
+        )
+    );
     const storyEditPanel = isEditingContent && storyData && storySelected && (
         <div className="p-4 rounded-lg border border-grey-dark/20 bg-white/70 mb-4">
             <h4 className="font-semibold text-grey-darkest mb-2">Edit Story</h4>
@@ -574,7 +619,7 @@ const DataStories = () => {
             <div id="data-stories-header" className="flex w-full items-center bg-grey-lighter-2 rounded-t-lg p-3">
                 <div id="data-stories-header-left" className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <span className="bg-bama-crimson text-white text-lg font-roboto-semibold px-3 py-1.5 rounded-lg">Data Stories</span>
-                    <ExportButton storyData={storyData} />
+                    <ExportButton narrativeCacheForExport={narrativeCacheForExport} />
                     <div className="flex items-center gap-1 border-l border-grey-dark/20 pl-2 sm:pl-3 ml-0 sm:ml-1">
                         <select
                             id="story-instance-selector"
@@ -590,7 +635,7 @@ const DataStories = () => {
                         >
                             {storyInstances.map((instance, idx) => (
                                 <option key={instance.id} value={idx}>
-                                    {instance.label}
+                                    {getStoryTabLabel(instance, idx)}
                                 </option>
                             ))}
                         </select>
@@ -624,10 +669,10 @@ const DataStories = () => {
                             type="button"
                             log-id="data-stories-save-button"
                             aria-label="Save current story to server"
-                            disabled={!storyData || !storyDirty || saveLoading}
+                            disabled={!canSaveSelectedStory}
                             onClick={handleSaveStory}
                             className="text-sm font-roboto-semibold px-2.5 py-1 rounded-md border border-grey-dark/30 text-grey-darkest hover:bg-white/60 disabled:opacity-40 disabled:pointer-events-none"
-                            title={saveError || 'Save story to server'}
+                            title={saveError || 'Save this story version to server'}
                         >
                             {saveLoading ? 'Saving…' : 'Save story'}
                         </button>
@@ -668,7 +713,13 @@ const DataStories = () => {
                         onDoubleClick={handleContentDoubleClick}
                         onTouchEnd={handleContentTouchEnd}
                     >
-                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structure{headerPattern ? `: ${headerPattern}` : ''}</h3>
+                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">
+                            Narrative Structure:
+                            {isGenerating
+                                ? ' Writing...' 
+                                : headerPattern ? `: ${headerPattern}` : ''
+                            }
+                        </h3>
                         {reasoningEditPanel}
                         {isGenerating ? (
                             <GeneratingPlaceholder contentName="narrative analysis" lines={6} />

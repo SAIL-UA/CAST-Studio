@@ -138,6 +138,7 @@ class ImageData(models.Model):
   long_desc_generating = models.BooleanField(default=False)
   source = models.TextField(default="")
   in_storyboard = models.BooleanField(default=True)
+  in_trash = models.BooleanField(default=False)
   x = models.FloatField(default=0.0)
   y = models.FloatField(default=0.0)
   group_id = models.ForeignKey(GroupData, on_delete=models.SET_NULL, db_column='group_id', null=True, blank=True, related_name='images')
@@ -148,6 +149,7 @@ class ImageData(models.Model):
   index = models.IntegerField(default=0)
   last_saved = models.DateTimeField(auto_now=True)
   created_at = models.DateTimeField(auto_now_add=True)
+  in_output = models.BooleanField(default=False)
 
   def __str__(self):
     return f"{self.user.username} - {self.filepath}"

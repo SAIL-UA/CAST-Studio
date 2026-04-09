@@ -12,7 +12,7 @@ const RestoreAllButton = ({ images, handleImageRestore, onRestoreComplete }: Res
     const [showModal, setShowModal] = useState<boolean>(false);
     const [isRestoring, setIsRestoring] = useState<boolean>(false);
 
-    const recycledImages = images.filter(img => img.in_storyboard === false);
+    const recycledImages = images.filter(img => img.in_trash === true);
 
     const handleOpenModal = (e: React.MouseEvent) => {
         logAction(e);

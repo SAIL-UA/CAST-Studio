@@ -38,6 +38,7 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
                     return {
                         ...img,
                         in_storyboard: img.in_storyboard !== undefined ? img.in_storyboard : true,
+                        in_trash: img.in_trash !== undefined ? img.in_trash : false,
                         x: img.x !== undefined ? img.x : (index % 4) * 160,
                         y: img.y !== undefined ? img.y : Math.floor(index / 4) * 120,
                         groupId: img.group_id || undefined,
@@ -93,12 +94,12 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
 
     // Move image to recycle bin
     const handleImageRecycle = (imageId: string) => {
-        updateImageData(imageId, { in_storyboard: false });
+        updateImageData(imageId, { in_storyboard: false, in_trash: true });
     };
 
     // Restore image from recycle bin
     const handleImageRestore = (imageId: string) => {
-        updateImageData(imageId, { in_storyboard: true });
+        updateImageData(imageId, { in_storyboard: true, in_trash: false });
     };
 
     // On component mount, fetch user data
