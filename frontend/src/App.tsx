@@ -16,6 +16,8 @@ import Tutorials from './pages/Tutorials'
 import ForgotPassword from './pages/ForgotPassword';
 import VerifyResetCode from './pages/VerifyResetCode';
 import ResetPassword from './pages/ResetPassword';
+import Admin from './pages/Admin';
+import ViewWorkspace from './pages/ViewWorkspace';
 
 // Main App component
 function App() {
@@ -62,6 +64,8 @@ function App() {
                 <Route path='/reset-password' element={<ResetPassword />} />
                 <Route path='/construction' element={<Construction />} />
                 <Route path='/tutorials' element={<Tutorials />}/>
+                <Route path='/admin' element={<Admin />}/>
+                <Route path='/workspace/:studentId' element={<ViewWorkspace />}/>
             </Routes>
       </div>
     </Router>

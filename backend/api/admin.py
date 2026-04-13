@@ -5,7 +5,7 @@ from io import StringIO
 from django.http import StreamingHttpResponse
 from django.utils.timezone import now
 from django.utils.html import format_html
-from .models import ImageData, NarrativeCache, UserAction, JupyterLog, User
+from .models import ImageData, NarrativeCache, UserAction, JupyterLog, User, FeatureFlags
 
 
 
@@ -183,7 +183,7 @@ class ImageDataInline(admin.TabularInline):
 
 @admin.register(User)
 class UsersAdmin(admin.ModelAdmin):
-    list_display = ("id", "username", "is_staff", "is_superuser")
+    list_display = ("id", "username", "is_admin", "is_staff", "is_superuser")
     search_fields = ("username", "email")
     inlines = [ImageDataInline]
 
@@ -204,3 +204,8 @@ class UsersAdmin(admin.ModelAdmin):
     export_users_ndjson.short_description = "Export users (JSONL)"
 
     actions = [export_users_ndjson]
+
+### Feature Flags ###
+@admin.register(FeatureFlags)
+class FeatureFlagsAdmin(admin.ModelAdmin):
+    list_display = ("id", "annotate_with_ai", "select_with_ai")

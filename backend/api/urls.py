@@ -9,7 +9,7 @@ from .views import (
     CreateGroupView, GetGroupView, UpdateGroupView, DeleteGroupView,
     LogMousePositionView, LogScrollView,
     ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView,
-    TaskProgressView
+    TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, AdminUsersView, AdminWorkspaceView
 )
 
 urlpatterns = [
@@ -19,6 +19,12 @@ urlpatterns = [
     path("log/scroll-batch/", LogScrollView.as_view(), name="log-scroll-position"),
     path("actions/requestfeedback/", RequestFeedbackView.as_view(), name="request-feedback"),
     path("task/progress/", TaskProgressView.as_view(), name="task-progress"),
+
+    # Admin
+    path("admin/features/", GetFeatureFlagsView.as_view(), name="admin-features-get"),
+    path("admin/features/update/", UpdateFeatureFlagsView.as_view(), name="admin-features-update"),
+    path("admin/users/", AdminUsersView.as_view(), name="admin-users"),
+    path("admin/workspace/<uuid:student_id>/", AdminWorkspaceView.as_view(), name="admin-workspace"),
 
     # Images
     path("images/", ImageDataView.as_view(), name="image-list"),  # GET list or single via query param

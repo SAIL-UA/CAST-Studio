@@ -22,7 +22,7 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRe
     const navigate = useNavigate();
 
     // Contexts
-    const { userAuthenticated, setUserAuthenticated, username, setUsername } = useAuth();
+    const { userAuthenticated, setUserAuthenticated, username, setUsername, isAdmin } = useAuth();
 
     // Profile dropdown state
     const [profileOpen, setProfileOpen] = useState(false);
@@ -126,6 +126,15 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRe
                         {userAuthenticated && profileOpen && (
                             <div className="absolute top-full right-0 pt-1 z-[500]">
                                 <div className="bg-white rounded-lg shadow-lg py-1 min-w-[120px]">
+                                    {isAdmin && (
+                                        <button
+                                            log-id="admin-button"
+                                            onClick={() => navigate('/admin')}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                                        >
+                                            Admin
+                                        </button>
+                                    )}
                                     <button
                                         log-id="logout-button"
                                         onClick={handleLogout}
@@ -208,6 +217,15 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRe
                         {userAuthenticated && profileOpen && (
                             <div className="absolute top-full right-0 pt-1 z-[500]">
                                 <div className="bg-white rounded-lg shadow-lg py-1 min-w-[120px]">
+                                    {isAdmin && (
+                                        <button
+                                            log-id="admin-button"
+                                            onClick={() => navigate('/admin')}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                                        >
+                                            Admin
+                                        </button>
+                                    )}
                                     <button
                                         log-id="logout-button"
                                         onClick={handleLogout}

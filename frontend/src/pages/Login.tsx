@@ -14,7 +14,7 @@ import { login, register } from '../services/api';
 const Login = () => {
     // Helpers
     const navigate = useNavigate();
-    const { userAuthenticated, setUserAuthenticated, setUsername } = useAuth();
+    const { userAuthenticated, setUserAuthenticated, setUsername, setIsAdmin } = useAuth();
     
     // States
     const [isRegisterMode, setIsRegisterMode] = useState(false);
@@ -47,6 +47,7 @@ const Login = () => {
             if (response.status === 200) {
               setUserAuthenticated(true);
               setUsername(response.data.user.username);
+              setIsAdmin(response.data.user.is_admin || false);
               navigate('/home');
             } else {
               setError('Login failed. Please check your credentials.');

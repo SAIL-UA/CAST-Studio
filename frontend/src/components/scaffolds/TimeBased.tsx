@@ -28,6 +28,7 @@ type TimeBasedProps = {
     onGroupNameChange?: (groupId: string, newName: string) => void;
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
+    readOnly?: boolean;
 };
 
 /** Derive max scaffold_group_number from scaffold's groups and images belonging to this scaffold */
@@ -61,7 +62,8 @@ const TimeBased = ({
     onCardRemoveFromGroup,
     onGroupNameChange,
     onGroupDescriptionChange,
-    onGroupUpdate
+    onGroupUpdate,
+    readOnly = false
 }: TimeBasedProps) => {
     const [position, setPosition] = useState({
         x: scaffold?.x || 50,
@@ -143,9 +145,9 @@ const TimeBased = ({
         if (!scaffold) return;
 
         await updateImageData(cardId, {
-            scaffoldId: undefined,
-            scaffold_group_number: undefined
-        } as Partial<ImageData>);
+            scaffoldId: null,
+            scaffold_group_number: null
+        } as any);
 
         setPeriodCardIds((prev) => {
             const next = { ...prev };
@@ -170,7 +172,7 @@ const TimeBased = ({
             (img) => img.scaffoldId === scaffold.id && img.scaffold_group_number === removedPeriod
         );
         for (const img of imagesInPeriod) {
-            await updateImageData(img.id, { scaffoldId: undefined, scaffold_group_number: undefined } as Partial<ImageData>);
+            await updateImageData(img.id, { scaffoldId: null, scaffold_group_number: null } as any);
         }
 
         const groupsInPeriod = (scaffold.groups || []).filter((g) => g.scaffold_group_number === removedPeriod);
@@ -190,6 +192,7 @@ const TimeBased = ({
     const [{ isDraggingDnd }, drag] = useDrag(
         () => ({
             type: 'group',
+            canDrag: !readOnly,
             item: () => {
                 if (wrapperRef.current && storyBinRef.current) {
                     const wrapperRect = wrapperRef.current.getBoundingClientRect();
@@ -346,12 +349,12 @@ const TimeBased = ({
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
             }}
-            onMouseDown={handleMouseDown}
+            onMouseDown={readOnly ? undefined : handleMouseDown}
         >
             <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-lg">
                 <h3 className="text-sm font-bold">Narrative Structure: Timeline</h3>
                 <div className="flex items-center gap-1">
-                    {displaySlotCount < MAX_SLOTS && (
+                    {!readOnly && displaySlotCount < MAX_SLOTS && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -363,7 +366,7 @@ const TimeBased = ({
                             + Period
                         </button>
                     )}
-                    {displaySlotCount > MIN_SLOTS && (
+                    {!readOnly && displaySlotCount > MIN_SLOTS && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -375,6 +378,7 @@ const TimeBased = ({
                             − Period
                         </button>
                     )}
+                    {!readOnly && (
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -386,6 +390,7 @@ const TimeBased = ({
                     >
                         ×
                     </button>
+                    )}
                 </div>
             </div>
 
@@ -409,6 +414,7 @@ const TimeBased = ({
                         onGroupDescriptionChange={onGroupDescriptionChange}
                         onGroupUpdate={onGroupUpdate}
                         storyBinRef={storyBinRef}
+                        readOnly={readOnly}
                     />
                 ))}
             </div>
@@ -434,6 +440,7 @@ type TimeBasedPeriodProps = {
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
     storyBinRef: React.RefObject<HTMLDivElement | null>;
+    readOnly?: boolean;
 };
 
 const TimeBasedPeriod = ({
@@ -452,7 +459,8 @@ const TimeBasedPeriod = ({
     onGroupNameChange,
     onGroupDescriptionChange,
     onGroupUpdate,
-    storyBinRef
+    storyBinRef,
+    readOnly = false
 }: TimeBasedPeriodProps) => {
     const groupRef = useRef<HTMLDivElement>(null);
 
@@ -601,9 +609,11 @@ const TimeBasedPeriod = ({
                                     onTrash={() => onCardRemove(card.id, id)}
                                     onUnTrash={() => {}}
                                     draggable={false}
+                                    readOnly={readOnly}
                                 />
                             </div>
-                            <button
+                            {/* Remove button overlay — hidden in readOnly */}
+                            {!readOnly && <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onCardRemove(card.id, id);
@@ -613,7 +623,7 @@ const TimeBasedPeriod = ({
                                 title="Remove from period"
                             >
                                 ×
-                            </button>
+                            </button>}
                         </div>
                     ))}
                 </div>

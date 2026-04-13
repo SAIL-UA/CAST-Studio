@@ -202,4 +202,19 @@ class NarrativeCache(models.Model):
   class Meta:
     db_table = 'narrative_cache'
     managed = True
-  
+
+
+class FeatureFlags(models.Model):
+  """
+  Single-row table for admin-controlled feature toggles.
+  """
+  annotate_with_ai = models.BooleanField(default=True)
+  select_with_ai = models.BooleanField(default=True)
+
+  def __str__(self):
+    return f"annotate_with_ai={self.annotate_with_ai}, select_with_ai={self.select_with_ai}"
+
+  class Meta:
+    db_table = 'feature_flags'
+    managed = True
+

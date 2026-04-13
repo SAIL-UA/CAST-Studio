@@ -22,6 +22,7 @@ type ProblemSolutionProps = {
     onGroupNameChange?: (groupId: string, newName: string) => void;
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
+    readOnly?: boolean;
 }
 
 // Problem and Solution Scaffold component
@@ -39,7 +40,8 @@ const ProblemSolution = ({
     onCardRemoveFromGroup,
     onGroupNameChange,
     onGroupDescriptionChange,
-    onGroupUpdate
+    onGroupUpdate,
+    readOnly = false
 }: ProblemSolutionProps) => {
     // Use scaffold position if provided, otherwise default
     const [position, setPosition] = useState({ 
@@ -153,8 +155,8 @@ const ProblemSolution = ({
         // Update backend to clear scaffoldId and scaffold_group_number
         // Note: Use camelCase (scaffoldId) to match types.ts - updateImageData will transform to snake_case for API
         await updateImageData(cardId, {
-            scaffoldId: undefined,
-            scaffold_group_number: undefined
+            scaffoldId: null,
+            scaffold_group_number: null
         } as any);
         
         // Update local state
@@ -176,6 +178,7 @@ const ProblemSolution = ({
     // React DnD hook for drag functionality (wrapper)
     const [{ isDraggingDnd }, drag] = useDrag(() => ({
         type: 'group',
+        canDrag: !readOnly,
         item: () => {
             if (wrapperRef.current && storyBinRef.current) {
                 const wrapperRect = wrapperRef.current.getBoundingClientRect();
@@ -376,11 +379,12 @@ const ProblemSolution = ({
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
             }}
-            onMouseDown={handleMouseDown}
+            onMouseDown={readOnly ? undefined : handleMouseDown}
         >
             {/* Header */}
             <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-lg">
                 <h3 className="text-sm font-bold">Narrative Structure: Problem and Solution</h3>
+                {!readOnly && (
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
@@ -396,6 +400,7 @@ const ProblemSolution = ({
                 >
                     ×
                 </button>
+                )}
             </div>
 
             {/* Groups Container - Horizontal Layout */}
@@ -418,6 +423,7 @@ const ProblemSolution = ({
                 onGroupDescriptionChange={onGroupDescriptionChange}
                 onGroupUpdate={onGroupUpdate}
                 storyBinRef={storyBinRef}
+                readOnly={readOnly}
             />
 
             {/* Solution Group */}
@@ -438,6 +444,7 @@ const ProblemSolution = ({
                 onGroupDescriptionChange={onGroupDescriptionChange}
                 onGroupUpdate={onGroupUpdate}
                 storyBinRef={storyBinRef}
+                readOnly={readOnly}
             />
             </div>
 
@@ -463,9 +470,10 @@ type ProblemSolutionGroupProps = {
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
     storyBinRef: React.RefObject<HTMLDivElement | null>;
+    readOnly?: boolean;
 };
 
-const ProblemSolutionGroup = ({ 
+const ProblemSolutionGroup = ({
     id, 
     title, 
     cards, 
@@ -481,7 +489,8 @@ const ProblemSolutionGroup = ({
     onGroupNameChange,
     onGroupDescriptionChange,
     onGroupUpdate,
-    storyBinRef
+    storyBinRef,
+    readOnly = false
 }: ProblemSolutionGroupProps) => {
     const groupRef = useRef<HTMLDivElement>(null);
 
@@ -666,10 +675,11 @@ const ProblemSolutionGroup = ({
                                     onTrash={() => onCardRemove(card.id, id)}
                                     onUnTrash={() => {}}
                                     draggable={false}
+                                    readOnly={readOnly}
                                 />
                             </div>
-                            {/* Remove button overlay */}
-                            <button
+                            {/* Remove button overlay — hidden in readOnly */}
+                            {!readOnly && <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onCardRemove(card.id, id);
@@ -682,7 +692,7 @@ const ProblemSolutionGroup = ({
                                 title="Remove from group"
                             >
                                 ×
-                            </button>
+                            </button>}
                         </div>
                     ))}
                 </div>

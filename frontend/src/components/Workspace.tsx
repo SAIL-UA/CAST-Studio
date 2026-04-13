@@ -14,10 +14,13 @@ type WorkspaceProps = {
     selectedPattern: string;
     storyLoading: boolean;
     setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    readOnly?: boolean;
+    targetUser?: string;
+    readOnlyToolbar?: React.ReactNode;
 }
 
 // Workspace component
-const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading }: WorkspaceProps) => {
+const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, readOnly = false, targetUser, readOnlyToolbar }: WorkspaceProps) => {
 
     // States
     const [images, setImages] = useState<ImageData[]>([]);
@@ -25,7 +28,7 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
 
     // Fetch user data from backend
     const fetchUserData = async () => {
-        await getImageDataAll()
+        await getImageDataAll(targetUser)
         .then((response: any) => {
             if (response.data.images.length === 0) {
                 setImages([]);
@@ -79,10 +82,15 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
             
             const response = await updateImageDataAPI(imageId, apiData);
             if (response.status === 200) {
+                // Use server-returned last_saved if available
+                const serverData = response.data?.image_data;
+                const mergeData = serverData?.last_saved
+                    ? { ...data, last_saved: serverData.last_saved }
+                    : data;
                 // Update local state with camelCase field names (matching types.ts)
                 setImages((prevImages) =>
-                    prevImages.map((img) => 
-                        img.id === imageId ? { ...img, ...data, index: img.index } : img
+                    prevImages.map((img) =>
+                        img.id === imageId ? { ...img, ...mergeData, index: img.index } : img
                     )
                 );
             }
@@ -120,9 +128,18 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
                 loading={loading}
                 fetchUserData={fetchUserData}
                 refreshImageDataAfterStoryGeneration={refreshImageDataAfterStoryGeneration}
-                updateImageData={updateImageData}
-                handleImageRecycle={handleImageRecycle}
-                handleImageRestore={handleImageRestore}
+                updateImageData={readOnly ? (imageId: string, data: Partial<ImageData>) => {
+                    // In readOnly mode, only allow position updates for instructor notes
+                    const img = images.find(i => i.id === imageId);
+                    if (img?.source === 'instructor') {
+                        updateImageData(imageId, data);
+                    }
+                } : updateImageData}
+                handleImageRecycle={readOnly ? () => {} : handleImageRecycle}
+                handleImageRestore={readOnly ? () => {} : handleImageRestore}
+                readOnly={readOnly}
+                targetUser={targetUser}
+                readOnlyToolbar={readOnlyToolbar}
             />
         </div>
     )

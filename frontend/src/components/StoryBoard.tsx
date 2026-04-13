@@ -48,10 +48,13 @@ type StoryBoardProps = {
     updateImageData: (imageId: string, data: Partial<ImageData>) => void;
     handleImageRecycle: (imageId: string) => void;
     handleImageRestore: (imageId: string) => void;
+    readOnly?: boolean;
+    targetUser?: string;
+    readOnlyToolbar?: React.ReactNode;
 }
 
 // StoryBoard component
-const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, images, setImages, loading, fetchUserData, refreshImageDataAfterStoryGeneration, updateImageData, handleImageRecycle, handleImageRestore }: StoryBoardProps) => {
+const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, images, setImages, loading, fetchUserData, refreshImageDataAfterStoryGeneration, updateImageData, handleImageRecycle, handleImageRestore, readOnly = false, targetUser, readOnlyToolbar }: StoryBoardProps) => {
 
     // States
     const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
@@ -76,7 +79,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Fetch groups from backend
     const fetchGroups = async (): Promise<GroupData[]> => {
         try {
-            const fetchedGroups = await getGroups();
+            const fetchedGroups = await getGroups(undefined, targetUser);
             if (!fetchedGroups || fetchedGroups.length === 0) {
                 setGroupDivs([]);
                 return [];
@@ -118,7 +121,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Fetch scaffolds from backend
     const fetchScaffolds = async (groupsToUse?: GroupData[]) => {
         try {
-            const fetchedScaffolds = await getScaffolds();
+            const fetchedScaffolds = await getScaffolds(undefined, targetUser);
             if (!fetchedScaffolds || fetchedScaffolds.length === 0) {
                 // setSelectedPattern('');
                 setScaffold(null);
@@ -193,6 +196,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Handle creating scaffold when pattern is selected (if scaffold doesn't exist)
     useEffect(() => {
         const handleCreateScaffoldIfNeeded = async () => {
+            // In read-only mode, don't create or modify scaffolds
+            if (readOnly) return;
+
             // If no pattern selected, don't do anything
             if (!selectedPattern || selectedPattern === '') {
                 return;
@@ -680,7 +686,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Visible component
     return (
         <div id="story-board-container" className="flex flex-col h-full w-full bg-white">
-            <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[305px] flex-shrink-0 grid-background">
+            {readOnly && readOnlyToolbar && (
+                <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[275px] flex-shrink-0 grid-background">
+                    {readOnlyToolbar}
+                </div>
+            )}
+            {!readOnly && <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[305px] flex-shrink-0 grid-background">
                 <UploadButton onUploaded={async () => {
                     const oldIds = new Set(images.map(img => img.id));
                     await fetchUserData();
@@ -717,7 +728,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     onStoryGenerated={refreshImageDataAfterStoryGeneration}
                 />
                 <FeedbackButton />
-            </div>
+            </div>}
             <div id = "story-bin-wrapper" className="flex-1 min-h-0 relative overflow-hidden" ref={storyBinRef}>
                 <Bin
                     id="story-bin"
@@ -731,6 +742,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     panOffset={panOffset}
                     onPanOffsetChange={setPanOffset}
                     onZoomLevelChange={setZoomLevel}
+                    readOnly={readOnly}
                 >
                     {/* Render Cause and Effect scaffold when pattern is selected */}
                     {selectedPattern === 'cause_and_effect' && scaffold && (
@@ -740,7 +752,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             setSelectedPattern={setSelectedPattern}
                             scaffold={scaffold}
                             updateImageData={updateImageData}
-                            onPositionUpdate={async (newX: number, newY: number) => {
+                            onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
                                     setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
@@ -748,14 +760,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={handleScaffoldClose}
-                            onGroupAdd={handleGroupAddToScaffold}
-                            onGroupRemove={handleGroupRemoveFromScaffold}
-                            onCardAddToGroup={handleCardAddToGroup}
-                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
-                            onGroupNameChange={handleGroupNameChange}
-                            onGroupDescriptionChange={handleGroupDescriptionChange}
-                            onGroupUpdate={handleGroupUpdate}
+                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
+                            onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemoveFromGroup={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onGroupNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
+                            readOnly={readOnly}
                         />
                     )}
                     {/* Render Question and Answer scaffold when pattern is selected */}
@@ -766,7 +779,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             setSelectedPattern={setSelectedPattern}
                             scaffold={scaffold}
                             updateImageData={updateImageData}
-                            onPositionUpdate={async (newX: number, newY: number) => {
+                            onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
                                     setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
@@ -774,14 +787,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={handleScaffoldClose}
-                            onGroupAdd={handleGroupAddToScaffold}
-                            onGroupRemove={handleGroupRemoveFromScaffold}
-                            onCardAddToGroup={handleCardAddToGroup}
-                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
-                            onGroupNameChange={handleGroupNameChange}
-                            onGroupDescriptionChange={handleGroupDescriptionChange}
-                            onGroupUpdate={handleGroupUpdate}
+                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
+                            onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemoveFromGroup={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onGroupNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
+                            readOnly={readOnly}
                         />
                     )}  
                     {/* Render Problem and Solution scaffold when pattern is selected */}
@@ -792,7 +806,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             setSelectedPattern={setSelectedPattern}
                             scaffold={scaffold}
                             updateImageData={updateImageData}
-                            onPositionUpdate={async (newX: number, newY: number) => {
+                            onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
                                     setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
@@ -800,14 +814,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={handleScaffoldClose}
-                            onGroupAdd={handleGroupAddToScaffold}
-                            onGroupRemove={handleGroupRemoveFromScaffold}
-                            onCardAddToGroup={handleCardAddToGroup}
-                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
-                            onGroupNameChange={handleGroupNameChange}
-                            onGroupDescriptionChange={handleGroupDescriptionChange}
-                            onGroupUpdate={handleGroupUpdate}
+                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
+                            onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemoveFromGroup={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onGroupNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
+                            readOnly={readOnly}
                         />
                     )}
                     {selectedPattern === 'time_based' && scaffold && (
@@ -817,7 +832,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             setSelectedPattern={setSelectedPattern}
                             scaffold={scaffold}
                             updateImageData={updateImageData}
-                            onPositionUpdate={async (newX: number, newY: number) => {
+                            onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
                                     setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
@@ -825,14 +840,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={handleScaffoldClose}
-                            onGroupAdd={handleGroupAddToScaffold}
-                            onGroupRemove={handleGroupRemoveFromScaffold}
-                            onCardAddToGroup={handleCardAddToGroup}
-                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
-                            onGroupNameChange={handleGroupNameChange}
-                            onGroupDescriptionChange={handleGroupDescriptionChange}
-                            onGroupUpdate={handleGroupUpdate}
+                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
+                            onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemoveFromGroup={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onGroupNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
+                            readOnly={readOnly}
                         />
                     )}
                     {selectedPattern === 'factor_analysis' && scaffold && (
@@ -842,7 +858,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             setSelectedPattern={setSelectedPattern}
                             scaffold={scaffold}
                             updateImageData={updateImageData}
-                            onPositionUpdate={async (newX: number, newY: number) => {
+                            onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
                                     setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
@@ -850,14 +866,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={handleScaffoldClose}
-                            onGroupAdd={handleGroupAddToScaffold}
-                            onGroupRemove={handleGroupRemoveFromScaffold}
-                            onCardAddToGroup={handleCardAddToGroup}
-                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
-                            onGroupNameChange={handleGroupNameChange}
-                            onGroupDescriptionChange={handleGroupDescriptionChange}
-                            onGroupUpdate={handleGroupUpdate}
+                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
+                            onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemoveFromGroup={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onGroupNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
+                            readOnly={readOnly}
                         />
                     )}
                     {selectedPattern === 'overview_to_detail' && scaffold && (
@@ -867,7 +884,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             setSelectedPattern={setSelectedPattern}
                             scaffold={scaffold}
                             updateImageData={updateImageData}
-                            onPositionUpdate={async (newX: number, newY: number) => {
+                            onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
                                     setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
@@ -875,14 +892,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={handleScaffoldClose}
-                            onGroupAdd={handleGroupAddToScaffold}
-                            onGroupRemove={handleGroupRemoveFromScaffold}
-                            onCardAddToGroup={handleCardAddToGroup}
-                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
-                            onGroupNameChange={handleGroupNameChange}
-                            onGroupDescriptionChange={handleGroupDescriptionChange}
-                            onGroupUpdate={handleGroupUpdate}
+                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
+                            onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemoveFromGroup={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onGroupNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
+                            readOnly={readOnly}
                         />
                     )}
                     {selectedPattern === 'comparative' && scaffold && (
@@ -892,7 +910,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             setSelectedPattern={setSelectedPattern}
                             scaffold={scaffold}
                             updateImageData={updateImageData}
-                            onPositionUpdate={async (newX: number, newY: number) => {
+                            onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
                                     setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
@@ -900,14 +918,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={handleScaffoldClose}
-                            onGroupAdd={handleGroupAddToScaffold}
-                            onGroupRemove={handleGroupRemoveFromScaffold}
-                            onCardAddToGroup={handleCardAddToGroup}
-                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
-                            onGroupNameChange={handleGroupNameChange}
-                            onGroupDescriptionChange={handleGroupDescriptionChange}
-                            onGroupUpdate={handleGroupUpdate}
+                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
+                            onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemoveFromGroup={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onGroupNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
+                            readOnly={readOnly}
                         />
                     )}
                     {selectedPattern === 'shock_lead' && scaffold && (
@@ -917,7 +936,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             setSelectedPattern={setSelectedPattern}
                             scaffold={scaffold}
                             updateImageData={updateImageData}
-                            onPositionUpdate={async (newX: number, newY: number) => {
+                            onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
                                     setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
@@ -925,14 +944,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={handleScaffoldClose}
-                            onGroupAdd={handleGroupAddToScaffold}
-                            onGroupRemove={handleGroupRemoveFromScaffold}
-                            onCardAddToGroup={handleCardAddToGroup}
-                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
-                            onGroupNameChange={handleGroupNameChange}
-                            onGroupDescriptionChange={handleGroupDescriptionChange}
-                            onGroupUpdate={handleGroupUpdate}
+                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
+                            onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemoveFromGroup={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onGroupNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
+                            readOnly={readOnly}
                         />
                     )}
                     {selectedPattern === 'workflow_process' && scaffold && (
@@ -942,7 +962,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             setSelectedPattern={setSelectedPattern}
                             scaffold={scaffold}
                             updateImageData={updateImageData}
-                            onPositionUpdate={async (newX: number, newY: number) => {
+                            onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
                                     setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
@@ -950,19 +970,20 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={handleScaffoldClose}
-                            onGroupAdd={handleGroupAddToScaffold}
-                            onGroupRemove={handleGroupRemoveFromScaffold}
-                            onCardAddToGroup={handleCardAddToGroup}
-                            onCardRemoveFromGroup={handleCardRemoveFromGroup}
-                            onGroupNameChange={handleGroupNameChange}
-                            onGroupDescriptionChange={handleGroupDescriptionChange}
-                            onGroupUpdate={handleGroupUpdate}
+                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
+                            onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemoveFromGroup={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onGroupNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
+                            readOnly={readOnly}
                         />
                     )}
                     {/* Render groups directly in the scrollable container - only groups without scaffold */}
                     {mainStoryboardGroups.map(group => (
-                        <GroupDiv 
+                        <GroupDiv
                             key={group.id}
                             id={group.id}
                             number={group.number}
@@ -970,13 +991,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             description={group.description}
                             cards={group.cards}
                             initialPosition={{ x: group.x, y: group.y }}
-                            onClose={handleCloseGroup}
-                            onPositionUpdate={async (newX, newY) => {
+                            onClose={readOnly ? () => {} : handleCloseGroup}
+                            onPositionUpdate={readOnly ? async () => {} : async (newX, newY) => {
                                 try {
-                                    // Update position in backend
                                     await updateGroup(group.id, { x: newX, y: newY });
-
-                                    // Update local state
                                     setGroupDivs(prev => prev.map(g =>
                                         g.id === group.id ? { ...g, x: newX, y: newY, last_modified: new Date().toISOString() } : g
                                     ));
@@ -984,15 +1002,16 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                     console.error('Error updating group position:', error);
                                 }
                             }}
-                            onCardAdd={handleCardAddToGroup}
-                            onCardRemove={handleCardRemoveFromGroup}
-                            onNameChange={handleGroupNameChange}
-                            onDescriptionChange={handleGroupDescriptionChange}
-                            onGroupUpdate={handleGroupUpdate}
+                            onCardAdd={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemove={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             storyBinRef={storyBinRef}
                             scaffoldId={group.scaffoldId}
                             zoomLevel={zoomLevel}
                             panOffset={panOffset}
+                            disableDrag={readOnly}
                         />
                     ))}
                 </Bin>
@@ -1019,33 +1038,35 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     >+</button>
                     <span className="text-xs text-grey-dark w-8 text-right">{Math.round(zoomLevel * 100)}%</span>
                 </div>
-                {/* DeleteAll and ClearAll buttons - positioned in bottom left */}
-                <div className="absolute bottom-6 left-4 flex gap-2 z-[350]">
-                    <DeleteAllButton 
-                        images={images}
-                        setImages={setImages}
-                        setGroupDivs={setGroupDivs}
-                        setScaffold={setScaffold}
-                        setSelectedPattern={setSelectedPattern}
-                        onDeleteComplete={async () => {
-                            await fetchUserData();
-                            const groups = await fetchGroups();
-                            await fetchScaffolds(groups);
-                        }}
-                    />
-                    <ClearAllButton 
-                        images={images}
-                        setImages={setImages}
-                        setGroupDivs={setGroupDivs}
-                        setScaffold={setScaffold}
-                        setSelectedPattern={setSelectedPattern}
-                        onClearComplete={async () => {
-                            await fetchUserData();
-                            const groups = await fetchGroups();
-                            await fetchScaffolds(groups);
-                        }}
-                    />
-                </div>
+                {/* DeleteAll and ClearAll buttons - positioned in bottom left, hidden in readOnly */}
+                {!readOnly && (
+                    <div className="absolute bottom-6 left-4 flex gap-2 z-[350]">
+                        <DeleteAllButton
+                            images={images}
+                            setImages={setImages}
+                            setGroupDivs={setGroupDivs}
+                            setScaffold={setScaffold}
+                            setSelectedPattern={setSelectedPattern}
+                            onDeleteComplete={async () => {
+                                await fetchUserData();
+                                const groups = await fetchGroups();
+                                await fetchScaffolds(groups);
+                            }}
+                        />
+                        <ClearAllButton
+                            images={images}
+                            setImages={setImages}
+                            setGroupDivs={setGroupDivs}
+                            setScaffold={setScaffold}
+                            setSelectedPattern={setSelectedPattern}
+                            onClearComplete={async () => {
+                                await fetchUserData();
+                                const groups = await fetchGroups();
+                                await fetchScaffolds(groups);
+                            }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Recycle Bin Modal */}

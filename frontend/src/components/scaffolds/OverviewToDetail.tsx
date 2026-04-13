@@ -21,6 +21,7 @@ type OverviewToDetailProps = {
     onGroupNameChange?: (groupId: string, newName: string) => void;
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
+    readOnly?: boolean;
 };
 
 const OverviewToDetail = ({
@@ -37,7 +38,8 @@ const OverviewToDetail = ({
     onCardRemoveFromGroup,
     onGroupNameChange,
     onGroupDescriptionChange,
-    onGroupUpdate
+    onGroupUpdate,
+    readOnly = false
 }: OverviewToDetailProps) => {
     const scaffoldNumber = scaffold?.number || 5;
     const validGroupNumbers = SCAFFOLD_VALID_GROUP_NUMBERS[scaffoldNumber] || [1, 2];
@@ -116,7 +118,7 @@ const OverviewToDetail = ({
 
     const handleCardRemove = async (cardId: string, groupId: string) => {
         if (!scaffold) return;
-        await updateImageData(cardId, { scaffoldId: undefined, scaffold_group_number: undefined } as any);
+        await updateImageData(cardId, { scaffoldId: null, scaffold_group_number: null } as any);
 
         if (groupId === leftGroupId) {
             setLeftCardIds((prev) => {
@@ -136,6 +138,7 @@ const OverviewToDetail = ({
     const [{ isDraggingDnd }, drag] = useDrag(
         () => ({
             type: 'group',
+            canDrag: !readOnly,
             item: () => {
                 if (wrapperRef.current && storyBinRef.current) {
                     const wrapperRect = wrapperRef.current.getBoundingClientRect();
@@ -302,10 +305,11 @@ const OverviewToDetail = ({
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
             }}
-            onMouseDown={handleMouseDown}
+            onMouseDown={readOnly ? undefined : handleMouseDown}
         >
             <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-lg">
                 <h3 className="text-sm font-bold">Narrative Structure: Overview to Detail</h3>
+                {!readOnly && (
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
@@ -317,6 +321,7 @@ const OverviewToDetail = ({
                 >
                     ×
                 </button>
+                )}
             </div>
 
             <div className="flex flex-row gap-4 p-2">
@@ -338,6 +343,7 @@ const OverviewToDetail = ({
                     onGroupUpdate={onGroupUpdate}
                     storyBinRef={storyBinRef}
                     scaffoldDragId="overview-detail-scaffold"
+                    readOnly={readOnly}
                 />
                 <TwoColumnGroup
                     id={rightGroupId}
@@ -357,6 +363,7 @@ const OverviewToDetail = ({
                     onGroupUpdate={onGroupUpdate}
                     storyBinRef={storyBinRef}
                     scaffoldDragId="overview-detail-scaffold"
+                    readOnly={readOnly}
                 />
             </div>
         </div>
@@ -381,6 +388,7 @@ type TwoColumnGroupProps = {
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
     storyBinRef: React.RefObject<HTMLDivElement | null>;
     scaffoldDragId: string;
+    readOnly?: boolean;
 };
 
 const TwoColumnGroup = ({
@@ -400,7 +408,8 @@ const TwoColumnGroup = ({
     onGroupDescriptionChange,
     onGroupUpdate,
     storyBinRef,
-    scaffoldDragId
+    scaffoldDragId,
+    readOnly = false
 }: TwoColumnGroupProps) => {
     const groupRef = useRef<HTMLDivElement>(null);
 
@@ -549,9 +558,11 @@ const TwoColumnGroup = ({
                                     onTrash={() => onCardRemove(card.id, id)}
                                     onUnTrash={() => {}}
                                     draggable={false}
+                                    readOnly={readOnly}
                                 />
                             </div>
-                            <button
+                            {/* Remove button overlay — hidden in readOnly */}
+                            {!readOnly && <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onCardRemove(card.id, id);
@@ -561,7 +572,7 @@ const TwoColumnGroup = ({
                                 title="Remove from group"
                             >
                                 ×
-                            </button>
+                            </button>}
                         </div>
                     ))}
                 </div>

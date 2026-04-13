@@ -21,6 +21,7 @@ type ComparativeProps = {
     onGroupNameChange?: (groupId: string, newName: string) => void;
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
+    readOnly?: boolean;
 };
 
 const Comparative = ({
@@ -37,7 +38,8 @@ const Comparative = ({
     onCardRemoveFromGroup,
     onGroupNameChange,
     onGroupDescriptionChange,
-    onGroupUpdate
+    onGroupUpdate,
+    readOnly = false
 }: ComparativeProps) => {
     const scaffoldNumber = scaffold?.number || 7;
     const validGroupNumbers = SCAFFOLD_VALID_GROUP_NUMBERS[scaffoldNumber] || [1, 2];
@@ -116,7 +118,7 @@ const Comparative = ({
 
     const handleCardRemove = async (cardId: string, groupId: string) => {
         if (!scaffold) return;
-        await updateImageData(cardId, { scaffoldId: undefined, scaffold_group_number: undefined } as any);
+        await updateImageData(cardId, { scaffoldId: null, scaffold_group_number: null } as any);
 
         if (groupId === leftGroupId) {
             setLeftCardIds((prev) => {
@@ -136,6 +138,7 @@ const Comparative = ({
     const [{ isDraggingDnd }, drag] = useDrag(
         () => ({
             type: 'group',
+            canDrag: !readOnly,
             item: () => {
                 if (wrapperRef.current && storyBinRef.current) {
                     const wrapperRect = wrapperRef.current.getBoundingClientRect();
@@ -302,10 +305,11 @@ const Comparative = ({
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
             }}
-            onMouseDown={handleMouseDown}
+            onMouseDown={readOnly ? undefined : handleMouseDown}
         >
             <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-lg">
                 <h3 className="text-sm font-bold">Narrative Structure: Comparative</h3>
+                {!readOnly && (
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
@@ -317,6 +321,7 @@ const Comparative = ({
                 >
                     ×
                 </button>
+                )}
             </div>
 
             <div className="flex flex-row gap-4 p-2">
@@ -337,6 +342,7 @@ const Comparative = ({
                     onGroupDescriptionChange={onGroupDescriptionChange}
                     onGroupUpdate={onGroupUpdate}
                     storyBinRef={storyBinRef}
+                    readOnly={readOnly}
                 />
                 <ComparativeGroup
                     id={rightGroupId}
@@ -355,6 +361,7 @@ const Comparative = ({
                     onGroupDescriptionChange={onGroupDescriptionChange}
                     onGroupUpdate={onGroupUpdate}
                     storyBinRef={storyBinRef}
+                    readOnly={readOnly}
                 />
             </div>
         </div>
@@ -378,6 +385,7 @@ type ComparativeGroupProps = {
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
     storyBinRef: React.RefObject<HTMLDivElement | null>;
+    readOnly?: boolean;
 };
 
 const ComparativeGroup = ({
@@ -396,7 +404,8 @@ const ComparativeGroup = ({
     onGroupNameChange,
     onGroupDescriptionChange,
     onGroupUpdate,
-    storyBinRef
+    storyBinRef,
+    readOnly = false
 }: ComparativeGroupProps) => {
     const groupRef = useRef<HTMLDivElement>(null);
 
@@ -545,9 +554,11 @@ const ComparativeGroup = ({
                                     onTrash={() => onCardRemove(card.id, id)}
                                     onUnTrash={() => {}}
                                     draggable={false}
+                                    readOnly={readOnly}
                                 />
                             </div>
-                            <button
+                            {/* Remove button overlay — hidden in readOnly */}
+                            {!readOnly && <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onCardRemove(card.id, id);
@@ -557,7 +568,7 @@ const ComparativeGroup = ({
                                 title="Remove from group"
                             >
                                 ×
-                            </button>
+                            </button>}
                         </div>
                     ))}
                 </div>

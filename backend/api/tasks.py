@@ -1154,6 +1154,8 @@ def _build_figure_dict(images_queryset, skip_missing_desc=True):
     """
     figures = {}
     for image in images_queryset:
+        if image.source == 'instructor':
+            continue  # Skip instructor feedback notes from story generation
         if skip_missing_desc and not image.long_desc:
             logger.warning(f"[BUILD_FIGURES] Image {image.filepath or image.short_desc} has no long_desc, skipping")
             continue
@@ -1546,6 +1548,8 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         flat_figures: dict[str, dict[str, str]] = {}
         all_descriptions: list[str] = []
         for image in storyboard_images:
+            if image.source == 'instructor':
+                continue  # Skip instructor feedback notes
             if not image.long_desc:
                 continue
             key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
@@ -1654,6 +1658,8 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
                 group_figures = {}
                 for image in group_images:
+                    if image.source == 'instructor':
+                        continue
                     key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
                     category = _categorize_figure(image.long_desc)
                     group_figures[key] = {
@@ -1671,6 +1677,8 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
             ungrouped_data = {}
             for image in ungrouped_images:
+                if image.source == 'instructor':
+                    continue
                 key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
                 category = _categorize_figure(image.long_desc)
                 ungrouped_data[key] = {

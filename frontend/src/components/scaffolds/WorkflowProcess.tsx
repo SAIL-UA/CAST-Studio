@@ -27,6 +27,7 @@ type WorkflowProcessProps = {
     onGroupNameChange?: (groupId: string, newName: string) => void;
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
+    readOnly?: boolean;
 };
 
 function getMaxSlotInData(scaffold: ScaffoldData | null, images: ImageData[]): number {
@@ -59,7 +60,8 @@ const WorkflowProcess = ({
     onCardRemoveFromGroup,
     onGroupNameChange,
     onGroupDescriptionChange,
-    onGroupUpdate
+    onGroupUpdate,
+    readOnly = false
 }: WorkflowProcessProps) => {
     const [position, setPosition] = useState({
         x: scaffold?.x || 50,
@@ -140,7 +142,7 @@ const WorkflowProcess = ({
 
     const handleCardRemove = async (cardId: string, groupId: string) => {
         if (!scaffold) return;
-        await updateImageData(cardId, { scaffoldId: undefined, scaffold_group_number: undefined } as Partial<ImageData>);
+        await updateImageData(cardId, { scaffoldId: null, scaffold_group_number: null } as any);
         setStageCardIds((prev) => {
             const next = { ...prev };
             for (let p = 1; p <= MAX_SLOTS; p++) {
@@ -160,7 +162,7 @@ const WorkflowProcess = ({
 
         const imagesInStage = images.filter((img) => img.scaffoldId === scaffold.id && img.scaffold_group_number === removedStage);
         for (const img of imagesInStage) {
-            await updateImageData(img.id, { scaffoldId: undefined, scaffold_group_number: undefined } as Partial<ImageData>);
+            await updateImageData(img.id, { scaffoldId: null, scaffold_group_number: null } as any);
         }
 
         const groupsInStage = (scaffold.groups || []).filter((g) => g.scaffold_group_number === removedStage);
@@ -180,6 +182,7 @@ const WorkflowProcess = ({
     const [{ isDraggingDnd }, drag] = useDrag(
         () => ({
             type: 'group',
+            canDrag: !readOnly,
             item: () => {
                 if (wrapperRef.current && storyBinRef.current) {
                     const wrapperRect = wrapperRef.current.getBoundingClientRect();
@@ -336,12 +339,12 @@ const WorkflowProcess = ({
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
             }}
-            onMouseDown={handleMouseDown}
+            onMouseDown={readOnly ? undefined : handleMouseDown}
         >
             <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-lg">
                 <h3 className="text-sm font-bold">Narrative Structure: Workflow / Process</h3>
                 <div className="flex items-center gap-1">
-                    {displaySlotCount < MAX_SLOTS && (
+                    {!readOnly && displaySlotCount < MAX_SLOTS && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -353,7 +356,7 @@ const WorkflowProcess = ({
                             + Stage
                         </button>
                     )}
-                    {displaySlotCount > MIN_SLOTS && (
+                    {!readOnly && displaySlotCount > MIN_SLOTS && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -365,6 +368,7 @@ const WorkflowProcess = ({
                             − Stage
                         </button>
                     )}
+                    {!readOnly && (
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -376,6 +380,7 @@ const WorkflowProcess = ({
                     >
                         ×
                     </button>
+                    )}
                 </div>
             </div>
 
@@ -399,6 +404,7 @@ const WorkflowProcess = ({
                         onGroupDescriptionChange={onGroupDescriptionChange}
                         onGroupUpdate={onGroupUpdate}
                         storyBinRef={storyBinRef}
+                        readOnly={readOnly}
                     />
                 ))}
             </div>
@@ -423,6 +429,7 @@ type WorkflowStageProps = {
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
     storyBinRef: React.RefObject<HTMLDivElement | null>;
+    readOnly?: boolean;
 };
 
 const WorkflowStage = ({
@@ -441,7 +448,8 @@ const WorkflowStage = ({
     onGroupNameChange,
     onGroupDescriptionChange,
     onGroupUpdate,
-    storyBinRef
+    storyBinRef,
+    readOnly = false
 }: WorkflowStageProps) => {
     const groupRef = useRef<HTMLDivElement>(null);
 
@@ -590,9 +598,11 @@ const WorkflowStage = ({
                                     onTrash={() => onCardRemove(card.id, id)}
                                     onUnTrash={() => {}}
                                     draggable={false}
+                                    readOnly={readOnly}
                                 />
                             </div>
-                            <button
+                            {/* Remove button overlay — hidden in readOnly */}
+                            {!readOnly && <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onCardRemove(card.id, id);
@@ -602,7 +612,7 @@ const WorkflowStage = ({
                                 title="Remove from stage"
                             >
                                 ×
-                            </button>
+                            </button>}
                         </div>
                     ))}
                 </div>

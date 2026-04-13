@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { generateDescription, getImageDataAll } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import type { ImageData } from '../types/types';
 
 // Legacy placeholder text — kept for backward compatibility with existing images
@@ -18,6 +19,7 @@ type AnnotateVisualsButtonProps = {
 };
 
 const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpdated }: AnnotateVisualsButtonProps) => {
+  const { annotateWithAI } = useFeatureFlags();
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [alertModal, setAlertModal] = useState<string | null>(null);
   const [aiRunning, setAiRunning] = useState(false);
@@ -201,8 +203,8 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
             align="start"
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
-            {/* Create with AI — with submenu */}
-            <DropdownMenu.Sub>
+            {/* Create with AI — with submenu (hidden when feature is disabled) */}
+            {annotateWithAI && <DropdownMenu.Sub>
               <DropdownMenu.SubTrigger className={`${menuItemClass} flex items-center justify-between gap-2`}>
                 Create with AI
                 <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -230,7 +232,7 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
                   </DropdownMenu.Item>
                 </DropdownMenu.SubContent>
               </DropdownMenu.Portal>
-            </DropdownMenu.Sub>
+            </DropdownMenu.Sub>}
 
             {/* Create Manually */}
             <DropdownMenu.Item
