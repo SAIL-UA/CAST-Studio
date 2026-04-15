@@ -546,30 +546,32 @@ const GroupDiv: React.FC<GroupDivProps> = ({
           </h4>
         )}
         
-        {/* Action buttons */}
-        <div className="flex items-center space-x-1">
-          {/* Edit button */}
-          <button
-            log-id="group-edit-button"
-            className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200 z-[210]"
-            onClick={handleShowEditModal}
-            style={{ cursor: 'pointer' }}
-            title="Edit group"
-          >
-            ✎
-          </button>
+        {/* Action buttons — hidden in read-only/disabled drag mode */}
+        {!disableDrag && (
+          <div className="flex items-center space-x-1">
+            {/* Edit button */}
+            <button
+              log-id="group-edit-button"
+              className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200 z-[210]"
+              onClick={handleShowEditModal}
+              style={{ cursor: 'pointer' }}
+              title="Edit group"
+            >
+              ✎
+            </button>
 
-          {/* Close button */}
-          <button
-            log-id="group-close-button"
-            className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
-            onClick={handleClose}
-            style={{ cursor: 'pointer' }}
-            title="Close group"
-          >
-            ×
-          </button>
-        </div>
+            {/* Close button */}
+            <button
+              log-id="group-close-button"
+              className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
+              onClick={handleClose}
+              style={{ cursor: 'pointer' }}
+              title="Close group"
+            >
+              ×
+            </button>
+          </div>
+        )}
       </div>
       
       {/* Group content area */}
@@ -615,21 +617,24 @@ const GroupDiv: React.FC<GroupDivProps> = ({
                     onTrash={() => onCardRemove(card.id, id)}
                     onUnTrash={() => {}}
                     draggable={false}
+                    readOnly={disableDrag}
                   />
                 </div>
-                {/* Remove button overlay — outside zoom so it's full size and visible */}
-                <button
-                  log-id="group-remove-card-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCardRemove(e, card.id);
-                  }}
-                  className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[305] shadow-md"
-                  style={{ top: '2px', right: '2px' }}
-                  title="Remove from group"
-                >
-                  ×
-                </button>
+                {/* Remove button overlay — outside zoom so it's full size and visible, hidden in readOnly */}
+                {!disableDrag && (
+                  <button
+                    log-id="group-remove-card-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCardRemove(e, card.id);
+                    }}
+                    className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[305] shadow-md"
+                    style={{ top: '2px', right: '2px' }}
+                    title="Remove from group"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             ))}
           </div>

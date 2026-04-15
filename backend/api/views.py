@@ -38,7 +38,7 @@ from config.celery import app as celery_app
 from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
-  JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress
+  JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress, FeatureFlags
 )
 
 # Serializers
@@ -58,6 +58,22 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 class BurstRateThrottle(UserRateThrottle):
   rate = '10/min'
+
+
+def resolve_target_user(request):
+  """
+  If ?target_user=<id> is present and requester is admin, return that user.
+  Otherwise return request.user. Used for admin "view as student" feature.
+  """
+  target_id = request.query_params.get('target_user')
+  if target_id:
+    if not request.user.is_instructor:
+      from rest_framework.exceptions import PermissionDenied
+      raise PermissionDenied("Admin access required")
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    return User.objects.get(id=target_id)
+  return request.user
 
 
 class LogsExportRateThrottle(UserRateThrottle):
@@ -233,11 +249,12 @@ class ExportJupyterLogsView(APIView):
 class ImageDataView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
+    user = resolve_target_user(request)
     image_id = request.query_params.get("image_id")
     if image_id: # single image
       image_data = ImageData.objects.get(id=image_id)
     else: # all images
-      image_data = ImageData.objects.filter(user=request.user)
+      image_data = ImageData.objects.filter(user=user)
     
     if not image_data:
       return Response({"message": "No image data found"}, status=status.HTTP_204_NO_CONTENT)
@@ -318,23 +335,35 @@ class CreateNoteView(APIView):
     now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     note_id = str(uuid.uuid4())
 
-    # Find the first available index for this user's images
-    user_images = ImageData.objects.filter(user=request.user)
+    # Support target_user for admin creating instructor feedback on student workspace
+    target_user_id = request.data.get('target_user')
+    source = request.data.get('source', '')
+    if target_user_id:
+      if not request.user.is_instructor:
+        return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+      owner_id = target_user_id
+    else:
+      owner_id = request.user.id
+
+    # Find the first available index for the target user's images
+    user_images = ImageData.objects.filter(user_id=owner_id)
     used_indices = set(user_images.values_list('index', flat=True))
     first_available_index = 0
     while first_available_index in used_indices:
       first_available_index += 1
 
+    title = "Instructor Feedback" if source == 'instructor' else f"Note {first_available_index + 1}"
+
     serializer = ImageDataSerializer(data={
       "id": note_id,
-      "user": request.user.id,
+      "user": owner_id,
       "filepath": "",
-      "short_desc": f"Note {first_available_index + 1}",
+      "short_desc": title,
       "long_desc": "",
-      "source": "",
+      "source": source,
       "in_storyboard": True,
-      "x": 0,
-      "y": 0,
+      "x": 400,
+      "y": 300,
       "has_order": False,
       "order_num": 0,
       "index": first_available_index,
@@ -383,10 +412,18 @@ class DeleteFigureView(APIView):
       try:
         image_data = ImageData.objects.get(filepath=filename, user=request.user)
       except ImageData.DoesNotExist:
-        # Check if it exists for another user (security check)
-        other_user_image = ImageData.objects.filter(filepath=filename).exclude(user=request.user).first()
-        if other_user_image:
-          return Response({"status": "error", "message": "Image belongs to another user"}, status=status.HTTP_403_FORBIDDEN)
+        # Admin can delete instructor feedback notes on student accounts
+        if request.user.is_instructor:
+          try:
+            image_id = uuid.UUID(base_name)
+            image_data = ImageData.objects.get(id=image_id, source='instructor')
+          except (ValueError, ImageData.DoesNotExist):
+            pass
+        if not image_data:
+          # Check if it exists for another user (security check)
+          other_user_image = ImageData.objects.filter(filepath=filename).exclude(user=request.user).first()
+          if other_user_image:
+            return Response({"status": "error", "message": "Image belongs to another user"}, status=status.HTTP_403_FORBIDDEN)
 
     # Remove image file if it exists
     file_deleted = False
@@ -442,14 +479,15 @@ class UpdateImageDataView(APIView):
       return Response({"errors": e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
   
 
-class GetGroupView(APIView): 
+class GetGroupView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
+    user = resolve_target_user(request)
     group_id = request.query_params.get("group_id")
     if group_id: # single group
       group_data = GroupData.objects.get(id=group_id)
     else: # all groups
-      group_data = GroupData.objects.filter(user=request.user)
+      group_data = GroupData.objects.filter(user=user)
     
     if not group_data:
       return Response({"message": "No group data found"}, status=status.HTTP_204_NO_CONTENT)
@@ -552,7 +590,8 @@ class GetNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
 
   def get(self, request):
-    cache = NarrativeCache.objects.filter(user=request.user).first()
+    user = resolve_target_user(request)
+    cache = NarrativeCache.objects.filter(user=user).first()
     if cache is None:
       return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -598,6 +637,74 @@ class TaskProgressView(APIView):
         "substage": None,
         "error": None,
       })
+
+
+class GetFeatureFlagsView(APIView):
+  permission_classes = [AllowAny]
+
+  def get(self, request):
+    flags = FeatureFlags.objects.first()
+    if flags:
+      return Response({
+        "annotate_with_ai": flags.annotate_with_ai,
+        "select_with_ai": flags.select_with_ai,
+      })
+    return Response({
+      "annotate_with_ai": True,
+      "select_with_ai": True,
+    })
+
+
+class UpdateFeatureFlagsView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    flags, _ = FeatureFlags.objects.get_or_create(id=1)
+    flags.annotate_with_ai = request.data.get('annotate_with_ai', flags.annotate_with_ai)
+    flags.select_with_ai = request.data.get('select_with_ai', flags.select_with_ai)
+    flags.save()
+
+    return Response({
+      "annotate_with_ai": flags.annotate_with_ai,
+      "select_with_ai": flags.select_with_ai,
+    })
+
+
+class InstructorUsersView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    users = User.objects.all().values('id', 'username', 'email', 'first_name', 'last_name', 'is_instructor')
+    return Response({"users": list(users)})
+
+
+class InstructorWorkspaceView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request, student_id):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    try:
+      student = User.objects.get(id=student_id)
+      return Response({
+        "id": str(student.id),
+        "username": student.username,
+        "first_name": student.first_name,
+        "last_name": student.last_name,
+      })
+    except User.DoesNotExist:
+      return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class UpdateNarrativeCacheView(APIView):
@@ -1067,11 +1174,12 @@ class CreateScaffoldView(APIView):
 class GetScaffoldView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
+    user = resolve_target_user(request)
     scaffold_id = request.query_params.get("scaffold_id")
     if scaffold_id: # single scaffold
-      scaffold_data = ScaffoldData.objects.get(id=scaffold_id, user=request.user)
+      scaffold_data = ScaffoldData.objects.get(id=scaffold_id, user=user)
     else: # all scaffolds for user
-      scaffold_data = ScaffoldData.objects.filter(user=request.user)
+      scaffold_data = ScaffoldData.objects.filter(user=user)
     
     if not scaffold_data:
       return Response({"message": "No scaffold data found"}, status=status.HTTP_204_NO_CONTENT)

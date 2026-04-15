@@ -5,7 +5,7 @@ import { useDrop } from 'react-dnd';
 import { BinProps, DragItem } from '../types/types';
 import DraggableCard from './DraggableCard';
 
-function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, zoomLevel = 1, panOffset = { x: 0, y: 0 }, onPanOffsetChange, onZoomLevelChange, scrollable = false, children}: BinProps) {
+function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, zoomLevel = 1, panOffset = { x: 0, y: 0 }, onPanOffsetChange, onZoomLevelChange, scrollable = false, children, readOnly = false}: BinProps) {
   const binRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
@@ -20,7 +20,7 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
 
   // React DnD hook for drop functionality
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
-    accept: ['image', 'group'],
+    accept: ['image', 'group', 'instructor_note'],
     drop: (item: DragItem, monitor) => {
       // If a nested drop target (e.g. GroupDiv) already handled this drop, don't process it again
       if (monitor.didDrop()) return;
@@ -203,18 +203,32 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
         }}
         onMouseDown={handleContentMouseDown}
       >
-        {images.map((image) => (
-          <DraggableCard
-            key={image.id}
-            image={image}
-            index={image.index}
-            onDescriptionsUpdate={onDescriptionsUpdate}
-            onDelete={onDelete}
-            onTrash={onTrash}
-            onUnTrash={onUnTrash}
-            draggable={true}
-          />
-        ))}
+        {images.map((image) => {
+          const isReadOnlyCard = readOnly && image.source !== 'instructor';
+          const card = (
+            <DraggableCard
+              key={image.id}
+              image={image}
+              index={image.index}
+              onDescriptionsUpdate={onDescriptionsUpdate}
+              onDelete={onDelete}
+              onTrash={onTrash}
+              onUnTrash={onUnTrash}
+              draggable={!readOnly || image.source === 'instructor'}
+              readOnly={isReadOnlyCard}
+            />
+          );
+          // In readOnly mode, non-draggable cards need absolute positioning since
+          // DraggableCard uses relative positioning when draggable=false
+          if (isReadOnlyCard) {
+            return (
+              <div key={image.id} style={{ position: 'absolute', left: `${image.x}px`, top: `${image.y}px`, zIndex: 300 }}>
+                {card}
+              </div>
+            );
+          }
+          return card;
+        })}
         {children}
       </div>
 

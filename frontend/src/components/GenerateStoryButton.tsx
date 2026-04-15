@@ -1,6 +1,8 @@
 // Import dependencies
+import { useEffect } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { logAction } from '../utils/userActionLogger';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 const menuItemClass = "block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm !font-light rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 cursor-pointer outline-none text-left";
 
@@ -14,6 +16,15 @@ type GenerateStoryButtonProps = {
 
 // Generate story button component
 const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading }: GenerateStoryButtonProps) => {
+
+    const { selectWithAI } = useFeatureFlags();
+
+    // Reset stale AI pattern if feature is disabled
+    useEffect(() => {
+        if (!selectWithAI && selectedPattern === 'AI Assistance') {
+            setSelectedPattern('');
+        }
+    }, [selectWithAI, selectedPattern, setSelectedPattern]);
 
     // Handle generate story
     const handleAIStoryGeneration = async (e: React.MouseEvent) => {
@@ -66,13 +77,15 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
                     align="start"
                     onCloseAutoFocus={(e) => e.preventDefault()}
                 >
-                    <DropdownMenu.Item
-                        className={menuItemClass}
-                        log-id="select-narrative-ai-button"
-                        onSelect={(e) => handleAIStoryGeneration(e as any)}
-                    >
-                        Select With AI
-                    </DropdownMenu.Item>
+                    {selectWithAI && (
+                        <DropdownMenu.Item
+                            className={menuItemClass}
+                            log-id="select-narrative-ai-button"
+                            onSelect={(e) => handleAIStoryGeneration(e as any)}
+                        >
+                            Select With AI
+                        </DropdownMenu.Item>
+                    )}
                     <DropdownMenu.Item
                         className={menuItemClass}
                         log-id="select-narrative-manually-button"

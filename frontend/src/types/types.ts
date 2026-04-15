@@ -78,6 +78,7 @@ export interface BinProps {
   onZoomLevelChange?: (zoom: number) => void;
   scrollable?: boolean;
   children?: React.ReactNode;
+  readOnly?: boolean;
 }
 
 export interface DraggableCardProps {
@@ -90,6 +91,7 @@ export interface DraggableCardProps {
   /** Optional: request parent to refetch images so this card receives updated props (e.g. after AI description generation) */
   onRefetchRequested?: () => void | Promise<void>;
   draggable?: boolean;
+  readOnly?: boolean;
 }
 
 // Group data structure

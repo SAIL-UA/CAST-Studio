@@ -28,6 +28,7 @@ type FactorAnalysisProps = {
     onGroupNameChange?: (groupId: string, newName: string) => void;
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
+    readOnly?: boolean;
 };
 
 /** Derive max scaffold_group_number from scaffold's groups and images belonging to this scaffold */
@@ -61,7 +62,8 @@ const FactorAnalysis = ({
     onCardRemoveFromGroup,
     onGroupNameChange,
     onGroupDescriptionChange,
-    onGroupUpdate
+    onGroupUpdate,
+    readOnly = false
 }: FactorAnalysisProps) => {
     const [position, setPosition] = useState({
         x: scaffold?.x || 50,
@@ -144,9 +146,9 @@ const FactorAnalysis = ({
         if (!scaffold) return;
 
         await updateImageData(cardId, {
-            scaffoldId: undefined,
-            scaffold_group_number: undefined
-        } as Partial<ImageData>);
+            scaffoldId: null,
+            scaffold_group_number: null
+        } as any);
 
         setFactorCardIds((prev) => {
             const next = { ...prev };
@@ -171,7 +173,7 @@ const FactorAnalysis = ({
             (img) => img.scaffoldId === scaffold.id && img.scaffold_group_number === removedFactor
         );
         for (const img of imagesInFactor) {
-            await updateImageData(img.id, { scaffoldId: undefined, scaffold_group_number: undefined } as Partial<ImageData>);
+            await updateImageData(img.id, { scaffoldId: null, scaffold_group_number: null } as any);
         }
 
         const groupsInFactor = (scaffold.groups || []).filter((g) => g.scaffold_group_number === removedFactor);
@@ -191,6 +193,7 @@ const FactorAnalysis = ({
     const [{ isDraggingDnd }, drag] = useDrag(
         () => ({
             type: 'group',
+            canDrag: !readOnly,
             item: () => {
                 if (wrapperRef.current && storyBinRef.current) {
                     const wrapperRect = wrapperRef.current.getBoundingClientRect();
@@ -347,12 +350,12 @@ const FactorAnalysis = ({
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
             }}
-            onMouseDown={handleMouseDown}
+            onMouseDown={readOnly ? undefined : handleMouseDown}
         >
             <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-lg">
                 <h3 className="text-sm font-bold">Narrative Structure: Factor Analysis</h3>
                 <div className="flex items-center gap-1">
-                    {displaySlotCount < MAX_SLOTS && (
+                    {!readOnly && displaySlotCount < MAX_SLOTS && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -364,7 +367,7 @@ const FactorAnalysis = ({
                             + Factor
                         </button>
                     )}
-                    {displaySlotCount > MIN_SLOTS && (
+                    {!readOnly && displaySlotCount > MIN_SLOTS && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -376,6 +379,7 @@ const FactorAnalysis = ({
                             − Factor
                         </button>
                     )}
+                    {!readOnly && (
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -387,6 +391,7 @@ const FactorAnalysis = ({
                     >
                         ×
                     </button>
+                    )}
                 </div>
             </div>
 
@@ -410,6 +415,7 @@ const FactorAnalysis = ({
                         onGroupDescriptionChange={onGroupDescriptionChange}
                         onGroupUpdate={onGroupUpdate}
                         storyBinRef={storyBinRef}
+                        readOnly={readOnly}
                     />
                 ))}
             </div>
@@ -435,6 +441,7 @@ type FactorAnalysisFactorProps = {
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
     storyBinRef: React.RefObject<HTMLDivElement | null>;
+    readOnly?: boolean;
 };
 
 const FactorAnalysisFactor = ({
@@ -453,7 +460,8 @@ const FactorAnalysisFactor = ({
     onGroupNameChange,
     onGroupDescriptionChange,
     onGroupUpdate,
-    storyBinRef
+    storyBinRef,
+    readOnly = false
 }: FactorAnalysisFactorProps) => {
     const groupRef = useRef<HTMLDivElement>(null);
 
@@ -602,9 +610,11 @@ const FactorAnalysisFactor = ({
                                     onTrash={() => onCardRemove(card.id, id)}
                                     onUnTrash={() => {}}
                                     draggable={false}
+                                    readOnly={readOnly}
                                 />
                             </div>
-                            <button
+                            {/* Remove button overlay — hidden in readOnly */}
+                            {!readOnly && <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onCardRemove(card.id, id);
@@ -614,7 +624,7 @@ const FactorAnalysisFactor = ({
                                 title="Remove from factor"
                             >
                                 ×
-                            </button>
+                            </button>}
                         </div>
                     ))}
                 </div>

@@ -84,7 +84,8 @@ class CheckAuthView(APIView):
   def get(self, request):
     return Response({
       "authenticated": request.user.is_authenticated,
-      "user": request.user.username if request.user.is_authenticated else None
+      "user": request.user.username if request.user.is_authenticated else None,
+      "is_instructor": request.user.is_instructor if request.user.is_authenticated else False
     })
 
 class PasswordResetRequestView(APIView):

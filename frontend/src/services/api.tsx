@@ -142,8 +142,9 @@ export const getImageData = async(image_id: string) => {
   return response.data.images;
 };
 
-export const getImageDataAll = async() => {
-  const response = await API.get('/images/')
+export const getImageDataAll = async(targetUser?: string) => {
+  const params = targetUser ? { target_user: targetUser } : {};
+  const response = await API.get('/images/', { params });
   return response;
 };
 
@@ -168,14 +169,22 @@ export const createNote = async() => {
   return response.data;
 };
 
+export const createInstructorNote = async(targetUser: string) => {
+  const response = await API.post('/notes/create/', { target_user: targetUser, source: 'instructor' });
+  return response.data;
+};
+
 export const updateImageData = async(imageId: string, data: any) => {
   const response = await API.post(`/images/${imageId}/update/`, { data })
   return response;
 };
 
 
-export const getGroups = async(group_id?: string) => {
-  const url = group_id ? `/groups/?group_id=${encodeURIComponent(group_id)}` : '/groups/';
+export const getGroups = async(group_id?: string, targetUser?: string) => {
+  let url = group_id ? `/groups/?group_id=${encodeURIComponent(group_id)}` : '/groups/';
+  if (targetUser) {
+    url += (url.includes('?') ? '&' : '?') + `target_user=${encodeURIComponent(targetUser)}`;
+  }
   const response = await API.get(url);
   return response.data.groups;
 };
@@ -214,13 +223,34 @@ export const runScript = async() => {
   return response.data;
 };
 
-export const getNarrativeCache = async() => {
-  const response = await API.get('/narrative/cache/');
+export const getNarrativeCache = async(targetUser?: string) => {
+  const params = targetUser ? { target_user: targetUser } : {};
+  const response = await API.get('/narrative/cache/', { params });
   return response;
 };
 
 export const getTaskProgress = async (taskId: string) => {
   const response = await API.get('/task/progress/', { params: { task_id: taskId } });
+  return response.data;
+};
+
+export const getFeatureFlags = async () => {
+  const response = await API.get('/instructor/features/');
+  return response.data;
+};
+
+export const updateFeatureFlags = async (flags: { annotate_with_ai: boolean; select_with_ai: boolean }) => {
+  const response = await API.post('/instructor/features/update/', flags);
+  return response.data;
+};
+
+export const getInstructorUsers = async () => {
+  const response = await API.get('/instructor/users/');
+  return response.data;
+};
+
+export const getInstructorWorkspace = async (studentId: string) => {
+  const response = await API.get(`/instructor/workspace/${studentId}/`);
   return response.data;
 };
 
@@ -326,8 +356,11 @@ export const createScaffold = async(pattern: string, x?: number, y?: number) => 
   return response.data;
 };
 
-export const getScaffolds = async(scaffold_id?: string) => {
-  const url = scaffold_id ? `/scaffolds/?scaffold_id=${encodeURIComponent(scaffold_id)}` : '/scaffolds/';
+export const getScaffolds = async(scaffold_id?: string, targetUser?: string) => {
+  let url = scaffold_id ? `/scaffolds/?scaffold_id=${encodeURIComponent(scaffold_id)}` : '/scaffolds/';
+  if (targetUser) {
+    url += (url.includes('?') ? '&' : '?') + `target_user=${encodeURIComponent(targetUser)}`;
+  }
   const response = await API.get(url);
   return response.data.scaffolds;
 };

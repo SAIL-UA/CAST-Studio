@@ -8,6 +8,8 @@ import { updateImageData, generateDescription, deleteFigure, getImageData } from
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 import { logAction, captureActionContext } from '../utils/userActionLogger';
 import { formatImageMetadata, getImageUrl } from '../utils/imageUtils';
+import { useAuth } from '../contexts/Auth';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 const OLD_SHORT_DESC_PLACEHOLDER = 'Add a description for this visual.';
 const OLD_LONG_DESC_PLACEHOLDER = 'Ask AI to create a description for this visual.';
@@ -22,7 +24,13 @@ function getDesc(longDesc: string | undefined): string {
   return longDesc;
 }
 
-function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, draggable = true }: DraggableCardProps) {
+function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, draggable = true, readOnly: readOnlyProp = false }: DraggableCardProps) {
+  const { isInstructor } = useAuth();
+  const { annotateWithAI } = useFeatureFlags();
+  // Instructor notes are read-only for non-admin users
+  const isInstructorNote = image.source === 'instructor';
+  const readOnly = readOnlyProp || (isInstructorNote && !isInstructor);
+
   const [showModal, setShowModal] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(getTitle(image.short_desc, index));
@@ -72,8 +80,8 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
   // React DnD hook for drag functionality
   const [{ isDragging }, drag] = useDrag(
     () => ({
-      type: 'image',
-      canDrag: draggable,
+      type: isInstructorNote ? 'instructor_note' : 'image',
+      canDrag: draggable && !(isInstructorNote && !isInstructor),
       item: (): DragItem => {
         if (cardRef.current) {
           const rect = cardRef.current.getBoundingClientRect();
@@ -140,11 +148,8 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
 
   // Calculate card styling based on state
   const getCardStyle = (): React.CSSProperties => {
-    // Check if we're in a group (CSS grid layout) - only groups should use relative positioning
-    // Cards in the regular story bin should use absolute positioning for drag-and-drop
     const isInGroup = !!image.groupId;
-    
-    // Base style
+
     const baseStyle: React.CSSProperties = draggable
         ? isInGroup
           ? {
@@ -165,7 +170,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
             opacity: isDragging ? 0.5 : 1,
             position: 'relative',
             margin: '5px',
-            cursor: 'grab',
+            cursor: 'default',
             zIndex: 300,
           }
     return baseStyle;
@@ -213,12 +218,13 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
       return;
     }
 
+    // Optimistic UI update first
+    onDescriptionsUpdate(image.id, tempTitle, tempLongDesc);
+
     updateImageData(image.id, {
-      ...image,
       short_desc: tempTitle,
       long_desc: tempLongDesc,
     }).then(() => {
-      onDescriptionsUpdate(image.id, tempTitle, tempLongDesc);
       setShowModal(false);
       document.body.style.overflow = 'auto';
     }).catch((error) => {
@@ -352,12 +358,9 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
       return;
     }
 
-    await updateImageData(image.id, {
-      ...image,
-      short_desc: tempTitle,
-    });
-
+    // Optimistic UI update first, then persist to backend
     onDescriptionsUpdate(image.id, tempTitle, image.long_desc || '');
+    await updateImageData(image.id, { short_desc: tempTitle });
   };
 
   const handleDescSave = async (e: React.FocusEvent | React.KeyboardEvent) => {
@@ -367,12 +370,9 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
       return;
     }
 
-    await updateImageData(image.id, {
-      ...image,
-      long_desc: tempLongDesc,
-    });
-
+    // Optimistic UI update first, then persist to backend
     onDescriptionsUpdate(image.id, image.short_desc || '', tempLongDesc);
+    await updateImageData(image.id, { long_desc: tempLongDesc });
   };
 
   // Combine refs for draggable functionality
@@ -393,9 +393,13 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
           log-id={"draggable-card"}
           ref={cardRef}
           onDragEnd={handleDragEnd}
-          className={`card-width overflow-hidden rounded-lg shadow-md border border-grey-lightest ${image.filepath ? 'bg-grey-lighter-2' : 'bg-amber-50'}`}
+          className={`card-width overflow-hidden rounded-lg shadow-md border border-grey-lightest ${
+            image.source === 'instructor' ? 'bg-rose-50' : image.filepath ? 'bg-grey-lighter-2' : 'bg-amber-50'
+          }`}
         >
-          <div id="card-header" className={`flex p-1 text-tiny-bold ${image.filepath ? 'bg-bama-crimson' : 'bg-amber-400'}`}>
+          <div id="card-header" className={`flex p-1 text-tiny-bold ${
+            image.source === 'instructor' ? 'bg-red-400' : image.filepath ? 'bg-bama-crimson' : 'bg-amber-400'
+          }`}>
             <div id="card-header-left" className="flex items-center overflow-hidden" style={{ width: 'calc(100% - 1.5rem)' }}>
               {editingTitle ? (
                 <input
@@ -418,8 +422,9 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
                 />
               ) : (
                 <p
-                  className="text-white font-sans cursor-pointer hover:underline truncate"
+                  className={`text-white font-sans truncate ${readOnly ? '' : 'cursor-pointer hover:underline'}`}
                   onClick={(e) => {
+                    if (readOnly) return;
                     e.stopPropagation();
                     setEditingTitle(true);
                   }}
@@ -429,17 +434,19 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
                 </p>
               )}
             </div>
-            <div id="card-header-right" className="flex justify-end w-1/2">
-              <button
-                log-id="edit-figure-button"
-                onClick={handleShow}
-                className="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
-                style={{ fontSize: '0.5rem' }}
-                title="Edit figure"
-              >
-                ✎
-              </button>
-            </div>
+            {!readOnly && (
+              <div id="card-header-right" className="flex justify-end w-1/2">
+                <button
+                  log-id="edit-figure-button"
+                  onClick={handleShow}
+                  className="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                  style={{ fontSize: '0.5rem' }}
+                  title="Edit figure"
+                >
+                  ✎
+                </button>
+              </div>
+            )}
           </div>
           {image.filepath && (
             <div id="card-body">
@@ -473,14 +480,25 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
               />
             ) : (
               <p
-                className="text-somewhat-tiny text-grey-darkest overflow-hidden text-ellipsis line-clamp-4 cursor-pointer hover:underline"
+                className={`text-somewhat-tiny text-grey-darkest overflow-hidden text-ellipsis ${isInstructorNote ? 'line-clamp-[10]' : 'line-clamp-4'} ${readOnly ? '' : 'cursor-pointer hover:underline'}`}
                 onClick={(e) => {
+                  if (readOnly) return;
                   e.stopPropagation();
                   setEditingDesc(true);
                 }}
               >
                 {getDesc(image.long_desc) || (image.filepath ? 'Click to add description' : 'Click to add text')}
               </p>
+            )}
+            {image.source === 'instructor' && (
+              <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                <span className="inline-block text-somewhat-tiny font-medium text-white bg-red-400 rounded-full px-2 py-0.5">Instructor</span>
+                {image.last_saved && (
+                  <span className="text-gray-400 whitespace-nowrap" style={{ fontSize: '0.5rem' }}>
+                    {new Date(image.last_saved).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -496,20 +514,22 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
               <div className="flex items-center justify-between mb-6 gap-4">
                 <h2 className="text-xl font-bold truncate min-w-0" style={{ maxWidth: '250px' }} title={tempTitle}>{tempTitle}</h2>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {image.in_storyboard ? (
-                    <button log-id="move-figure-to-recycle-bin-button"
-                      onClick={handleTrash}
-                      className="bg-yellow-600 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-                    >
-                      Move to Recycle Bin
-                    </button>
-                  ) : (
-                    <button log-id="restore-figure-to-storyboard-button"
-                      onClick={handleUnTrash}
-                      className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-                    >
-                      Restore to Storyboard
-                    </button>
+                  {!isInstructorNote && (
+                    image.in_storyboard ? (
+                      <button log-id="move-figure-to-recycle-bin-button"
+                        onClick={handleTrash}
+                        className="bg-yellow-600 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                      >
+                        Move to Recycle Bin
+                      </button>
+                    ) : (
+                      <button log-id="restore-figure-to-storyboard-button"
+                        onClick={handleUnTrash}
+                        className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                      >
+                        Restore to Storyboard
+                      </button>
+                    )
                   )}
                   <button log-id="delete-figure-button"
                     onClick={handleDelete}
@@ -559,7 +579,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
                     <h4 className="text-base font-semibold text-grey-darkest">
                       {image.filepath ? 'Description' : 'Text'}
                     </h4>
-                    {image.filepath && (
+                    {image.filepath && annotateWithAI && (
                       <button log-id="generate-description-button"
                         onClick={handleGenerateDescription}
                         disabled={loadingGenDesc}
@@ -572,11 +592,11 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
                   {loadingGenDesc ? <GeneratingPlaceholder contentName="description" lines={5} /> : (
                   <textarea
                     id="longDesc"
-                    rows={6}
+                    rows={isInstructorNote ? 12 : 6}
                     value={tempLongDesc}
                     onChange={(e) => setTempLongDesc(e.target.value)}
                     className="w-full px-3 py-2 text-xs border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: '#f4f7fa' }}
-                    placeholder="Click 'Generate Description' to create with AI, or type a description here."
+                    placeholder={isInstructorNote ? "Type your feedback here." : "Click 'Generate Description' to create with AI, or type a description here."}
                   />
                   )}
                 </div>

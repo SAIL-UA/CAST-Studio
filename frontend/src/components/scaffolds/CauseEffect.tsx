@@ -22,6 +22,7 @@ type CauseEffectProps = {
     onGroupNameChange?: (groupId: string, newName: string) => void;
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
+    readOnly?: boolean;
 }
 
 // Cause and Effect Scaffold component
@@ -39,7 +40,8 @@ const CauseEffect = ({
     onCardRemoveFromGroup,
     onGroupNameChange,
     onGroupDescriptionChange,
-    onGroupUpdate
+    onGroupUpdate,
+    readOnly = false
 }: CauseEffectProps) => {
     // Use scaffold position if provided, otherwise default
     const [position, setPosition] = useState({ 
@@ -153,8 +155,8 @@ const CauseEffect = ({
         // Update backend to clear scaffoldId and scaffold_group_number
         // Note: Use camelCase (scaffoldId) to match types.ts - updateImageData will transform to snake_case for API
         await updateImageData(cardId, {
-            scaffoldId: undefined,
-            scaffold_group_number: undefined
+            scaffoldId: null,
+            scaffold_group_number: null
         } as any);
         
         // Update local state
@@ -176,6 +178,7 @@ const CauseEffect = ({
     // React DnD hook for drag functionality (wrapper)
     const [{ isDraggingDnd }, drag] = useDrag(() => ({
         type: 'group',
+        canDrag: !readOnly,
         item: () => {
             if (wrapperRef.current && storyBinRef.current) {
                 const wrapperRect = wrapperRef.current.getBoundingClientRect();
@@ -376,11 +379,12 @@ const CauseEffect = ({
                 opacity: isDraggingDnd ? 0.5 : 1,
                 pointerEvents: 'auto'
             }}
-            onMouseDown={handleMouseDown}
+            onMouseDown={readOnly ? undefined : handleMouseDown}
         >
             {/* Header */}
             <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-lg">
                 <h3 className="text-sm font-bold">Narrative Structure: Cause and Effects</h3>
+                {!readOnly && (
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
@@ -392,6 +396,7 @@ const CauseEffect = ({
                 >
                     ×
                 </button>
+                )}
             </div>
 
             {/* Groups Container - Horizontal Layout */}
@@ -414,6 +419,7 @@ const CauseEffect = ({
                 onGroupDescriptionChange={onGroupDescriptionChange}
                 onGroupUpdate={onGroupUpdate}
                 storyBinRef={storyBinRef}
+                readOnly={readOnly}
             />
 
             {/* Effects Group */}
@@ -434,6 +440,7 @@ const CauseEffect = ({
                 onGroupDescriptionChange={onGroupDescriptionChange}
                 onGroupUpdate={onGroupUpdate}
                 storyBinRef={storyBinRef}
+                readOnly={readOnly}
             />
             </div>
 
@@ -459,9 +466,10 @@ type CauseEffectGroupProps = {
     onGroupDescriptionChange?: (groupId: string, newDescription: string) => void;
     onGroupUpdate?: (groupId: string, updates: { name?: string; description?: string }) => void;
     storyBinRef: React.RefObject<HTMLDivElement | null>;
+    readOnly?: boolean;
 };
 
-const CauseEffectGroup = ({ 
+const CauseEffectGroup = ({
     id, 
     title, 
     cards, 
@@ -477,7 +485,8 @@ const CauseEffectGroup = ({
     onGroupNameChange,
     onGroupDescriptionChange,
     onGroupUpdate,
-    storyBinRef
+    storyBinRef,
+    readOnly = false
 }: CauseEffectGroupProps) => {
     const groupRef = useRef<HTMLDivElement>(null);
 
@@ -662,10 +671,11 @@ const CauseEffectGroup = ({
                                     onTrash={() => onCardRemove(card.id, id)}
                                     onUnTrash={() => {}}
                                     draggable={false}
+                                    readOnly={readOnly}
                                 />
                             </div>
-                            {/* Remove button overlay */}
-                            <button
+                            {/* Remove button overlay — hidden in readOnly */}
+                            {!readOnly && <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onCardRemove(card.id, id);
@@ -678,7 +688,7 @@ const CauseEffectGroup = ({
                                 title="Remove from group"
                             >
                                 ×
-                            </button>
+                            </button>}
                         </div>
                     ))}
                 </div>

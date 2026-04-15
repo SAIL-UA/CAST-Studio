@@ -40,8 +40,8 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
         // --- Validation checks ---
         const missing: string[] = [];
 
-        // 1. Check for visuals on the storyboard
-        const storyboardImages = images.filter(img => img.in_storyboard);
+        // 1. Check for visuals on the storyboard (exclude instructor feedback)
+        const storyboardImages = images.filter(img => img.in_storyboard && img.source !== 'instructor');
         if (storyboardImages.length === 0) {
             missing.push('Upload visuals to the workspace and annotate them');
         }

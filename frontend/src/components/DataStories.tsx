@@ -23,7 +23,12 @@ interface StoryData {
 }
 
 // DataStories component
-const DataStories = () => {
+type DataStoriesProps = {
+    targetUser?: string;
+    readOnly?: boolean;
+};
+
+const DataStories = ({ targetUser, readOnly = false }: DataStoriesProps) => {
 
     // State
     const [narrativeSelected, setNarrativeSelected] = useState(true);
@@ -40,7 +45,7 @@ const DataStories = () => {
     // Check for existing cached narrative on component mount
     const loadCachedNarrative = async () => {
         try {
-            const response = await getNarrativeCache();
+            const response = await getNarrativeCache(targetUser);
             if (response.data && response.data.data) {
                 const cacheData = response.data.data;
                 setStoryData({
@@ -61,7 +66,7 @@ const DataStories = () => {
     // Fetch image descriptions to use as captions
     const loadImageDescriptions = async () => {
         try {
-            const response = await getImageDataAll();
+            const response = await getImageDataAll(targetUser);
             if (response.data && response.data.images) {
                 const descMap: Record<string, string> = {};
                 for (const img of response.data.images) {
@@ -317,7 +322,7 @@ const DataStories = () => {
             <div id="data-stories-header" className="flex w-full items-center bg-grey-lighter-2 rounded-t-lg p-3">
                 <div id="data-stories-header-left" className="flex items-center gap-3">
                     <span className="bg-bama-crimson text-white text-lg font-roboto-semibold px-3 py-1.5 rounded-lg">Data Stories</span>
-                    <ExportButton storyData={storyData} />
+                    {!readOnly && <ExportButton storyData={storyData} />}
                 </div>
                 <div id="data-stories-header-right" className="flex flex-1 items-center justify-end text-sm">
 
