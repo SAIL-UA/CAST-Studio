@@ -80,7 +80,7 @@ const Instructor = () => {
 
     return (
         <>
-            <Header onMenuOpen={() => setLeftMenuOpen(prev => !prev)} floating menuOpen={leftMenuOpen} subtitle="Instructor" />
+            <Header onMenuOpen={() => setLeftMenuOpen(prev => !prev)} floating menuOpen={leftMenuOpen} subtitle="Instructor" pillLink="/instructor" />
 
             {/* Left Panel */}
             {leftMenuOpen && (
@@ -99,8 +99,15 @@ const Instructor = () => {
             )}
 
             <div className="min-h-screen bg-grey-lighter pt-20 px-8">
-                {/* Feature Flags Section */}
                 <div className="max-w-2xl mx-auto">
+                    <button
+                        onClick={() => navigate('/home')}
+                        className="text-sm text-bama-crimson hover:underline mb-4 inline-block"
+                    >
+                        ← Back to Workspace
+                    </button>
+
+                    {/* Feature Flags Section */}
                     <h2 className="text-lg font-semibold text-grey-darkest mb-4">Select to enable StoryStudio features:</h2>
                     <div className="bg-white rounded-lg p-6 shadow-sm space-y-4">
                         <label className="flex items-center gap-3 cursor-pointer">
@@ -134,7 +141,7 @@ const Instructor = () => {
 
                     {/* Users Section */}
                     <h2 className="text-lg font-semibold text-grey-darkest mt-8 mb-4">User accounts:</h2>
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="bg-grey-lighter border-b border-grey-lightest">

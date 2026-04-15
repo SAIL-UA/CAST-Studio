@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/Auth';
 // Import components
 import Header from '../components/Header';
 import DataStories from '../components/DataStories';
-import FeedbackPanel, { FeedbackCardData } from '../components/FeedbackPanel';
+import FeedbackPanel, { FeedbackCardData, InstructorNote } from '../components/FeedbackPanel';
 import NarrativePatterns from '../components/NarrativePatterns'
 import Workspace from '../components/Workspace'
 import NarrativeExamples from '../components/NarrativeExamples'
@@ -17,6 +17,7 @@ import Footer from '../components/Footer'
 
 // Import utils
 import { handleAuthRequired } from '../utils/utils';
+import { getImageDataAll } from '../services/api';
 
 // Login page component
 const Home = () => {
@@ -31,6 +32,7 @@ const Home = () => {
     const [rightNarrativePatternsOpen, setRightNarrativePatternsOpen] = useState(false);
     const [feedbackItems, setFeedbackItems] = useState<FeedbackCardData[]>([]);
     const [feedbackExpanded, setFeedbackExpanded] = useState(false);
+    const [instructorNotes, setInstructorNotes] = useState<InstructorNote[]>([]);
     const [rightNarrativeExamplesOpen, setRightNarrativeExamplesOpen] = useState(false);
     const [selectedPattern, setSelectedPattern] = useState('');
     const [examplesPattern, setExamplesPattern] = useState('');
@@ -57,6 +59,39 @@ const Home = () => {
             window.removeEventListener('storyGenerationStarted', handleExpand);
         };
     }, []);
+
+    // Fetch instructor notes
+    const fetchInstructorNotes = async () => {
+        try {
+            const response = await getImageDataAll();
+            const images = response.data?.images || [];
+            const notes = images
+                .filter((img: any) => img.source === 'instructor')
+                .map((img: any) => ({
+                    id: img.id,
+                    short_desc: img.short_desc,
+                    long_desc: img.long_desc,
+                    last_saved: img.last_saved,
+                }));
+            setInstructorNotes(notes);
+        } catch (err) {
+            console.error('Error fetching instructor notes:', err);
+        }
+    };
+
+    // Load instructor notes on mount
+    useEffect(() => {
+        if (userAuthenticated) {
+            fetchInstructorNotes();
+        }
+    }, [userAuthenticated]);
+
+    // Refetch instructor notes when feedback panel expands
+    useEffect(() => {
+        if (feedbackExpanded) {
+            fetchInstructorNotes();
+        }
+    }, [feedbackExpanded]);
 
     // Feedback event handler
     useEffect(() => {
@@ -147,7 +182,7 @@ const Home = () => {
                             style={{ height: '80vh' }}
                         >
                             <div className="h-full bg-grey-lighter-2 overflow-y-auto">
-                                <FeedbackPanel items={feedbackItems} onClose={() => setFeedbackExpanded(false)} />
+                                <FeedbackPanel items={feedbackItems} instructorNotes={instructorNotes} onClose={() => setFeedbackExpanded(false)} />
                             </div>
                         </div>
                     </div>

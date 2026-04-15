@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/Auth';
-import { getInstructorWorkspace, createInstructorNote } from '../services/api';
+import { getInstructorWorkspace, getInstructorUsers, createInstructorNote } from '../services/api';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import Header from '../components/Header';
 import Workspace from '../components/Workspace';
 import DataStories from '../components/DataStories';
@@ -27,6 +28,7 @@ const ViewWorkspace = () => {
     const [refreshKey, setRefreshKey] = useState(0);
     const [leftMenuOpen, setLeftMenuOpen] = useState(false);
     const [dataStoriesExpanded, setDataStoriesExpanded] = useState(false);
+    const [allUsers, setAllUsers] = useState<StudentInfo[]>([]);
 
     // Redirect non-admin users
     useEffect(() => {
@@ -60,6 +62,17 @@ const ViewWorkspace = () => {
         };
 
         loadStudentInfo();
+
+        // Fetch all users for the workspace switcher dropdown
+        const loadUsers = async () => {
+            try {
+                const data = await getInstructorUsers();
+                setAllUsers((data.users || []).filter((u: any) => !u.is_instructor));
+            } catch (err) {
+                console.error('Error loading users:', err);
+            }
+        };
+        loadUsers();
     }, [studentId, isInstructor]);
 
     const studentName = student
@@ -88,7 +101,7 @@ const ViewWorkspace = () => {
                             onClick={() => navigate('/instructor')}
                             className="mt-4 bg-bama-crimson text-sm text-white rounded-full px-4 py-1.5 hover:brightness-95 transition duration-200"
                         >
-                            Back to Instructor
+                            Back to Instructor View
                         </button>
                     </div>
                 </div>
@@ -117,11 +130,53 @@ const ViewWorkspace = () => {
                 floating
                 menuOpen={leftMenuOpen}
                 subtitle="Instructor"
+                pillLink="/instructor"
                 extraContent={
                     <>
-                        <span className="bg-bama-crimson text-white text-sm rounded-full px-3 py-1 whitespace-nowrap shadow-lg">
-                            Viewing: {studentName}'s Workspace
-                        </span>
+                        <DropdownMenu.Root>
+                            <DropdownMenu.Trigger asChild>
+                                <button className="flex items-center gap-2 bg-bama-crimson text-white text-sm rounded-full px-3 py-1 whitespace-nowrap shadow-lg hover:brightness-95 transition duration-200">
+                                    Viewing: {studentName}'s Workspace
+                                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
+                                    </svg>
+                                </button>
+                            </DropdownMenu.Trigger>
+                            <DropdownMenu.Portal>
+                                <DropdownMenu.Content
+                                    className="mt-1 shadow-lg z-[500] bg-white rounded-lg py-1 min-w-[200px] max-h-[400px] overflow-y-auto"
+                                    sideOffset={4}
+                                    align="start"
+                                >
+                                    <DropdownMenu.Item
+                                        className="block w-full text-left text-sm !font-light text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
+                                        onSelect={() => navigate('/instructor')}
+                                    >
+                                        Back to Instructor View
+                                    </DropdownMenu.Item>
+                                    <DropdownMenu.Separator className="h-px bg-grey-lightest my-1" />
+                                    <DropdownMenu.Label className="px-3 py-1 text-xs text-gray-400 font-medium">
+                                        View another workspace
+                                    </DropdownMenu.Label>
+                                    {allUsers.map((user) => (
+                                        <DropdownMenu.Item
+                                            key={user.id}
+                                            className={`block w-full text-left text-sm !font-light text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none ${user.id === studentId ? 'font-bold bg-grey-lighter' : ''}`}
+                                            onSelect={() => {
+                                                if (user.id !== studentId) {
+                                                    navigate(`/workspace/${user.id}`);
+                                                }
+                                            }}
+                                        >
+                                            {user.username}
+                                        </DropdownMenu.Item>
+                                    ))}
+                                    {allUsers.length === 0 && (
+                                        <div className="px-3 py-1.5 text-xs text-gray-400">No students found</div>
+                                    )}
+                                </DropdownMenu.Content>
+                            </DropdownMenu.Portal>
+                        </DropdownMenu.Root>
                         <button
                             onClick={handleGiveFeedback}
                             className="bg-red-400 text-sm text-white rounded-full px-3 py-1 shadow-lg hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 whitespace-nowrap"

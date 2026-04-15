@@ -14,10 +14,11 @@ type HeaderProps = {
     subtitle?: string;
     onRecycleBinOpen?: () => void;
     extraContent?: React.ReactNode;
+    pillLink?: string;
 };
 
 // Header component
-const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRecycleBinOpen, extraContent }: HeaderProps) => {
+const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRecycleBinOpen, extraContent, pillLink }: HeaderProps) => {
 
     // Helpers
     const navigate = useNavigate();
@@ -75,7 +76,7 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRe
                                 </svg>
                             </button>
                         )}
-                        <div onClick={() => navigate('/')} className="flex items-center cursor-pointer">
+                        <div onClick={() => navigate(pillLink || '/')} className="flex items-center cursor-pointer">
                             <svg
                                 className={`w-5 transition-colors duration-200 ${menuOpen ? 'text-grey-darkest' : 'text-white'}`}
                                 xmlns="http://www.w3.org/2000/svg"
