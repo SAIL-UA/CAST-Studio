@@ -12,6 +12,7 @@ from .serializers import UserSerializer, PasswordResetRequestSerializer, Passwor
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 import os
+from api.figure_refs import sync_in_output_flags_for_user
 
 User = get_user_model()
 
@@ -39,6 +40,7 @@ class LoginView(APIView):
         refresh = RefreshToken.for_user(user)
         request.session['DATA_PATH'] = settings.DATA_PATH
         os.makedirs(os.path.join(settings.USER_DIR, user.username, "workspace"), exist_ok=True)
+        sync_in_output_flags_for_user(user)
 
         return Response({
           "access": str(refresh.access_token),

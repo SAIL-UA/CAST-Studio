@@ -22,13 +22,14 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework.parsers import MultiPartParser, FormParser
 
 # ReportLab exports
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem, Image as RLImage
+from reportlab.platypus import SimpleDocTemplate, Paragraph, PageBreak, Spacer, ListFlowable, ListItem, Image as RLImage
 from reportlab.lib.utils import ImageReader
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
+
 
 # Celery
 from celery.result import AsyncResult
@@ -663,7 +664,6 @@ class ClearNarrativeCacheView(APIView):
       cache.delete()
     except ObjectDoesNotExist:
       pass
-    sync_in_output_flags_for_user(request.user)
     return Response({"status": "success"}, status=status.HTTP_200_OK)
 
 
@@ -978,8 +978,6 @@ class ExportStoryView(APIView):
 
         flush_list()
         return flow
-
-      from reportlab.platypus import PageBreak
 
       story = []
       # Title and metadata

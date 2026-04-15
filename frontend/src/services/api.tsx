@@ -104,18 +104,6 @@ const refreshToken = async () => {
   );
 });
 
-/** Reconcile ImageData.in_output with persisted NarrativeCache; once per browser tab session. */
-export const runImageInOutputGcIfNeeded = async () => {
-  if (typeof sessionStorage === 'undefined') return;
-  if (sessionStorage.getItem(IMAGE_IN_OUTPUT_GC_SESSION_KEY)) return;
-  try {
-    await API.post('/images/gc/');
-    sessionStorage.setItem(IMAGE_IN_OUTPUT_GC_SESSION_KEY, '1');
-  } catch (e) {
-    console.warn('Image in_output GC failed:', e);
-  }
-};
-
 // user endpoints
 export const checkAuth = async() => {
   const response = await USER_API.get('/check_auth/')

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { checkAuth, runImageInOutputGcIfNeeded } from "../services/api";
+import { checkAuth } from "../services/api";
 
 // Create context instance
 type AuthContextType = {
@@ -27,9 +27,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 const data = await checkAuth();
                 setUserAuthenticated(data.authenticated);
                 setUsername(data.user);
-                if (data.authenticated) {
-                    await runImageInOutputGcIfNeeded();
-                }
             } catch (error) {
                 console.error('Initial auth check failed:', error);
 
@@ -45,9 +42,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         const retryData = await checkAuth();
                         setUserAuthenticated(retryData.authenticated);
                         setUsername(retryData.user);
-                        if (retryData.authenticated) {
-                            await runImageInOutputGcIfNeeded();
-                        }
                         // console.log('Auth check succeeded after retry');
                         setAuthLoading(false);
                         return;

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 
 // Import context
 import { useAuth } from '../contexts/Auth';
-import { login, register, runImageInOutputGcIfNeeded } from '../services/api';
+import { login, register } from '../services/api';
 
 // Import components
 
@@ -47,7 +47,6 @@ const Login = () => {
             if (response.status === 200) {
               setUserAuthenticated(true);
               setUsername(response.data.user.username);
-              await runImageInOutputGcIfNeeded();
               navigate('/home');
             } else {
               setError('Login failed. Please check your credentials.');
