@@ -717,7 +717,7 @@ const DataStories = () => {
                             Narrative Structure:
                             {isGenerating
                                 ? ' Writing...' 
-                                : headerPattern ? `: ${headerPattern}` : ''
+                                : headerPattern ? ` ${headerPattern}` : ''
                             }
                         </h3>
                         {reasoningEditPanel}
