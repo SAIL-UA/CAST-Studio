@@ -67,7 +67,7 @@ def resolve_target_user(request):
   """
   target_id = request.query_params.get('target_user')
   if target_id:
-    if not request.user.is_admin:
+    if not request.user.is_instructor:
       from rest_framework.exceptions import PermissionDenied
       raise PermissionDenied("Admin access required")
     from django.contrib.auth import get_user_model
@@ -339,7 +339,7 @@ class CreateNoteView(APIView):
     target_user_id = request.data.get('target_user')
     source = request.data.get('source', '')
     if target_user_id:
-      if not request.user.is_admin:
+      if not request.user.is_instructor:
         return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
       owner_id = target_user_id
     else:
@@ -413,7 +413,7 @@ class DeleteFigureView(APIView):
         image_data = ImageData.objects.get(filepath=filename, user=request.user)
       except ImageData.DoesNotExist:
         # Admin can delete instructor feedback notes on student accounts
-        if request.user.is_admin:
+        if request.user.is_instructor:
           try:
             image_id = uuid.UUID(base_name)
             image_data = ImageData.objects.get(id=image_id, source='instructor')
@@ -659,7 +659,7 @@ class UpdateFeatureFlagsView(APIView):
   permission_classes = [IsAuthenticated]
 
   def post(self, request):
-    if not request.user.is_admin:
+    if not request.user.is_instructor:
       return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
 
     flags, _ = FeatureFlags.objects.get_or_create(id=1)
@@ -673,24 +673,24 @@ class UpdateFeatureFlagsView(APIView):
     })
 
 
-class AdminUsersView(APIView):
+class InstructorUsersView(APIView):
   permission_classes = [IsAuthenticated]
 
   def get(self, request):
-    if not request.user.is_admin:
+    if not request.user.is_instructor:
       return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
 
     from django.contrib.auth import get_user_model
     User = get_user_model()
-    users = User.objects.all().values('id', 'username', 'email', 'first_name', 'last_name', 'is_admin')
+    users = User.objects.all().values('id', 'username', 'email', 'first_name', 'last_name', 'is_instructor')
     return Response({"users": list(users)})
 
 
-class AdminWorkspaceView(APIView):
+class InstructorWorkspaceView(APIView):
   permission_classes = [IsAuthenticated]
 
   def get(self, request, student_id):
-    if not request.user.is_admin:
+    if not request.user.is_instructor:
       return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
 
     from django.contrib.auth import get_user_model

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/Auth';
-import { getAdminWorkspace, createInstructorNote } from '../services/api';
+import { getInstructorWorkspace, createInstructorNote } from '../services/api';
 import Header from '../components/Header';
 import Workspace from '../components/Workspace';
 import DataStories from '../components/DataStories';
@@ -18,7 +18,7 @@ type StudentInfo = {
 const ViewWorkspace = () => {
     const { studentId } = useParams<{ studentId: string }>();
     const navigate = useNavigate();
-    const { userAuthenticated, isAdmin } = useAuth();
+    const { userAuthenticated, isInstructor } = useAuth();
 
     const [student, setStudent] = useState<StudentInfo | null>(null);
     const [selectedPattern, setSelectedPattern] = useState('');
@@ -32,19 +32,19 @@ const ViewWorkspace = () => {
     useEffect(() => {
         if (!userAuthenticated) {
             navigate('/login');
-        } else if (!isAdmin) {
+        } else if (!isInstructor) {
             navigate('/home');
         }
-    }, [userAuthenticated, isAdmin, navigate]);
+    }, [userAuthenticated, isInstructor, navigate]);
 
     // Validate admin access and get student info
     useEffect(() => {
-        if (!studentId || !isAdmin) return;
+        if (!studentId || !isInstructor) return;
 
         const loadStudentInfo = async () => {
             setLoading(true);
             try {
-                const studentInfo = await getAdminWorkspace(studentId);
+                const studentInfo = await getInstructorWorkspace(studentId);
                 setStudent(studentInfo);
             } catch (err: any) {
                 if (err?.response?.status === 404) {
@@ -60,7 +60,7 @@ const ViewWorkspace = () => {
         };
 
         loadStudentInfo();
-    }, [studentId, isAdmin]);
+    }, [studentId, isInstructor]);
 
     const studentName = student
         ? `${student.first_name || ''} ${student.last_name || ''}`.trim() || student.username
@@ -85,10 +85,10 @@ const ViewWorkspace = () => {
                     <div className="bg-white rounded-lg p-6 shadow-sm text-center">
                         <p className="text-sm text-grey-darkest">{error}</p>
                         <button
-                            onClick={() => navigate('/admin')}
+                            onClick={() => navigate('/instructor')}
                             className="mt-4 bg-bama-crimson text-sm text-white rounded-full px-4 py-1.5 hover:brightness-95 transition duration-200"
                         >
-                            Back to Admin
+                            Back to Instructor
                         </button>
                     </div>
                 </div>
@@ -112,7 +112,25 @@ const ViewWorkspace = () => {
 
     return (
         <>
-            <Header onMenuOpen={() => setLeftMenuOpen(prev => !prev)} floating menuOpen={leftMenuOpen} subtitle="Admin" />
+            <Header
+                onMenuOpen={() => setLeftMenuOpen(prev => !prev)}
+                floating
+                menuOpen={leftMenuOpen}
+                subtitle="Instructor"
+                extraContent={
+                    <>
+                        <span className="bg-bama-crimson text-white text-sm rounded-full px-3 py-1 whitespace-nowrap shadow-lg">
+                            Viewing: {studentName}'s Workspace
+                        </span>
+                        <button
+                            onClick={handleGiveFeedback}
+                            className="bg-red-400 text-sm text-white rounded-full px-3 py-1 shadow-lg hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 whitespace-nowrap"
+                        >
+                            Give Feedback
+                        </button>
+                    </>
+                }
+            />
 
             {/* Left Panel */}
             {leftMenuOpen && (
@@ -140,19 +158,6 @@ const ViewWorkspace = () => {
                     setStoryLoading={() => {}}
                     readOnly={true}
                     targetUser={studentId}
-                    readOnlyToolbar={
-                        <>
-                            <span className="bg-bama-crimson text-white text-sm rounded-full px-3 py-1 mx-1 whitespace-nowrap">
-                                Viewing: {studentName}'s Workspace
-                            </span>
-                            <button
-                                onClick={handleGiveFeedback}
-                                className="bg-red-400 text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 whitespace-nowrap"
-                            >
-                                Give Feedback
-                            </button>
-                        </>
-                    }
                 />
             </div>
 

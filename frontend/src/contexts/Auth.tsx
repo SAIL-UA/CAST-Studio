@@ -7,8 +7,8 @@ type AuthContextType = {
     setUserAuthenticated: (authenticated: boolean) => void;
     username: string | null;
     setUsername: (username: string | null) => void;
-    isAdmin: boolean;
-    setIsAdmin: (isAdmin: boolean) => void;
+    isInstructor: boolean;
+    setIsInstructor: (isInstructor: boolean) => void;
     authLoading: boolean;
 }
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const [userAuthenticated, setUserAuthenticated ] = useState(false);
     const [username, setUsername] = useState<string | null>(null);
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [isInstructor, setIsInstructor] = useState(false);
     const [authLoading, setAuthLoading] = useState(true);
 
     // Global auth check on load
@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 const data = await checkAuth();
                 setUserAuthenticated(data.authenticated);
                 setUsername(data.user);
-                setIsAdmin(data.is_admin || false);
+                setIsInstructor(data.is_instructor || false);
             } catch (error) {
                 console.error('Initial auth check failed:', error);
 
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         const retryData = await checkAuth();
                         setUserAuthenticated(retryData.authenticated);
                         setUsername(retryData.user);
-                        setIsAdmin(retryData.is_admin || false);
+                        setIsInstructor(retryData.is_instructor || false);
                         console.log('Auth check succeeded after retry');
                         setAuthLoading(false);
                         return;
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 // No refresh token or retry failed - mark as unauthenticated
                 setUserAuthenticated(false);
                 setUsername(null);
-                setIsAdmin(false);
+                setIsInstructor(false);
             } finally {
                 setAuthLoading(false);
             }
@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Return context provider
     return (
-        <AuthContext.Provider value={{ userAuthenticated, setUserAuthenticated, username, setUsername, isAdmin, setIsAdmin, authLoading }}>
+        <AuthContext.Provider value={{ userAuthenticated, setUserAuthenticated, username, setUsername, isInstructor, setIsInstructor, authLoading }}>
             { children }
         </AuthContext.Provider>
     )

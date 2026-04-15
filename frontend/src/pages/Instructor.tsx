@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/Auth';
-import { getFeatureFlags, updateFeatureFlags, getAdminUsers } from '../services/api';
+import { getFeatureFlags, updateFeatureFlags, getInstructorUsers } from '../services/api';
 import Header from '../components/Header';
 import CompactSidebar from '../components/CompactSidebar';
 import Footer from '../components/Footer';
@@ -12,12 +12,12 @@ type UserRow = {
     email: string;
     first_name: string;
     last_name: string;
-    is_admin: boolean;
+    is_instructor: boolean;
 };
 
-const Admin = () => {
+const Instructor = () => {
     const navigate = useNavigate();
-    const { userAuthenticated, isAdmin } = useAuth();
+    const { userAuthenticated, isInstructor } = useAuth();
 
     const [leftMenuOpen, setLeftMenuOpen] = useState(false);
     const [annotateWithAI, setAnnotateWithAI] = useState(true);
@@ -26,14 +26,14 @@ const Admin = () => {
     const [alertModal, setAlertModal] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
-    // Redirect non-admin users
+    // Redirect non-instructor users
     useEffect(() => {
         if (!userAuthenticated) {
             navigate('/login');
-        } else if (!isAdmin) {
+        } else if (!isInstructor) {
             navigate('/home');
         }
-    }, [userAuthenticated, isAdmin, navigate]);
+    }, [userAuthenticated, isInstructor, navigate]);
 
     // Load feature flags and users
     useEffect(() => {
@@ -47,15 +47,15 @@ const Admin = () => {
             }
 
             try {
-                const data = await getAdminUsers();
+                const data = await getInstructorUsers();
                 setUsers(data.users || []);
             } catch (err) {
                 console.error('Error loading users:', err);
             }
         };
 
-        if (isAdmin) load();
-    }, [isAdmin]);
+        if (isInstructor) load();
+    }, [isInstructor]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -76,11 +76,11 @@ const Admin = () => {
         }
     };
 
-    if (!isAdmin) return null;
+    if (!isInstructor) return null;
 
     return (
         <>
-            <Header onMenuOpen={() => setLeftMenuOpen(prev => !prev)} floating menuOpen={leftMenuOpen} subtitle="Admin" />
+            <Header onMenuOpen={() => setLeftMenuOpen(prev => !prev)} floating menuOpen={leftMenuOpen} subtitle="Instructor" />
 
             {/* Left Panel */}
             {leftMenuOpen && (
@@ -152,12 +152,12 @@ const Admin = () => {
                                         <td className="p-3 text-grey-darkest">{user.email}</td>
                                         <td className="p-3 text-grey-darkest">{user.first_name} {user.last_name}</td>
                                         <td className="p-3">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full ${user.is_admin ? 'bg-bama-crimson text-white' : 'bg-grey-lighter text-grey-darkest'}`}>
-                                                {user.is_admin ? 'Admin' : 'User'}
+                                            <span className={`text-xs px-2 py-0.5 rounded-full ${user.is_instructor ? 'bg-bama-crimson text-white' : 'bg-grey-lighter text-grey-darkest'}`}>
+                                                {user.is_instructor ? 'Instructor' : 'Student'}
                                             </span>
                                         </td>
                                         <td className="p-3">
-                                            {!user.is_admin && (
+                                            {!user.is_instructor && (
                                                 <button
                                                     onClick={() => window.open(`/workspace/${user.id}`, '_blank')}
                                                     className="bg-bama-crimson text-xs text-white rounded-full px-3 py-1 hover:brightness-95 transition duration-200"
@@ -205,4 +205,4 @@ const Admin = () => {
     );
 };
 
-export default Admin;
+export default Instructor;

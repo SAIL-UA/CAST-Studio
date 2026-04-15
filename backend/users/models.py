@@ -22,7 +22,7 @@ class CustomUserManager(BaseUserManager):
   def create_superuser(self, email, password=None, **extra_fields):
     extra_fields.setdefault("is_staff", True)
     extra_fields.setdefault("is_superuser", True)
-    extra_fields.setdefault("is_admin", True)
+    extra_fields.setdefault("is_instructor", True)
     if extra_fields.get("is_staff") is not True:
       raise ValueError("Superuser must have is_staff=True.")
     if extra_fields.get("is_superuser") is not True:
@@ -40,7 +40,7 @@ class User(AbstractUser):
   email = models.EmailField(max_length=320, unique=True)
   first_name = models.CharField(max_length=32)
   last_name = models.CharField(max_length=64)
-  is_admin = models.BooleanField(default=False)
+  is_instructor = models.BooleanField(default=False)
 
   objects = CustomUserManager()
 

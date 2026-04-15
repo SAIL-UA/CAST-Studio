@@ -13,16 +13,17 @@ type HeaderProps = {
     menuOpen?: boolean;
     subtitle?: string;
     onRecycleBinOpen?: () => void;
+    extraContent?: React.ReactNode;
 };
 
 // Header component
-const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRecycleBinOpen }: HeaderProps) => {
+const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRecycleBinOpen, extraContent }: HeaderProps) => {
 
     // Helpers
     const navigate = useNavigate();
 
     // Contexts
-    const { userAuthenticated, setUserAuthenticated, username, setUsername, isAdmin } = useAuth();
+    const { userAuthenticated, setUserAuthenticated, username, setUsername, isInstructor } = useAuth();
 
     // Profile dropdown state
     const [profileOpen, setProfileOpen] = useState(false);
@@ -51,45 +52,48 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRe
     if (floating) {
         return (
             <>
-                {/* Left pill: Menu + Logo + Title */}
-                <div className={`fixed top-3 left-3 z-[499] flex items-center rounded-lg pl-3 pr-4 py-2 transition-colors duration-200 ${
-                    menuOpen
-                        ? 'bg-grey-lighter-2 shadow-none'
-                        : 'bg-bama-crimson shadow-lg'
-                }`}>
-                    {onMenuOpen && (
-                        <button
-                            log-id="menu-button"
-                            className={`flex items-center justify-center w-8 h-8 rounded transition-colors duration-150 mr-2 ${
-                                menuOpen
-                                    ? 'text-grey-darkest hover:bg-grey-lighter'
-                                    : 'text-white hover:bg-bama-burgundy'
-                            }`}
-                            onClick={onMenuOpen}
-                            title="Menu"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                {/* Left area: Pill + extra content */}
+                <div className="fixed top-3 left-3 z-[499] flex items-center gap-2">
+                    <div className={`flex items-center rounded-lg pl-3 pr-4 py-2 transition-colors duration-200 ${
+                        menuOpen
+                            ? 'bg-grey-lighter-2 shadow-none'
+                            : 'bg-bama-crimson shadow-lg'
+                    }`}>
+                        {onMenuOpen && (
+                            <button
+                                log-id="menu-button"
+                                className={`flex items-center justify-center w-8 h-8 rounded transition-colors duration-150 mr-2 ${
+                                    menuOpen
+                                        ? 'text-grey-darkest hover:bg-grey-lighter'
+                                        : 'text-white hover:bg-bama-burgundy'
+                                }`}
+                                onClick={onMenuOpen}
+                                title="Menu"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            </button>
+                        )}
+                        <div onClick={() => navigate('/')} className="flex items-center cursor-pointer">
+                            <svg
+                                className={`w-5 transition-colors duration-200 ${menuOpen ? 'text-grey-darkest' : 'text-white'}`}
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                            >
+                                <path d="M12 .75a8.25 8.25 0 0 0-4.135 15.39c.686.398 1.115 1.008 1.134 1.623a.75.75 0 0 0 .577.706c.352.083.71.148 1.074.195.323.041.6-.218.6-.544v-4.661a6.714 6.714 0 0 1-.937-.171.75.75 0 1 1 .374-1.453 5.261 5.261 0 0 0 2.626 0 .75.75 0 1 1 .374 1.452 6.712 6.712 0 0 1-.937.172v4.66c0 .327.277.586.6.545.364-.047.722-.112 1.074-.195a.75.75 0 0 0 .577-.706c.02-.615.448-1.225 1.134-1.623A8.25 8.25 0 0 0 12 .75Z" />
+                                <path fillRule="evenodd"
+                                    d="M9.013 19.9a.75.75 0 0 1 .877-.597 11.319 11.319 0 0 0 4.22 0 .75.75 0 1 1 .28 1.473 12.819 12.819 0 0 1-4.78 0 .75.75 0 0 1-.597-.876ZM9.754 22.344a.75.75 0 0 1 .824-.668 13.682 13.682 0 0 0 2.844 0 .75.75 0 1 1 .156 1.492 15.156 15.156 0 0 1-3.156 0 .75.75 0 0 1-.668-.824Z"
+                                    clipRule="evenodd"
+                                />
                             </svg>
-                        </button>
-                    )}
-                    <div onClick={() => navigate('/')} className="flex items-center cursor-pointer">
-                        <svg
-                            className={`w-5 transition-colors duration-200 ${menuOpen ? 'text-grey-darkest' : 'text-white'}`}
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                        >
-                            <path d="M12 .75a8.25 8.25 0 0 0-4.135 15.39c.686.398 1.115 1.008 1.134 1.623a.75.75 0 0 0 .577.706c.352.083.71.148 1.074.195.323.041.6-.218.6-.544v-4.661a6.714 6.714 0 0 1-.937-.171.75.75 0 1 1 .374-1.453 5.261 5.261 0 0 0 2.626 0 .75.75 0 1 1 .374 1.452 6.712 6.712 0 0 1-.937.172v4.66c0 .327.277.586.6.545.364-.047.722-.112 1.074-.195a.75.75 0 0 0 .577-.706c.02-.615.448-1.225 1.134-1.623A8.25 8.25 0 0 0 12 .75Z" />
-                            <path fillRule="evenodd"
-                                d="M9.013 19.9a.75.75 0 0 1 .877-.597 11.319 11.319 0 0 0 4.22 0 .75.75 0 1 1 .28 1.473 12.819 12.819 0 0 1-4.78 0 .75.75 0 0 1-.597-.876ZM9.754 22.344a.75.75 0 0 1 .824-.668 13.682 13.682 0 0 0 2.844 0 .75.75 0 1 1 .156 1.492 15.156 15.156 0 0 1-3.156 0 .75.75 0 0 1-.668-.824Z"
-                                clipRule="evenodd"
-                            />
-                        </svg>
-                        <p className={`font-roboto-semibold ml-2 text-lg whitespace-nowrap transition-colors duration-200 ${
-                            menuOpen ? 'text-grey-darkest' : 'text-white'
-                        }`}>StoryStudio{subtitle && <span className="font-roboto-light font-normal ml-1.5">{subtitle}</span>}</p>
+                            <p className={`font-roboto-semibold ml-2 text-lg whitespace-nowrap transition-colors duration-200 ${
+                                menuOpen ? 'text-grey-darkest' : 'text-white'
+                            }`}>StoryStudio{subtitle && <span className="font-roboto-light font-normal ml-1.5">{subtitle}</span>}</p>
+                        </div>
                     </div>
+                    {!menuOpen && extraContent}
                 </div>
 
                 {/* Right area: Recycle Bin + Profile pill */}
@@ -126,13 +130,13 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRe
                         {userAuthenticated && profileOpen && (
                             <div className="absolute top-full right-0 pt-1 z-[500]">
                                 <div className="bg-white rounded-lg shadow-lg py-1 min-w-[120px]">
-                                    {isAdmin && (
+                                    {isInstructor && (
                                         <button
                                             log-id="admin-button"
-                                            onClick={() => navigate('/admin')}
+                                            onClick={() => navigate('/instructor')}
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
                                         >
-                                            Admin
+                                            Instructor
                                         </button>
                                     )}
                                     <button
@@ -217,13 +221,13 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRe
                         {userAuthenticated && profileOpen && (
                             <div className="absolute top-full right-0 pt-1 z-[500]">
                                 <div className="bg-white rounded-lg shadow-lg py-1 min-w-[120px]">
-                                    {isAdmin && (
+                                    {isInstructor && (
                                         <button
                                             log-id="admin-button"
-                                            onClick={() => navigate('/admin')}
+                                            onClick={() => navigate('/instructor')}
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
                                         >
-                                            Admin
+                                            Instructor
                                         </button>
                                     )}
                                     <button

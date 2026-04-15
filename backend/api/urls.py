@@ -9,7 +9,7 @@ from .views import (
     CreateGroupView, GetGroupView, UpdateGroupView, DeleteGroupView,
     LogMousePositionView, LogScrollView,
     ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView,
-    TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, AdminUsersView, AdminWorkspaceView
+    TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, InstructorUsersView, InstructorWorkspaceView
 )
 
 urlpatterns = [
@@ -20,11 +20,11 @@ urlpatterns = [
     path("actions/requestfeedback/", RequestFeedbackView.as_view(), name="request-feedback"),
     path("task/progress/", TaskProgressView.as_view(), name="task-progress"),
 
-    # Admin
-    path("admin/features/", GetFeatureFlagsView.as_view(), name="admin-features-get"),
-    path("admin/features/update/", UpdateFeatureFlagsView.as_view(), name="admin-features-update"),
-    path("admin/users/", AdminUsersView.as_view(), name="admin-users"),
-    path("admin/workspace/<uuid:student_id>/", AdminWorkspaceView.as_view(), name="admin-workspace"),
+    # Instructor
+    path("instructor/features/", GetFeatureFlagsView.as_view(), name="instructor-features-get"),
+    path("instructor/features/update/", UpdateFeatureFlagsView.as_view(), name="instructor-features-update"),
+    path("instructor/users/", InstructorUsersView.as_view(), name="instructor-users"),
+    path("instructor/workspace/<uuid:student_id>/", InstructorWorkspaceView.as_view(), name="instructor-workspace"),
 
     # Images
     path("images/", ImageDataView.as_view(), name="image-list"),  # GET list or single via query param

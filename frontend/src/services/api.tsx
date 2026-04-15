@@ -235,22 +235,22 @@ export const getTaskProgress = async (taskId: string) => {
 };
 
 export const getFeatureFlags = async () => {
-  const response = await API.get('/admin/features/');
+  const response = await API.get('/instructor/features/');
   return response.data;
 };
 
 export const updateFeatureFlags = async (flags: { annotate_with_ai: boolean; select_with_ai: boolean }) => {
-  const response = await API.post('/admin/features/update/', flags);
+  const response = await API.post('/instructor/features/update/', flags);
   return response.data;
 };
 
-export const getAdminUsers = async () => {
-  const response = await API.get('/admin/users/');
+export const getInstructorUsers = async () => {
+  const response = await API.get('/instructor/users/');
   return response.data;
 };
 
-export const getAdminWorkspace = async (studentId: string) => {
-  const response = await API.get(`/admin/workspace/${studentId}/`);
+export const getInstructorWorkspace = async (studentId: string) => {
+  const response = await API.get(`/instructor/workspace/${studentId}/`);
   return response.data;
 };
 

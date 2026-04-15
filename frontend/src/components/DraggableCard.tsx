@@ -9,6 +9,7 @@ import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 import { logAction, captureActionContext } from '../utils/userActionLogger';
 import { formatImageMetadata, getImageUrl } from '../utils/imageUtils';
 import { useAuth } from '../contexts/Auth';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 const OLD_SHORT_DESC_PLACEHOLDER = 'Add a description for this visual.';
 const OLD_LONG_DESC_PLACEHOLDER = 'Ask AI to create a description for this visual.';
@@ -24,10 +25,11 @@ function getDesc(longDesc: string | undefined): string {
 }
 
 function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, draggable = true, readOnly: readOnlyProp = false }: DraggableCardProps) {
-  const { isAdmin } = useAuth();
+  const { isInstructor } = useAuth();
+  const { annotateWithAI } = useFeatureFlags();
   // Instructor notes are read-only for non-admin users
   const isInstructorNote = image.source === 'instructor';
-  const readOnly = readOnlyProp || (isInstructorNote && !isAdmin);
+  const readOnly = readOnlyProp || (isInstructorNote && !isInstructor);
 
   const [showModal, setShowModal] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -79,7 +81,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
   const [{ isDragging }, drag] = useDrag(
     () => ({
       type: isInstructorNote ? 'instructor_note' : 'image',
-      canDrag: draggable && !(isInstructorNote && !isAdmin),
+      canDrag: draggable && !(isInstructorNote && !isInstructor),
       item: (): DragItem => {
         if (cardRef.current) {
           const rect = cardRef.current.getBoundingClientRect();
@@ -396,7 +398,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
           }`}
         >
           <div id="card-header" className={`flex p-1 text-tiny-bold ${
-            image.source === 'instructor' ? 'bg-rose-900' : image.filepath ? 'bg-bama-crimson' : 'bg-amber-400'
+            image.source === 'instructor' ? 'bg-red-400' : image.filepath ? 'bg-bama-crimson' : 'bg-amber-400'
           }`}>
             <div id="card-header-left" className="flex items-center overflow-hidden" style={{ width: 'calc(100% - 1.5rem)' }}>
               {editingTitle ? (
@@ -489,10 +491,10 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
               </p>
             )}
             {image.source === 'instructor' && (
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-somewhat-tiny text-rose-900 font-bold">Instructor</span>
+              <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                <span className="inline-block text-somewhat-tiny font-medium text-white bg-red-400 rounded-full px-2 py-0.5">Instructor</span>
                 {image.last_saved && (
-                  <span className="text-somewhat-tiny text-gray-400">
+                  <span className="text-gray-400 whitespace-nowrap" style={{ fontSize: '0.5rem' }}>
                     {new Date(image.last_saved).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 )}
@@ -577,7 +579,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
                     <h4 className="text-base font-semibold text-grey-darkest">
                       {image.filepath ? 'Description' : 'Text'}
                     </h4>
-                    {image.filepath && (
+                    {image.filepath && annotateWithAI && (
                       <button log-id="generate-description-button"
                         onClick={handleGenerateDescription}
                         disabled={loadingGenDesc}

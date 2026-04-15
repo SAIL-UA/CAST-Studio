@@ -183,7 +183,7 @@ class ImageDataInline(admin.TabularInline):
 
 @admin.register(User)
 class UsersAdmin(admin.ModelAdmin):
-    list_display = ("id", "username", "is_admin", "is_staff", "is_superuser")
+    list_display = ("id", "username", "is_instructor", "is_staff", "is_superuser")
     search_fields = ("username", "email")
     inlines = [ImageDataInline]
 
