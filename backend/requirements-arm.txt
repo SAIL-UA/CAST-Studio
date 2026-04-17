@@ -13,6 +13,11 @@ psycopg2-binary>=2.9,<3.0
 celery>=5.5,<6.0
 redis>=5.0,<6.0
 
+# WebSocket / Channels
+channels>=4.0,<5.0
+channels-redis>=4.0,<5.0
+daphne>=4.0,<5.0
+
 # Authentication and Security
 cryptography>=45.0,<46.0
 argon2-cffi>=25.0,<26.0

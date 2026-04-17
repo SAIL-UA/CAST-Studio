@@ -18,6 +18,7 @@ import VerifyResetCode from './pages/VerifyResetCode';
 import ResetPassword from './pages/ResetPassword';
 import Instructor from './pages/Instructor';
 import ViewWorkspace from './pages/ViewWorkspace';
+import SessionWorkspace from './pages/SessionWorkspace';
 
 // Main App component
 function App() {
@@ -66,6 +67,7 @@ function App() {
                 <Route path='/tutorials' element={<Tutorials />}/>
                 <Route path='/instructor' element={<Instructor />}/>
                 <Route path='/workspace/:studentId' element={<ViewWorkspace />}/>
+                <Route path='/session/:shareToken' element={<SessionWorkspace />}/>
             </Routes>
       </div>
     </Router>

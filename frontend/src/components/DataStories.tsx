@@ -26,9 +26,10 @@ interface StoryData {
 type DataStoriesProps = {
     targetUser?: string;
     readOnly?: boolean;
+    refreshTrigger?: number;
 };
 
-const DataStories = ({ targetUser, readOnly = false }: DataStoriesProps) => {
+const DataStories = ({ targetUser, readOnly = false, refreshTrigger }: DataStoriesProps) => {
 
     // State
     const [narrativeSelected, setNarrativeSelected] = useState(true);
@@ -120,6 +121,14 @@ const DataStories = ({ targetUser, readOnly = false }: DataStoriesProps) => {
             scrollTracker.flush();
         };
     }, [])
+
+    // Refetch when refreshTrigger changes (from WebSocket workspace_update)
+    useEffect(() => {
+        if (refreshTrigger && refreshTrigger > 0) {
+            loadCachedNarrative();
+            loadImageDescriptions();
+        }
+    }, [refreshTrigger]);
 
 
     // Process narrative text to replace [FIGURE: filename] with blob URLs

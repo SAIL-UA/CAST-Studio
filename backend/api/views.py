@@ -38,7 +38,8 @@ from config.celery import app as celery_app
 from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
-  JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress, FeatureFlags
+  JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress, FeatureFlags,
+  SharedSession, SessionParticipant
 )
 
 # Serializers
@@ -62,17 +63,30 @@ class BurstRateThrottle(UserRateThrottle):
 
 def resolve_target_user(request):
   """
-  If ?target_user=<id> is present and requester is admin, return that user.
-  Otherwise return request.user. Used for admin "view as student" feature.
+  If ?target_user=<id> is present, verify the requester has permission to view that user's data.
+  Allowed if: requester is instructor, OR requester is a participant in an active session hosted by the target user.
+  Otherwise return request.user.
   """
   target_id = request.query_params.get('target_user')
   if target_id:
-    if not request.user.is_instructor:
-      from rest_framework.exceptions import PermissionDenied
-      raise PermissionDenied("Admin access required")
     from django.contrib.auth import get_user_model
     User = get_user_model()
-    return User.objects.get(id=target_id)
+
+    # Instructors can view any user
+    if request.user.is_instructor:
+      return User.objects.get(id=target_id)
+
+    # Session participants can view the host's data
+    is_participant = SessionParticipant.objects.filter(
+      user=request.user,
+      session__host_id=target_id,
+      session__is_active=True
+    ).exists()
+    if is_participant:
+      return User.objects.get(id=target_id)
+
+    from rest_framework.exceptions import PermissionDenied
+    raise PermissionDenied("Access denied")
   return request.user
 
 
@@ -705,6 +719,121 @@ class InstructorWorkspaceView(APIView):
       })
     except User.DoesNotExist:
       return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class HostSessionView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    """Create a new session or return existing active session."""
+    existing = SharedSession.objects.filter(host=request.user, is_active=True).first()
+    if existing:
+      participant_count = existing.participants.count()
+      return Response({
+        "share_token": str(existing.share_token),
+        "is_active": existing.is_active,
+        "participant_count": participant_count,
+        "max_participants": existing.max_participants,
+      })
+
+    session = SharedSession.objects.create(host=request.user)
+    return Response({
+      "share_token": str(session.share_token),
+      "is_active": session.is_active,
+      "participant_count": 0,
+      "max_participants": session.max_participants,
+    }, status=status.HTTP_201_CREATED)
+
+
+class CloseSessionView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    """Close the user's active session."""
+    session = SharedSession.objects.filter(host=request.user, is_active=True).first()
+    if not session:
+      return Response({"error": "No active session found"}, status=status.HTTP_404_NOT_FOUND)
+
+    session.is_active = False
+    session.save()
+    return Response({"message": "Session closed"})
+
+
+class SessionStatusView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    """Get the user's active session status."""
+    session = SharedSession.objects.filter(host=request.user, is_active=True).first()
+    if not session:
+      return Response(status=status.HTTP_204_NO_CONTENT)
+
+    from django.utils import timezone
+    participants = session.participants.select_related('user').all()
+    now = timezone.now()
+    online_count = sum(1 for p in participants if p.last_seen and (now - p.last_seen).total_seconds() < 15)
+    return Response({
+      "share_token": str(session.share_token),
+      "is_active": session.is_active,
+      "participant_count": participants.count(),
+      "online_count": online_count,
+      "max_participants": session.max_participants,
+      "participants": [
+        {
+          "username": p.user.username,
+          "first_name": p.user.first_name,
+          "last_name": p.user.last_name,
+          "is_online": (now - p.last_seen).total_seconds() < 15 if p.last_seen else False,
+        }
+        for p in participants
+      ],
+    })
+
+
+class JoinSessionView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request, share_token):
+    """Join a session by share token."""
+    try:
+      session = SharedSession.objects.get(share_token=share_token)
+    except SharedSession.DoesNotExist:
+      return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if not session.is_active:
+      return Response({"error": "This session has ended."}, status=status.HTTP_403_FORBIDDEN)
+
+    if session.host == request.user:
+      return Response({"error": "You cannot join your own session."}, status=status.HTTP_400_BAD_REQUEST)
+
+    participant_count = session.participants.count()
+    if participant_count >= session.max_participants:
+      return Response({"error": "This session is full."}, status=status.HTTP_403_FORBIDDEN)
+
+    # Add as participant if not already, and update last_seen
+    from django.utils import timezone
+    participant, created = SessionParticipant.objects.get_or_create(session=session, user=request.user)
+    if not created:
+      participant.last_seen = timezone.now()
+      participant.save(update_fields=['last_seen'])
+
+    participants = session.participants.select_related('user').all()
+    host = session.host
+    now = timezone.now()
+    return Response({
+      "host_id": str(host.id),
+      "host_name": f"{host.first_name} {host.last_name}".strip() or host.username,
+      "participants": [
+        {
+          "username": p.user.username,
+          "first_name": p.user.first_name,
+          "last_name": p.user.last_name,
+          "is_online": (now - p.last_seen).total_seconds() < 15 if p.last_seen else False,
+        }
+        for p in participants
+      ],
+      "is_active": session.is_active,
+    })
 
 
 class UpdateNarrativeCacheView(APIView):

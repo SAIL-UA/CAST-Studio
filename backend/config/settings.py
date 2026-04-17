@@ -58,6 +58,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, env('STATIC_ROOT', default='staticfiles'))
 # Application definition
 
 INSTALLED_APPS = [
+  'daphne',
   'django.contrib.admin',
   'django.contrib.auth',
   'django.contrib.contenttypes',
@@ -68,10 +69,22 @@ INSTALLED_APPS = [
   'django_otp.plugins.otp_totp',
   'corsheaders',
   'rest_framework',
+  'channels',
   'users',
   'api',
   'rest_framework_simplejwt',
 ]
+
+# Django Channels
+ASGI_APPLICATION = 'config.asgi.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [(env('REDIS_HOST', default='redis'), 6379)],
+        },
+    },
+}
 
 MIDDLEWARE = [
   'corsheaders.middleware.CorsMiddleware',  # CORS middleware should be placed above 'django.middleware.common.CommonMiddleware'

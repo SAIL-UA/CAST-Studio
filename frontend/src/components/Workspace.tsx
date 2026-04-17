@@ -17,10 +17,11 @@ type WorkspaceProps = {
     readOnly?: boolean;
     targetUser?: string;
     readOnlyToolbar?: React.ReactNode;
+    refreshTrigger?: number;
 }
 
 // Workspace component
-const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, readOnly = false, targetUser, readOnlyToolbar }: WorkspaceProps) => {
+const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, readOnly = false, targetUser, readOnlyToolbar, refreshTrigger }: WorkspaceProps) => {
 
     // States
     const [images, setImages] = useState<ImageData[]>([]);
@@ -114,6 +115,13 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
         fetchUserData();
     }, []);
 
+    // Refetch when refreshTrigger changes (from WebSocket workspace_update)
+    useEffect(() => {
+        if (refreshTrigger && refreshTrigger > 0) {
+            fetchUserData();
+        }
+    }, [refreshTrigger]);
+
     // Visible component
     return (
         <div id="workspace" className="flex flex-col h-full w-full">
@@ -140,6 +148,7 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
                 readOnly={readOnly}
                 targetUser={targetUser}
                 readOnlyToolbar={readOnlyToolbar}
+                refreshTrigger={refreshTrigger}
             />
         </div>
     )

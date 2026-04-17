@@ -9,7 +9,8 @@ from .views import (
     CreateGroupView, GetGroupView, UpdateGroupView, DeleteGroupView,
     LogMousePositionView, LogScrollView,
     ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView,
-    TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, InstructorUsersView, InstructorWorkspaceView
+    TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, InstructorUsersView, InstructorWorkspaceView,
+    HostSessionView, CloseSessionView, SessionStatusView, JoinSessionView
 )
 
 urlpatterns = [
@@ -25,6 +26,12 @@ urlpatterns = [
     path("instructor/features/update/", UpdateFeatureFlagsView.as_view(), name="instructor-features-update"),
     path("instructor/users/", InstructorUsersView.as_view(), name="instructor-users"),
     path("instructor/workspace/<uuid:student_id>/", InstructorWorkspaceView.as_view(), name="instructor-workspace"),
+
+    # Collaborate
+    path("collaborate/host/", HostSessionView.as_view(), name="collaborate-host"),
+    path("collaborate/host/close/", CloseSessionView.as_view(), name="collaborate-close"),
+    path("collaborate/host/status/", SessionStatusView.as_view(), name="collaborate-status"),
+    path("collaborate/session/<str:share_token>/", JoinSessionView.as_view(), name="collaborate-join"),
 
     # Images
     path("images/", ImageDataView.as_view(), name="image-list"),  # GET list or single via query param

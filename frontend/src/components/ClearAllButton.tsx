@@ -177,12 +177,11 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
                     e.currentTarget.style.backgroundColor = 'rgba(0, 92, 132, 0.5)';
                 }}
                 onClick={handleOpenModal}
+                title="Clear All"
             >
-                <img
-                    src={clearIcon}
-                    alt="Clear"
-                    className="w-4 h-4"
-                />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17h6l7.5-7.5a2.12 2.12 0 00-3-3L6 14v3zM12.5 6.5l3 3M21 21H3" />
+                </svg>
             </button>
         </>
     );

@@ -254,6 +254,26 @@ export const getInstructorWorkspace = async (studentId: string) => {
   return response.data;
 };
 
+export const hostSession = async () => {
+  const response = await API.post('/collaborate/host/', {});
+  return response.data;
+};
+
+export const closeSession = async () => {
+  const response = await API.post('/collaborate/host/close/', {});
+  return response.data;
+};
+
+export const getSessionStatus = async () => {
+  const response = await API.get('/collaborate/host/status/');
+  return response;
+};
+
+export const joinSession = async (shareToken: string) => {
+  const response = await API.get(`/collaborate/session/${shareToken}/`);
+  return response.data;
+};
+
 export const updateNarrativeCache = async(data: any) => {
   const response = await API.post('/narrative/cache/update/', { data })
   return response.data; 
