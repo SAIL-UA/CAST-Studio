@@ -18,10 +18,12 @@ type WorkspaceProps = {
     targetUser?: string;
     readOnlyToolbar?: React.ReactNode;
     refreshTrigger?: number;
+    onSessionChange?: (shareToken: string | null) => void;
+    hideToolbar?: boolean;
 }
 
 // Workspace component
-const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, readOnly = false, targetUser, readOnlyToolbar, refreshTrigger }: WorkspaceProps) => {
+const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, readOnly = false, targetUser, readOnlyToolbar, refreshTrigger, onSessionChange, hideToolbar = false }: WorkspaceProps) => {
 
     // States
     const [images, setImages] = useState<ImageData[]>([]);
@@ -31,7 +33,8 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
     const fetchUserData = async () => {
         await getImageDataAll(targetUser)
         .then((response: any) => {
-            if (response.data.images.length === 0) {
+            const images = response.data?.images;
+            if (!images || images.length === 0) {
                 setImages([]);
             }
             else {
@@ -149,6 +152,8 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
                 targetUser={targetUser}
                 readOnlyToolbar={readOnlyToolbar}
                 refreshTrigger={refreshTrigger}
+                onSessionChange={onSessionChange}
+                hideToolbar={hideToolbar}
             />
         </div>
     )

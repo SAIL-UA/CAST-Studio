@@ -7,6 +7,8 @@ type AuthContextType = {
     setUserAuthenticated: (authenticated: boolean) => void;
     username: string | null;
     setUsername: (username: string | null) => void;
+    userId: string | null;
+    setUserId: (userId: string | null) => void;
     isInstructor: boolean;
     setIsInstructor: (isInstructor: boolean) => void;
     authLoading: boolean;
@@ -18,6 +20,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const [userAuthenticated, setUserAuthenticated ] = useState(false);
     const [username, setUsername] = useState<string | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
     const [isInstructor, setIsInstructor] = useState(false);
     const [authLoading, setAuthLoading] = useState(true);
 
@@ -30,6 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 const data = await checkAuth();
                 setUserAuthenticated(data.authenticated);
                 setUsername(data.user);
+                setUserId(data.user_id || null);
                 setIsInstructor(data.is_instructor || false);
             } catch (error) {
                 console.error('Initial auth check failed:', error);
@@ -46,6 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         const retryData = await checkAuth();
                         setUserAuthenticated(retryData.authenticated);
                         setUsername(retryData.user);
+                        setUserId(retryData.user_id || null);
                         setIsInstructor(retryData.is_instructor || false);
                         console.log('Auth check succeeded after retry');
                         setAuthLoading(false);
@@ -58,6 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 // No refresh token or retry failed - mark as unauthenticated
                 setUserAuthenticated(false);
                 setUsername(null);
+                setUserId(null);
                 setIsInstructor(false);
             } finally {
                 setAuthLoading(false);
@@ -69,7 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Return context provider
     return (
-        <AuthContext.Provider value={{ userAuthenticated, setUserAuthenticated, username, setUsername, isInstructor, setIsInstructor, authLoading }}>
+        <AuthContext.Provider value={{ userAuthenticated, setUserAuthenticated, username, setUsername, userId, setUserId, isInstructor, setIsInstructor, authLoading }}>
             { children }
         </AuthContext.Provider>
     )

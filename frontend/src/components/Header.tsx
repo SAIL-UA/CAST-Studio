@@ -91,7 +91,7 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRe
                             </svg>
                             <p className={`font-roboto-semibold ml-2 text-lg whitespace-nowrap transition-colors duration-200 ${
                                 menuOpen ? 'text-grey-darkest' : 'text-white'
-                            }`}>StoryStudio{subtitle && <span className="font-roboto-light font-normal ml-1.5">{subtitle}</span>}</p>
+                            }`}>StoryStudio{subtitle && <span className="inline font-roboto-light font-normal ml-1.5">{subtitle}</span>}</p>
                         </div>
                     </div>
                     {!menuOpen && extraContent}

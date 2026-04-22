@@ -10,7 +10,8 @@ from .views import (
     LogMousePositionView, LogScrollView,
     ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView,
     TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, InstructorUsersView, InstructorWorkspaceView,
-    HostSessionView, CloseSessionView, SessionStatusView, JoinSessionView
+    HostSessionView, CloseSessionView, SessionStatusView, JoinSessionView,
+    TakeControlView, ReturnControlView
 )
 
 urlpatterns = [
@@ -32,6 +33,8 @@ urlpatterns = [
     path("collaborate/host/close/", CloseSessionView.as_view(), name="collaborate-close"),
     path("collaborate/host/status/", SessionStatusView.as_view(), name="collaborate-status"),
     path("collaborate/session/<str:share_token>/", JoinSessionView.as_view(), name="collaborate-join"),
+    path("collaborate/control/take/", TakeControlView.as_view(), name="collaborate-take-control"),
+    path("collaborate/control/return/", ReturnControlView.as_view(), name="collaborate-return-control"),
 
     # Images
     path("images/", ImageDataView.as_view(), name="image-list"),  # GET list or single via query param

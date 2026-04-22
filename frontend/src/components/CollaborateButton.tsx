@@ -4,7 +4,11 @@ import { hostSession, closeSession, getSessionStatus } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
 import { useNavigate } from 'react-router-dom';
 
-const CollaborateButton = () => {
+type CollaborateButtonProps = {
+    onSessionChange?: (shareToken: string | null) => void;
+};
+
+const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
     const navigate = useNavigate();
     const [shareToken, setShareToken] = useState<string | null>(null);
     const [participantCount, setParticipantCount] = useState(0);
@@ -22,6 +26,7 @@ const CollaborateButton = () => {
                     setShareToken(response.data.share_token);
                     setParticipantCount(response.data.participant_count);
                     setMaxParticipants(response.data.max_participants);
+                    onSessionChange?.(response.data.share_token);
                 }
             } catch (err) {
                 // No active session — that's fine
@@ -37,6 +42,7 @@ const CollaborateButton = () => {
             setShareToken(data.share_token);
             setParticipantCount(data.participant_count);
             setMaxParticipants(data.max_participants);
+            onSessionChange?.(data.share_token);
         } catch (err) {
             console.error('Error starting session:', err);
             setAlertModal('An error occurred while starting the session.');
@@ -49,6 +55,7 @@ const CollaborateButton = () => {
             setShareToken(null);
             setParticipantCount(0);
             setShowConfirmClose(false);
+            onSessionChange?.(null);
         } catch (err) {
             console.error('Error closing session:', err);
             setAlertModal('An error occurred while closing the session.');

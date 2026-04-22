@@ -176,13 +176,13 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
               />
             )}
             <span className="invisible whitespace-nowrap flex items-center gap-2">
-              Annotate Visuals
+              Annotate
               <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                 <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
               </svg>
             </span>
             <span className="absolute inset-0 flex items-center justify-center z-10 gap-2">
-              Annotate Visuals
+              Annotate
               {!aiRunning && (
                 <svg
                   className="fill-current h-4 w-4"

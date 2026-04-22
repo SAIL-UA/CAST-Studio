@@ -16,6 +16,7 @@ import GroupDiv from './GroupDiv';
 import Bin from './Bin';
 import DeleteAllButton from './DeleteAllButton';
 import ClearAllButton from './ClearAllButton';
+// import MobileMenuButton from './MobileMenuButton';
 import RecycleBoard from './Recycle';
 
 // Import scaffolds
@@ -53,10 +54,12 @@ type StoryBoardProps = {
     targetUser?: string;
     readOnlyToolbar?: React.ReactNode;
     refreshTrigger?: number;
+    onSessionChange?: (shareToken: string | null) => void;
+    hideToolbar?: boolean;
 }
 
 // StoryBoard component
-const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, images, setImages, loading, fetchUserData, refreshImageDataAfterStoryGeneration, updateImageData, handleImageRecycle, handleImageRestore, readOnly = false, targetUser, readOnlyToolbar, refreshTrigger }: StoryBoardProps) => {
+const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, images, setImages, loading, fetchUserData, refreshImageDataAfterStoryGeneration, updateImageData, handleImageRecycle, handleImageRestore, readOnly = false, targetUser, readOnlyToolbar, refreshTrigger, onSessionChange, hideToolbar = false }: StoryBoardProps) => {
 
     // States
     const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
@@ -179,7 +182,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Fetch groups and scaffolds after images are loaded
     useEffect(() => {
         const loadData = async () => {
-            if (!loading && images.length > 0) {
+            if (!loading) {
                 // Fetch groups first, then scaffolds (scaffolds depend on groups)
                 const groups = await fetchGroups();
                 await fetchScaffolds(groups);
@@ -699,7 +702,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Visible component
     return (
         <div id="story-board-container" className="flex flex-col h-full w-full bg-white">
-            <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[305px] flex-shrink-0 grid-background">
+            {!hideToolbar && <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[305px] flex-shrink-0 grid-background">
                 <div className={readOnly ? 'opacity-50 pointer-events-none flex items-center' : 'flex items-center'}>
                     <UploadButton onUploaded={async () => {
                         const oldIds = new Set(images.map(img => img.id));
@@ -735,9 +738,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                         onStoryGenerated={refreshImageDataAfterStoryGeneration}
                     />
                     <FeedbackButton />
-                    <CollaborateButton />
+                    <CollaborateButton onSessionChange={onSessionChange} />
                 </div>
-            </div>
+            </div>}
             <div id = "story-bin-wrapper" className="flex-1 min-h-0 relative overflow-hidden" ref={storyBinRef}>
                 <Bin
                     id="story-bin"

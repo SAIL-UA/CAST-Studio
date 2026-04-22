@@ -1,12 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/Auth';
-import { joinSession, getImageDataAll } from '../services/api';
+import { joinSession, getImageDataAll, setActiveTargetUser } from '../services/api';
+import { getAvatarColor } from '../utils/avatarUtils';
 import Header from '../components/Header';
 import Workspace from '../components/Workspace';
 import DataStories from '../components/DataStories';
 import FeedbackPanel, { FeedbackCardData, InstructorNote } from '../components/FeedbackPanel';
 import CompactSidebar from '../components/CompactSidebar';
+import ControlWorkspaceButton from '../components/ControlWorkspaceButton';
 import Footer from '../components/Footer';
 
 type ParticipantInfo = {
@@ -16,20 +18,10 @@ type ParticipantInfo = {
     is_online?: boolean;
 };
 
-// Generate a consistent color from a string
-const getAvatarColor = (str: string) => {
-    const colors = ['#4d8497', '#be6d6d', '#6d8fbe', '#8fbe6d', '#be8f6d', '#6dbe8f', '#8f6dbe', '#be6d8f'];
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-};
-
 const SessionWorkspace = () => {
     const { shareToken } = useParams<{ shareToken: string }>();
     const navigate = useNavigate();
-    const { userAuthenticated } = useAuth();
+    const { userAuthenticated, userId } = useAuth();
 
     const [hostId, setHostId] = useState<string | null>(null);
     const [hostName, setHostName] = useState('');
@@ -38,10 +30,13 @@ const SessionWorkspace = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [controlledBy, setControlledBy] = useState<string | null>(null);
+    const [controlledByName, setControlledByName] = useState<string | null>(null);
+    const [storyLoading, setStoryLoading] = useState(false);
     const [leftMenuOpen, setLeftMenuOpen] = useState(false);
     const [dataStoriesExpanded, setDataStoriesExpanded] = useState(false);
     const [feedbackExpanded, setFeedbackExpanded] = useState(false);
-    const [feedbackItems] = useState<FeedbackCardData[]>([]);
+    const [feedbackItems, setFeedbackItems] = useState<FeedbackCardData[]>([]);
     const [instructorNotes, setInstructorNotes] = useState<InstructorNote[]>([]);
 
     useEffect(() => {
@@ -49,6 +44,41 @@ const SessionWorkspace = () => {
             navigate('/login');
         }
     }, [userAuthenticated, navigate]);
+
+    // Auto-expand DataStories when story generation starts or completes
+    // Also broadcast to other viewers via WebSocket
+    useEffect(() => {
+        const handleExpand = () => {
+            setDataStoriesExpanded(true);
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+                wsRef.current.send(JSON.stringify({ type: 'panel_open', panel: 'dataStories' }));
+            }
+        };
+        window.addEventListener('storyGenerated', handleExpand);
+        window.addEventListener('storyGenerationStarted', handleExpand);
+        return () => {
+            window.removeEventListener('storyGenerated', handleExpand);
+            window.removeEventListener('storyGenerationStarted', handleExpand);
+        };
+    }, []);
+
+    // Listen for feedback results
+    // Also broadcast to other viewers via WebSocket
+    useEffect(() => {
+        const onShowFeedback = (e: Event) => {
+            const ce = e as CustomEvent;
+            const items = Array.isArray(ce.detail?.items) ? ce.detail.items : [];
+            if (items.length > 0) {
+                setFeedbackItems(items);
+                setFeedbackExpanded(true);
+                if (wsRef.current?.readyState === WebSocket.OPEN) {
+                    wsRef.current.send(JSON.stringify({ type: 'panel_open', panel: 'feedback', items }));
+                }
+            }
+        };
+        window.addEventListener('showFeedbackPanel', onShowFeedback as EventListener);
+        return () => window.removeEventListener('showFeedbackPanel', onShowFeedback as EventListener);
+    }, []);
 
     useEffect(() => {
         if (!shareToken || !userAuthenticated) return;
@@ -60,6 +90,8 @@ const SessionWorkspace = () => {
                 setHostId(data.host_id);
                 setHostName(data.host_name);
                 setParticipants(data.participants || []);
+                setControlledBy(data.controlled_by || null);
+                setControlledByName(data.controlled_by_name || null);
                 if (!data.is_active) {
                     setError('This session has ended.');
                 }
@@ -106,6 +138,16 @@ const SessionWorkspace = () => {
         fetchNotes();
     }, [hostId, refreshTrigger]);
 
+    // Set/clear target user interceptor based on control state
+    useEffect(() => {
+        if (controlledBy === userId && hostId) {
+            setActiveTargetUser(hostId);
+        } else {
+            setActiveTargetUser(null);
+        }
+        return () => setActiveTargetUser(null);
+    }, [controlledBy, userId, hostId]);
+
     // WebSocket connection for real-time updates
     const wsRef = useRef<WebSocket | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -133,8 +175,24 @@ const SessionWorkspace = () => {
 
                 if (data.type === 'participant_joined') {
                     console.log(`[WS] ${data.username} joined the session`);
+                    setParticipants(prev => {
+                        if (prev.some(p => p.username === data.username)) return prev;
+                        return [...prev, { username: data.username, first_name: '', last_name: '', is_online: true }];
+                    });
                 } else if (data.type === 'participant_left') {
                     console.log(`[WS] ${data.username} left the session`);
+                    setParticipants(prev => prev.filter(p => p.username !== data.username));
+                } else if (data.type === 'control_changed') {
+                    console.log(`[WS] Control changed to: ${data.controlled_by_name || 'host'}`);
+                    setControlledBy(data.controlled_by || null);
+                    setControlledByName(data.controlled_by_name || null);
+                } else if (data.type === 'panel_open') {
+                    if (data.panel === 'dataStories') {
+                        setDataStoriesExpanded(true);
+                    } else if (data.panel === 'feedback' && Array.isArray(data.items) && data.items.length > 0) {
+                        setFeedbackItems(data.items);
+                        setFeedbackExpanded(true);
+                    }
                 } else if (data.type === 'workspace_update') {
                     // Debounce: wait 500ms after the last update before refreshing
                     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -207,10 +265,22 @@ const SessionWorkspace = () => {
             />
 
             {/* Session info — under the pill */}
-            <div className="fixed top-16 left-3 z-[498] flex items-center gap-2">
+            <div className="fixed top-16 left-3 z-[350] flex items-center gap-2">
                 <span className="bg-bama-crimson text-white text-xs rounded-full px-3 py-1 whitespace-nowrap shadow-sm">
-                    {hostName}'s Workspace
+                    {controlledBy === userId ? `Controlling ${hostName}'s Workspace` : `Viewing ${hostName}'s Workspace`}
                 </span>
+                {shareToken && userId && (
+                    <ControlWorkspaceButton
+                        shareToken={shareToken}
+                        controlledBy={controlledBy}
+                        currentUserId={userId}
+                        isHost={false}
+                        onControlChanged={(cb, cbn) => {
+                            setControlledBy(cb);
+                            setControlledByName(cbn);
+                        }}
+                    />
+                )}
                 {/* Participant avatars with online/offline indicators */}
                 <div className="flex items-center gap-1">
                     <div className="relative" title={`${hostName} (Host)`}>
@@ -221,18 +291,17 @@ const SessionWorkspace = () => {
                             {hostName.charAt(0).toUpperCase()}
                         </div>
                     </div>
-                    {participants.map((p) => {
+                    {participants.filter(p => p.is_online !== false).map((p) => {
                         const name = `${p.first_name} ${p.last_name}`.trim() || p.username;
-                        const isOnline = p.is_online !== false;
                         return (
-                            <div key={p.username} className="relative" title={`${name}${isOnline ? '' : ' (offline)'}`}>
+                            <div key={p.username} className="relative" title={name}>
                                 <div
-                                    className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm cursor-default ${isOnline ? '' : 'opacity-40'}`}
+                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm cursor-default"
                                     style={{ backgroundColor: getAvatarColor(p.username) }}
                                 >
                                     {p.username.charAt(0).toUpperCase()}
                                 </div>
-                                <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${isOnline ? 'bg-green-400' : 'bg-gray-400'}`} />
+                                <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white bg-green-400" />
                             </div>
                         );
                     })}
@@ -243,10 +312,7 @@ const SessionWorkspace = () => {
             {leftMenuOpen && (
                 <>
                     <div className="fixed inset-0 bg-black bg-opacity-30 z-[400]" onClick={() => setLeftMenuOpen(false)} />
-                    <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[256px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto">
-                        <div className="flex justify-end p-2">
-                            <button className="w-7 h-7 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200" onClick={() => setLeftMenuOpen(false)}>×</button>
-                        </div>
+                    <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto pt-8">
                         <CompactSidebar setCenterNarrativePatternsOpen={() => setLeftMenuOpen(false)} />
                         <div id="footer" className="flex flex-col justify-start items-start mb-6">
                             <Footer />
@@ -260,9 +326,9 @@ const SessionWorkspace = () => {
                     setRightNarrativePatternsOpen={() => {}}
                     setSelectedPattern={setSelectedPattern}
                     selectedPattern={selectedPattern}
-                    storyLoading={false}
-                    setStoryLoading={() => {}}
-                    readOnly={true}
+                    storyLoading={storyLoading}
+                    setStoryLoading={setStoryLoading}
+                    readOnly={controlledBy !== userId}
                     targetUser={hostId}
                     refreshTrigger={refreshTrigger}
                 />

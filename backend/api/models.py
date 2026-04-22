@@ -228,6 +228,7 @@ class SharedSession(models.Model):
   share_token = models.CharField(max_length=255, unique=True, default=uuid.uuid4)
   is_active = models.BooleanField(default=True)
   max_participants = models.IntegerField(default=3)
+  controlled_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='controlling_session')
   created_at = models.DateTimeField(auto_now_add=True)
 
   def __str__(self):

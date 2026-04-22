@@ -42,6 +42,9 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
         logger.info(f"[WS] {username} connected to session {self.share_token}")
 
     async def disconnect(self, close_code):
+        # Auto-return control if this user had it
+        await self.auto_return_control()
+
         # Leave the Channels group
         username = await self.get_username()
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
@@ -58,9 +61,20 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
         logger.info(f"[WS] {username} disconnected from session {self.share_token}")
 
     async def receive_json(self, content):
-        """Handle incoming messages from clients (future use for Stage 3+)."""
+        """Handle incoming messages from clients and broadcast to the group."""
         msg_type = content.get('type', '')
         logger.info(f"[WS] Received {msg_type} from {await self.get_username()}")
+
+        if msg_type == 'panel_open':
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    'type': 'panel_open',
+                    'panel': content.get('panel'),
+                    'items': content.get('items'),
+                    'sender': await self.get_username(),
+                }
+            )
 
     # --- Group message handlers ---
 
@@ -79,8 +93,25 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
         })
 
     async def workspace_update(self, event):
-        """Broadcast workspace changes to all clients (Stage 3)."""
+        """Broadcast workspace changes to all clients."""
         await self.send_json(event)
+
+    async def panel_open(self, event):
+        """Broadcast panel open events to all clients."""
+        await self.send_json({
+            'type': 'panel_open',
+            'panel': event.get('panel'),
+            'items': event.get('items'),
+            'sender': event.get('sender'),
+        })
+
+    async def control_changed(self, event):
+        """Broadcast control changes to all clients."""
+        await self.send_json({
+            'type': 'control_changed',
+            'controlled_by': event.get('controlled_by'),
+            'controlled_by_name': event.get('controlled_by_name'),
+        })
 
     # --- Helpers ---
 
@@ -119,3 +150,35 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
         if self.user and not self.user.is_anonymous:
             return self.user.username
         return 'anonymous'
+
+    @database_sync_to_async
+    def _return_control_if_held(self):
+        """Check if this user holds control and return it to host. Returns True if control was returned."""
+        from api.models import SharedSession
+        try:
+            session = SharedSession.objects.get(share_token=self.share_token, is_active=True)
+            if session.controlled_by and session.controlled_by == self.user:
+                session.controlled_by = None
+                session.save(update_fields=['controlled_by'])
+                return True
+        except SharedSession.DoesNotExist:
+            pass
+        return False
+
+    async def auto_return_control(self):
+        """Auto-return control to host when a participant disconnects."""
+        try:
+            returned = await self._return_control_if_held()
+            if returned:
+                username = await self.get_username()
+                logger.info(f"[WS] Auto-returned control from {username} in session {self.share_token}")
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        'type': 'control_changed',
+                        'controlled_by': None,
+                        'controlled_by_name': None,
+                    }
+                )
+        except Exception as e:
+            logger.error(f"[WS] Error auto-returning control: {e}")
