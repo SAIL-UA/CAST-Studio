@@ -105,6 +105,25 @@ services:
     networks:
       - cast-network
 
+  daphne:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cast-daphne
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    volumes:
+      - ./data:/data
+    networks:
+      - cast-network
+    command: daphne -b 0.0.0.0 -p 8052 config.asgi:application
+
   celery:
     build:
       context: ./backend
