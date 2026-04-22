@@ -181,3 +181,9 @@ Werkzeug
 wheel
 widgetsnbextension
 zipp
+
+# WebSocket / Channels
+channels>=4.0,<5.0
+channels-redis>=4.0,<5.0
+daphne>=4.0,<5.0
+lxml>=4.9,<5.0
