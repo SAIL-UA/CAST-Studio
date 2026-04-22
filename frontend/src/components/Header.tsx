@@ -14,10 +14,11 @@ type HeaderProps = {
     subtitle?: string;
     onRecycleBinOpen?: () => void;
     extraContent?: React.ReactNode;
+    pillLink?: string;
 };
 
 // Header component
-const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRecycleBinOpen, extraContent }: HeaderProps) => {
+const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRecycleBinOpen, extraContent, pillLink }: HeaderProps) => {
 
     // Helpers
     const navigate = useNavigate();
@@ -75,7 +76,7 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRe
                                 </svg>
                             </button>
                         )}
-                        <div onClick={() => navigate('/')} className="flex items-center cursor-pointer">
+                        <div onClick={() => navigate(pillLink || '/')} className="flex items-center cursor-pointer">
                             <svg
                                 className={`w-5 transition-colors duration-200 ${menuOpen ? 'text-grey-darkest' : 'text-white'}`}
                                 xmlns="http://www.w3.org/2000/svg"
@@ -90,26 +91,14 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRe
                             </svg>
                             <p className={`font-roboto-semibold ml-2 text-lg whitespace-nowrap transition-colors duration-200 ${
                                 menuOpen ? 'text-grey-darkest' : 'text-white'
-                            }`}>StoryStudio{subtitle && <span className="font-roboto-light font-normal ml-1.5">{subtitle}</span>}</p>
+                            }`}>StoryStudio{subtitle && <span className="inline font-roboto-light font-normal ml-1.5">{subtitle}</span>}</p>
                         </div>
                     </div>
                     {!menuOpen && extraContent}
                 </div>
 
-                {/* Right area: Recycle Bin + Profile pill */}
+                {/* Right area: Profile pill */}
                 <div className="fixed top-3 right-3 z-[499] flex items-center gap-2">
-                    {onRecycleBinOpen && (
-                        <button
-                            log-id="view-recycle-bin-button"
-                            className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-grey-darker bg-white border border-grey-light rounded-lg shadow-lg hover:bg-grey-lightest transition-colors duration-150"
-                            onClick={onRecycleBinOpen}
-                        >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            View Recycle Bin
-                        </button>
-                    )}
                     <div
                         className="relative"
                         onMouseEnter={() => setProfileOpen(true)}

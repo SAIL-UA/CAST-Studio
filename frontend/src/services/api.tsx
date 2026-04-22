@@ -19,6 +19,20 @@ if (accessToken) {
   USER_API.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
 }
 
+// === Workspace Target User (for session control) ===
+let activeTargetUser: string | null = null;
+
+export const setActiveTargetUser = (userId: string | null) => {
+  activeTargetUser = userId;
+};
+
+API.interceptors.request.use((config) => {
+  if (activeTargetUser) {
+    config.params = { ...config.params, target_user: activeTargetUser };
+  }
+  return config;
+});
+
 // === Token Refresh Helper ===
 let isRefreshing = false;
 let failedQueue: Array<{resolve: (token: string) => void, reject: (error: any) => void}> = [];
@@ -251,6 +265,36 @@ export const getInstructorUsers = async () => {
 
 export const getInstructorWorkspace = async (studentId: string) => {
   const response = await API.get(`/instructor/workspace/${studentId}/`);
+  return response.data;
+};
+
+export const hostSession = async () => {
+  const response = await API.post('/collaborate/host/', {});
+  return response.data;
+};
+
+export const closeSession = async () => {
+  const response = await API.post('/collaborate/host/close/', {});
+  return response.data;
+};
+
+export const getSessionStatus = async () => {
+  const response = await API.get('/collaborate/host/status/');
+  return response;
+};
+
+export const joinSession = async (shareToken: string) => {
+  const response = await API.get(`/collaborate/session/${shareToken}/`);
+  return response.data;
+};
+
+export const takeControl = async (shareToken: string) => {
+  const response = await API.post('/collaborate/control/take/', { share_token: shareToken });
+  return response.data;
+};
+
+export const returnControl = async (shareToken: string) => {
+  const response = await API.post('/collaborate/control/return/', { share_token: shareToken });
   return response.data;
 };
 

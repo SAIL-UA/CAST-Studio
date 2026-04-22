@@ -218,3 +218,41 @@ class FeatureFlags(models.Model):
     db_table = 'feature_flags'
     managed = True
 
+
+class SharedSession(models.Model):
+  """
+  A collaboration session hosted by a user, shareable via a token link.
+  """
+  id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  host = models.ForeignKey(User, on_delete=models.CASCADE, related_name='hosted_sessions')
+  share_token = models.CharField(max_length=255, unique=True, default=uuid.uuid4)
+  is_active = models.BooleanField(default=True)
+  max_participants = models.IntegerField(default=3)
+  controlled_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='controlling_session')
+  created_at = models.DateTimeField(auto_now_add=True)
+
+  def __str__(self):
+    return f"{self.host.username} - {self.share_token} - active={self.is_active}"
+
+  class Meta:
+    db_table = 'shared_sessions'
+    managed = True
+
+
+class SessionParticipant(models.Model):
+  """
+  A user who has joined a shared collaboration session.
+  """
+  id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  session = models.ForeignKey(SharedSession, on_delete=models.CASCADE, related_name='participants')
+  user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='session_participations')
+  joined_at = models.DateTimeField(auto_now_add=True)
+  last_seen = models.DateTimeField(auto_now=True)
+
+  class Meta:
+    db_table = 'session_participants'
+    managed = True
+    unique_together = ('session', 'user')
+
+  def __str__(self):
+    return f"{self.user.username} in {self.session.share_token}"

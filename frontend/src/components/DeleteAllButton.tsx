@@ -169,17 +169,18 @@ const DeleteAllButton = ({ images, onDeleteComplete, setImages, setGroupDivs, se
             <button
                 log-id="delete-all-button"
                 className="w-auto h-auto rounded-full px-3 py-1 flex items-center justify-center gap-1 text-white font-bold text-sm transition-all duration-200"
-                style={{ 
+                style={{
                     cursor: 'pointer',
-                    backgroundColor: 'rgba(0, 92, 132, 0.5)', // bama-crimson #005c84 with 50% opacity
+                    backgroundColor: 'rgba(239, 68, 68, 0.5)',
                 }}
                 onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(0, 92, 132, 0.7)';
+                    e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.7)';
                 }}
                 onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(0, 92, 132, 0.5)';
+                    e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.5)';
                 }}
                 onClick={handleOpenModal}
+                title="Delete All"
             >
                 <img
                     src={trashIcon}

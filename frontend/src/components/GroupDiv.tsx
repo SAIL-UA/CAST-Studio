@@ -32,6 +32,13 @@ const GroupDiv: React.FC<GroupDivProps> = ({
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Sync position when initialPosition prop changes (e.g., from WebSocket refresh)
+  useEffect(() => {
+    if (!isDragging) {
+      setPosition(initialPosition);
+    }
+  }, [initialPosition.x, initialPosition.y]);
   const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
   const dragEventContext = useRef<any>(null);
   const groupRef = useRef<HTMLDivElement>(null);

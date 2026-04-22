@@ -86,13 +86,13 @@ const FeedbackButton = () => {
             id="feedback-button"
             logId="feedback-button"
             color="#f87171"
-            label="Request Feedback"
+            label="Ask for Feedback"
             progress={progress}
             isRunning={feedbackLoading}
             onClick={handleFeedback}
             disabled={feedbackLoading}
         >
-            {feedbackLoading ? (stageName || 'Generating...') : 'Request Feedback'}
+            {feedbackLoading ? (stageName || 'Generating...') : 'Ask for Feedback'}
         </ProgressButton>
     );
 };

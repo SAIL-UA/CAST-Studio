@@ -10,11 +10,13 @@ import GenerateStoryButton from './GenerateStoryButton';
 import CraftStoryButton from './CraftStoryButton';
 import GroupButton from './GroupButton';
 import FeedbackButton from './FeedbackButton';
+import CollaborateButton from './CollaborateButton';
 import AnnotateVisualsButton from './AnnotateVisualsButton';
 import GroupDiv from './GroupDiv';
 import Bin from './Bin';
 import DeleteAllButton from './DeleteAllButton';
 import ClearAllButton from './ClearAllButton';
+// import MobileMenuButton from './MobileMenuButton';
 import RecycleBoard from './Recycle';
 
 // Import scaffolds
@@ -51,10 +53,13 @@ type StoryBoardProps = {
     readOnly?: boolean;
     targetUser?: string;
     readOnlyToolbar?: React.ReactNode;
+    refreshTrigger?: number;
+    onSessionChange?: (shareToken: string | null) => void;
+    hideToolbar?: boolean;
 }
 
 // StoryBoard component
-const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, images, setImages, loading, fetchUserData, refreshImageDataAfterStoryGeneration, updateImageData, handleImageRecycle, handleImageRestore, readOnly = false, targetUser, readOnlyToolbar }: StoryBoardProps) => {
+const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading, setStoryLoading, images, setImages, loading, fetchUserData, refreshImageDataAfterStoryGeneration, updateImageData, handleImageRecycle, handleImageRestore, readOnly = false, targetUser, readOnlyToolbar, refreshTrigger, onSessionChange, hideToolbar = false }: StoryBoardProps) => {
 
     // States
     const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
@@ -177,7 +182,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Fetch groups and scaffolds after images are loaded
     useEffect(() => {
         const loadData = async () => {
-            if (!loading && images.length > 0) {
+            if (!loading) {
                 // Fetch groups first, then scaffolds (scaffolds depend on groups)
                 const groups = await fetchGroups();
                 await fetchScaffolds(groups);
@@ -185,6 +190,17 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         };
         loadData();
     }, [loading, images]);
+
+    // Refetch groups and scaffolds when refreshTrigger changes (WebSocket workspace_update)
+    useEffect(() => {
+        if (refreshTrigger && refreshTrigger > 0) {
+            const refresh = async () => {
+                const groups = await fetchGroups();
+                await fetchScaffolds(groups);
+            };
+            refresh();
+        }
+    }, [refreshTrigger]);
 
     // Listen for recycle bin open event from Header
     useEffect(() => {
@@ -686,48 +702,44 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Visible component
     return (
         <div id="story-board-container" className="flex flex-col h-full w-full bg-white">
-            {readOnly && readOnlyToolbar && (
-                <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[275px] flex-shrink-0 grid-background">
-                    {readOnlyToolbar}
-                </div>
-            )}
-            {!readOnly && <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[305px] flex-shrink-0 grid-background">
-                <UploadButton onUploaded={async () => {
-                    const oldIds = new Set(images.map(img => img.id));
-                    await fetchUserData();
-                    // After fetch, reposition any newly appeared images to visible center
-                    const center = getVisibleCenter();
-                    setImages(prev => prev.map(img => {
-                        if (!oldIds.has(img.id) && img.x === 0 && img.y === 0 && img.in_storyboard && !img.groupId) {
-                            const newX = Math.max(0, center.x - 65);
-                            const newY = Math.max(0, center.y - 50);
-                            updateImageData(img.id, { x: newX, y: newY });
-                            return { ...img, x: newX, y: newY };
-                        }
-                        return img;
-                    }));
-                }}/>
-                <AnnotateVisualsButton
-                    images={images}
-                    storyLoading={storyLoading}
-                    onDescriptionsUpdated={async () => {
-                        // Refresh images and any derived group/scaffold state
+            {!hideToolbar && <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[305px] flex-shrink-0 grid-background">
+                <div className={readOnly ? 'opacity-50 pointer-events-none flex items-center' : 'flex items-center'}>
+                    <UploadButton onUploaded={async () => {
+                        const oldIds = new Set(images.map(img => img.id));
                         await fetchUserData();
-                        const groups = await fetchGroups();
-                        await fetchScaffolds(groups);
-                    }}
-                />
-                <GroupButton onClick={handleCreateGroup} />
-                <GenerateStoryButton setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} />
-                <CraftStoryButton
-                    images={images}
-                    storyLoading={storyLoading}
-                    setStoryLoading={setStoryLoading}
-                    hasGroups={groupDivs.length > 0}
-                    selectedPattern={selectedPattern}
-                    onStoryGenerated={refreshImageDataAfterStoryGeneration}
-                />
-                <FeedbackButton />
+                        const center = getVisibleCenter();
+                        setImages(prev => prev.map(img => {
+                            if (!oldIds.has(img.id) && img.x === 0 && img.y === 0 && img.in_storyboard && !img.groupId) {
+                                const newX = Math.max(0, center.x - 65);
+                                const newY = Math.max(0, center.y - 50);
+                                updateImageData(img.id, { x: newX, y: newY });
+                                return { ...img, x: newX, y: newY };
+                            }
+                            return img;
+                        }));
+                    }}/>
+                    <AnnotateVisualsButton
+                        images={images}
+                        storyLoading={storyLoading}
+                        onDescriptionsUpdated={async () => {
+                            await fetchUserData();
+                            const groups = await fetchGroups();
+                            await fetchScaffolds(groups);
+                        }}
+                    />
+                    <GroupButton onClick={handleCreateGroup} />
+                    <GenerateStoryButton setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} />
+                    <CraftStoryButton
+                        images={images}
+                        storyLoading={storyLoading}
+                        setStoryLoading={setStoryLoading}
+                        hasGroups={groupDivs.length > 0}
+                        selectedPattern={selectedPattern}
+                        onStoryGenerated={refreshImageDataAfterStoryGeneration}
+                    />
+                    <FeedbackButton />
+                    <CollaborateButton onSessionChange={onSessionChange} />
+                </div>
             </div>}
             <div id = "story-bin-wrapper" className="flex-1 min-h-0 relative overflow-hidden" ref={storyBinRef}>
                 <Bin
@@ -1038,21 +1050,25 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     >+</button>
                     <span className="text-xs text-grey-dark w-8 text-right">{Math.round(zoomLevel * 100)}%</span>
                 </div>
-                {/* DeleteAll and ClearAll buttons - positioned in bottom left, hidden in readOnly */}
+                {/* Recycle Bin, DeleteAll and ClearAll buttons - positioned in bottom left, hidden in readOnly */}
                 {!readOnly && (
                     <div className="absolute bottom-6 left-4 flex gap-2 z-[350]">
-                        <DeleteAllButton
-                            images={images}
-                            setImages={setImages}
-                            setGroupDivs={setGroupDivs}
-                            setScaffold={setScaffold}
-                            setSelectedPattern={setSelectedPattern}
-                            onDeleteComplete={async () => {
-                                await fetchUserData();
-                                const groups = await fetchGroups();
-                                await fetchScaffolds(groups);
+                        <button
+                            log-id="view-recycle-bin-button"
+                            className="w-auto h-auto rounded-full px-3 py-1 flex items-center justify-center gap-1 text-white font-bold text-sm transition-all duration-200"
+                            style={{
+                                cursor: 'pointer',
+                                backgroundColor: 'rgba(0, 92, 132, 0.5)',
                             }}
-                        />
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0, 92, 132, 0.7)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0, 92, 132, 0.5)'; }}
+                            onClick={() => setRecycleBinOpen(true)}
+                            title="View Recycle Bin"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
                         <ClearAllButton
                             images={images}
                             setImages={setImages}
@@ -1060,6 +1076,18 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             setScaffold={setScaffold}
                             setSelectedPattern={setSelectedPattern}
                             onClearComplete={async () => {
+                                await fetchUserData();
+                                const groups = await fetchGroups();
+                                await fetchScaffolds(groups);
+                            }}
+                        />
+                        <DeleteAllButton
+                            images={images}
+                            setImages={setImages}
+                            setGroupDivs={setGroupDivs}
+                            setScaffold={setScaffold}
+                            setSelectedPattern={setSelectedPattern}
+                            onDeleteComplete={async () => {
                                 await fetchUserData();
                                 const groups = await fetchGroups();
                                 await fetchScaffolds(groups);

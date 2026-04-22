@@ -65,15 +65,7 @@ const Tutorials = () => {
                     className="fixed inset-0 bg-black bg-opacity-30 z-[400]"
                     onClick={() => setLeftMenuOpen(false)}
                 />
-                <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[256px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto">
-                    <div className="flex justify-end p-2">
-                        <button
-                            className="w-7 h-7 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
-                            onClick={() => setLeftMenuOpen(false)}
-                        >
-                            ×
-                        </button>
-                    </div>
+                <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto pt-8">
                     <CompactSidebar setCenterNarrativePatternsOpen={(val: boolean) => {
                         setCenterNarrativePatternsOpen(val);
                         setLeftMenuOpen(false);

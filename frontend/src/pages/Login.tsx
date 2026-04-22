@@ -14,7 +14,7 @@ import { login, register } from '../services/api';
 const Login = () => {
     // Helpers
     const navigate = useNavigate();
-    const { userAuthenticated, setUserAuthenticated, setUsername, setIsInstructor } = useAuth();
+    const { userAuthenticated, setUserAuthenticated, setUsername, setUserId, setIsInstructor } = useAuth();
     
     // States
     const [isRegisterMode, setIsRegisterMode] = useState(false);
@@ -47,6 +47,7 @@ const Login = () => {
             if (response.status === 200) {
               setUserAuthenticated(true);
               setUsername(response.data.user.username);
+              setUserId(String(response.data.user.id));
               setIsInstructor(response.data.user.is_instructor || false);
               navigate('/home');
             } else {

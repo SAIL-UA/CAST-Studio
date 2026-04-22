@@ -38,7 +38,8 @@ from config.celery import app as celery_app
 from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
-  JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress, FeatureFlags
+  JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress, FeatureFlags,
+  SharedSession, SessionParticipant
 )
 
 # Serializers
@@ -50,6 +51,7 @@ from .serializers import (
 
 # Tasks
 from .tasks import generate_description_task, generate_narrative_task, generate_feedback_task
+from .middleware import get_workspace_user
 
 # Scaffold mappings (moved to pydandtic.py)
 from .pydandtic import STORY_SCAFFOLDS
@@ -62,17 +64,30 @@ class BurstRateThrottle(UserRateThrottle):
 
 def resolve_target_user(request):
   """
-  If ?target_user=<id> is present and requester is admin, return that user.
-  Otherwise return request.user. Used for admin "view as student" feature.
+  If ?target_user=<id> is present, verify the requester has permission to view that user's data.
+  Allowed if: requester is instructor, OR requester is a participant in an active session hosted by the target user.
+  Otherwise return request.user.
   """
   target_id = request.query_params.get('target_user')
   if target_id:
-    if not request.user.is_instructor:
-      from rest_framework.exceptions import PermissionDenied
-      raise PermissionDenied("Admin access required")
     from django.contrib.auth import get_user_model
     User = get_user_model()
-    return User.objects.get(id=target_id)
+
+    # Instructors can view any user
+    if request.user.is_instructor:
+      return User.objects.get(id=target_id)
+
+    # Session participants can view the host's data
+    is_participant = SessionParticipant.objects.filter(
+      user=request.user,
+      session__host_id=target_id,
+      session__is_active=True
+    ).exists()
+    if is_participant:
+      return User.objects.get(id=target_id)
+
+    from rest_framework.exceptions import PermissionDenied
+    raise PermissionDenied("Access denied")
   return request.user
 
 
@@ -293,18 +308,19 @@ class UploadFigureView(APIView):
     
     now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     
-    # Find the first available index for this user's images
-    user_images = ImageData.objects.filter(user=request.user)
+    # Find the first available index for workspace user's images
+    workspace_user = get_workspace_user(request)
+    user_images = ImageData.objects.filter(user=workspace_user)
     used_indices = set(user_images.values_list('index', flat=True))
-    
+
     # Find first available index starting from 0
     first_available_index = 0
     while first_available_index in used_indices:
       first_available_index += 1
-    
+
     serializer = ImageDataSerializer(data={
       "id": figure_id,
-      "user": request.user.id,
+      "user": workspace_user.id,
       "filepath": f"{figure_id}{ext}",
       "short_desc": request.data.get('short_desc') or f"Visual {first_available_index + 1}",
       "long_desc": request.data.get('long_desc') or "",
@@ -322,7 +338,7 @@ class UploadFigureView(APIView):
     if serializer.is_valid():
       serializer.save()
       fig_data = serializer.validated_data
-      fig_data['user'] = request.user.id
+      fig_data['user'] = workspace_user.id
       return Response({"message": "Figure uploaded successfully", "fig_data": fig_data }, status=status.HTTP_200_OK)
     else:
       return Response({"message": f"Figure upload failed: {serializer.errors}"}, status=status.HTTP_400_BAD_REQUEST)
@@ -335,7 +351,8 @@ class CreateNoteView(APIView):
     now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     note_id = str(uuid.uuid4())
 
-    # Support target_user for admin creating instructor feedback on student workspace
+    # Use workspace_user (set by middleware for session controllers / instructors)
+    # Also support explicit target_user in body for instructor feedback
     target_user_id = request.data.get('target_user')
     source = request.data.get('source', '')
     if target_user_id:
@@ -343,7 +360,7 @@ class CreateNoteView(APIView):
         return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
       owner_id = target_user_id
     else:
-      owner_id = request.user.id
+      owner_id = get_workspace_user(request).id
 
     # Find the first available index for the target user's images
     user_images = ImageData.objects.filter(user_id=owner_id)
@@ -400,17 +417,18 @@ class DeleteFigureView(APIView):
       return Response({"message": "Invalid filename"}, status=status.HTTP_400_BAD_REQUEST)
 
     base_name, _ = os.path.splitext(filename)
+    workspace_user = get_workspace_user(request)
 
     # Try to find the image record - first by ID (as UUID), then by filepath as fallback
     image_data = None
     try:
       # Convert base_name string to UUID object for database lookup
       image_id = uuid.UUID(base_name)
-      image_data = ImageData.objects.get(id=image_id, user=request.user)
+      image_data = ImageData.objects.get(id=image_id, user=workspace_user)
     except (ValueError, ImageData.DoesNotExist):
       # If UUID conversion fails or not found by ID, try filepath lookup
       try:
-        image_data = ImageData.objects.get(filepath=filename, user=request.user)
+        image_data = ImageData.objects.get(filepath=filename, user=workspace_user)
       except ImageData.DoesNotExist:
         # Admin can delete instructor feedback notes on student accounts
         if request.user.is_instructor:
@@ -421,7 +439,7 @@ class DeleteFigureView(APIView):
             pass
         if not image_data:
           # Check if it exists for another user (security check)
-          other_user_image = ImageData.objects.filter(filepath=filename).exclude(user=request.user).first()
+          other_user_image = ImageData.objects.filter(filepath=filename).exclude(user=workspace_user).first()
           if other_user_image:
             return Response({"status": "error", "message": "Image belongs to another user"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -502,7 +520,7 @@ class CreateGroupView(APIView):
   def post(self, request):
     try:
       group_data = request.data.get('data')
-      group_data['user'] = request.user.id
+      group_data['user'] = get_workspace_user(request).id
       
       serializer = GroupDataSerializer(data=group_data)
       if serializer.is_valid():
@@ -572,7 +590,8 @@ class GenerateNarrativeAsyncView(APIView):
       use_groups = request.data.get('use_groups', False) if request.data else False
 
       # Start the narrative generation task
-      task = generate_narrative_task.delay(request.user.id, story_structure_id, use_groups)
+      workspace_user = get_workspace_user(request)
+      task = generate_narrative_task.delay(workspace_user.id, story_structure_id, use_groups)
 
       return Response({
         "status": "success",
@@ -707,15 +726,277 @@ class InstructorWorkspaceView(APIView):
       return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
+class HostSessionView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    """Create a new session or return existing active session."""
+    existing = SharedSession.objects.filter(host=request.user, is_active=True).first()
+    if existing:
+      participant_count = existing.participants.count()
+      controlled_by_id = str(existing.controlled_by.id) if existing.controlled_by else None
+      controlled_by_name = None
+      if existing.controlled_by:
+        controlled_by_name = f"{existing.controlled_by.first_name} {existing.controlled_by.last_name}".strip() or existing.controlled_by.username
+      return Response({
+        "share_token": str(existing.share_token),
+        "is_active": existing.is_active,
+        "participant_count": participant_count,
+        "max_participants": existing.max_participants,
+        "controlled_by": controlled_by_id,
+        "controlled_by_name": controlled_by_name,
+      })
+
+    session = SharedSession.objects.create(host=request.user)
+    return Response({
+      "share_token": str(session.share_token),
+      "is_active": session.is_active,
+      "participant_count": 0,
+      "max_participants": session.max_participants,
+      "controlled_by": None,
+      "controlled_by_name": None,
+    }, status=status.HTTP_201_CREATED)
+
+
+class CloseSessionView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    """Close the user's active session."""
+    session = SharedSession.objects.filter(host=request.user, is_active=True).first()
+    if not session:
+      return Response({"error": "No active session found"}, status=status.HTTP_404_NOT_FOUND)
+
+    share_token = str(session.share_token)
+    session.controlled_by = None
+    session.is_active = False
+    session.save(update_fields=['controlled_by', 'is_active'])
+
+    # Broadcast control cleared and session closed
+    try:
+      from channels.layers import get_channel_layer
+      from asgiref.sync import async_to_sync
+      channel_layer = get_channel_layer()
+      async_to_sync(channel_layer.group_send)(
+        f'session_{share_token}',
+        {
+          'type': 'control_changed',
+          'controlled_by': None,
+          'controlled_by_name': None,
+        }
+      )
+    except Exception:
+      pass
+
+    return Response({"message": "Session closed"})
+
+
+class SessionStatusView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    """Get the user's active session status."""
+    session = SharedSession.objects.filter(host=request.user, is_active=True).first()
+    if not session:
+      return Response(status=status.HTTP_204_NO_CONTENT)
+
+    from django.utils import timezone
+    participants = session.participants.select_related('user').all()
+    now = timezone.now()
+    online_count = sum(1 for p in participants if p.last_seen and (now - p.last_seen).total_seconds() < 15)
+    controlled_by_id = str(session.controlled_by.id) if session.controlled_by else None
+    controlled_by_name = None
+    if session.controlled_by:
+      controlled_by_name = f"{session.controlled_by.first_name} {session.controlled_by.last_name}".strip() or session.controlled_by.username
+    return Response({
+      "share_token": str(session.share_token),
+      "is_active": session.is_active,
+      "participant_count": participants.count(),
+      "online_count": online_count,
+      "max_participants": session.max_participants,
+      "controlled_by": controlled_by_id,
+      "controlled_by_name": controlled_by_name,
+      "participants": [
+        {
+          "username": p.user.username,
+          "first_name": p.user.first_name,
+          "last_name": p.user.last_name,
+          "is_online": (now - p.last_seen).total_seconds() < 15 if p.last_seen else False,
+        }
+        for p in participants
+      ],
+    })
+
+
+class JoinSessionView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request, share_token):
+    """Join a session by share token."""
+    try:
+      session = SharedSession.objects.get(share_token=share_token)
+    except SharedSession.DoesNotExist:
+      return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if not session.is_active:
+      return Response({"error": "This session has ended."}, status=status.HTTP_403_FORBIDDEN)
+
+    if session.host == request.user:
+      return Response({"error": "You cannot join your own session."}, status=status.HTTP_400_BAD_REQUEST)
+
+    participant_count = session.participants.count()
+    if participant_count >= session.max_participants:
+      return Response({"error": "This session is full."}, status=status.HTTP_403_FORBIDDEN)
+
+    # Add as participant if not already, and update last_seen
+    from django.utils import timezone
+    participant, created = SessionParticipant.objects.get_or_create(session=session, user=request.user)
+    if not created:
+      participant.last_seen = timezone.now()
+      participant.save(update_fields=['last_seen'])
+
+    participants = session.participants.select_related('user').all()
+    host = session.host
+    now = timezone.now()
+    controlled_by_id = str(session.controlled_by.id) if session.controlled_by else None
+    controlled_by_name = None
+    if session.controlled_by:
+      controlled_by_name = f"{session.controlled_by.first_name} {session.controlled_by.last_name}".strip() or session.controlled_by.username
+    return Response({
+      "host_id": str(host.id),
+      "host_name": f"{host.first_name} {host.last_name}".strip() or host.username,
+      "participants": [
+        {
+          "username": p.user.username,
+          "first_name": p.user.first_name,
+          "last_name": p.user.last_name,
+          "is_online": (now - p.last_seen).total_seconds() < 15 if p.last_seen else False,
+        }
+        for p in participants
+      ],
+      "is_active": session.is_active,
+      "controlled_by": controlled_by_id,
+      "controlled_by_name": controlled_by_name,
+    })
+
+
+class TakeControlView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    """Take control of a session's workspace."""
+    from django.db import transaction
+
+    share_token = request.data.get('share_token')
+    if not share_token:
+      return Response({"error": "share_token required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+      try:
+        # Use select_for_update to prevent race conditions
+        session = SharedSession.objects.select_for_update().get(share_token=share_token, is_active=True)
+      except SharedSession.DoesNotExist:
+        return Response({"error": "Session not found or inactive"}, status=status.HTTP_404_NOT_FOUND)
+
+      # Host reclaims control by setting controlled_by to None
+      if session.host == request.user:
+        session.controlled_by = None
+        session.save(update_fields=['controlled_by'])
+      else:
+        # Participant: must be a session participant
+        is_participant = SessionParticipant.objects.filter(session=session, user=request.user).exists()
+        if not is_participant:
+          return Response({"error": "Not a participant in this session"}, status=status.HTTP_403_FORBIDDEN)
+
+        session.controlled_by = request.user
+        session.save(update_fields=['controlled_by'])
+
+    # Broadcast control change via WebSocket (outside transaction)
+    try:
+      from channels.layers import get_channel_layer
+      from asgiref.sync import async_to_sync
+      channel_layer = get_channel_layer()
+      controlled_by_id = str(session.controlled_by.id) if session.controlled_by else None
+      controlled_by_name = None
+      if session.controlled_by:
+        controlled_by_name = f"{session.controlled_by.first_name} {session.controlled_by.last_name}".strip() or session.controlled_by.username
+      async_to_sync(channel_layer.group_send)(
+        f'session_{share_token}',
+        {
+          'type': 'control_changed',
+          'controlled_by': controlled_by_id,
+          'controlled_by_name': controlled_by_name,
+        }
+      )
+    except Exception:
+      pass  # Don't fail the request if broadcast fails
+
+    controlled_by_id = str(session.controlled_by.id) if session.controlled_by else None
+    controlled_by_name = None
+    if session.controlled_by:
+      controlled_by_name = f"{session.controlled_by.first_name} {session.controlled_by.last_name}".strip() or session.controlled_by.username
+
+    return Response({
+      "controlled_by": controlled_by_id,
+      "controlled_by_name": controlled_by_name,
+    })
+
+
+class ReturnControlView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    """Return control of a session back to the host."""
+    from django.db import transaction
+
+    share_token = request.data.get('share_token')
+    if not share_token:
+      return Response({"error": "share_token required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+      try:
+        session = SharedSession.objects.select_for_update().get(share_token=share_token, is_active=True)
+      except SharedSession.DoesNotExist:
+        return Response({"error": "Session not found or inactive"}, status=status.HTTP_404_NOT_FOUND)
+
+      # Only the user who has control can return it
+      if session.controlled_by != request.user:
+        return Response({"error": "You don't have control of this session"}, status=status.HTTP_403_FORBIDDEN)
+
+      session.controlled_by = None
+      session.save(update_fields=['controlled_by'])
+
+    # Broadcast control change via WebSocket (outside transaction)
+    try:
+      from channels.layers import get_channel_layer
+      from asgiref.sync import async_to_sync
+      channel_layer = get_channel_layer()
+      async_to_sync(channel_layer.group_send)(
+        f'session_{share_token}',
+        {
+          'type': 'control_changed',
+          'controlled_by': None,
+          'controlled_by_name': None,
+        }
+      )
+    except Exception:
+      pass
+
+    return Response({
+      "controlled_by": None,
+      "controlled_by_name": None,
+    })
+
+
 class UpdateNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
     cache_data = request.data.get('data')
     
-    cache = NarrativeCache.objects.get(user=request.user)
+    cache = NarrativeCache.objects.get(user=get_workspace_user(request))
     if not cache:
       return Response({"status": "error", "message": "Cache not found"}, status=status.HTTP_404_NOT_FOUND)
-    
+
     serializer = NarrativeCacheSerializer(cache, data={'data': cache_data}, partial=True)
     if serializer.is_valid():
       serializer.save()
@@ -728,7 +1009,7 @@ class ClearNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
     try:
-      cache = NarrativeCache.objects.get(user=request.user)
+      cache = NarrativeCache.objects.get(user=get_workspace_user(request))
       cache.delete()
     except ObjectDoesNotExist:
       pass
@@ -778,11 +1059,12 @@ class GenerateNarrativeView(APIView):
     """Generate narrative synchronously (blocking) using Celery task"""
     try:
       # Run the narrative generation task synchronously
-      result = generate_narrative_task(request.user.id)
+      workspace_user = get_workspace_user(request)
+      result = generate_narrative_task(workspace_user.id)
 
       # Get the updated narrative cache
       try:
-        narrative_cache = NarrativeCache.objects.get(user=request.user)
+        narrative_cache = NarrativeCache.objects.get(user=workspace_user)
         return Response({
           "status": "success",
           "story_structure_id": narrative_cache.story_structure_id,
@@ -817,7 +1099,8 @@ class RequestFeedbackView(APIView):
       if isinstance(request.data, dict):
         storyboard_id = request.data.get('storyboard_id')
 
-      task = generate_feedback_task.delay(request.user.id, storyboard_id)
+      workspace_user = get_workspace_user(request)
+      task = generate_feedback_task.delay(workspace_user.id, storyboard_id)
       return Response({"status": "accepted", "task_id": task.id}, status=status.HTTP_202_ACCEPTED)
     except Exception as e:
       return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -869,7 +1152,7 @@ class ExportStoryView(APIView):
 
       # If no payload provided, attempt to pull latest from NarrativeCache
       if not payload:
-        cache = NarrativeCache.objects.filter(user=request.user).first()
+        cache = NarrativeCache.objects.filter(user=get_workspace_user(request)).first()
         if cache:
           payload = {
             "narrative": cache.narrative,
@@ -1096,25 +1379,27 @@ class CreateScaffoldView(APIView):
     }
     """
     try:
+      workspace_user = get_workspace_user(request)
+
       # Get scaffold pattern from request
       scaffold_pattern = request.data.get('pattern', '')
-      
+
       # Validate pattern
       if not scaffold_pattern:
         return Response({
           "error": "'pattern' field is required"
         }, status=status.HTTP_400_BAD_REQUEST)
-      
+
       if scaffold_pattern not in STORY_SCAFFOLDS:
         return Response({
           "error": f"Invalid pattern '{scaffold_pattern}'. Must be one of: {', '.join(STORY_SCAFFOLDS.keys())}"
         }, status=status.HTTP_400_BAD_REQUEST)
-      
+
       # Get scaffold info from mapping
       scaffold_info = STORY_SCAFFOLDS[scaffold_pattern]
 
       # Get any current scaffolds for user
-      current_scaffolds = ScaffoldData.objects.filter(user=request.user)
+      current_scaffolds = ScaffoldData.objects.filter(user=workspace_user)
 
       # If current scaffold is same as new scaffold, return error
       if current_scaffolds.count() == 1 and current_scaffolds[0].name == scaffold_info['name']:
@@ -1129,22 +1414,22 @@ class CreateScaffoldView(APIView):
           scaffold.delete()
 
         # Update images to not have a scaffold_id or scaffold_group_number
-        images = ImageData.objects.filter(user=request.user)
+        images = ImageData.objects.filter(user=workspace_user)
         for image in images:
           image.scaffold_id = None
           image.scaffold_group_number = None
           image.save()
 
         # Update groups to not have a scaffold_id or scaffold_group_number
-        groups = GroupData.objects.filter(user=request.user)
+        groups = GroupData.objects.filter(user=workspace_user)
         for group in groups:
           group.scaffold_id = None
           group.scaffold_group_number = None
           group.save()
-      
+
       # Create new scaffold
       scaffold_data = {
-        'user': request.user.id,
+        'user': workspace_user.id,
         'name': scaffold_info['name'],
         'number': scaffold_info['number'],
         'description': scaffold_info['description'],
@@ -1199,7 +1484,7 @@ class UpdateScaffoldView(APIView):
       
       update_data = request.data.get('data')
       
-      existing_scaffold = ScaffoldData.objects.get(id=scaffold_id, user=request.user)
+      existing_scaffold = ScaffoldData.objects.get(id=scaffold_id, user=get_workspace_user(request))
       
       serializer = ScaffoldDataSerializer(existing_scaffold, data=update_data, partial=True)
       
@@ -1218,20 +1503,21 @@ class DeleteScaffoldView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
     try:
+      workspace_user = get_workspace_user(request)
       # Since only one scaffold per user is allowed, just delete all scaffolds
-      scaffolds = ScaffoldData.objects.filter(user=request.user)
+      scaffolds = ScaffoldData.objects.filter(user=workspace_user)
       for scaffold in scaffolds:
         scaffold.delete()
-      
+
       # Update images to not have a scaffold_id or scaffold_group_number
-      images = ImageData.objects.filter(user=request.user)
+      images = ImageData.objects.filter(user=workspace_user)
       for image in images:
         image.scaffold_id = None
         image.scaffold_group_number = None
         image.save()
 
       # Update groups to not have a scaffold_id or scaffold_group_number
-      groups = GroupData.objects.filter(user=request.user)
+      groups = GroupData.objects.filter(user=workspace_user)
       for group in groups:
         group.scaffold_id = None
         group.scaffold_group_number = None

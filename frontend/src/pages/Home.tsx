@@ -1,6 +1,6 @@
 // Import dependencies
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 // Import context
 import { useAuth } from '../contexts/Auth';
@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/Auth';
 // Import components
 import Header from '../components/Header';
 import DataStories from '../components/DataStories';
-import FeedbackPanel, { FeedbackCardData } from '../components/FeedbackPanel';
+import FeedbackPanel, { FeedbackCardData, InstructorNote } from '../components/FeedbackPanel';
 import NarrativePatterns from '../components/NarrativePatterns'
 import Workspace from '../components/Workspace'
 import NarrativeExamples from '../components/NarrativeExamples'
@@ -17,6 +17,9 @@ import Footer from '../components/Footer'
 
 // Import utils
 import { handleAuthRequired } from '../utils/utils';
+import { getImageDataAll, getSessionStatus } from '../services/api';
+import { getAvatarColor } from '../utils/avatarUtils';
+import ControlWorkspaceButton from '../components/ControlWorkspaceButton';
 
 // Login page component
 const Home = () => {
@@ -24,13 +27,14 @@ const Home = () => {
     const navigate = useNavigate();
 
     // Contexts
-    const { userAuthenticated } = useAuth();
+    const { userAuthenticated, username, userId } = useAuth();
 
     // State
     const [centerNarrativePatternsOpen, setCenterNarrativePatternsOpen] = useState(false);
     const [rightNarrativePatternsOpen, setRightNarrativePatternsOpen] = useState(false);
     const [feedbackItems, setFeedbackItems] = useState<FeedbackCardData[]>([]);
     const [feedbackExpanded, setFeedbackExpanded] = useState(false);
+    const [instructorNotes, setInstructorNotes] = useState<InstructorNote[]>([]);
     const [rightNarrativeExamplesOpen, setRightNarrativeExamplesOpen] = useState(false);
     const [selectedPattern, setSelectedPattern] = useState('');
     const [examplesPattern, setExamplesPattern] = useState('');
@@ -38,6 +42,12 @@ const Home = () => {
 
     const [leftMenuOpen, setLeftMenuOpen] = useState(false);
     const [dataStoriesExpanded, setDataStoriesExpanded] = useState(false);
+
+    // Session state for host avatars
+    const [sessionShareToken, setSessionShareToken] = useState<string | null>(null);
+    const [sessionParticipants, setSessionParticipants] = useState<{username: string; first_name: string; last_name: string; is_online?: boolean}[]>([]);
+    const [controlledBy, setControlledBy] = useState<string | null>(null);
+    const [controlledByName, setControlledByName] = useState<string | null>(null);
 
     // Derived: right panel is open when narrative patterns or examples are active
     const rightPanelOpen = rightNarrativePatternsOpen;
@@ -48,8 +58,14 @@ const Home = () => {
     }, [userAuthenticated, navigate]);
 
     // Auto-expand DataStories when story generation starts or completes
+    // Also broadcast to other viewers via WebSocket
     useEffect(() => {
-        const handleExpand = () => setDataStoriesExpanded(true);
+        const handleExpand = () => {
+            setDataStoriesExpanded(true);
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+                wsRef.current.send(JSON.stringify({ type: 'panel_open', panel: 'dataStories' }));
+            }
+        };
         window.addEventListener('storyGenerated', handleExpand);
         window.addEventListener('storyGenerationStarted', handleExpand);
         return () => {
@@ -58,7 +74,132 @@ const Home = () => {
         };
     }, []);
 
+    // Fetch instructor notes
+    const fetchInstructorNotes = async () => {
+        try {
+            const response = await getImageDataAll();
+            const images = response.data?.images || [];
+            const notes = images
+                .filter((img: any) => img.source === 'instructor')
+                .map((img: any) => ({
+                    id: img.id,
+                    short_desc: img.short_desc,
+                    long_desc: img.long_desc,
+                    last_saved: img.last_saved,
+                }));
+            setInstructorNotes(notes);
+        } catch (err) {
+            console.error('Error fetching instructor notes:', err);
+        }
+    };
+
+    // Load instructor notes on mount
+    useEffect(() => {
+        if (userAuthenticated) {
+            fetchInstructorNotes();
+        }
+    }, [userAuthenticated]);
+
+    // Refetch instructor notes when feedback panel expands
+    useEffect(() => {
+        if (feedbackExpanded) {
+            fetchInstructorNotes();
+        }
+    }, [feedbackExpanded]);
+
+    // Poll session status when host has an active session
+    useEffect(() => {
+        if (!sessionShareToken) {
+            setSessionParticipants([]);
+            setControlledBy(null);
+            setControlledByName(null);
+            return;
+        }
+
+        const pollStatus = async () => {
+            try {
+                const response = await getSessionStatus();
+                if (response.status === 200 && response.data) {
+                    setSessionParticipants(response.data.participants || []);
+                    setControlledBy(response.data.controlled_by || null);
+                    setControlledByName(response.data.controlled_by_name || null);
+                }
+            } catch {
+                // Session may have been closed
+                setSessionShareToken(null);
+            }
+        };
+
+        pollStatus();
+        const interval = setInterval(pollStatus, 10000);
+        return () => clearInterval(interval);
+    }, [sessionShareToken]);
+
+    // Callback for CollaborateButton session changes
+    const handleSessionChange = (shareToken: string | null) => {
+        setSessionShareToken(shareToken);
+    };
+
+    // Host WebSocket connection for real-time updates when session is active
+    const [hostRefreshTrigger, setHostRefreshTrigger] = useState(0);
+    const wsRef = useRef<WebSocket | null>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (!sessionShareToken) return;
+
+        const accessToken = localStorage.getItem('access');
+        if (!accessToken) return;
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/session/${sessionShareToken}/?access_token=${accessToken}`;
+
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'participant_joined') {
+                    // Skip host's own join message — host avatar is rendered separately
+                    if (data.username === username) return;
+                    setSessionParticipants(prev => {
+                        if (prev.some(p => p.username === data.username)) return prev;
+                        return [...prev, { username: data.username, first_name: '', last_name: '', is_online: true }];
+                    });
+                } else if (data.type === 'participant_left') {
+                    setSessionParticipants(prev => prev.filter(p => p.username !== data.username));
+                } else if (data.type === 'control_changed') {
+                    setControlledBy(data.controlled_by || null);
+                    setControlledByName(data.controlled_by_name || null);
+                } else if (data.type === 'panel_open') {
+                    if (data.panel === 'dataStories') {
+                        setDataStoriesExpanded(true);
+                    } else if (data.panel === 'feedback' && Array.isArray(data.items) && data.items.length > 0) {
+                        setFeedbackItems(data.items);
+                        setFeedbackExpanded(true);
+                    }
+                } else if (data.type === 'workspace_update') {
+                    if (debounceRef.current) clearTimeout(debounceRef.current);
+                    debounceRef.current = setTimeout(() => {
+                        setHostRefreshTrigger(prev => prev + 1);
+                    }, 500);
+                }
+            } catch (err) {
+                console.error('[WS Host] Error parsing message:', err);
+            }
+        };
+
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                ws.close();
+            }
+        };
+    }, [sessionShareToken]);
+
     // Feedback event handler
+    // Also broadcast to other viewers via WebSocket
     useEffect(() => {
         const onShowFeedback = (e: Event) => {
             const ce = e as CustomEvent;
@@ -66,6 +207,9 @@ const Home = () => {
             if (items.length > 0) {
                 setFeedbackItems(items);
                 setFeedbackExpanded(true);
+                if (wsRef.current?.readyState === WebSocket.OPEN) {
+                    wsRef.current.send(JSON.stringify({ type: 'panel_open', panel: 'feedback', items }));
+                }
             }
         };
         window.addEventListener('showFeedbackPanel', onShowFeedback as EventListener);
@@ -76,6 +220,56 @@ const Home = () => {
     return (
         <>
             <Header onMenuOpen={() => setLeftMenuOpen(prev => !prev)} floating menuOpen={leftMenuOpen} subtitle="Workspace" onRecycleBinOpen={() => window.dispatchEvent(new CustomEvent('openRecycleBin'))} />
+
+            {/* Session info — under the pill, visible when host has active session with participants */}
+            {sessionShareToken && sessionParticipants.filter(p => p.is_online !== false).length > 0 && (
+                <div className="fixed top-16 left-3 z-[350] flex items-center gap-2">
+                    {controlledByName && (
+                        <span className="bg-bama-crimson text-white text-xs rounded-full px-3 py-1 whitespace-nowrap shadow-sm">
+                            {controlledByName} Controlling {username}'s Workspace
+                        </span>
+                    )}
+                    {userId && (
+                        <ControlWorkspaceButton
+                            shareToken={sessionShareToken}
+                            controlledBy={controlledBy}
+                            currentUserId={userId}
+                            isHost={true}
+                            onControlChanged={(cb, cbn) => {
+                                setControlledBy(cb);
+                                setControlledByName(cbn);
+                            }}
+                        />
+                    )}
+                    <div className="flex items-center gap-1">
+                        {/* Host avatar */}
+                        <div className="relative" title={`${username} (Host)`}>
+                            <div
+                                className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm border-2 border-white cursor-default"
+                                style={{ backgroundColor: getAvatarColor(username || '') }}
+                            >
+                                {(username || '?').charAt(0).toUpperCase()}
+                            </div>
+                        </div>
+                        {/* Participant avatars */}
+                        {sessionParticipants.filter(p => p.is_online !== false).map((p) => {
+                            const name = `${p.first_name} ${p.last_name}`.trim() || p.username;
+                            return (
+                                <div key={p.username} className="relative" title={name}>
+                                    <div
+                                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm cursor-default"
+                                        style={{ backgroundColor: getAvatarColor(p.username) }}
+                                    >
+                                        {p.username.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white bg-green-400" />
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             <div id="home-container" className="flex w-full font-roboto-light">
 
                 {/* Middle Home — workspace takes full width, edgeless */}
@@ -93,7 +287,7 @@ const Home = () => {
                         </div>
                     ) : (
                         <div className="h-screen">
-                            <Workspace setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} />
+                            <Workspace setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} onSessionChange={handleSessionChange} readOnly={controlledBy !== null} refreshTrigger={hostRefreshTrigger} />
                         </div>
                     )}
 
@@ -117,7 +311,7 @@ const Home = () => {
                         {/* DataStories content — always mounted, hidden when collapsed */}
                         <div className={`flex-1 min-h-0 overflow-y-auto px-1 pb-1 ${dataStoriesExpanded ? '' : 'hidden'}`}>
                             <div className="bg-grey-lighter-2 rounded-lg px-4 pb-4">
-                                <DataStories />
+                                <DataStories refreshTrigger={hostRefreshTrigger} />
                             </div>
                         </div>
                     </div>
@@ -147,7 +341,7 @@ const Home = () => {
                             style={{ height: '80vh' }}
                         >
                             <div className="h-full bg-grey-lighter-2 overflow-y-auto">
-                                <FeedbackPanel items={feedbackItems} onClose={() => setFeedbackExpanded(false)} />
+                                <FeedbackPanel items={feedbackItems} instructorNotes={instructorNotes} onClose={() => setFeedbackExpanded(false)} />
                             </div>
                         </div>
                     </div>
@@ -160,15 +354,7 @@ const Home = () => {
                             className="fixed inset-0 bg-black bg-opacity-30 z-[400]"
                             onClick={() => setLeftMenuOpen(false)}
                         />
-                        <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[256px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto">
-                            <div className="flex justify-end p-2">
-                                <button
-                                    className="w-7 h-7 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
-                                    onClick={() => setLeftMenuOpen(false)}
-                                >
-                                    ×
-                                </button>
-                            </div>
+                        <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto pt-8">
                             <CompactSidebar setCenterNarrativePatternsOpen={(val: boolean) => {
                                 setCenterNarrativePatternsOpen(val);
                                 setLeftMenuOpen(false);
