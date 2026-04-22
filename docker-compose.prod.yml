@@ -43,6 +43,28 @@ services:
              python manage.py collectstatic --noinput &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8051 --workers 3"
 
+  daphne:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cast-daphne
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    expose:
+      - "8052"
+    volumes:
+      - /data/CAST_ext/user_images:/data/CAST_ext/user_images
+      - static:/app/staticfiles
+    networks:
+      - cast-network
+    command: daphne -b 0.0.0.0 -p 8052 config.asgi:application
+
   frontend:
     build:
       context: ./frontend
@@ -74,6 +96,7 @@ services:
       - ./nginx/www:/var/www/certbot  # webroot for ACME challenge
     depends_on:
       - backend
+      - daphne
       - frontend
     networks:
       - cast-network
