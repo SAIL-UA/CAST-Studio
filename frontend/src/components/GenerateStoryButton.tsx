@@ -27,13 +27,14 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
     }, [selectWithAI, selectedPattern, setSelectedPattern]);
 
     // Handle generate story
-    const handleAIStoryGeneration = async (e: React.MouseEvent) => {
+    const handleAIStoryGeneration = async () => {
         setSelectedPattern('AI Assistance');
-        logAction(e, { "narrative_pattern": 'AI Assistance' });
+        logAction({ actionType: 'click', elementId: 'select-narrative-ai-button' }, { "narrative_pattern": 'AI Assistance' });
     }
 
     // Handle select manually
-    const handleSelectManually = (e: React.MouseEvent) => {
+    const handleSelectManually = () => {
+        logAction({ actionType: 'click', elementId: 'select-narrative-manually-button' });
         setRightNarrativePatternsOpen(true);
     }
 
@@ -81,7 +82,7 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
                         <DropdownMenu.Item
                             className={menuItemClass}
                             log-id="select-narrative-ai-button"
-                            onSelect={(e) => handleAIStoryGeneration(e as any)}
+                            onSelect={() => handleAIStoryGeneration()}
                         >
                             Select With AI
                         </DropdownMenu.Item>
@@ -89,7 +90,7 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
                     <DropdownMenu.Item
                         className={menuItemClass}
                         log-id="select-narrative-manually-button"
-                        onSelect={(e) => handleSelectManually(e as any)}
+                        onSelect={() => handleSelectManually()}
                     >
                         Select Manually
                     </DropdownMenu.Item>

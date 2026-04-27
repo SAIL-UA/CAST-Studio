@@ -5,6 +5,7 @@ import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types'
 import { SCAFFOLD_GROUP_LABELS, SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 import GroupDiv from '../GroupDiv';
+import { logAction } from '../../utils/userActionLogger';
 
 type ComparativeProps = {
     images: ImageData[];
@@ -114,6 +115,8 @@ const Comparative = ({
                 return next;
             });
         }
+
+        logAction({ actionType: 'click', elementId: 'scaffold-card-add' }, { scaffoldType: 'comparative', groupNumber: scaffoldGroupNumber });
     };
 
     const handleCardRemove = async (cardId: string, groupId: string) => {
@@ -313,11 +316,13 @@ const Comparative = ({
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
+                        logAction(e);
                         onClose();
                     }}
                     className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                     style={{ cursor: 'pointer' }}
                     title="Close Comparative scaffold"
+                    log-id="scaffold-close"
                 >
                     ×
                 </button>
@@ -421,6 +426,7 @@ const ComparativeGroup = ({
                 if (item.type === 'group' && scaffoldId && scaffoldGroupNumber !== undefined && onGroupAdd) {
                     if (item.scaffoldId !== scaffoldId) {
                         onGroupAdd(item.id, scaffoldId, scaffoldGroupNumber);
+                        logAction({ actionType: 'drop', elementId: 'scaffold-group-add' }, { scaffoldType: 'comparative' });
                         return { droppedInScaffoldGroup: true, scaffoldId, scaffoldGroupNumber };
                     }
                 }
@@ -525,11 +531,13 @@ const ComparativeGroup = ({
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
+                                                logAction(e);
                                                 onGroupRemove(group.id);
                                             }}
                                             className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
                                             style={{ top: '-2px', right: '8px' }}
                                             title="Remove group from scaffold"
+                                            log-id="scaffold-group-remove"
                                         >
                                             ×
                                         </button>
@@ -561,11 +569,13 @@ const ComparativeGroup = ({
                             {!readOnly && <button
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    logAction(e);
                                     onCardRemove(card.id, id);
                                 }}
                                 className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[305] shadow-md"
                                 style={{ top: '2px', right: '2px' }}
                                 title="Remove from group"
+                                log-id="scaffold-card-remove"
                             >
                                 ×
                             </button>}

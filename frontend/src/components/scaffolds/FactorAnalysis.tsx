@@ -5,6 +5,7 @@ import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types'
 import { SCAFFOLD_VALID_GROUP_NUMBERS, SCAFFOLD_GROUP_LABELS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 import GroupDiv from '../GroupDiv';
+import { logAction } from '../../utils/userActionLogger';
 
 const SCAFFOLD_NUMBER = 4;
 const MIN_SLOTS = 2;
@@ -140,6 +141,8 @@ const FactorAnalysis = ({
             }
             return next;
         });
+
+        logAction({ actionType: 'click', elementId: 'scaffold-card-add' }, { scaffoldType: 'factor_analysis', groupNumber: factor });
     };
 
     const handleCardRemove = async (cardId: string, groupId: string) => {
@@ -359,10 +362,12 @@ const FactorAnalysis = ({
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
+                                logAction(e);
                                 handleAddFactor();
                             }}
                             className="px-2 py-0.5 text-xs bg-white bg-opacity-20 hover:bg-opacity-40 rounded transition-all duration-200"
                             title="Add factor"
+                            log-id="scaffold-slot-add"
                         >
                             + Factor
                         </button>
@@ -371,10 +376,12 @@ const FactorAnalysis = ({
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
+                                logAction(e);
                                 handleRemoveFactor();
                             }}
                             className="px-2 py-0.5 text-xs bg-white bg-opacity-20 hover:bg-opacity-40 rounded transition-all duration-200"
                             title="Remove last factor"
+                            log-id="scaffold-slot-remove"
                         >
                             − Factor
                         </button>
@@ -383,11 +390,13 @@ const FactorAnalysis = ({
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
+                            logAction(e);
                             onClose();
                         }}
                         className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Close Factor Analysis scaffold"
+                        log-id="scaffold-close"
                     >
                         ×
                     </button>
@@ -477,6 +486,7 @@ const FactorAnalysisFactor = ({
                 if (item.type === 'group' && scaffoldId != null && scaffoldGroupNumber != null && onGroupAdd) {
                     if (item.scaffoldId !== scaffoldId) {
                         onGroupAdd(item.id, scaffoldId, scaffoldGroupNumber);
+                        logAction({ actionType: 'drop', elementId: 'scaffold-group-add' }, { scaffoldType: 'factor_analysis' });
                         return { droppedInScaffoldGroup: true, scaffoldId, scaffoldGroupNumber };
                     }
                 }
@@ -581,11 +591,13 @@ const FactorAnalysisFactor = ({
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
+                                                logAction(e);
                                                 onGroupRemove(group.id);
                                             }}
                                             className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
                                             style={{ top: '-2px', right: '8px' }}
                                             title="Remove group from scaffold"
+                                            log-id="scaffold-group-remove"
                                         >
                                             ×
                                         </button>
@@ -617,11 +629,13 @@ const FactorAnalysisFactor = ({
                             {!readOnly && <button
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    logAction(e);
                                     onCardRemove(card.id, id);
                                 }}
                                 className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[305] shadow-md"
                                 style={{ top: '2px', right: '2px' }}
                                 title="Remove from factor"
+                                log-id="scaffold-card-remove"
                             >
                                 ×
                             </button>}

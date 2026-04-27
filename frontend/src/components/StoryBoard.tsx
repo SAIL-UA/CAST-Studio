@@ -702,9 +702,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // Visible component
     return (
         <div id="story-board-container" className="flex flex-col h-full w-full bg-white">
-            {!hideToolbar && <div id="story-bin-header" className="flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[305px] flex-shrink-0 grid-background">
+            <div id="story-bin-header" className={`flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[305px] flex-shrink-0 grid-background ${hideToolbar ? 'min-h-[58px]' : ''}`}>
+                {!hideToolbar && (
                 <div className={readOnly ? 'opacity-50 pointer-events-none flex items-center' : 'flex items-center'}>
-                    <UploadButton onUploaded={async () => {
+                    <UploadButton targetUser={targetUser} onUploaded={async () => {
                         const oldIds = new Set(images.map(img => img.id));
                         await fetchUserData();
                         const center = getVisibleCenter();
@@ -740,7 +741,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     <FeedbackButton />
                     <CollaborateButton onSessionChange={onSessionChange} />
                 </div>
-            </div>}
+                )}
+            </div>
             <div id = "story-bin-wrapper" className="flex-1 min-h-0 relative overflow-hidden" ref={storyBinRef}>
                 <Bin
                     id="story-bin"

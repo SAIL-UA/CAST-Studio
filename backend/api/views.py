@@ -700,9 +700,29 @@ class InstructorUsersView(APIView):
       return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
 
     from django.contrib.auth import get_user_model
+    from django.db.models import Max
     User = get_user_model()
-    users = User.objects.all().values('id', 'username', 'email', 'first_name', 'last_name', 'is_instructor')
-    return Response({"users": list(users)})
+    users = User.objects.annotate(
+      last_image=Max('image_data__last_saved'),
+      last_group=Max('group_data__last_modified'),
+      last_scaffold=Max('scaffold_data__last_modified'),
+    ).values('id', 'username', 'email', 'first_name', 'last_name', 'is_instructor', 'last_image', 'last_group', 'last_scaffold')
+
+    result = []
+    for user in users:
+      timestamps = [t for t in [user['last_image'], user['last_group'], user['last_scaffold']] if t is not None]
+      last_modified = max(timestamps).isoformat() if timestamps else None
+      result.append({
+        'id': user['id'],
+        'username': user['username'],
+        'email': user['email'],
+        'first_name': user['first_name'],
+        'last_name': user['last_name'],
+        'is_instructor': user['is_instructor'],
+        'last_modified': last_modified,
+      })
+
+    return Response({"users": result})
 
 
 class InstructorWorkspaceView(APIView):
@@ -724,6 +744,222 @@ class InstructorWorkspaceView(APIView):
       })
     except User.DoesNotExist:
       return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class ExportWorkspaceReportView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  # Category definitions: category_name -> list of log-id element values
+  CATEGORIES = {
+    'Uploads': ['import-from-jupyter', 'upload-submit-button'],
+    'Notes': ['add-text-note'],
+    'Groups': ['group-create-button'],
+    'Editing': ['edit-figure-button', 'save-and-close-figure-button', 'visual-inline-title-save', 'visual-inline-desc-save', 'group-inline-name-input', 'group-save-changes-button'],
+    'AI Descriptions': ['description-generated', 'annotate-visuals-ai-complete'],
+    'Examples Viewed': ['narrative-examples-button'],
+    'AI Narrative': ['select-narrative-ai-button'],
+    'Scaffolds': ['scaffold-card-add', 'scaffold-card-remove', 'scaffold-group-add', 'scaffold-group-remove', 'scaffold-slot-add', 'scaffold-slot-remove', 'scaffold-close'],
+    'Story Generation': ['craft-story-button'],
+    'Story Review': ['data-stories-story-button', 'data-stories-narrative-button'],
+    'Feedback': ['feedback-button'],
+    'Export': ['export-pdf-button'],
+    'Delete': ['delete-figure-button', 'move-figure-to-recycle-bin-button'],
+  }
+
+  def _gather_data(self):
+    """Shared data gathering for both JSON and Excel formats."""
+    from django.contrib.auth import get_user_model
+    from django.db.models import Count, Max
+
+    User = get_user_model()
+
+    # Collect all tracked log-id values
+    all_elements = []
+    for elements in self.CATEGORIES.values():
+      all_elements.extend(elements)
+
+    # Query: count per user per element, filtered to click actions and tracked elements
+    action_counts = (
+      UserAction.objects
+      .filter(action='click', element__in=all_elements)
+      .values('user__id', 'user__username', 'user__first_name', 'user__last_name', 'user__email', 'element')
+      .annotate(count=Count('id'))
+    )
+
+    # Also include drop actions for scaffold-group-add and scaffold-card-add
+    drop_elements = ['scaffold-group-add', 'scaffold-card-add']
+    drop_counts = (
+      UserAction.objects
+      .filter(action='drop', element__in=drop_elements)
+      .values('user__id', 'user__username', 'user__first_name', 'user__last_name', 'user__email', 'element')
+      .annotate(count=Count('id'))
+    )
+
+    # Build per-user data: { user_id: { element: count, ... } }
+    user_data = {}
+    all_users = User.objects.all().values('id', 'username', 'first_name', 'last_name', 'email', 'is_instructor')
+    for u in all_users:
+      user_data[u['id']] = {
+        'username': u['username'],
+        'first_name': u['first_name'],
+        'last_name': u['last_name'],
+        'email': u['email'],
+        'is_instructor': u['is_instructor'],
+        'elements': {},
+      }
+
+    for row in action_counts:
+      uid = row['user__id']
+      if uid in user_data:
+        user_data[uid]['elements'][row['element']] = row['count']
+
+    for row in drop_counts:
+      uid = row['user__id']
+      if uid in user_data:
+        existing = user_data[uid]['elements'].get(row['element'], 0)
+        user_data[uid]['elements'][row['element']] = existing + row['count']
+
+    # Get last_modified per user
+    user_timestamps = User.objects.annotate(
+      last_image=Max('image_data__last_saved'),
+      last_group=Max('group_data__last_modified'),
+      last_scaffold=Max('scaffold_data__last_modified'),
+    ).values('id', 'last_image', 'last_group', 'last_scaffold')
+
+    for ut in user_timestamps:
+      uid = ut['id']
+      if uid in user_data:
+        timestamps = [t for t in [ut['last_image'], ut['last_group'], ut['last_scaffold']] if t is not None]
+        user_data[uid]['last_modified'] = max(timestamps) if timestamps else None
+
+    # Sort users by last_name
+    sorted_users = sorted(user_data.values(), key=lambda u: (u['last_name'] or '').lower())
+    return sorted_users, all_elements
+
+  def get(self, request):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    sorted_users, all_elements = self._gather_data()
+    output_format = request.query_params.get('format', 'excel')
+
+    # --- JSON format ---
+    if output_format == 'json':
+      result = []
+      for u in sorted_users:
+        row = {
+          'username': u['username'],
+          'first_name': u['first_name'],
+          'last_name': u['last_name'],
+          'email': u['email'],
+          'is_instructor': u['is_instructor'],
+          'last_modified': u.get('last_modified', None).isoformat() if u.get('last_modified') else None,
+        }
+        total = 0
+        for cat_name, elements in self.CATEGORIES.items():
+          cat_total = sum(u['elements'].get(el, 0) for el in elements)
+          row[cat_name] = cat_total
+          total += cat_total
+        row['Total'] = total
+        result.append(row)
+      return Response({"users": result, "categories": list(self.CATEGORIES.keys())})
+
+    # --- Excel format ---
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+
+    wb = Workbook()
+
+    # --- Sheet 1: Categories ---
+    ws_cat = wb.active
+    ws_cat.title = 'Categories'
+
+    header_font = Font(bold=True)
+    header_fill = PatternFill(start_color='D9E1F2', end_color='D9E1F2', fill_type='solid')
+
+    cat_headers = ['Username', 'First Name', 'Last Name', 'Email', 'Role', 'Total'] + list(self.CATEGORIES.keys()) + ['Last Modified']
+    for col, header in enumerate(cat_headers, 1):
+      cell = ws_cat.cell(row=1, column=col, value=header)
+      cell.font = header_font
+      cell.fill = header_fill
+      cell.alignment = Alignment(horizontal='center')
+
+    for row_idx, u in enumerate(sorted_users, 2):
+      ws_cat.cell(row=row_idx, column=1, value=u['username'])
+      ws_cat.cell(row=row_idx, column=2, value=u['first_name'])
+      ws_cat.cell(row=row_idx, column=3, value=u['last_name'])
+      ws_cat.cell(row=row_idx, column=4, value=u['email'])
+      ws_cat.cell(row=row_idx, column=5, value='Instructor' if u['is_instructor'] else 'Student')
+
+      row_total = 0
+      for cat_idx, (cat_name, elements) in enumerate(self.CATEGORIES.items(), 7):
+        cat_total = sum(u['elements'].get(el, 0) for el in elements)
+        ws_cat.cell(row=row_idx, column=cat_idx, value=cat_total)
+        row_total += cat_total
+
+      ws_cat.cell(row=row_idx, column=6, value=row_total)
+
+      last_mod = u.get('last_modified')
+      ws_cat.cell(row=row_idx, column=len(cat_headers), value=last_mod.strftime('%b %d %Y, %I:%M %p') if last_mod else '')
+
+    # Auto-width columns
+    for col in ws_cat.columns:
+      max_len = max(len(str(cell.value or '')) for cell in col)
+      ws_cat.column_dimensions[col[0].column_letter].width = min(max_len + 3, 30)
+
+    # --- Sheet 2: Raw ---
+    ws_raw = wb.create_sheet('Raw')
+
+    raw_headers = ['Username', 'First Name', 'Last Name', 'Email', 'Role'] + sorted(all_elements) + ['Last Modified']
+    for col, header in enumerate(raw_headers, 1):
+      cell = ws_raw.cell(row=1, column=col, value=header)
+      cell.font = header_font
+      cell.fill = header_fill
+      cell.alignment = Alignment(horizontal='center')
+
+    for row_idx, u in enumerate(sorted_users, 2):
+      ws_raw.cell(row=row_idx, column=1, value=u['username'])
+      ws_raw.cell(row=row_idx, column=2, value=u['first_name'])
+      ws_raw.cell(row=row_idx, column=3, value=u['last_name'])
+      ws_raw.cell(row=row_idx, column=4, value=u['email'])
+      ws_raw.cell(row=row_idx, column=5, value='Instructor' if u['is_instructor'] else 'Student')
+
+      for el_idx, element in enumerate(sorted(all_elements), 6):
+        ws_raw.cell(row=row_idx, column=el_idx, value=u['elements'].get(element, 0))
+
+      last_mod = u.get('last_modified')
+      ws_raw.cell(row=row_idx, column=len(raw_headers), value=last_mod.strftime('%b %d %Y, %I:%M %p') if last_mod else '')
+
+    # Auto-width columns
+    for col in ws_raw.columns:
+      max_len = max(len(str(cell.value or '')) for cell in col)
+      ws_raw.column_dimensions[col[0].column_letter].width = min(max_len + 3, 30)
+
+    # --- Sheet 3: Definitions ---
+    ws_def = wb.create_sheet('Definitions')
+
+    def_headers = ['Category', 'Log IDs']
+    for col, header in enumerate(def_headers, 1):
+      cell = ws_def.cell(row=1, column=col, value=header)
+      cell.font = header_font
+      cell.fill = header_fill
+      cell.alignment = Alignment(horizontal='center')
+
+    for row_idx, (cat_name, elements) in enumerate(self.CATEGORIES.items(), 2):
+      ws_def.cell(row=row_idx, column=1, value=cat_name)
+      ws_def.cell(row=row_idx, column=2, value=', '.join(elements))
+
+    for col in ws_def.columns:
+      max_len = max(len(str(cell.value or '')) for cell in col)
+      ws_def.column_dimensions[col[0].column_letter].width = min(max_len + 3, 80)
+
+    # Return as downloadable file
+    from django.http import HttpResponse
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    timestamp = now().strftime('%Y%m%dT%H%M%S')
+    response['Content-Disposition'] = f'attachment; filename="workspace_report_{timestamp}.xlsx"'
+    wb.save(response)
+    return response
 
 
 class HostSessionView(APIView):

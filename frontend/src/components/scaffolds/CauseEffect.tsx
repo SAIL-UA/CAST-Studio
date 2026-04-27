@@ -5,6 +5,7 @@ import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types'
 import { SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 import GroupDiv from '../GroupDiv';
+import { logAction } from '../../utils/userActionLogger';
 
 // Define props interface
 type CauseEffectProps = {
@@ -146,6 +147,8 @@ const CauseEffect = ({
                 return newSet;
             });
         }
+
+        logAction({ actionType: 'click', elementId: 'scaffold-card-add' }, { scaffoldType: 'cause_effect', groupNumber: scaffoldGroupNumber });
     };
 
     // Updated handler: now calls backend to clear scaffold_group_number
@@ -388,11 +391,13 @@ const CauseEffect = ({
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
+                        logAction(e);
                         onClose();
                     }}
                     className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                     style={{ cursor: 'pointer' }}
                     title="Close Cause and Effects scaffold"
+                    log-id="scaffold-close"
                 >
                     ×
                 </button>
@@ -513,6 +518,7 @@ const CauseEffectGroup = ({
                 if (item.scaffoldId !== scaffoldId) {
                     console.log(`Group ${item.id} dropped into ${id} (scaffold group ${scaffoldGroupNumber})`);
                     onGroupAdd(item.id, scaffoldId, scaffoldGroupNumber);
+                    logAction({ actionType: 'drop', elementId: 'scaffold-group-add' }, { scaffoldType: 'cause_effect' });
                     return {
                         droppedInScaffoldGroup: true,
                         scaffoldId: scaffoldId,
@@ -638,6 +644,7 @@ const CauseEffectGroup = ({
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
+                                                logAction(e);
                                                 onGroupRemove(group.id);
                                             }}
                                             className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
@@ -646,6 +653,7 @@ const CauseEffectGroup = ({
                                                 right: '8px'
                                             }}
                                             title="Remove group from scaffold"
+                                            log-id="scaffold-group-remove"
                                         >
                                             ×
                                         </button>
@@ -678,6 +686,7 @@ const CauseEffectGroup = ({
                             {!readOnly && <button
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    logAction(e);
                                     onCardRemove(card.id, id);
                                 }}
                                 className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[305] shadow-md"
@@ -686,6 +695,7 @@ const CauseEffectGroup = ({
                                     right: '2px'
                                 }}
                                 title="Remove from group"
+                                log-id="scaffold-card-remove"
                             >
                                 ×
                             </button>}

@@ -294,9 +294,10 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
                 // Description generation complete
                 setTempLongDesc(updatedImage.long_desc);
                 setLoadingGenDesc(false);
-                // Log the action with updated metadata, and update the ref
+                // Log the completion with updated metadata, and update the ref
                 const updatedImageMetadata = await formatImageMetadata(updatedImage);
-                logAction(ctx, { 
+                logAction({ actionType: 'click', elementId: 'description-generated' }, {
+                  imageId: image.id,
                   image_metadata: imageMetadataRef.current,
                   updated_image_metadata: updatedImageMetadata
                 });
@@ -358,6 +359,8 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
       return;
     }
 
+    logAction({ actionType: 'click', elementId: 'visual-inline-title-save' }, { imageId: image.id });
+
     // Optimistic UI update first, then persist to backend
     onDescriptionsUpdate(image.id, tempTitle, image.long_desc || '');
     await updateImageData(image.id, { short_desc: tempTitle });
@@ -369,6 +372,8 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
     if (tempLongDesc === image.long_desc) {
       return;
     }
+
+    logAction({ actionType: 'click', elementId: 'visual-inline-desc-save' }, { imageId: image.id });
 
     // Optimistic UI update first, then persist to backend
     onDescriptionsUpdate(image.id, image.short_desc || '', tempLongDesc);

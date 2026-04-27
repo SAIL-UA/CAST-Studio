@@ -67,7 +67,15 @@ const ViewWorkspace = () => {
         const loadUsers = async () => {
             try {
                 const data = await getInstructorUsers();
-                setAllUsers((data.users || []).filter((u: any) => !u.is_instructor));
+                setAllUsers(
+                    (data.users || [])
+                        .filter((u: any) => !u.is_instructor)
+                        .sort((a: any, b: any) => {
+                            const aName = `${a.last_name} ${a.first_name}`.toLowerCase();
+                            const bName = `${b.last_name} ${b.first_name}`.toLowerCase();
+                            return aName.localeCompare(bName);
+                        })
+                );
             } catch (err) {
                 console.error('Error loading users:', err);
             }
@@ -168,7 +176,7 @@ const ViewWorkspace = () => {
                                                 }
                                             }}
                                         >
-                                            {user.username}
+                                            {user.username} ({user.first_name} {user.last_name})
                                         </DropdownMenu.Item>
                                     ))}
                                     {allUsers.length === 0 && (

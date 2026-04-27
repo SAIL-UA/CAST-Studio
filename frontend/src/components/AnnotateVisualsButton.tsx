@@ -79,6 +79,8 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
           stopPolling();
           setProgress(100);
 
+          logAction({ actionType: 'click', elementId: 'annotate-visuals-ai-complete' }, { imagesProcessed: total });
+
           setTimeout(async () => {
             setAiRunning(false);
             setProgress(0);
@@ -107,8 +109,8 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
     }
   };
 
-  const handleAnnotateAll = async (e: React.MouseEvent) => {
-    logAction(e, { annotate_mode: 'ai_all' });
+  const handleAnnotateAll = async () => {
+    logAction({ actionType: 'click', elementId: 'annotate-visuals-ai-all' }, { annotate_mode: 'ai_all' });
 
     const freshImages = await fetchFreshImages();
     const activeImageSet = freshImages.filter((img: ImageData) => img.in_storyboard && img.filepath);
@@ -120,8 +122,8 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
     await runAiGeneration(activeImageSet);
   };
 
-  const handleAnnotateMissing = async (e: React.MouseEvent) => {
-    logAction(e, { annotate_mode: 'ai_missing' });
+  const handleAnnotateMissing = async () => {
+    logAction({ actionType: 'click', elementId: 'annotate-visuals-ai-missing' }, { annotate_mode: 'ai_missing' });
 
     const freshImages = await fetchFreshImages();
     const activeImageSet = freshImages.filter((img: ImageData) => img.in_storyboard && img.filepath);
@@ -139,8 +141,8 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
     await runAiGeneration(missing);
   };
 
-  const handleCreateManually = (e: React.MouseEvent) => {
-    logAction(e, { annotate_mode: 'manual' });
+  const handleCreateManually = () => {
+    logAction({ actionType: 'click', elementId: 'annotate-visuals-manual-option' }, { annotate_mode: 'manual' });
     setManualModalOpen(true);
   };
 
@@ -219,14 +221,14 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
                   <DropdownMenu.Item
                     className={menuItemClass}
                     log-id="annotate-visuals-ai-all"
-                    onSelect={(e) => { e.preventDefault(); handleAnnotateAll(e as any); }}
+                    onSelect={(e) => { e.preventDefault(); handleAnnotateAll(); }}
                   >
                     All visuals
                   </DropdownMenu.Item>
                   <DropdownMenu.Item
                     className={menuItemClass}
                     log-id="annotate-visuals-ai-missing"
-                    onSelect={(e) => { e.preventDefault(); handleAnnotateMissing(e as any); }}
+                    onSelect={(e) => { e.preventDefault(); handleAnnotateMissing(); }}
                   >
                     Visuals missing descriptions
                   </DropdownMenu.Item>
@@ -238,7 +240,7 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
             <DropdownMenu.Item
               className={menuItemClass}
               log-id="annotate-visuals-manual-option"
-              onSelect={(e) => { e.preventDefault(); handleCreateManually(e as any); }}
+              onSelect={(e) => { e.preventDefault(); handleCreateManually(); }}
             >
               Create Manually
             </DropdownMenu.Item>

@@ -11,7 +11,7 @@ from .views import (
     ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView,
     TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, InstructorUsersView, InstructorWorkspaceView,
     HostSessionView, CloseSessionView, SessionStatusView, JoinSessionView,
-    TakeControlView, ReturnControlView
+    TakeControlView, ReturnControlView, ExportWorkspaceReportView
 )
 
 urlpatterns = [
@@ -27,6 +27,7 @@ urlpatterns = [
     path("instructor/features/update/", UpdateFeatureFlagsView.as_view(), name="instructor-features-update"),
     path("instructor/users/", InstructorUsersView.as_view(), name="instructor-users"),
     path("instructor/workspace/<uuid:student_id>/", InstructorWorkspaceView.as_view(), name="instructor-workspace"),
+    path("instructor/report/export/", ExportWorkspaceReportView.as_view(), name="instructor-report-export"),
 
     # Collaborate
     path("collaborate/host/", HostSessionView.as_view(), name="collaborate-host"),

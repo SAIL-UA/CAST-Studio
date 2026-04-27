@@ -105,6 +105,7 @@ notebook_shim
 numpy
 oauthlib
 openai
+openpyxl
 opencv-python
 overrides
 packaging
