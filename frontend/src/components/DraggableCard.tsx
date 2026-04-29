@@ -485,7 +485,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
               />
             ) : (
               <p
-                className={`text-somewhat-tiny text-grey-darkest overflow-hidden text-ellipsis ${isInstructorNote ? 'line-clamp-[10]' : 'line-clamp-4'} ${readOnly ? '' : 'cursor-pointer hover:underline'}`}
+                className={`text-somewhat-tiny text-grey-darkest overflow-hidden text-ellipsis ${isInstructorNote ? 'line-clamp-[10]' : 'line-clamp-6'} ${readOnly ? '' : 'cursor-pointer hover:underline'}`}
                 onClick={(e) => {
                   if (readOnly) return;
                   e.stopPropagation();

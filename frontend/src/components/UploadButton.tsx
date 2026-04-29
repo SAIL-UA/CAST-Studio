@@ -135,28 +135,30 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 
             <DropdownMenu.Portal>
                 <DropdownMenu.Content
-                    className="mt-1 ml-1 shadow-lg z-[400]"
+                    className="mt-1 ml-1 shadow-lg z-[400] bg-white rounded-lg py-1 min-w-[200px]"
                     sideOffset={4}
                     align="start"
                     onCloseAutoFocus={(e) => e.preventDefault()}
                 >
                     <DropdownMenu.Item
-                        className={menuItemClass}
+                        className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
                         log-id="upload-from-computer"
                         onSelect={handleUploadFromComputer}
                     >
                         Upload Visuals from Computer
                     </DropdownMenu.Item>
+                    <div className="h-px mx-3 bg-grey" />
                     <DropdownMenu.Item
-                        className={targetUser ? `${menuItemClass} opacity-40 pointer-events-none` : menuItemClass}
+                        className={`block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none ${targetUser ? 'opacity-40 pointer-events-none' : ''}`}
                         log-id="import-from-jupyter"
                         onSelect={targetUser ? undefined : handleImportFromJupyter}
                         disabled={!!targetUser}
                     >
                         Import Visuals from Jupyter Notebook
                     </DropdownMenu.Item>
+                    <div className="h-px mx-3 bg-grey" />
                     <DropdownMenu.Item
-                        className={menuItemClass}
+                        className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
                         log-id="add-text-note"
                         onSelect={handleAddNote}
                     >

@@ -24,6 +24,8 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
 
     const [taskId, setTaskId] = useState<string | null>(null);
     const [alertModal, setAlertModal] = useState<string | null>(null);
+    const [confirmModal, setConfirmModal] = useState<string | null>(null);
+    const [pendingGeneration, setPendingGeneration] = useState<(() => void) | null>(null);
     const { progress, stageName, error, isComplete } = useTaskProgress(taskId);
 
     // Handle error from progress tracking
@@ -37,36 +39,58 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
     const handleCraft = async (e: React.MouseEvent) => {
         const ctx = captureActionContext(e);
 
-        // --- Validation checks ---
+        // --- Categorize storyboard items ---
+        const storyboardItems = images.filter(img => img.in_storyboard && img.source !== 'instructor');
+        const actualImages = storyboardItems.filter(img => img.filepath && img.filepath !== '');
+        const stickyNotes = storyboardItems.filter(img => !img.filepath || img.filepath === '');
+
+        const hasValidDescription = (img: ImageData) => {
+            return img.long_desc && img.long_desc.trim() !== '' && img.long_desc !== DESCRIPTION_PLACEHOLDER;
+        };
+        const hasContent = (img: ImageData) => {
+            // Sticky note has content if long_desc has text OR title was changed from default "Note N"
+            if (hasValidDescription(img)) return true;
+            const defaultTitlePattern = /^Note \d+$/;
+            return img.short_desc && !defaultTitlePattern.test(img.short_desc);
+        };
+
+        const annotatedImages = actualImages.filter(img => hasValidDescription(img));
+        const unannotatedImages = actualImages.filter(img => !hasValidDescription(img));
+        const contentNotes = stickyNotes.filter(img => hasContent(img));
+
+        // --- Validation ---
         const missing: string[] = [];
 
-        // 1. Check for visuals on the storyboard (exclude instructor feedback)
-        const storyboardImages = images.filter(img => img.in_storyboard && img.source !== 'instructor');
-        if (storyboardImages.length === 0) {
+        // 1. At least one annotated image is required
+        if (annotatedImages.length === 0) {
             missing.push('Upload visuals to the workspace and annotate them');
         }
 
-        // 2. Check that all storyboard images have descriptions
-        if (storyboardImages.length > 0) {
-            const hasValidDescription = (img: ImageData) => {
-                return img.long_desc && img.long_desc.trim() !== '' && img.long_desc !== DESCRIPTION_PLACEHOLDER;
-            };
-            const unannotated = storyboardImages.filter(img => !hasValidDescription(img));
-            if (unannotated.length > 0) {
-                missing.push(`Annotate all visuals (${unannotated.length} image(s) missing descriptions)`);
-            }
-        }
-
-        // 3. Check that a narrative pattern has been selected
+        // 2. Has a narrative pattern been selected?
         if (!selectedPattern || selectedPattern === '') {
             missing.push('Select a narrative structure (with AI or manually)');
         }
 
-        // If any checks failed, show a single prompt and return
+        // If hard checks failed, show alert and return
         if (missing.length > 0) {
             setAlertModal('Before generating a story, please:\n\n' + missing.map(m => `• ${m}`).join('\n'));
             return;
         }
+
+        // 3. Warn about unannotated images (soft check — user can proceed)
+        if (unannotatedImages.length > 0) {
+            setConfirmModal(`${unannotatedImages.length} image(s) don't have descriptions and will be excluded from the story. Continue?`);
+            setPendingGeneration(() => () => startGeneration(ctx));
+            return;
+        }
+
+        // All checks passed — generate
+        startGeneration(ctx);
+    };
+
+    const startGeneration = async (ctx: any) => {
+        setConfirmModal(null);
+        setPendingGeneration(null);
 
         // Generate story with selected pattern
         setStoryLoading(true);
@@ -202,6 +226,30 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                                 className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-150"
                             >
                                 OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {confirmModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4">
+                        <div className="text-sm text-grey-darkest">
+                            {confirmModal}
+                        </div>
+                        <div className="flex justify-end gap-2 mt-6">
+                            <button
+                                onClick={() => { setConfirmModal(null); setPendingGeneration(null); }}
+                                className="text-sm px-4 py-1.5 rounded border hover:bg-grey-lighter transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => { if (pendingGeneration) pendingGeneration(); }}
+                                className="text-sm bg-bama-crimson text-white rounded px-4 py-1.5 hover:brightness-95 transition"
+                            >
+                                Continue
                             </button>
                         </div>
                     </div>

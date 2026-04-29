@@ -19,6 +19,7 @@ import ResetPassword from './pages/ResetPassword';
 import Instructor from './pages/Instructor';
 import ViewWorkspace from './pages/ViewWorkspace';
 import SessionWorkspace from './pages/SessionWorkspace';
+import TestLogin from './pages/TestLogin';
 
 // Main App component
 function App() {
@@ -68,6 +69,7 @@ function App() {
                 <Route path='/instructor' element={<Instructor />}/>
                 <Route path='/workspace/:studentId' element={<ViewWorkspace />}/>
                 <Route path='/session/:shareToken' element={<SessionWorkspace />}/>
+                <Route path='/testlogin' element={<TestLogin />}/>
             </Routes>
       </div>
     </Router>
