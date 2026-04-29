@@ -258,6 +258,25 @@ export const updateFeatureFlags = async (flags: { annotate_with_ai: boolean; sel
   return response.data;
 };
 
+export const exportWorkspaceReport = async () => {
+  const response = await API.get('/instructor/report/export/', { responseType: 'blob' });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  const disposition = response.headers['content-disposition'] || '';
+  const match = disposition.match(/filename="?(.+?)"?$/);
+  link.download = match ? match[1] : 'workspace_report.xlsx';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+export const getEngagementReport = async () => {
+  const response = await API.get('/instructor/report/export/', { params: { format: 'json' } });
+  return response.data;
+};
+
 export const getInstructorUsers = async () => {
   const response = await API.get('/instructor/users/');
   return response.data;

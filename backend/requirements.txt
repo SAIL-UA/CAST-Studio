@@ -16,6 +16,8 @@ Brotli
 cachelib
 celery
 certifi
+channels
+channels-redis
 certipy
 cffi
 charset-normalizer
@@ -24,6 +26,7 @@ comm
 contourpy
 cryptography
 cycler
+daphne
 dash
 dash-bootstrap-components
 dash-core-components
@@ -84,6 +87,7 @@ jupyterlab-pygments
 jupyterlab-widgets
 jupyterlab_server
 kiwisolver
+lxml
 Mako
 MarkupSafe
 matplotlib
@@ -101,6 +105,7 @@ notebook_shim
 numpy
 oauthlib
 openai
+openpyxl
 opencv-python
 overrides
 packaging

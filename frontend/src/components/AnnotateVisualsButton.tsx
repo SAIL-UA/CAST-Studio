@@ -79,6 +79,8 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
           stopPolling();
           setProgress(100);
 
+          logAction({ actionType: 'click', elementId: 'annotate-visuals-ai-complete' }, { imagesProcessed: total });
+
           setTimeout(async () => {
             setAiRunning(false);
             setProgress(0);
@@ -107,8 +109,8 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
     }
   };
 
-  const handleAnnotateAll = async (e: React.MouseEvent) => {
-    logAction(e, { annotate_mode: 'ai_all' });
+  const handleAnnotateAll = async () => {
+    logAction({ actionType: 'click', elementId: 'annotate-visuals-ai-all' }, { annotate_mode: 'ai_all' });
 
     const freshImages = await fetchFreshImages();
     const activeImageSet = freshImages.filter((img: ImageData) => img.in_storyboard && img.filepath);
@@ -120,8 +122,8 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
     await runAiGeneration(activeImageSet);
   };
 
-  const handleAnnotateMissing = async (e: React.MouseEvent) => {
-    logAction(e, { annotate_mode: 'ai_missing' });
+  const handleAnnotateMissing = async () => {
+    logAction({ actionType: 'click', elementId: 'annotate-visuals-ai-missing' }, { annotate_mode: 'ai_missing' });
 
     const freshImages = await fetchFreshImages();
     const activeImageSet = freshImages.filter((img: ImageData) => img.in_storyboard && img.filepath);
@@ -139,8 +141,8 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
     await runAiGeneration(missing);
   };
 
-  const handleCreateManually = (e: React.MouseEvent) => {
-    logAction(e, { annotate_mode: 'manual' });
+  const handleCreateManually = () => {
+    logAction({ actionType: 'click', elementId: 'annotate-visuals-manual-option' }, { annotate_mode: 'manual' });
     setManualModalOpen(true);
   };
 
@@ -198,47 +200,51 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
 
         <DropdownMenu.Portal>
           <DropdownMenu.Content
-            className="mt-1 ml-1 shadow-lg z-[400] overflow-visible"
+            className="mt-1 ml-1 shadow-lg z-[400] bg-white rounded-lg py-1 min-w-[200px] overflow-visible"
             sideOffset={4}
             align="start"
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
             {/* Create with AI — with submenu (hidden when feature is disabled) */}
-            {annotateWithAI && <DropdownMenu.Sub>
-              <DropdownMenu.SubTrigger className={`${menuItemClass} flex items-center justify-between gap-2`}>
-                Create with AI
-                <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                  <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"></path>
-                </svg>
-              </DropdownMenu.SubTrigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.SubContent
-                  className="ml-1 shadow-lg z-[401] whitespace-nowrap"
-                  sideOffset={4}
-                >
-                  <DropdownMenu.Item
-                    className={menuItemClass}
-                    log-id="annotate-visuals-ai-all"
-                    onSelect={(e) => { e.preventDefault(); handleAnnotateAll(e as any); }}
+            {annotateWithAI && <>
+              <DropdownMenu.Sub>
+                <DropdownMenu.SubTrigger className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none flex items-center justify-between gap-2">
+                  Create with AI
+                  <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"></path>
+                  </svg>
+                </DropdownMenu.SubTrigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.SubContent
+                    className="ml-1 shadow-lg z-[401] bg-white rounded-lg py-1 min-w-[180px] whitespace-nowrap"
+                    sideOffset={4}
                   >
-                    All visuals
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    className={menuItemClass}
-                    log-id="annotate-visuals-ai-missing"
-                    onSelect={(e) => { e.preventDefault(); handleAnnotateMissing(e as any); }}
-                  >
-                    Visuals missing descriptions
-                  </DropdownMenu.Item>
-                </DropdownMenu.SubContent>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Sub>}
+                    <DropdownMenu.Item
+                      className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
+                      log-id="annotate-visuals-ai-all"
+                      onSelect={(e) => { e.preventDefault(); handleAnnotateAll(); }}
+                    >
+                      All visuals
+                    </DropdownMenu.Item>
+                    <div className="h-px mx-3 bg-grey" />
+                    <DropdownMenu.Item
+                      className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
+                      log-id="annotate-visuals-ai-missing"
+                      onSelect={(e) => { e.preventDefault(); handleAnnotateMissing(); }}
+                    >
+                      Visuals missing descriptions
+                    </DropdownMenu.Item>
+                  </DropdownMenu.SubContent>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Sub>
+              <div className="h-px mx-3 bg-grey" />
+            </>}
 
             {/* Create Manually */}
             <DropdownMenu.Item
-              className={menuItemClass}
+              className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
               log-id="annotate-visuals-manual-option"
-              onSelect={(e) => { e.preventDefault(); handleCreateManually(e as any); }}
+              onSelect={(e) => { e.preventDefault(); handleCreateManually(); }}
             >
               Create Manually
             </DropdownMenu.Item>

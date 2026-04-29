@@ -29,6 +29,7 @@ urllib3>=2.0,<3.0
 
 # AI/ML (OpenAI)
 openai>=1.0,<2.0
+openpyxl>=3.1,<4.0
 
 # Utilities
 python-dotenv>=1.0,<2.0

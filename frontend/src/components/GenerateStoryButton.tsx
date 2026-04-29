@@ -27,26 +27,41 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
     }, [selectWithAI, selectedPattern, setSelectedPattern]);
 
     // Handle generate story
-    const handleAIStoryGeneration = async (e: React.MouseEvent) => {
+    const handleAIStoryGeneration = async () => {
         setSelectedPattern('AI Assistance');
-        logAction(e, { "narrative_pattern": 'AI Assistance' });
+        logAction({ actionType: 'click', elementId: 'select-narrative-ai-button' }, { "narrative_pattern": 'AI Assistance' });
     }
 
     // Handle select manually
-    const handleSelectManually = (e: React.MouseEvent) => {
+    const handleSelectManually = () => {
+        logAction({ actionType: 'click', elementId: 'select-narrative-manually-button' });
         setRightNarrativePatternsOpen(true);
     }
 
-    // Format pattern name
+    // Format pattern name for display
     const formatPatternName = (pattern: string) => {
         if (pattern === '') {
             return 'Select Narrative';
+        } else if (pattern === 'AI Assistance') {
+            return 'AI Assistance';
         } else {
             return pattern.split('_').map(word =>
                 word.charAt(0).toUpperCase() + word.slice(1)
             ).join(' ');
         }
     };
+
+    // Derive selection state
+    const isAISelected = selectedPattern === 'AI Assistance';
+    const isManualSelected = selectedPattern !== '' && selectedPattern !== 'AI Assistance';
+    const currentNarrativeLabel = selectedPattern === '' ? 'None' : formatPatternName(selectedPattern);
+
+    // Tick mark component
+    const Tick = () => (
+        <svg className="w-3.5 h-3.5 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+    );
 
     // Visible component
     return (
@@ -72,27 +87,36 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
 
             <DropdownMenu.Portal>
                 <DropdownMenu.Content
-                    className="mt-1 ml-1 shadow-lg z-[400]"
+                    className="mt-1 ml-1 shadow-lg z-[400] bg-white rounded-lg py-1 min-w-[200px]"
                     sideOffset={4}
                     align="start"
                     onCloseAutoFocus={(e) => e.preventDefault()}
                 >
                     {selectWithAI && (
+                        <>
                         <DropdownMenu.Item
-                            className={menuItemClass}
+                            className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
                             log-id="select-narrative-ai-button"
-                            onSelect={(e) => handleAIStoryGeneration(e as any)}
+                            onSelect={() => handleAIStoryGeneration()}
                         >
+                            {isAISelected && <Tick />}
                             Select With AI
                         </DropdownMenu.Item>
+                        <div className="h-px mx-3 bg-grey" />
+                        </>
                     )}
                     <DropdownMenu.Item
-                        className={menuItemClass}
+                        className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
                         log-id="select-narrative-manually-button"
-                        onSelect={(e) => handleSelectManually(e as any)}
+                        onSelect={() => handleSelectManually()}
                     >
+                        {isManualSelected && <Tick />}
                         Select Manually
                     </DropdownMenu.Item>
+                    <div className="h-px mx-3 bg-grey" />
+                    <div className="px-3 py-1.5 text-xs text-grey-dark">
+                        Current Narrative: <span className="font-medium text-grey-darkest">{currentNarrativeLabel}</span>
+                    </div>
                 </DropdownMenu.Content>
             </DropdownMenu.Portal>
         </DropdownMenu.Root>

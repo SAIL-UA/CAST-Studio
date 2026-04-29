@@ -8,10 +8,11 @@ const menuItemClass = "block w-full bg-grey-lightest border-grey-light border-2 
 
 type UploadButtonProps = {
     onUploaded?: () => void | Promise<void>;
+    targetUser?: string;
 }
 
 // Upload button component
-const UploadButton = ({ onUploaded }: UploadButtonProps) => {
+const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
     // Hidden file input ref
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,16 +88,19 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
 
     // Handle upload from computer
     const handleUploadFromComputer = () => {
+        logAction({ actionType: 'click', elementId: 'upload-from-computer' });
         setShowModal(true);
     }
 
     // Handle import from Jupyter
     const handleImportFromJupyter = () => {
+        logAction({ actionType: 'click', elementId: 'import-from-jupyter' });
         window.open('https://cast-storystudio.com/jupyterhub', '_blank');
     }
 
     // Handle add text note
     const handleAddNote = async () => {
+        logAction({ actionType: 'click', elementId: 'add-text-note' });
         try {
             await createNote();
             if (onUploaded) {
@@ -131,27 +135,30 @@ const UploadButton = ({ onUploaded }: UploadButtonProps) => {
 
             <DropdownMenu.Portal>
                 <DropdownMenu.Content
-                    className="mt-1 ml-1 shadow-lg z-[400]"
+                    className="mt-1 ml-1 shadow-lg z-[400] bg-white rounded-lg py-1 min-w-[200px]"
                     sideOffset={4}
                     align="start"
                     onCloseAutoFocus={(e) => e.preventDefault()}
                 >
                     <DropdownMenu.Item
-                        className={menuItemClass}
+                        className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
                         log-id="upload-from-computer"
                         onSelect={handleUploadFromComputer}
                     >
                         Upload Visuals from Computer
                     </DropdownMenu.Item>
+                    <div className="h-px mx-3 bg-grey" />
                     <DropdownMenu.Item
-                        className={menuItemClass}
+                        className={`block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none ${targetUser ? 'opacity-40 pointer-events-none' : ''}`}
                         log-id="import-from-jupyter"
-                        onSelect={handleImportFromJupyter}
+                        onSelect={targetUser ? undefined : handleImportFromJupyter}
+                        disabled={!!targetUser}
                     >
                         Import Visuals from Jupyter Notebook
                     </DropdownMenu.Item>
+                    <div className="h-px mx-3 bg-grey" />
                     <DropdownMenu.Item
-                        className={menuItemClass}
+                        className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
                         log-id="add-text-note"
                         onSelect={handleAddNote}
                     >

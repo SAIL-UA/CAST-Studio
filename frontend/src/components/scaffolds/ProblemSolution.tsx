@@ -5,6 +5,7 @@ import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types'
 import { SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 import GroupDiv from '../GroupDiv';
+import { logAction } from '../../utils/userActionLogger';
 
 // Define props interface
 type ProblemSolutionProps = {
@@ -146,6 +147,8 @@ const ProblemSolution = ({
                 return newSet;
             });
         }
+
+        logAction({ actionType: 'click', elementId: 'scaffold-card-add' }, { scaffoldType: 'problem_solution', groupNumber: scaffoldGroupNumber });
     };
 
     // Updated handler: now calls backend to clear scaffold_group_number
@@ -388,6 +391,7 @@ const ProblemSolution = ({
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
+                        logAction(e);
                         if (onClose) {
                             onClose();
                         } else {
@@ -397,6 +401,7 @@ const ProblemSolution = ({
                     className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                     style={{ cursor: 'pointer' }}
                     title="Close Problem and Solution scaffold"
+                    log-id="scaffold-close"
                 >
                     ×
                 </button>
@@ -517,6 +522,7 @@ const ProblemSolutionGroup = ({
                 if (item.scaffoldId !== scaffoldId) {
                     console.log(`Group ${item.id} dropped into ${id} (scaffold group ${scaffoldGroupNumber})`);
                     onGroupAdd(item.id, scaffoldId, scaffoldGroupNumber);
+                    logAction({ actionType: 'drop', elementId: 'scaffold-group-add' }, { scaffoldType: 'problem_solution' });
                     return {
                         droppedInScaffoldGroup: true,
                         scaffoldId: scaffoldId,
@@ -642,6 +648,7 @@ const ProblemSolutionGroup = ({
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
+                                                logAction(e);
                                                 onGroupRemove(group.id);
                                             }}
                                             className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[105] shadow-md"
@@ -650,6 +657,7 @@ const ProblemSolutionGroup = ({
                                                 right: '8px'
                                             }}
                                             title="Remove group from scaffold"
+                                            log-id="scaffold-group-remove"
                                         >
                                             ×
                                         </button>
@@ -682,6 +690,7 @@ const ProblemSolutionGroup = ({
                             {!readOnly && <button
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    logAction(e);
                                     onCardRemove(card.id, id);
                                 }}
                                 className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[305] shadow-md"
@@ -690,6 +699,7 @@ const ProblemSolutionGroup = ({
                                     right: '2px'
                                 }}
                                 title="Remove from group"
+                                log-id="scaffold-card-remove"
                             >
                                 ×
                             </button>}
