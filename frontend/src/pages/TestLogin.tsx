@@ -5,7 +5,8 @@ import { login, register } from '../services/api';
 
 const TEAL_DARK = '#004a6e';
 const TEAL = '#005c84';
-const CREAM = '#fafaf7';
+const CREAM_NAV = '#f7f6f0';
+const CREAM_PAGE = '#fafaf8';
 
 // Logo — bulb icon in a rounded box
 const Logo = () => (
@@ -129,14 +130,14 @@ const TestLogin = () => {
     };
 
     return (
-        <div className="flex flex-col w-full h-screen" style={{ backgroundColor: CREAM }}>
+        <div className="flex flex-col w-full h-screen" style={{ backgroundColor: CREAM_PAGE }}>
             {/* Nav bar */}
-            <nav className="fixed top-0 left-0 right-0 z-10 flex items-center justify-between px-8 py-4" style={{ backgroundColor: CREAM }}>
+            <nav className="fixed top-0 left-0 right-0 z-10 flex items-center justify-between px-8 py-4" style={{ backgroundColor: CREAM_NAV }}>
                 <Logo />
                 <div className="flex items-center gap-6">
-                    <Link to="/tutorials" className="text-sm font-medium hover:opacity-70 transition-opacity duration-200" style={{ color: TEAL_DARK }}>
+                    <a href="http://cast.tahahassan.info" target="_blank" rel="noreferrer" className="text-sm font-medium hover:opacity-70 transition-opacity duration-200" style={{ color: TEAL_DARK }}>
                         About
-                    </Link>
+                    </a>
                     <button
                         type="button"
                         onClick={toggleMode}
