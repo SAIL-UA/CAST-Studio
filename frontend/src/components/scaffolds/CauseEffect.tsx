@@ -1,6 +1,6 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
-import { useDrag, useDrop } from 'react-dnd';
+import { useDrop } from 'react-dnd';
 import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
 import { SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
@@ -178,93 +178,12 @@ const CauseEffect = ({
         }
     };
 
-    // React DnD hook for drag functionality (wrapper)
-    const [{ isDraggingDnd }, drag] = useDrag(() => ({
-        type: 'group',
-        canDrag: !readOnly,
-        item: () => {
-            if (wrapperRef.current && storyBinRef.current) {
-                const wrapperRect = wrapperRef.current.getBoundingClientRect();
-                const event = window.event as MouseEvent;
-                const offsetX = event.clientX - wrapperRect.left;
-                const offsetY = event.clientY - wrapperRect.top;
-                
-                return {
-                    id: 'cause-effect-scaffold',
-                    type: 'group',
-                    oldX: position.x,
-                    oldY: position.y,
-                    offsetX,
-                    offsetY,
-                };
-            }
-        return {
-            id: 'cause-effect-scaffold',
-            type: 'group',
-            oldX: position.x,
-            oldY: position.y,
-            offsetX: 0,
-            offsetY: 0,
-        };
-    },
-        end: (item, monitor) => {
-        const dropResult = monitor.getDropResult();
-        const clientOffset = monitor.getClientOffset();
-
-        let finalX = item.oldX;
-        let finalY = item.oldY;
-
-        if (dropResult && typeof dropResult === 'object' && 'x' in dropResult && 'y' in dropResult) {
-            const newPosition = dropResult as { x: number; y: number };
-            finalX = newPosition.x;
-            finalY = newPosition.y;
-            setPosition({ x: finalX, y: finalY });
-            // Call onPositionUpdate if provided
-            if (onPositionUpdate) {
-                onPositionUpdate(finalX, finalY);
-            }
-        } else if (clientOffset && storyBinRef.current) {
-            // Find the actual bin element (scrollable container) within the wrapper
-            const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
-            if (!binElement) return;
-            
-            const binRect = binElement.getBoundingClientRect();
-            // Account for scroll position within the bin
-            const scrollLeft = binElement.scrollLeft;
-            const scrollTop = binElement.scrollTop;
-            
-            const wrapperWidth = 650;
-            const wrapperHeight = 390;
-                
-            let newX = clientOffset.x - binRect.left - item.offsetX + scrollLeft;
-            let newY = clientOffset.y - binRect.top - item.offsetY + scrollTop;
-
-            const contentWidth = binElement.scrollWidth;
-            const contentHeight = binElement.scrollHeight;
-            newX = Math.max(0, Math.min(newX, contentWidth - wrapperWidth));
-            newY = Math.max(0, Math.min(newY, contentHeight - wrapperHeight));
-
-                finalX = newX;
-                finalY = newY;
-                setPosition({ x: finalX, y: finalY });
-                // Call onPositionUpdate if provided
-                if (onPositionUpdate) {
-                    onPositionUpdate(finalX, finalY);
-                }
-            }
-        },
-        collect: (monitor) => ({
-            isDraggingDnd: !!monitor.isDragging(),
-        }),
-    }), [position, storyBinRef, onPositionUpdate]);
-
     // Handle mouse drag for wrapper
     const handleMouseDown = (e: React.MouseEvent) => {
         // Don't start drag if clicking on close button or header buttons
         if ((e.target as HTMLElement).closest('button')) {
             return;
         }
-        if (isDraggingDnd) return;
         if (!storyBinRef.current) return;
 
         // Find the actual bin element (scrollable container) within the wrapper
@@ -286,12 +205,7 @@ const CauseEffect = ({
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (!isDragging || !storyBinRef.current || isDraggingDnd) {
-                if (isDragging) {
-                    setIsDragging(false);
-                }
-                return;
-            }
+            if (!isDragging || !storyBinRef.current) return;
 
             // Find the actual bin element (scrollable container) within the wrapper
             const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
@@ -335,7 +249,7 @@ const CauseEffect = ({
             }
         };
 
-        if (isDragging && !isDraggingDnd) {
+        if (isDragging) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         }
@@ -344,14 +258,7 @@ const CauseEffect = ({
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, dragOffset, isDraggingDnd, storyBinRef, position, onPositionUpdate]);
-
-    // Stop custom dragging when React DnD starts
-    useEffect(() => {
-        if (isDraggingDnd && isDragging) {
-            setIsDragging(false);
-        }
-    }, [isDraggingDnd, isDragging]);
+    }, [isDragging, dragOffset, storyBinRef, position, onPositionUpdate]);
 
     // Calculate container position relative to story bin
     const containerPos = storyBinRef.current
@@ -363,10 +270,7 @@ const CauseEffect = ({
 
     // Combine refs for drag functionality
     const combinedRef = (element: HTMLDivElement | null) => {
-        if (element) {
-            drag(element);
-            wrapperRef.current = element;
-        }
+        wrapperRef.current = element;
     };
 
     return (
@@ -378,8 +282,8 @@ const CauseEffect = ({
                 top: containerPos.top,
                 width: '650px',
                 minHeight: '500px',
-                cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
-                opacity: isDraggingDnd ? 0.5 : 1,
+                cursor: isDragging ? 'grabbing' : 'grab',
+                opacity: 1,
                 pointerEvents: 'auto'
             }}
             onMouseDown={readOnly ? undefined : handleMouseDown}

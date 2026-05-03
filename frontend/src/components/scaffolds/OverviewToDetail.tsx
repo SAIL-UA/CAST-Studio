@@ -1,6 +1,6 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
-import { useDrag, useDrop } from 'react-dnd';
+import { useDrop } from 'react-dnd';
 import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
 import { SCAFFOLD_GROUP_LABELS, SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
@@ -138,80 +138,9 @@ const OverviewToDetail = ({
         }
     };
 
-    const [{ isDraggingDnd }, drag] = useDrag(
-        () => ({
-            type: 'group',
-            canDrag: !readOnly,
-            item: () => {
-                if (wrapperRef.current && storyBinRef.current) {
-                    const wrapperRect = wrapperRef.current.getBoundingClientRect();
-                    const event = window.event as MouseEvent;
-                    const offsetX = event.clientX - wrapperRect.left;
-                    const offsetY = event.clientY - wrapperRect.top;
-                    return {
-                        id: 'overview-detail-scaffold',
-                        type: 'group',
-                        oldX: position.x,
-                        oldY: position.y,
-                        offsetX,
-                        offsetY
-                    };
-                }
-                return {
-                    id: 'overview-detail-scaffold',
-                    type: 'group',
-                    oldX: position.x,
-                    oldY: position.y,
-                    offsetX: 0,
-                    offsetY: 0
-                };
-            },
-            end: (item, monitor) => {
-                const dropResult = monitor.getDropResult();
-                const clientOffset = monitor.getClientOffset();
-
-                let finalX = (item as any).oldX;
-                let finalY = (item as any).oldY;
-
-                if (dropResult && typeof dropResult === 'object' && 'x' in dropResult && 'y' in dropResult) {
-                    const newPosition = dropResult as { x: number; y: number };
-                    finalX = newPosition.x;
-                    finalY = newPosition.y;
-                    setPosition({ x: finalX, y: finalY });
-                    if (onPositionUpdate) onPositionUpdate(finalX, finalY);
-                } else if (clientOffset && storyBinRef.current) {
-                    const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
-                    if (!binElement) return;
-
-                    const binRect = binElement.getBoundingClientRect();
-                    const scrollLeft = binElement.scrollLeft;
-                    const scrollTop = binElement.scrollTop;
-
-                    const wrapperWidth = 650;
-                    const wrapperHeight = 390;
-
-                    let newX = clientOffset.x - binRect.left - (item as any).offsetX + scrollLeft;
-                    let newY = clientOffset.y - binRect.top - (item as any).offsetY + scrollTop;
-
-                    const contentWidth = binElement.scrollWidth;
-                    const contentHeight = binElement.scrollHeight;
-                    newX = Math.max(0, Math.min(newX, contentWidth - wrapperWidth));
-                    newY = Math.max(0, Math.min(newY, contentHeight - wrapperHeight));
-
-                    finalX = newX;
-                    finalY = newY;
-                    setPosition({ x: finalX, y: finalY });
-                    if (onPositionUpdate) onPositionUpdate(finalX, finalY);
-                }
-            },
-            collect: (monitor) => ({ isDraggingDnd: !!monitor.isDragging() })
-        }),
-        [position, storyBinRef, onPositionUpdate]
-    );
-
     const handleMouseDown = (e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('button')) return;
-        if (isDraggingDnd || !storyBinRef.current) return;
+        if (!storyBinRef.current) return;
 
         const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
         if (!binElement) return;
@@ -229,10 +158,7 @@ const OverviewToDetail = ({
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (!isDragging || !storyBinRef.current || isDraggingDnd) {
-                if (isDragging) setIsDragging(false);
-                return;
-            }
+            if (!isDragging || !storyBinRef.current) return;
 
             const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
             if (!binElement) {
@@ -271,7 +197,7 @@ const OverviewToDetail = ({
             }
         };
 
-        if (isDragging && !isDraggingDnd) {
+        if (isDragging) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         }
@@ -280,19 +206,12 @@ const OverviewToDetail = ({
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, dragOffset, isDraggingDnd, storyBinRef, position, onPositionUpdate]);
-
-    useEffect(() => {
-        if (isDraggingDnd && isDragging) setIsDragging(false);
-    }, [isDraggingDnd, isDragging]);
+    }, [isDragging, dragOffset, storyBinRef, position, onPositionUpdate]);
 
     const containerPos = storyBinRef.current ? { left: position.x, top: position.y } : { left: 0, top: 0 };
 
     const combinedRef = (element: HTMLDivElement | null) => {
-        if (element) {
-            drag(element);
-            wrapperRef.current = element;
-        }
+        wrapperRef.current = element;
     };
 
     return (
@@ -304,8 +223,8 @@ const OverviewToDetail = ({
                 top: containerPos.top,
                 width: '650px',
                 minHeight: '500px',
-                cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
-                opacity: isDraggingDnd ? 0.5 : 1,
+                cursor: isDragging ? 'grabbing' : 'grab',
+                opacity: 1,
                 pointerEvents: 'auto'
             }}
             onMouseDown={readOnly ? undefined : handleMouseDown}

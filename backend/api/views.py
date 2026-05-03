@@ -344,6 +344,148 @@ class UploadFigureView(APIView):
       return Response({"message": f"Figure upload failed: {serializer.errors}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UploadSlidesView(APIView):
+  permission_classes = [IsAuthenticated]
+  parser_classes = [MultiPartParser, FormParser]
+
+  MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+  MAX_SLIDES = 15
+
+  def post(self, request):
+    import subprocess
+    import tempfile
+    import glob as glob_module
+
+    slides_file = request.FILES.get('slides')
+    if not slides_file:
+      return Response({"message": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate file type
+    if not slides_file.name.lower().endswith('.pptx'):
+      return Response({"message": "Only .pptx files are supported"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate file size
+    if slides_file.size > self.MAX_FILE_SIZE:
+      return Response({"message": f"File exceeds {self.MAX_FILE_SIZE // (1024*1024)}MB limit"}, status=status.HTTP_400_BAD_REQUEST)
+
+    data_path = os.getenv('DATA_PATH')
+    if not data_path:
+      return Response({"message": "DATA_PATH not configured"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    os.makedirs(data_path, exist_ok=True)
+    workspace_user = get_workspace_user(request)
+
+    try:
+      # Save uploaded file to temp directory
+      with tempfile.TemporaryDirectory() as tmpdir:
+        input_path = os.path.join(tmpdir, 'input.pptx')
+        with open(input_path, 'wb+') as f:
+          for chunk in slides_file.chunks():
+            f.write(chunk)
+
+        # Step 1: Convert PPTX to PDF using LibreOffice
+        output_dir = os.path.join(tmpdir, 'output')
+        os.makedirs(output_dir, exist_ok=True)
+
+        result = subprocess.run(
+          ['libreoffice', '--headless', '--convert-to', 'pdf', '--outdir', output_dir, input_path],
+          capture_output=True, text=True, timeout=120
+        )
+
+        if result.returncode != 0:
+          return Response({"message": f"Slide conversion failed: {result.stderr[:200]}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Find the generated PDF
+        pdf_files = glob_module.glob(os.path.join(output_dir, '*.pdf'))
+        if not pdf_files:
+          return Response({"message": "PDF conversion produced no output"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Step 2: Convert PDF pages to PNGs using pdftoppm
+        png_dir = os.path.join(tmpdir, 'pngs')
+        os.makedirs(png_dir, exist_ok=True)
+
+        result2 = subprocess.run(
+          ['pdftoppm', '-png', '-r', '200', pdf_files[0], os.path.join(png_dir, 'slide')],
+          capture_output=True, text=True, timeout=120
+        )
+
+        if result2.returncode != 0:
+          return Response({"message": f"Page extraction failed: {result2.stderr[:200]}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Find generated PNGs — pdftoppm names them slide-01.png, slide-02.png, etc.
+        png_files = sorted(glob_module.glob(os.path.join(png_dir, '*.png')))
+
+        if not png_files:
+          return Response({"message": "No slides could be extracted from the file"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Limit to MAX_SLIDES
+        png_files = png_files[:self.MAX_SLIDES]
+
+        now_str = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        # Find first available index for this user's images
+        user_images = ImageData.objects.filter(user=workspace_user)
+        used_indices = set(user_images.values_list('index', flat=True))
+        next_index = 0
+        while next_index in used_indices:
+          next_index += 1
+
+        created_images = []
+
+        for slide_num, png_path in enumerate(png_files, 1):
+          figure_id = str(uuid.uuid4())
+          ext = '.png'
+          dest_path = os.path.join(data_path, f"{figure_id}{ext}")
+
+          # Copy PNG to data path
+          import shutil
+          shutil.copy2(png_path, dest_path)
+
+          # Find next available index
+          while next_index in used_indices:
+            next_index += 1
+
+          serializer = ImageDataSerializer(data={
+            "id": figure_id,
+            "user": workspace_user.id,
+            "filepath": f"{figure_id}{ext}",
+            "short_desc": f"{slide_num}",
+            "long_desc": "",
+            "source": "pptx",
+            "in_storyboard": True,
+            "x": 0,
+            "y": 0,
+            "has_order": False,
+            "order_num": 0,
+            "index": next_index,
+            "created_at": now_str,
+            "last_saved": now_str,
+          })
+
+          if serializer.is_valid():
+            serializer.save()
+            created_images.append({
+              "id": figure_id,
+              "slide_number": slide_num,
+              "filepath": f"{figure_id}{ext}",
+            })
+            used_indices.add(next_index)
+            next_index += 1
+          else:
+            return Response({"message": f"Error creating slide {slide_num}: {serializer.errors}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+          "message": f"Successfully imported {len(created_images)} slides",
+          "slides": created_images,
+          "total_slides_in_file": len(glob_module.glob(os.path.join(output_dir, '*.png'))),
+        }, status=status.HTTP_200_OK)
+
+    except subprocess.TimeoutExpired:
+      return Response({"message": "Slide conversion timed out"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+      return Response({"message": f"Error processing slides: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class CreateNoteView(APIView):
   permission_classes = [IsAuthenticated]
 
@@ -588,10 +730,11 @@ class GenerateNarrativeAsyncView(APIView):
       # Get story structure ID and use_groups from request
       story_structure_id = request.data.get('story_structure_id') if request.data else None
       use_groups = request.data.get('use_groups', False) if request.data else False
+      slot_order = request.data.get('slot_order', None) if request.data else None
 
       # Start the narrative generation task
       workspace_user = get_workspace_user(request)
-      task = generate_narrative_task.delay(workspace_user.id, story_structure_id, use_groups)
+      task = generate_narrative_task.delay(workspace_user.id, story_structure_id, use_groups, slot_order)
 
       return Response({
         "status": "success",

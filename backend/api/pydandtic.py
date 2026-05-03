@@ -80,6 +80,22 @@ STORY_SCAFFOLDS = {
         "description": "A striking fact, followed by analysis of explanatory factors.",
         "valid_group_numbers": [1, 2],  # 1=shock fact, 2=explanatory factors
     },
+    "linear": {
+        "id": "linear",
+        "name": "Linear",
+        "filename": "unique_stories/10_linear.txt",
+        "number": 10,
+        "description": "A straightforward beginning-to-end progression that builds understanding step by step.",
+        "valid_group_numbers": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    },
+    "inverted_pyramid": {
+        "id": "inverted_pyramid",
+        "name": "Inverted Pyramid",
+        "filename": "unique_stories/11_inverted_pyramid.txt",
+        "number": 11,
+        "description": "Lead with the most important finding, then layer in supporting details and context.",
+        "valid_group_numbers": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    },
 }
 
 # Literal type and Pydantic model for story structure selection outputs
@@ -93,6 +109,8 @@ StoryStructureId = Literal[
     "workflow_process",
     "factor_analysis",
     "shock_lead",
+    "linear",
+    "inverted_pyramid",
 ]
 
 

@@ -9,6 +9,8 @@ export const SCAFFOLD_PATTERN_TO_NUMBER: { [key: string]: number } = {
   'comparative': 7,
   'workflow_process': 8,
   'shock_lead': 9,
+  'linear': 10,
+  'inverted_pyramid': 11,
 };
 
 // Scaffold number to pattern mapping
@@ -22,6 +24,8 @@ export const SCAFFOLD_NUMBER_TO_PATTERN: { [key: number]: string } = {
   7: 'comparative',
   8: 'workflow_process',
   9: 'shock_lead',
+  10: 'linear',
+  11: 'inverted_pyramid',
 };
 
 // Scaffold number to valid group numbers mapping
@@ -35,6 +39,8 @@ export const SCAFFOLD_VALID_GROUP_NUMBERS: { [key: number]: number[] } = {
   7: [1, 2],  // comparative: first=1, second=2
   8: [1, 2, 3, 4, 5],  // workflow_process: multiple stages
   9: [1, 2],  // shock_lead: shock=1, factors=2
+  10: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],  // linear: sequential slots
+  11: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],  // inverted_pyramid: sequential slots
 };
 
 // Scaffold group number to label mapping (for display purposes)
@@ -48,4 +54,6 @@ export const SCAFFOLD_GROUP_LABELS: { [scaffoldNumber: number]: { [groupNumber: 
   7: { 1: 'Item 1', 2: 'Item 2' },  // comparative
   8: { 1: 'Stage 1', 2: 'Stage 2', 3: 'Stage 3', 4: 'Stage 4', 5: 'Stage 5' },  // workflow_process
   9: { 1: 'Shock Fact', 2: 'Explanatory Factors' },  // shock_lead
+  10: { 1:'Step 1',2:'Step 2',3:'Step 3',4:'Step 4',5:'Step 5',6:'Step 6',7:'Step 7',8:'Step 8',9:'Step 9',10:'Step 10',11:'Step 11',12:'Step 12',13:'Step 13',14:'Step 14',15:'Step 15' },  // linear
+  11: { 1:'Key Finding',2:'Details 2',3:'Details 3',4:'Details 4',5:'Details 5',6:'Details 6',7:'Details 7',8:'Details 8',9:'Details 9',10:'Details 10',11:'Details 11',12:'Details 12',13:'Details 13',14:'Details 14',15:'Details 15' },  // inverted_pyramid
 };

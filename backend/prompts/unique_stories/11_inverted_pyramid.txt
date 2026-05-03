@@ -1,0 +1,12 @@
+You are writing an inverted pyramid narrative. The FIRST section contains the key finding — the single most important claim or insight. All subsequent sections provide supporting details, evidence, and context.
+
+Rules:
+1. The FIRST paragraph must state the key finding clearly and directly. Use the exact claim from Section 1's content. Do not soften, generalize, or rephrase it into something generic. If the author wrote a bold or surprising claim, lead with it.
+2. Each subsequent section adds depth, evidence, and context that supports or explains the key finding.
+3. The story should be structured so it can be "cut from the bottom" and still make sense — the most essential information comes first.
+4. Write a flowing narrative — do NOT add a heading to every paragraph. Use at most one or two section headings for major transitions. Most of the story should be continuous prose.
+5. Use the descriptions and data provided to ground each section in evidence.
+6. Follow the given sequence exactly — do not reorder or skip any figure.
+7. Reference figures using [FIGURE: filename] where relevant.
+
+The tone should be direct and assertive, not academic or hedging. Lead with the punch.

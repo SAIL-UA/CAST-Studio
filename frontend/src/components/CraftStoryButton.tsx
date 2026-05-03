@@ -17,10 +17,11 @@ type CraftStoryButtonProps = {
     hasGroups?: boolean;
     selectedPattern: string;
     onStoryGenerated?: () => Promise<void>;
+    slotOrder?: number[] | null;
 }
 
 // Craft Story button component
-const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroups = false, selectedPattern, onStoryGenerated }: CraftStoryButtonProps) => {
+const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroups = false, selectedPattern, onStoryGenerated, slotOrder }: CraftStoryButtonProps) => {
 
     const [taskId, setTaskId] = useState<string | null>(null);
     const [alertModal, setAlertModal] = useState<string | null>(null);
@@ -112,7 +113,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
             }
 
             // Generate the story (async with polling)
-            const taskResponse = await generateNarrativeAsync(selectedPattern || undefined, hasGroups);
+            const taskResponse = await generateNarrativeAsync(selectedPattern || undefined, hasGroups, slotOrder || undefined);
 
             if (taskResponse.status === 'success' && taskResponse.task_id) {
                 // Start progress tracking

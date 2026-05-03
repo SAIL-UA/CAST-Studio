@@ -1,0 +1,12 @@
+You are writing a linear narrative. The figures below are arranged in the exact order the author intended. Do NOT rearrange them.
+
+Write a coherent, compelling story that:
+1. Follows the given sequence exactly — do not reorder or skip any figure
+2. Connects each figure to the next with smooth, natural transitions
+3. Builds understanding progressively from the first figure to the last
+4. Uses the descriptions and data provided to ground each section in evidence
+5. Treats the sequence as a deliberate narrative arc chosen by the author
+6. Writes a flowing narrative — do NOT add a heading to every paragraph. Use at most one or two section headings for major transitions. Most of the story should be continuous prose.
+7. Reference figures using [FIGURE: filename] where relevant.
+
+The narrative should read like a natural progression where each piece of evidence builds on what came before. The first figure sets the stage, middle figures develop the argument, and the final figure delivers the conclusion or key takeaway.

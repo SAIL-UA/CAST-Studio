@@ -605,7 +605,9 @@ Use the following story structure. Its description is given below.
         return f"Error sequencing figures with scaffolds: {e}"
 
 
-def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, sequence: str) -> str:
+FLOW_SCAFFOLDS = {'linear', 'inverted_pyramid'}
+
+def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, sequence: str, story_structure_id: str | None = None) -> str:
     """
     Build a narrative that explicitly reflects scaffold elements, their groups, and any extra groups/figures.
 
@@ -614,11 +616,16 @@ def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_f
         extra_groups: List of non-scaffold group dicts
         extra_figures: Dict of non-scaffold, ungrouped figures
         sequence: Recommended sequence from sequencing step
+        story_structure_id: Optional structure id to determine prompt selection
     """
+    is_flow = story_structure_id in FLOW_SCAFFOLDS if story_structure_id else False
     elements_text = ""
-    for element in scaffold_data.get("elements", []):
+    for idx, element in enumerate(scaffold_data.get("elements", [])):
         element_name = element.get("name") or f"Element {element.get('number')}"
-        elements_text += f"\n### Scaffold Element: {element_name}\n"
+        if is_flow:
+            elements_text += f"\n### Section {idx + 1}\n"
+        else:
+            elements_text += f"\n### Scaffold Element: {element_name}\n"
         elements_text += "Groups in this element:\n"
         for group in element.get("groups", []):
             elements_text += f"- Group: {group.get('name', '')}\n"
@@ -658,7 +665,7 @@ Scaffold structure (elements, groups, and figures):
 Sequence:
 {sequence}
 
-{_load_prompt('build_story_with_scaffolds.txt')}
+{_load_prompt(STORY_SCAFFOLDS[story_structure_id]['filename']) if story_structure_id and story_structure_id in FLOW_SCAFFOLDS else _load_prompt('build_story_with_scaffolds.txt')}
 """.strip()
 
     try:
@@ -1190,7 +1197,7 @@ def _build_group_structure(group, images_queryset):
     }
 
 
-def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: str | None = None):
+def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: str | None = None, slot_order: list | None = None):
     """
     Build the scaffold_data structure with elements, groups, and figures.
     
@@ -1233,8 +1240,9 @@ def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: s
             "elements": [],
         }
 
-    # Process each element number
-    for element_num in scaffold.valid_group_numbers:
+    # Process each element number — use slot_order if provided (for linear scaffold reordering)
+    element_order = slot_order if slot_order else scaffold.valid_group_numbers
+    for element_num in element_order:
         # Groups in this element
         element_groups = scaffold_groups.filter(scaffold_group_number=element_num)
         
@@ -1318,7 +1326,7 @@ def _build_figure_data(ungrouped_images):
     return _build_figure_dict(ungrouped_images)
 
 
-def _fetch_all_storyboard_data(user, story_structure_id=None):
+def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None):
     """
     Fetch and organize all storyboard data (scaffolds, groups, images).
     
@@ -1392,7 +1400,7 @@ def _fetch_all_storyboard_data(user, story_structure_id=None):
     
     # Build scaffold_data if scaffold exists
     if scaffold:
-        output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id)
+        output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order)
         
         # Non-scaffold groups
         non_scaffold_groups = all_groups.filter(scaffold_id__isnull=True)
@@ -1445,7 +1453,7 @@ def _fetch_all_storyboard_data(user, story_structure_id=None):
 
 
 @shared_task(bind=True)
-def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=False):
+def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=False, slot_order=None):
     User = get_user_model()
     ImageData = _get_model('api', 'ImageData')
     GroupData = _get_model('api', 'GroupData')
@@ -1571,7 +1579,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
         _progress(4, "Fetching...")
         # Fetch all storyboard data (scaffolds, groups, figures) using the resolved structure id
-        storyboard_data = _fetch_all_storyboard_data(user, story_structure_id)
+        storyboard_data = _fetch_all_storyboard_data(user, story_structure_id, slot_order)
         logger.info(f"[NARRATIVE] Storyboard data: {json.dumps(storyboard_data, indent=4)}")
 
         scaffold_data = storyboard_data.get("scaffold_data")
@@ -1613,6 +1621,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 story_non_scaffold_groups,
                 story_non_scaffold_figures,
                 sequence,
+                story_structure_id,
             )
             recommended_order = extract_figure_filenames(sequence)
 

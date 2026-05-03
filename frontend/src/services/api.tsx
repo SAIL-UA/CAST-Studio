@@ -173,6 +173,17 @@ export const uploadFigure = async(formData: FormData) => {
   return response.data;
 };
 
+export const uploadSlides = async(file: File) => {
+  const formData = new FormData();
+  formData.append('slides', file);
+  const response = await API.post('/images/upload-slides/', formData, {
+    transformRequest: [(data: any) => data],
+    headers: {},
+    timeout: 120000,
+  });
+  return response.data;
+};
+
 export const deleteFigure = async(filename: string) => {
   const response = await API.post(`/images/${encodeURIComponent(filename)}/delete/`, {})
   return response.data;
@@ -218,10 +229,11 @@ export const deleteGroup = async(groupId: string) => {
   return response;
 };
 
-export const generateNarrativeAsync = async(story_structure_id?: string, use_groups?: boolean) => {
+export const generateNarrativeAsync = async(story_structure_id?: string, use_groups?: boolean, slot_order?: number[]) => {
   const response = await API.post('/narrative/generate/async/', {
     story_structure_id: story_structure_id || null,
-    use_groups: use_groups || false
+    use_groups: use_groups || false,
+    slot_order: slot_order || null,
   })
   return response.data;
 };

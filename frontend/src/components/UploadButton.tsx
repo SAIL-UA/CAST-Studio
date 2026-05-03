@@ -1,6 +1,6 @@
 // Import dependencies
 import React, { useRef, useState } from 'react';
-import { uploadFigure, createNote } from '../services/api';
+import { uploadFigure, uploadSlides, createNote } from '../services/api';
 import { logAction, captureActionContext } from '../utils/userActionLogger';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
@@ -43,11 +43,30 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
         }
         const ctx = captureActionContext(e);
 
+        // Check for PPTX files
+        const pptxFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.pptx'));
+        const imageFiles = selectedFiles.filter(f => !f.name.toLowerCase().endsWith('.pptx'));
+
         let successCount = 0;
         let failCount = 0;
         let figDataArr = [];
 
-        for (const file of selectedFiles) {
+        // Handle PPTX files
+        for (const file of pptxFiles) {
+            try {
+                const result = await uploadSlides(file);
+                successCount += result.slides?.length || 0;
+                logAction({ actionType: 'click', elementId: 'upload-slides' }, { filename: file.name, slides_imported: result.slides?.length });
+            } catch (err: any) {
+                console.error('slide upload error', err?.response?.status, err?.response?.data || err);
+                const msg = err?.response?.data?.message || 'Slide upload failed';
+                setAlertModal(msg);
+                failCount++;
+            }
+        }
+
+        // Handle image files
+        for (const file of imageFiles) {
             const formData = new FormData();
             formData.append('figure', file, file.name);
             formData.append('short_desc', '');
@@ -62,11 +81,15 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
                 console.error('upload error', err?.response?.status, err?.response?.data || err);
                 failCount++;
             }
+        }
+
+        if (imageFiles.length > 0) {
             logAction(ctx, { "images": figDataArr });
         }
 
         if (failCount === 0) {
-            setAlertModal(`All ${successCount} figure(s) uploaded successfully.`);
+            const slideCount = pptxFiles.length > 0 ? ' (including slides)' : '';
+            setAlertModal(`${successCount} item(s) uploaded successfully${slideCount}.`);
         } else {
             setAlertModal(`Upload complete: ${successCount} succeeded, ${failCount} failed.`);
         }
@@ -218,7 +241,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 
         <input
             type="file"
-            accept="image/*"
+            accept="image/*,.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
             multiple
             ref={fileInputRef}
             onChange={handleFileChange}

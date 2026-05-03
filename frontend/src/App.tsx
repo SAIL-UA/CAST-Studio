@@ -60,7 +60,7 @@ function App() {
             <Routes>
                 <Route path='/' element={userAuthenticated ? <Navigate to="/home" /> : <Navigate to="/login" />} />
                 <Route path='/home' element={<Home />} />
-                <Route path='/login' element={<Login />} />
+                <Route path='/login' element={<TestLogin />} />
                 <Route path='/forgot-password' element={<ForgotPassword />} />
                 <Route path='/verify-reset-code' element={<VerifyResetCode />} />
                 <Route path='/reset-password' element={<ResetPassword />} />
@@ -69,7 +69,7 @@ function App() {
                 <Route path='/instructor' element={<Instructor />}/>
                 <Route path='/workspace/:studentId' element={<ViewWorkspace />}/>
                 <Route path='/session/:shareToken' element={<SessionWorkspace />}/>
-                <Route path='/testlogin' element={<TestLogin />}/>
+                <Route path='/testlogin' element={<Login />}/>
             </Routes>
       </div>
     </Router>

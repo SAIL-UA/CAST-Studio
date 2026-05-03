@@ -11,7 +11,7 @@ from .views import (
     ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView,
     TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, InstructorUsersView, InstructorWorkspaceView,
     HostSessionView, CloseSessionView, SessionStatusView, JoinSessionView,
-    TakeControlView, ReturnControlView, ExportWorkspaceReportView
+    TakeControlView, ReturnControlView, ExportWorkspaceReportView, UploadSlidesView
 )
 
 urlpatterns = [
@@ -40,6 +40,7 @@ urlpatterns = [
     # Images
     path("images/", ImageDataView.as_view(), name="image-list"),  # GET list or single via query param
     path("images/upload/", UploadFigureView.as_view(), name="image-upload"),
+    path("images/upload-slides/", UploadSlidesView.as_view(), name="image-upload-slides"),
     path("notes/create/", CreateNoteView.as_view(), name="note-create"),
     path("images/<uuid:image_id>/update/", UpdateImageDataView.as_view(), name="image-update"),
     path("images/<str:filename>/delete/", DeleteFigureView.as_view(), name="image-delete"),

@@ -29,6 +29,8 @@ import OverviewToDetail from './scaffolds/OverviewToDetail';
 import Comparative from './scaffolds/Comparative';
 import ShockLead from './scaffolds/ShockLead';
 import WorkflowProcess from './scaffolds/WorkflowProcess';
+import Linear from './scaffolds/Linear';
+import InvertedPyramid from './scaffolds/InvertedPyramid';
 
 // Import types
 import { ImageData, GroupData, ScaffoldData } from '../types/types';
@@ -64,6 +66,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     // States
     const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
     const [scaffold, setScaffold] = useState<ScaffoldData | null>(null);
+    const [linearSlotOrder, setLinearSlotOrder] = useState<number[] | null>(null);
     const [nextGroupNumber, setNextGroupNumber] = useState(1);
     const [zoomLevel, setZoomLevel] = useState(1.0);
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -571,9 +574,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     : group
             ));
 
-            // Clear scaffold state and reset pattern to default (AI Assistance)
+            // Clear scaffold state and reset pattern to none
             setScaffold(null);
-            setSelectedPattern('AI Assistance');
+            setSelectedPattern('');
 
             // Refresh data from backend to ensure consistency
             await fetchUserData();
@@ -737,6 +740,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                         hasGroups={groupDivs.length > 0}
                         selectedPattern={selectedPattern}
                         onStoryGenerated={refreshImageDataAfterStoryGeneration}
+                        slotOrder={(selectedPattern === 'linear' || selectedPattern === 'inverted_pyramid') ? linearSlotOrder : undefined}
                     />
                     <FeedbackButton />
                     <CollaborateButton onSessionChange={onSessionChange} />
@@ -993,6 +997,60 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
+                        />
+                    )}
+                    {selectedPattern === 'linear' && scaffold && (
+                        <Linear
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
+                            onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemoveFromGroup={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onGroupNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
+                            readOnly={readOnly}
+                            onSlotOrderChange={setLinearSlotOrder}
+                        />
+                    )}
+                    {selectedPattern === 'inverted_pyramid' && scaffold && (
+                        <InvertedPyramid
+                            images={images}
+                            storyBinRef={storyBinRef}
+                            setSelectedPattern={setSelectedPattern}
+                            scaffold={scaffold}
+                            updateImageData={updateImageData}
+                            onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
+                                try {
+                                    await updateScaffold(scaffold.id, { x: newX, y: newY });
+                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                } catch (error) {
+                                    console.error('Error updating scaffold position:', error);
+                                }
+                            }}
+                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
+                            onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
+                            onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
+                            onCardRemoveFromGroup={readOnly ? () => {} : handleCardRemoveFromGroup}
+                            onGroupNameChange={readOnly ? () => {} : handleGroupNameChange}
+                            onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
+                            onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
+                            readOnly={readOnly}
+                            onSlotOrderChange={setLinearSlotOrder}
                         />
                     )}
                     {/* Render groups directly in the scrollable container - only groups without scaffold */}

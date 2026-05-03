@@ -1,6 +1,6 @@
 // Import dependencies
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useDrag, useDrop } from 'react-dnd';
+import { useDrop } from 'react-dnd';
 import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
 import { SCAFFOLD_VALID_GROUP_NUMBERS, SCAFFOLD_GROUP_LABELS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
@@ -191,76 +191,9 @@ const TimeBased = ({
         setDisplaySlotCount((prev) => Math.max(MIN_SLOTS, prev - 1));
     };
 
-    // React DnD drag for wrapper
-    const [{ isDraggingDnd }, drag] = useDrag(
-        () => ({
-            type: 'group',
-            canDrag: !readOnly,
-            item: () => {
-                if (wrapperRef.current && storyBinRef.current) {
-                    const wrapperRect = wrapperRef.current.getBoundingClientRect();
-                    const event = window.event as MouseEvent;
-                    const offsetX = event.clientX - wrapperRect.left;
-                    const offsetY = event.clientY - wrapperRect.top;
-                    return {
-                        id: 'time-based-scaffold',
-                        type: 'group',
-                        oldX: position.x,
-                        oldY: position.y,
-                        offsetX,
-                        offsetY
-                    };
-                }
-                return {
-                    id: 'time-based-scaffold',
-                    type: 'group',
-                    oldX: position.x,
-                    oldY: position.y,
-                    offsetX: 0,
-                    offsetY: 0
-                };
-            },
-            end: (item, monitor) => {
-                const dropResult = monitor.getDropResult();
-                const clientOffset = monitor.getClientOffset();
-                let finalX = (item as { oldX: number; oldY: number }).oldX;
-                let finalY = (item as { oldX: number; oldY: number }).oldY;
-
-                if (dropResult && typeof dropResult === 'object' && 'x' in dropResult && 'y' in dropResult) {
-                    const newPosition = dropResult as { x: number; y: number };
-                    finalX = newPosition.x;
-                    finalY = newPosition.y;
-                    setPosition({ x: finalX, y: finalY });
-                    if (onPositionUpdate) onPositionUpdate(finalX, finalY);
-                } else if (clientOffset && storyBinRef.current) {
-                    const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
-                    if (binElement) {
-                        const binRect = binElement.getBoundingClientRect();
-                        const scrollLeft = binElement.scrollLeft;
-                        const scrollTop = binElement.scrollTop;
-                        const wrapperWidth = BASE_WIDTH + (displaySlotCount - 2) * SLOT_WIDTH;
-                        const wrapperHeight = 390;
-                        let newX = clientOffset.x - binRect.left - (item as { offsetX: number }).offsetX + scrollLeft;
-                        let newY = clientOffset.y - binRect.top - (item as { offsetY: number }).offsetY + scrollTop;
-                        const contentWidth = binElement.scrollWidth;
-                        const contentHeight = binElement.scrollHeight;
-                        newX = Math.max(0, Math.min(newX, contentWidth - wrapperWidth));
-                        newY = Math.max(0, Math.min(newY, contentHeight - wrapperHeight));
-                        finalX = newX;
-                        finalY = newY;
-                        setPosition({ x: finalX, y: finalY });
-                        if (onPositionUpdate) onPositionUpdate(finalX, finalY);
-                    }
-                }
-            },
-            collect: (monitor) => ({ isDraggingDnd: !!monitor.isDragging() })
-        }),
-        [position, storyBinRef, onPositionUpdate, displaySlotCount]
-    );
-
     const handleMouseDown = (e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('button')) return;
-        if (isDraggingDnd || !storyBinRef.current) return;
+        if (!storyBinRef.current) return;
         const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
         if (!binElement) return;
         const binRect = binElement.getBoundingClientRect();
@@ -276,10 +209,7 @@ const TimeBased = ({
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (!isDragging || !storyBinRef.current || isDraggingDnd) {
-                if (isDragging) setIsDragging(false);
-                return;
-            }
+            if (!isDragging || !storyBinRef.current) return;
             const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
             if (!binElement) {
                 setIsDragging(false);
@@ -312,7 +242,7 @@ const TimeBased = ({
             }
         };
 
-        if (isDragging && !isDraggingDnd) {
+        if (isDragging) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         }
@@ -320,21 +250,14 @@ const TimeBased = ({
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, dragOffset, isDraggingDnd, storyBinRef, position, onPositionUpdate, displaySlotCount]);
-
-    useEffect(() => {
-        if (isDraggingDnd && isDragging) setIsDragging(false);
-    }, [isDraggingDnd, isDragging]);
+    }, [isDragging, dragOffset, storyBinRef, position, onPositionUpdate, displaySlotCount]);
 
     const containerPos = storyBinRef.current
         ? { left: position.x, top: position.y }
         : { left: 0, top: 0 };
 
     const combinedRef = (element: HTMLDivElement | null) => {
-        if (element) {
-            drag(element);
-            wrapperRef.current = element;
-        }
+        wrapperRef.current = element;
     };
 
     const scaffoldWidth = BASE_WIDTH + (displaySlotCount - 2) * SLOT_WIDTH;
@@ -348,8 +271,8 @@ const TimeBased = ({
                 top: containerPos.top,
                 width: `${scaffoldWidth}px`,
                 minHeight: '500px',
-                cursor: isDragging || isDraggingDnd ? 'grabbing' : 'grab',
-                opacity: isDraggingDnd ? 0.5 : 1,
+                cursor: isDragging ? 'grabbing' : 'grab',
+                opacity: 1,
                 pointerEvents: 'auto'
             }}
             onMouseDown={readOnly ? undefined : handleMouseDown}
