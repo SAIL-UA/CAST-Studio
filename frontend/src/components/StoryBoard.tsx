@@ -679,7 +679,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             await fetchScaffolds(groups);
                         }}
                     />
-                    <GroupButton onClick={handleCreateGroup} />
+                    <GroupButton
+                        onClick={handleCreateGroup}
+                        onGroupComplete={async () => {
+                            await fetchUserData();
+                            await fetchGroups();
+                        }}
+                        onError={(msg) => setScaffoldLimitAlert(msg)}
+                        images={images}
+                    />
                     <GenerateStoryButton setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} />
                     <CraftStoryButton
                         images={images}

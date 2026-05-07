@@ -155,13 +155,20 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
             // Generate the story (async with polling)
             // Determine the story structure and scaffold for the selected target
             const scaffoldId = targetScaffoldIdRef.current;
-            let storyStructureId = selectedPattern || undefined;
+            let storyStructureId: string | undefined;
             let scaffoldSlotOrder = slotOrder || undefined;
             if (scaffoldId && scaffolds.length > 0) {
+                // Specific scaffold — use its structure type
                 const targetScaffold = scaffolds.find(s => s.id === scaffoldId);
                 if (targetScaffold) {
                     storyStructureId = SCAFFOLD_NUMBER_TO_PATTERN[targetScaffold.number] || selectedPattern || undefined;
                 }
+            } else if (!scaffoldId && scaffolds.length > 0) {
+                // All workspace with scaffolds — don't filter by structure type
+                storyStructureId = undefined;
+            } else {
+                // No scaffolds — use selected pattern
+                storyStructureId = selectedPattern || undefined;
             }
             const taskResponse = await generateNarrativeAsync(storyStructureId, hasGroups, scaffoldSlotOrder, scaffoldId || undefined);
 

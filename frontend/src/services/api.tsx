@@ -229,6 +229,11 @@ export const deleteGroup = async(groupId: string) => {
   return response;
 };
 
+export const aiGroupImages = async(mode: 'all' | 'ungrouped') => {
+  const response = await API.post('/groups/ai/', { mode });
+  return response.data;
+};
+
 export const generateNarrativeAsync = async(story_structure_id?: string, use_groups?: boolean, slot_order?: number[], scaffold_id?: string) => {
   const response = await API.post('/narrative/generate/async/', {
     story_structure_id: story_structure_id || null,

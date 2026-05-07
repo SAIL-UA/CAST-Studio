@@ -50,7 +50,7 @@ from .serializers import (
 )
 
 # Tasks
-from .tasks import generate_description_task, generate_narrative_task, generate_feedback_task
+from .tasks import generate_description_task, generate_narrative_task, generate_feedback_task, group_with_ai_task
 from .middleware import get_workspace_user
 
 # Scaffold mappings (moved to pydandtic.py)
@@ -724,6 +724,31 @@ class DeleteGroupView(APIView):
       return Response({"message": "Group deleted successfully"}, status=status.HTTP_200_OK)
     except GroupData.DoesNotExist:
       return Response({"message": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class AIGroupView(APIView):
+  permission_classes = [IsAuthenticated]
+  throttle_classes = [BurstRateThrottle]
+
+  def post(self, request):
+    """Kick off AI grouping as a Celery task. Returns task_id for progress polling."""
+    try:
+      mode = request.data.get("mode", "ungrouped")
+      if mode not in ("all", "ungrouped"):
+        return Response({"message": "Invalid mode. Use 'all' or 'ungrouped'."}, status=status.HTTP_400_BAD_REQUEST)
+
+      workspace_user = get_workspace_user(request)
+      task = group_with_ai_task.delay(workspace_user.id, mode)
+
+      return Response({
+        "status": "success",
+        "message": "AI grouping started",
+        "task_id": task.id,
+        "mode": mode,
+      }, status=status.HTTP_202_ACCEPTED)
+
+    except Exception as e:
+      return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class GenerateNarrativeAsyncView(APIView):

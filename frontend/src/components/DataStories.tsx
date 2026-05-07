@@ -238,6 +238,14 @@ const DataStories = ({ targetUser, readOnly = false, refreshTrigger }: DataStori
 
     const formatStoryStructureName = (structureId?: string) => {
         if (!structureId) return '';
+        // Multi-scaffold: "multi:question_answer,time_based" → "Multiple (Question Answer, Time Based)"
+        if (structureId.startsWith('multi:')) {
+            const ids = structureId.slice(6).split(',');
+            const names = ids.map(id =>
+                id.split('_').filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+            );
+            return `Multiple (${names.join(', ')})`;
+        }
         return structureId
             .split('_')
             .filter(Boolean)

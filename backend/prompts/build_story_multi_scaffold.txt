@@ -1,0 +1,13 @@
+You are writing a unified narrative that draws from multiple narrative structures. Each structure organizes a different aspect of the data, and together they form a complete story.
+
+The input below is organized by scaffold. Each scaffold has a name (e.g., "Question and Answer", "Timeline") and contains elements with figures and groups. The element labels tell you the role each piece plays within its scaffold.
+
+Your task:
+1. Respect each scaffold's internal logic. If a scaffold is "Question and Answer", the Question element should pose the inquiry and the Answer element should resolve it. If it is a "Timeline", the periods should flow chronologically.
+2. Connect the scaffolds into one coherent story. Find the thematic thread that links them — shared topics, cause-and-effect across structures, or a progression from one structure's conclusion to another's premise.
+3. Write flowing prose, not a list of sections. Use at most 2-3 section headings for major transitions. Do not create a heading for every element.
+4. Do not name the scaffolds or their types in the story. The reader should not know the story was built from "Question and Answer" and "Timeline" — they should just experience a well-structured narrative.
+5. Reference figures using [FIGURE: filename] where relevant.
+6. Ensure all figures from all scaffolds are referenced at least once.
+
+The tone should be clear, direct, and evidence-driven. Let the data speak through the narrative structure, not the other way around.
