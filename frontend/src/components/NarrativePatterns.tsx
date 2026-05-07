@@ -150,10 +150,11 @@ type NarrativePatternsProps = {
     setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
     setRightNarrativeExamplesOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setExamplesPattern: React.Dispatch<React.SetStateAction<string>>;
+    onCreateScaffold?: (pattern: string) => void;
 }
 
 // Narrative patterns component
-const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, center, setStoryLoading, setRightNarrativeExamplesOpen, setExamplesPattern }: NarrativePatternsProps) => {
+const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, center, setStoryLoading, setRightNarrativeExamplesOpen, setExamplesPattern, onCreateScaffold }: NarrativePatternsProps) => {
 
     // Reusable hover handler that captures pattern from data attribute
     const handleHover = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -188,7 +189,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Cause and Effect</h3>
                                 <p className="text-xs">How a variable or event influences another.</p>
                                 {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
-                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="cause_and_effect" setStoryLoading={setStoryLoading} />
+                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="cause_and_effect" setStoryLoading={setStoryLoading} />
                                 {!center && <NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="cause_and_effect" />}
                             </div>
                         </div>
@@ -202,7 +203,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Question and Answer</h3>
                                 <p className="text-xs">A central question, followed by evidence to support the answer.</p>
                                 {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
-                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} setStoryLoading={setStoryLoading} value="question_answer" />
+                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} setStoryLoading={setStoryLoading} value="question_answer" />
                                 {!center && <NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="question_answer" />}
                             </div>
                         </div>
@@ -216,7 +217,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Timeline</h3>
                                 <p className="text-xs">A sequence of events in time to highlight patterns and trends.</p>
                                 {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
-                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="time_based" setStoryLoading={setStoryLoading} />
+                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="time_based" setStoryLoading={setStoryLoading} />
                                 {!center && <NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="time_based" />}
                             </div>
                         </div>
@@ -230,7 +231,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Factor Analysis</h3>
                                 <p className="text-xs">A breakdown of a phenomenon into influencing factors.</p>
                                 {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
-                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="factor_analysis" setStoryLoading={setStoryLoading} />
+                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="factor_analysis" setStoryLoading={setStoryLoading} />
                                 {!center && <NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="factor_analysis" />}
                             </div>
                         </div>
@@ -244,7 +245,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Overview To Detail</h3>
                                 <p className="text-xs">A broad snapshot of a phenomenon, followed by finer details.</p>
                                 {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
-                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="overview_to_detail" setStoryLoading={setStoryLoading} />
+                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="overview_to_detail" setStoryLoading={setStoryLoading} />
                                 {!center && <NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="overview_to_detail" />}
                             </div>
                         </div>
@@ -258,7 +259,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Problem and Solution</h3>
                                 <p className="text-xs">A challenge, followed by evidence for a solution.</p>
                                 {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
-                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="problem_solution" setStoryLoading={setStoryLoading} />
+                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="problem_solution" setStoryLoading={setStoryLoading} />
                                 {!center && <NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="problem_solution" />}
                             </div>
                         </div>
@@ -272,7 +273,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Comparative Analysis</h3>
                                 <p className="text-xs">A side-by-side view of events to reveal similarities and differences.</p>
                                 {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
-                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="comparative" setStoryLoading={setStoryLoading} />
+                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="comparative" setStoryLoading={setStoryLoading} />
                                 {!center && <NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="comparative" />}
                             </div>
                         </div>
@@ -286,7 +287,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Workflow or Process</h3>
                                 <p className="text-xs">Discusses the key stages of a system or pipeline.</p>
                                 {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
-                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="workflow_process" setStoryLoading={setStoryLoading} />
+                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="workflow_process" setStoryLoading={setStoryLoading} />
                                 {!center && <NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="workflow_process" />}
                             </div>
                         </div>
@@ -300,7 +301,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Shock and Lead</h3>
                                 <p className="text-xs">A striking fact, followed by analysis of explanatory factors.</p>
                                 {center && <p className={`${center ? 'text-sm' : 'text-xs'} roboto-light text-grey-darkest`}></p>}
-                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="shock_lead" setStoryLoading={setStoryLoading} />
+                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="shock_lead" setStoryLoading={setStoryLoading} />
                                 {!center && <NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="shock_lead" />}
                             </div>
                         </div>
@@ -320,7 +321,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                             <div className="w-3/4 h-auto pl-4">
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Linear</h3>
                                 <p className="text-xs">A straightforward beginning-to-end progression that builds understanding step by step.</p>
-                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="linear" setStoryLoading={setStoryLoading} />
+                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="linear" setStoryLoading={setStoryLoading} />
                                 {!center && <span className="opacity-40 pointer-events-none inline-block"><NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="linear" /></span>}
                             </div>
                         </div>
@@ -333,7 +334,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                             <div className="w-3/4 h-auto pl-4">
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Inverted Pyramid</h3>
                                 <p className="text-xs">Lead with the most important finding, then layer in supporting details and context.</p>
-                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="inverted_pyramid" setStoryLoading={setStoryLoading} />
+                                <SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="inverted_pyramid" setStoryLoading={setStoryLoading} />
                                 {!center && <span className="opacity-40 pointer-events-none inline-block"><NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="inverted_pyramid" /></span>}
                             </div>
                         </div>
@@ -346,7 +347,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                             <div className="w-3/4 h-auto pl-4">
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Circular</h3>
                                 <p className="text-xs">The story returns to where it started, creating a loop that reinforces the central message.</p>
-                                <span className="opacity-40 pointer-events-none inline-block"><SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="circular" setStoryLoading={setStoryLoading} /></span>
+                                <span className="opacity-40 pointer-events-none inline-block"><SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="circular" setStoryLoading={setStoryLoading} /></span>
                                 {!center && <span className="opacity-40 pointer-events-none inline-block"><NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="circular" /></span>}
                             </div>
                         </div>
@@ -359,7 +360,7 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
                             <div className="w-3/4 h-auto pl-4">
                                 <h3 className={`${center ? 'text-md font-roboto-bold' : 'text-sm'}`}>Nested</h3>
                                 <p className="text-xs">A story within a story, zooming in and out of detail to build layered understanding.</p>
-                                <span className="opacity-40 pointer-events-none inline-block"><SelectNarrativeButton setSelectedPattern={setSelectedPattern} value="nested" setStoryLoading={setStoryLoading} /></span>
+                                <span className="opacity-40 pointer-events-none inline-block"><SelectNarrativeButton setSelectedPattern={setSelectedPattern} onCreateScaffold={onCreateScaffold} value="nested" setStoryLoading={setStoryLoading} /></span>
                                 {!center && <span className="opacity-40 pointer-events-none inline-block"><NarrativeExamplesButton setRightNarrativeExamplesOpen={setRightNarrativeExamplesOpen} setExamplesPattern={setExamplesPattern} value="nested" /></span>}
                             </div>
                         </div>

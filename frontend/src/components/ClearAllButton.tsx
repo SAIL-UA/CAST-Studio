@@ -10,12 +10,12 @@ type ClearAllButtonProps = {
     onClearComplete: () => Promise<void>;
     setImages?: React.Dispatch<React.SetStateAction<ImageData[]>>;
     setGroupDivs?: React.Dispatch<React.SetStateAction<GroupData[]>>;
-    setScaffold?: React.Dispatch<React.SetStateAction<ScaffoldData | null>>;
+    setScaffolds?: React.Dispatch<React.SetStateAction<ScaffoldData[]>>;
     setSelectedPattern?: React.Dispatch<React.SetStateAction<string>>;
 }
 
 // ClearAll component
-const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setScaffold, setSelectedPattern }: ClearAllButtonProps) => {
+const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setScaffolds, setSelectedPattern }: ClearAllButtonProps) => {
     const [showModal, setShowModal] = useState<boolean>(false);
     const [isClearing, setIsClearing] = useState<boolean>(false);
     const [groupCount, setGroupCount] = useState<number>(0);
@@ -94,8 +94,8 @@ const ClearAllButton = ({ images, onClearComplete, setImages, setGroupDivs, setS
             if (setGroupDivs) {
                 setGroupDivs([]);
             }
-            if (setScaffold) {
-                setScaffold(null);
+            if (setScaffolds) {
+                setScaffolds([]);
             }
             if (setSelectedPattern) {
                 setSelectedPattern('');

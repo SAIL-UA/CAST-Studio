@@ -1326,7 +1326,7 @@ def _build_figure_data(ungrouped_images):
     return _build_figure_dict(ungrouped_images)
 
 
-def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None):
+def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, scaffold_id=None):
     """
     Fetch and organize all storyboard data (scaffolds, groups, images).
     
@@ -1350,27 +1350,39 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None):
         "figure_data": {}
     }
     
-    # Fetch scaffolds
-    # Map story_structure_id (string like 'cause_and_effect') to its number before filtering
-    scaffold_number = None
-    if story_structure_id:
-        scaffold_info = STORY_SCAFFOLDS.get(story_structure_id)
-        if scaffold_info:
-            scaffold_number = scaffold_info['number']
-        else:
-            logger.warning(f"[FETCH_DATA] Unknown story_structure_id '{story_structure_id}', filtering without number")
-    
-    logger.info(f"[SCAFFOLD_NUMBER]: {scaffold_number}")
-    scaffolds = ScaffoldData.objects.filter(user=user, number=scaffold_number) if scaffold_number else ScaffoldData.objects.filter(user=user)
-    scaffold_count = scaffolds.count()
-    
-    logger.info(f"[FETCH_DATA] Found {scaffold_count} scaffold(s)")
-    
-    if scaffold_count > 1:
-        logger.warning(f"[FETCH_DATA] Multiple scaffolds found ({scaffold_count}), using first")
-        output_json["error"] = f"Multiple scaffolds found ({scaffold_count})"
-    
-    scaffold = scaffolds.first() if scaffold_count > 0 else None
+    # Fetch scaffold — by specific ID if provided, otherwise by structure type, otherwise first available
+    scaffold = None
+    if scaffold_id:
+        # Specific scaffold requested (from Generate Story dropdown)
+        try:
+            scaffold = ScaffoldData.objects.get(id=scaffold_id, user=user)
+            logger.info(f"[FETCH_DATA] Using specific scaffold: {scaffold.name} ({scaffold_id})")
+            # Infer story_structure_id from the scaffold if not explicitly provided
+            if not story_structure_id:
+                from .pydandtic import STORY_SCAFFOLDS as _SS
+                for sid, info in _SS.items():
+                    if info.get('number') == scaffold.number:
+                        story_structure_id = sid
+                        break
+        except ScaffoldData.DoesNotExist:
+            logger.warning(f"[FETCH_DATA] Scaffold {scaffold_id} not found, falling back")
+
+    if not scaffold:
+        # Fall back to filtering by structure type or getting all
+        scaffold_number = None
+        if story_structure_id:
+            scaffold_info = STORY_SCAFFOLDS.get(story_structure_id)
+            if scaffold_info:
+                scaffold_number = scaffold_info['number']
+
+        scaffolds = ScaffoldData.objects.filter(user=user, number=scaffold_number) if scaffold_number else ScaffoldData.objects.filter(user=user)
+        scaffold_count = scaffolds.count()
+        logger.info(f"[FETCH_DATA] Found {scaffold_count} scaffold(s)")
+
+        if scaffold_count > 1:
+            logger.warning(f"[FETCH_DATA] Multiple scaffolds found ({scaffold_count}), using first")
+
+        scaffold = scaffolds.first() if scaffold_count > 0 else None
     
     # Fetch all groups and images
     all_groups = GroupData.objects.filter(user=user).prefetch_related('images')
@@ -1453,7 +1465,7 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None):
 
 
 @shared_task(bind=True)
-def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=False, slot_order=None):
+def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=False, slot_order=None, scaffold_id=None):
     User = get_user_model()
     ImageData = _get_model('api', 'ImageData')
     GroupData = _get_model('api', 'GroupData')
@@ -1579,7 +1591,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
         _progress(4, "Fetching...")
         # Fetch all storyboard data (scaffolds, groups, figures) using the resolved structure id
-        storyboard_data = _fetch_all_storyboard_data(user, story_structure_id, slot_order)
+        storyboard_data = _fetch_all_storyboard_data(user, story_structure_id, slot_order, scaffold_id)
         logger.info(f"[NARRATIVE] Storyboard data: {json.dumps(storyboard_data, indent=4)}")
 
         scaffold_data = storyboard_data.get("scaffold_data")

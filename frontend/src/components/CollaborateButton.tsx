@@ -107,6 +107,7 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
                         className="bg-bama-crimson text-sm text-white rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
                     >
                         <span className="flex items-center justify-center gap-2">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 9a4 4 0 0 0 5.5.4l2-2a4 4 0 0 0-5.6-5.6L7.5 3.2"/><path d="M9 7a4 4 0 0 0-5.5-.4l-2 2a4 4 0 0 0 5.6 5.6l1.4-1.4"/></svg>
                             Collaborate
                             <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                                 <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>

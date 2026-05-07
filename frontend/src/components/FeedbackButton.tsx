@@ -86,13 +86,16 @@ const FeedbackButton = () => {
             id="feedback-button"
             logId="feedback-button"
             color="#f87171"
-            label="Ask for Feedback"
+            label="↩ Ask for Feedback"
             progress={progress}
             isRunning={feedbackLoading}
             onClick={handleFeedback}
             disabled={feedbackLoading}
         >
-            {feedbackLoading ? (stageName || 'Generating...') : 'Ask for Feedback'}
+            <span className="flex items-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 12 2 8 6 4"/><path d="M14 14v-2a4 4 0 0 0-4-4H2"/></svg>
+                {feedbackLoading ? (stageName || 'Generating...') : 'Ask for Feedback'}
+            </span>
         </ProgressButton>
     );
 };

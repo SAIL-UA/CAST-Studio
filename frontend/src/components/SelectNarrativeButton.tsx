@@ -1,28 +1,24 @@
 // Import dependencies
-import { getImageDataAll, generateNarrativeAsync, getNarrativeCache, deleteScaffold } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
-
-// Import components
-
-// Import images
 
 // Define props interface
 type SelectNarrativeButtonProps = {
     setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;
     value: string;
     setStoryLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    onCreateScaffold?: (pattern: string) => void;
 }
 
 // Select narrative button component
-const SelectNarrativeButton = ({ setSelectedPattern, value, setStoryLoading }: SelectNarrativeButtonProps) => {
-    // Handle button click
+const SelectNarrativeButton = ({ setSelectedPattern, value, setStoryLoading, onCreateScaffold }: SelectNarrativeButtonProps) => {
     const handleSelectNarrative = async (e: React.MouseEvent, value: string) => {
-        // Delete current scaffold from backend
-        await deleteScaffold();
-
-        // Set selected pattern to the new value
         setSelectedPattern(value);
-        logAction(e, { "narrative_pattern": value });
+        logAction({ actionType: 'click', elementId: 'select-narrative-button' }, { "narrative_pattern": value });
+        if (onCreateScaffold) {
+            onCreateScaffold(value);
+        }
+        // Also dispatch event for StoryBoard to listen to
+        window.dispatchEvent(new CustomEvent('createScaffold', { detail: { pattern: value } }));
     }
 
     return (

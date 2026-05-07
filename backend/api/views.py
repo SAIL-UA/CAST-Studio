@@ -288,6 +288,12 @@ class UploadFigureView(APIView):
     if not figure:
       return Response({"message": "No file part in the request"}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Validate file type
+    ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+    ext = os.path.splitext(figure.name)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+      return Response({"message": f"Unsupported file type '{ext}'. Please upload PNG, JPG, JPEG, GIF, or WebP images."}, status=status.HTTP_400_BAD_REQUEST)
+
     # Build file path - save directly to DATA_PATH root to match nginx serving location
     data_path = os.getenv('DATA_PATH')
     if not data_path:
@@ -731,10 +737,11 @@ class GenerateNarrativeAsyncView(APIView):
       story_structure_id = request.data.get('story_structure_id') if request.data else None
       use_groups = request.data.get('use_groups', False) if request.data else False
       slot_order = request.data.get('slot_order', None) if request.data else None
+      scaffold_id = request.data.get('scaffold_id', None) if request.data else None
 
       # Start the narrative generation task
       workspace_user = get_workspace_user(request)
-      task = generate_narrative_task.delay(workspace_user.id, story_structure_id, use_groups, slot_order)
+      task = generate_narrative_task.delay(workspace_user.id, story_structure_id, use_groups, slot_order, scaffold_id)
 
       return Response({
         "status": "success",
@@ -1777,36 +1784,7 @@ class CreateScaffoldView(APIView):
       # Get scaffold info from mapping
       scaffold_info = STORY_SCAFFOLDS[scaffold_pattern]
 
-      # Get any current scaffolds for user
-      current_scaffolds = ScaffoldData.objects.filter(user=workspace_user)
-
-      # If current scaffold is same as new scaffold, return error
-      if current_scaffolds.count() == 1 and current_scaffolds[0].name == scaffold_info['name']:
-        return Response({
-          "message": "Scaffold already created"
-        }, status=status.HTTP_200_OK)
-
-      # If different scaffold, delete all current scaffolds
-      if current_scaffolds.count() > 0:
-        # Delete all current scaffolds
-        for scaffold in current_scaffolds:
-          scaffold.delete()
-
-        # Update images to not have a scaffold_id or scaffold_group_number
-        images = ImageData.objects.filter(user=workspace_user)
-        for image in images:
-          image.scaffold_id = None
-          image.scaffold_group_number = None
-          image.save()
-
-        # Update groups to not have a scaffold_id or scaffold_group_number
-        groups = GroupData.objects.filter(user=workspace_user)
-        for group in groups:
-          group.scaffold_id = None
-          group.scaffold_group_number = None
-          group.save()
-
-      # Create new scaffold
+      # Create new scaffold (multiple scaffolds per user are allowed)
       scaffold_data = {
         'user': workspace_user.id,
         'name': scaffold_info['name'],
@@ -1883,25 +1861,30 @@ class DeleteScaffoldView(APIView):
   def post(self, request):
     try:
       workspace_user = get_workspace_user(request)
-      # Since only one scaffold per user is allowed, just delete all scaffolds
-      scaffolds = ScaffoldData.objects.filter(user=workspace_user)
-      for scaffold in scaffolds:
+      scaffold_id = request.data.get('scaffold_id')
+
+      if scaffold_id:
+        # Delete a specific scaffold
+        try:
+          scaffold = ScaffoldData.objects.get(id=scaffold_id, user=workspace_user)
+        except ScaffoldData.DoesNotExist:
+          return Response({"error": "Scaffold not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Clear associations for items in this scaffold only
+        ImageData.objects.filter(user=workspace_user, scaffold_id=scaffold).update(scaffold_id=None, scaffold_group_number=None)
+        GroupData.objects.filter(user=workspace_user, scaffold_id=scaffold).update(scaffold_id=None, scaffold_group_number=None)
         scaffold.delete()
 
-      # Update images to not have a scaffold_id or scaffold_group_number
-      images = ImageData.objects.filter(user=workspace_user)
-      for image in images:
-        image.scaffold_id = None
-        image.scaffold_group_number = None
-        image.save()
+        return Response({"message": "Scaffold deleted successfully"}, status=status.HTTP_200_OK)
+      else:
+        # Delete all scaffolds (backward compatible)
+        scaffolds = ScaffoldData.objects.filter(user=workspace_user)
+        for scaffold in scaffolds:
+          scaffold.delete()
 
-      # Update groups to not have a scaffold_id or scaffold_group_number
-      groups = GroupData.objects.filter(user=workspace_user)
-      for group in groups:
-        group.scaffold_id = None
-        group.scaffold_group_number = None
-        group.save()
+        ImageData.objects.filter(user=workspace_user, scaffold_id__isnull=False).update(scaffold_id=None, scaffold_group_number=None)
+        GroupData.objects.filter(user=workspace_user, scaffold_id__isnull=False).update(scaffold_id=None, scaffold_group_number=None)
 
-      return Response({"message": "All scaffolds deleted successfully"}, status=status.HTTP_200_OK)
+        return Response({"message": "All scaffolds deleted successfully"}, status=status.HTTP_200_OK)
     except Exception as e:
       return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
