@@ -65,8 +65,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
     // States
     const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
-    const [scaffold, setScaffold] = useState<ScaffoldData | null>(null);
-    const [linearSlotOrder, setLinearSlotOrder] = useState<number[] | null>(null);
+    const [scaffolds, setScaffolds] = useState<ScaffoldData[]>([]);
+    const [linearSlotOrders, setLinearSlotOrders] = useState<{ [scaffoldId: string]: number[] }>({});
     const [nextGroupNumber, setNextGroupNumber] = useState(1);
     const [zoomLevel, setZoomLevel] = useState(1.0);
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -131,51 +131,44 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         try {
             const fetchedScaffolds = await getScaffolds(undefined, targetUser);
             if (!fetchedScaffolds || fetchedScaffolds.length === 0) {
-                // setSelectedPattern('');
-                setScaffold(null);
+                setScaffolds([]);
                 return;
             }
 
-            // For now, assume one scaffold per user (or take the first one)
-            const scaffoldData = fetchedScaffolds[0];
-            
-            // Derive cards from images array using scaffold_id
-            const scaffoldCards = images
-                .filter(img => img.scaffoldId === scaffoldData.id)
-                .map((card: ImageData) => ({
-                    ...card,
-                    scaffoldId: scaffoldData.id
-                }));
-
             // Use provided groups or fall back to state
             const groups = groupsToUse || groupDivs;
-            
-            // Derive groups that belong to this scaffold
-            const scaffoldGroups = groups
-                .filter(group => group.scaffoldId === scaffoldData.id)
-                .map((group: GroupData) => ({
-                    ...group,
-                    cards: images
-                        .filter(img => img.groupId === group.id)
-                        .map((card: ImageData) => ({
-                            ...card,
-                            groupId: group.id
-                        }))
-                }));
 
-            const scaffoldWithCards: ScaffoldData = {
-                ...scaffoldData,
-                cards: scaffoldCards,
-                groups: scaffoldGroups  // Populate groups that belong to scaffold
-            };
+            // Build array of all scaffolds with their cards and groups
+            const scaffoldsWithCards: ScaffoldData[] = fetchedScaffolds.map((scaffoldData: any) => {
+                // Derive cards from images array using scaffold_id
+                const scaffoldCards = images
+                    .filter(img => img.scaffoldId === scaffoldData.id)
+                    .map((card: ImageData) => ({
+                        ...card,
+                        scaffoldId: scaffoldData.id
+                    }));
 
-            setScaffold(scaffoldWithCards);
-            
-            // Set selectedPattern based on scaffold name/number
-            const pattern = SCAFFOLD_NUMBER_TO_PATTERN[scaffoldData.number];
-            if (pattern) {
-                setSelectedPattern(pattern);
-            }
+                // Derive groups that belong to this scaffold
+                const scaffoldGroups = groups
+                    .filter(group => group.scaffoldId === scaffoldData.id)
+                    .map((group: GroupData) => ({
+                        ...group,
+                        cards: images
+                            .filter(img => img.groupId === group.id)
+                            .map((card: ImageData) => ({
+                                ...card,
+                                groupId: group.id
+                            }))
+                    }));
+
+                return {
+                    ...scaffoldData,
+                    cards: scaffoldCards,
+                    groups: scaffoldGroups
+                };
+            });
+
+            setScaffolds(scaffoldsWithCards);
 
         } catch (error) {
             console.error('Error fetching scaffolds:', error);
@@ -212,92 +205,54 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
         return () => window.removeEventListener('openRecycleBin', handleOpenRecycleBin);
     }, []);
 
-    // Handle creating scaffold when pattern is selected (if scaffold doesn't exist)
+    // Scaffold limit
+    const MAX_SCAFFOLDS = 3;
+    const [scaffoldLimitAlert, setScaffoldLimitAlert] = useState<string | null>(null);
+
+    // Listen for scaffold creation events from SelectNarrativeButton
     useEffect(() => {
-        const handleCreateScaffoldIfNeeded = async () => {
-            // In read-only mode, don't create or modify scaffolds
-            if (readOnly) return;
-
-            // If no pattern selected, don't do anything
-            if (!selectedPattern || selectedPattern === '') {
-                return;
-            }
-
-            // Check if there's an existing scaffold
-            if (scaffold) {
-                // Get the pattern of the existing scaffold
-                const existingPattern = SCAFFOLD_NUMBER_TO_PATTERN[scaffold.number];
-                
-                // If the existing scaffold's pattern doesn't match the selected pattern, close it first
-                if (existingPattern !== selectedPattern) {
-                    try {
-                        // Store scaffold ID before deletion for cleanup
-                        const scaffoldIdToRemove = scaffold.id;
-
-                        // Delete scaffold from backend (backend will clear scaffold associations)
-                        await deleteScaffold();
-
-                        // Update local state: remove scaffold associations from images
-                        setImages(prev => prev.map(img =>
-                            img.scaffoldId === scaffoldIdToRemove
-                                ? { ...img, scaffoldId: undefined, scaffold_group_number: undefined }
-                                : img
-                        ));
-
-                        // Update local state: remove scaffold associations from groups
-                        setGroupDivs(prev => prev.map(group =>
-                            group.scaffoldId === scaffoldIdToRemove
-                                ? { ...group, scaffoldId: undefined, scaffold_group_number: undefined }
-                                : group
-                        ));
-
-                        // Clear scaffold state (but keep selectedPattern - don't clear it)
-                        setScaffold(null);
-
-                        // Refresh data from backend to ensure consistency
-                        await fetchUserData();
-                        await fetchGroups();
-                        
-                        // After closing, create the new scaffold
-                        // (This will happen on the next render cycle since scaffold is now null)
-                        return;
-                    } catch (error) {
-                        console.error('Error closing scaffold:', error);
-                        return;
-                    }
-                }
-                // If patterns match, scaffold already exists, don't create a new one
-                return;
-            }
-
-            // No scaffold exists, create a new one
-            try {
-                // Calculate initial position
-                let initialX = 50;
-                let initialY = 50;
-                
-                if (storyBinRef.current) {
-                    const rect = storyBinRef.current.getBoundingClientRect();
-                    initialX = rect.width / 2 - 250; // Center scaffold (assuming 500px width)
-                    initialY = 50;
-                }
-
-                const response = await createScaffold(selectedPattern, initialX, initialY);
-                if (response.scaffold) {
-                    const newScaffold: ScaffoldData = {
-                        ...response.scaffold,
-                        cards: [],
-                        groups: []
-                    };
-                    setScaffold(newScaffold);
-                }
-            } catch (error) {
-                console.error('Error creating scaffold:', error);
-            }
+        const handleEvent = (e: Event) => {
+            const pattern = (e as CustomEvent).detail?.pattern;
+            if (pattern) handleCreateScaffold(pattern);
         };
+        window.addEventListener('createScaffold', handleEvent);
+        return () => window.removeEventListener('createScaffold', handleEvent);
+    }, [scaffolds, readOnly]);
 
-        handleCreateScaffoldIfNeeded();
-    }, [selectedPattern, scaffold]);
+    // Create scaffold — called directly from SelectNarrativeButton via callback
+    const handleCreateScaffold = async (pattern: string) => {
+        if (readOnly) return;
+        if (!pattern || pattern === '') return;
+
+        // Enforce limit
+        if (scaffolds.length >= MAX_SCAFFOLDS) {
+            setScaffoldLimitAlert('You are allowed a maximum of three narratives at one time. Remove an existing narrative to continue.');
+            return;
+        }
+
+        try {
+            let initialX = 50;
+            let initialY = 50;
+
+            if (storyBinRef.current) {
+                const rect = storyBinRef.current.getBoundingClientRect();
+                initialX = rect.width / 2 - 250;
+                initialY = 50 + scaffolds.length * 50; // Offset each scaffold so they don't stack
+            }
+
+            const response = await createScaffold(pattern, initialX, initialY);
+            if (response.scaffold) {
+                const newScaffold: ScaffoldData = {
+                    ...response.scaffold,
+                    cards: [],
+                    groups: []
+                };
+                setScaffolds(prev => [...prev, newScaffold]);
+            }
+        } catch (error) {
+            console.error('Error creating scaffold:', error);
+        }
+    };
 
     // Handle description updates
     const handleDescriptionsUpdate = (id: string, newShortDesc: string, newLongDesc: string) => {
@@ -402,11 +357,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
             // If group was in a scaffold, also update scaffold state
             const deletedGroup = groupDivs.find(g => g.id === groupId);
-            if (deletedGroup?.scaffoldId && scaffold && scaffold.id === deletedGroup.scaffoldId) {
-                setScaffold(prev => prev ? {
-                    ...prev,
-                    groups: prev.groups.filter(g => g.id !== groupId)
-                } : null);
+            if (deletedGroup?.scaffoldId) {
+                setScaffolds(prev => prev.map(s =>
+                    s.id === deletedGroup.scaffoldId
+                        ? { ...s, groups: s.groups.filter(g => g.id !== groupId) }
+                        : s
+                ));
             }
         } catch (error) {
             console.error('Error closing group:', error);
@@ -552,31 +508,27 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
     };
 
     // Handle scaffold close
-    const handleScaffoldClose = async () => {
+    const handleScaffoldClose = async (scaffoldId: string) => {
         try {
-            // Store scaffold ID before deletion for cleanup
-            const scaffoldIdToRemove = scaffold?.id;
-
             // Delete scaffold from backend (backend will clear scaffold associations)
-            await deleteScaffold();
+            await deleteScaffold(scaffoldId);
 
             // Update local state: remove scaffold associations from images
             setImages(prev => prev.map(img =>
-                img.scaffoldId === scaffoldIdToRemove
+                img.scaffoldId === scaffoldId
                     ? { ...img, scaffoldId: undefined, scaffold_group_number: undefined }
                     : img
             ));
 
             // Update local state: remove scaffold associations from groups
             setGroupDivs(prev => prev.map(group =>
-                group.scaffoldId === scaffoldIdToRemove
+                group.scaffoldId === scaffoldId
                     ? { ...group, scaffoldId: undefined, scaffold_group_number: undefined }
                     : group
             ));
 
-            // Clear scaffold state and reset pattern to none
-            setScaffold(null);
-            setSelectedPattern('');
+            // Remove scaffold from array
+            setScaffolds(prev => prev.filter(s => s.id !== scaffoldId));
 
             // Refresh data from backend to ensure consistency
             await fetchUserData();
@@ -607,24 +559,21 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 );
 
                 // Update scaffold state immediately with the updated groups
-                if (scaffold && scaffold.id === scaffoldId) {
-                    const updatedScaffoldGroups = updatedGroups
-                        .filter(group => group.scaffoldId === scaffoldId)
-                        .map((group: GroupData) => ({
-                            ...group,
-                            cards: images
-                                .filter(img => img.groupId === group.id)
-                                .map((card: ImageData) => ({
-                                    ...card,
-                                    groupId: group.id
-                                }))
-                        }));
+                const updatedScaffoldGroups = updatedGroups
+                    .filter(group => group.scaffoldId === scaffoldId)
+                    .map((group: GroupData) => ({
+                        ...group,
+                        cards: images
+                            .filter(img => img.groupId === group.id)
+                            .map((card: ImageData) => ({
+                                ...card,
+                                groupId: group.id
+                            }))
+                    }));
 
-                    setScaffold(prev => prev ? {
-                        ...prev,
-                        groups: updatedScaffoldGroups
-                    } : null);
-                }
+                setScaffolds(prev => prev.map(s =>
+                    s.id === scaffoldId ? { ...s, groups: updatedScaffoldGroups } : s
+                ));
 
                 return updatedGroups;
             });
@@ -658,7 +607,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                 );
 
                 // Update scaffold state immediately with the updated groups
-                if (scaffoldIdToRemove && scaffold && scaffold.id === scaffoldIdToRemove) {
+                if (scaffoldIdToRemove) {
                     const updatedScaffoldGroups = updatedGroups
                         .filter(group => group.scaffoldId === scaffoldIdToRemove)
                         .map((group: GroupData) => ({
@@ -671,10 +620,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                                 }))
                         }));
 
-                    setScaffold(prev => prev ? {
-                        ...prev,
-                        groups: updatedScaffoldGroups
-                    } : null);
+                    setScaffolds(prev => prev.map(s =>
+                        s.id === scaffoldIdToRemove ? { ...s, groups: updatedScaffoldGroups } : s
+                    ));
                 }
 
                 return updatedGroups;
@@ -731,7 +679,15 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             await fetchScaffolds(groups);
                         }}
                     />
-                    <GroupButton onClick={handleCreateGroup} />
+                    <GroupButton
+                        onClick={handleCreateGroup}
+                        onGroupComplete={async () => {
+                            await fetchUserData();
+                            await fetchGroups();
+                        }}
+                        onError={(msg) => setScaffoldLimitAlert(msg)}
+                        images={images}
+                    />
                     <GenerateStoryButton setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} />
                     <CraftStoryButton
                         images={images}
@@ -740,7 +696,14 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                         hasGroups={groupDivs.length > 0}
                         selectedPattern={selectedPattern}
                         onStoryGenerated={refreshImageDataAfterStoryGeneration}
-                        slotOrder={(selectedPattern === 'linear' || selectedPattern === 'inverted_pyramid') ? linearSlotOrder : undefined}
+                        scaffolds={scaffolds}
+                        slotOrder={(() => {
+                            const linearScaffold = scaffolds.find(s => {
+                                const p = SCAFFOLD_NUMBER_TO_PATTERN[s.number];
+                                return p === 'linear' || p === 'inverted_pyramid';
+                            });
+                            return linearScaffold ? linearSlotOrders[linearScaffold.id] : undefined;
+                        })()}
                     />
                     <FeedbackButton />
                     <CollaborateButton onSessionChange={onSessionChange} />
@@ -762,9 +725,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     onZoomLevelChange={setZoomLevel}
                     readOnly={readOnly}
                 >
-                    {/* Render Cause and Effect scaffold when pattern is selected */}
-                    {selectedPattern === 'cause_and_effect' && scaffold && (
+                    {/* Render all scaffolds based on their pattern type */}
+                    {scaffolds.filter(s => SCAFFOLD_NUMBER_TO_PATTERN[s.number] === 'cause_and_effect').map(scaffold => (
                         <CauseEffect
+                            key={scaffold.id}
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}
@@ -773,12 +737,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
-                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                    setScaffolds(prev => prev.map(s => s.id === scaffold.id ? { ...s, x: newX, y: newY } : s));
                                 } catch (error) {
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onClose={readOnly ? () => {} : () => handleScaffoldClose(scaffold.id)}
                             onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
                             onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
                             onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
@@ -788,10 +752,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
                         />
-                    )}
-                    {/* Render Question and Answer scaffold when pattern is selected */}
-                    {selectedPattern === 'question_answer' && scaffold && (
+                    ))}
+                    {scaffolds.filter(s => SCAFFOLD_NUMBER_TO_PATTERN[s.number] === 'question_answer').map(scaffold => (
                         <QuestionAnswer
+                            key={scaffold.id}
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}
@@ -800,12 +764,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
-                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                    setScaffolds(prev => prev.map(s => s.id === scaffold.id ? { ...s, x: newX, y: newY } : s));
                                 } catch (error) {
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onClose={readOnly ? () => {} : () => handleScaffoldClose(scaffold.id)}
                             onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
                             onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
                             onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
@@ -815,10 +779,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
                         />
-                    )}  
-                    {/* Render Problem and Solution scaffold when pattern is selected */}
-                    {selectedPattern === 'problem_solution' && scaffold && (
+                    ))}
+                    {scaffolds.filter(s => SCAFFOLD_NUMBER_TO_PATTERN[s.number] === 'problem_solution').map(scaffold => (
                         <ProblemSolution
+                            key={scaffold.id}
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}
@@ -827,12 +791,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
-                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                    setScaffolds(prev => prev.map(s => s.id === scaffold.id ? { ...s, x: newX, y: newY } : s));
                                 } catch (error) {
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onClose={readOnly ? () => {} : () => handleScaffoldClose(scaffold.id)}
                             onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
                             onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
                             onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
@@ -842,9 +806,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
                         />
-                    )}
-                    {selectedPattern === 'time_based' && scaffold && (
+                    ))}
+                    {scaffolds.filter(s => SCAFFOLD_NUMBER_TO_PATTERN[s.number] === 'time_based').map(scaffold => (
                         <TimeBased
+                            key={scaffold.id}
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}
@@ -853,12 +818,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
-                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                    setScaffolds(prev => prev.map(s => s.id === scaffold.id ? { ...s, x: newX, y: newY } : s));
                                 } catch (error) {
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onClose={readOnly ? () => {} : () => handleScaffoldClose(scaffold.id)}
                             onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
                             onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
                             onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
@@ -868,9 +833,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
                         />
-                    )}
-                    {selectedPattern === 'factor_analysis' && scaffold && (
+                    ))}
+                    {scaffolds.filter(s => SCAFFOLD_NUMBER_TO_PATTERN[s.number] === 'factor_analysis').map(scaffold => (
                         <FactorAnalysis
+                            key={scaffold.id}
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}
@@ -879,12 +845,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
-                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                    setScaffolds(prev => prev.map(s => s.id === scaffold.id ? { ...s, x: newX, y: newY } : s));
                                 } catch (error) {
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onClose={readOnly ? () => {} : () => handleScaffoldClose(scaffold.id)}
                             onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
                             onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
                             onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
@@ -894,9 +860,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
                         />
-                    )}
-                    {selectedPattern === 'overview_to_detail' && scaffold && (
+                    ))}
+                    {scaffolds.filter(s => SCAFFOLD_NUMBER_TO_PATTERN[s.number] === 'overview_to_detail').map(scaffold => (
                         <OverviewToDetail
+                            key={scaffold.id}
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}
@@ -905,12 +872,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
-                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                    setScaffolds(prev => prev.map(s => s.id === scaffold.id ? { ...s, x: newX, y: newY } : s));
                                 } catch (error) {
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onClose={readOnly ? () => {} : () => handleScaffoldClose(scaffold.id)}
                             onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
                             onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
                             onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
@@ -920,9 +887,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
                         />
-                    )}
-                    {selectedPattern === 'comparative' && scaffold && (
+                    ))}
+                    {scaffolds.filter(s => SCAFFOLD_NUMBER_TO_PATTERN[s.number] === 'comparative').map(scaffold => (
                         <Comparative
+                            key={scaffold.id}
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}
@@ -931,12 +899,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
-                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                    setScaffolds(prev => prev.map(s => s.id === scaffold.id ? { ...s, x: newX, y: newY } : s));
                                 } catch (error) {
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onClose={readOnly ? () => {} : () => handleScaffoldClose(scaffold.id)}
                             onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
                             onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
                             onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
@@ -946,9 +914,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
                         />
-                    )}
-                    {selectedPattern === 'shock_lead' && scaffold && (
+                    ))}
+                    {scaffolds.filter(s => SCAFFOLD_NUMBER_TO_PATTERN[s.number] === 'shock_lead').map(scaffold => (
                         <ShockLead
+                            key={scaffold.id}
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}
@@ -957,12 +926,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
-                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                    setScaffolds(prev => prev.map(s => s.id === scaffold.id ? { ...s, x: newX, y: newY } : s));
                                 } catch (error) {
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onClose={readOnly ? () => {} : () => handleScaffoldClose(scaffold.id)}
                             onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
                             onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
                             onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
@@ -972,9 +941,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
                         />
-                    )}
-                    {selectedPattern === 'workflow_process' && scaffold && (
+                    ))}
+                    {scaffolds.filter(s => SCAFFOLD_NUMBER_TO_PATTERN[s.number] === 'workflow_process').map(scaffold => (
                         <WorkflowProcess
+                            key={scaffold.id}
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}
@@ -983,12 +953,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
-                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                    setScaffolds(prev => prev.map(s => s.id === scaffold.id ? { ...s, x: newX, y: newY } : s));
                                 } catch (error) {
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onClose={readOnly ? () => {} : () => handleScaffoldClose(scaffold.id)}
                             onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
                             onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
                             onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
@@ -998,9 +968,10 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
                         />
-                    )}
-                    {selectedPattern === 'linear' && scaffold && (
+                    ))}
+                    {scaffolds.filter(s => SCAFFOLD_NUMBER_TO_PATTERN[s.number] === 'linear').map(scaffold => (
                         <Linear
+                            key={scaffold.id}
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}
@@ -1009,12 +980,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
-                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                    setScaffolds(prev => prev.map(s => s.id === scaffold.id ? { ...s, x: newX, y: newY } : s));
                                 } catch (error) {
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onClose={readOnly ? () => {} : () => handleScaffoldClose(scaffold.id)}
                             onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
                             onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
                             onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
@@ -1023,11 +994,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
-                            onSlotOrderChange={setLinearSlotOrder}
+                            onSlotOrderChange={(order: number[]) => setLinearSlotOrders(prev => ({ ...prev, [scaffold.id]: order }))}
                         />
-                    )}
-                    {selectedPattern === 'inverted_pyramid' && scaffold && (
+                    ))}
+                    {scaffolds.filter(s => SCAFFOLD_NUMBER_TO_PATTERN[s.number] === 'inverted_pyramid').map(scaffold => (
                         <InvertedPyramid
+                            key={scaffold.id}
                             images={images}
                             storyBinRef={storyBinRef}
                             setSelectedPattern={setSelectedPattern}
@@ -1036,12 +1008,12 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onPositionUpdate={readOnly ? async () => {} : async (newX: number, newY: number) => {
                                 try {
                                     await updateScaffold(scaffold.id, { x: newX, y: newY });
-                                    setScaffold(prev => prev ? { ...prev, x: newX, y: newY } : null);
+                                    setScaffolds(prev => prev.map(s => s.id === scaffold.id ? { ...s, x: newX, y: newY } : s));
                                 } catch (error) {
                                     console.error('Error updating scaffold position:', error);
                                 }
                             }}
-                            onClose={readOnly ? () => {} : handleScaffoldClose}
+                            onClose={readOnly ? () => {} : () => handleScaffoldClose(scaffold.id)}
                             onGroupAdd={readOnly ? () => {} : handleGroupAddToScaffold}
                             onGroupRemove={readOnly ? () => {} : handleGroupRemoveFromScaffold}
                             onCardAddToGroup={readOnly ? () => {} : handleCardAddToGroup}
@@ -1050,9 +1022,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             onGroupDescriptionChange={readOnly ? () => {} : handleGroupDescriptionChange}
                             onGroupUpdate={readOnly ? async () => {} : handleGroupUpdate}
                             readOnly={readOnly}
-                            onSlotOrderChange={setLinearSlotOrder}
+                            onSlotOrderChange={(order: number[]) => setLinearSlotOrders(prev => ({ ...prev, [scaffold.id]: order }))}
                         />
-                    )}
+                    ))}
                     {/* Render groups directly in the scrollable container - only groups without scaffold */}
                     {mainStoryboardGroups.map(group => (
                         <GroupDiv
@@ -1133,7 +1105,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             images={images}
                             setImages={setImages}
                             setGroupDivs={setGroupDivs}
-                            setScaffold={setScaffold}
+                            setScaffolds={setScaffolds}
                             setSelectedPattern={setSelectedPattern}
                             onClearComplete={async () => {
                                 await fetchUserData();
@@ -1145,7 +1117,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                             images={images}
                             setImages={setImages}
                             setGroupDivs={setGroupDivs}
-                            setScaffold={setScaffold}
+                            setScaffolds={setScaffolds}
                             setSelectedPattern={setSelectedPattern}
                             onDeleteComplete={async () => {
                                 await fetchUserData();
@@ -1158,6 +1130,20 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
             </div>
 
             {/* Recycle Bin Modal */}
+            {scaffoldLimitAlert && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4">
+                        <div className="text-sm text-grey-darkest">{scaffoldLimitAlert}</div>
+                        <div className="mt-6 text-right">
+                            <button
+                                onClick={() => setScaffoldLimitAlert(null)}
+                                className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-150"
+                            >OK</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {recycleBinOpen && ReactDOM.createPortal(
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
                     <div className="bg-white rounded-lg shadow-xl w-[80vw] h-[70vh] flex flex-col overflow-hidden">

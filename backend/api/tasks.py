@@ -520,22 +520,50 @@ def _sequence_figures_with_scaffolds(scaffold_data: dict, extra_groups: list, ex
         theme: Overall theme and objective
         story_structure_id: Story structure ID
     """
+    is_multi = scaffold_data.get("multi", False)
     elements_text = ""
-    for element in scaffold_data.get("elements", []):
-        element_name = element.get("name") or f"Element {element.get('number')}"
-        elements_text += f"\n### Scaffold Element: {element_name}\n"
-        elements_text += "Groups in this element:\n"
-        for group in element.get("groups", []):
-            elements_text += f"- Group: {group.get('name', '')}\n"
-            elements_text += f"  Description: {group.get('description', '')}\n"
-            elements_text += "  Figures:\n"
-            for fig_file, fig_info in group.get("figures", {}).items():
-                elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
-        element_figs = element.get("figures", {})
-        if element_figs:
-            elements_text += "Ungrouped figures in this element:\n"
-            for fig_file, fig_info in element_figs.items():
-                elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+
+    if is_multi:
+        # Group elements by scaffold name for clarity
+        from collections import defaultdict
+        scaffold_groups = defaultdict(list)
+        for element in scaffold_data.get("elements", []):
+            scaffold_name = element.get("_scaffold_name", "Unknown")
+            scaffold_groups[scaffold_name].append(element)
+
+        for scaffold_name, elements in scaffold_groups.items():
+            elements_text += f"\n## Scaffold: {scaffold_name}\n"
+            for element in elements:
+                element_name = element.get("name") or f"Element {element.get('number')}"
+                elements_text += f"\n### Element: {element_name}\n"
+                elements_text += "Groups in this element:\n"
+                for group in element.get("groups", []):
+                    elements_text += f"- Group: {group.get('name', '')}\n"
+                    elements_text += f"  Description: {group.get('description', '')}\n"
+                    elements_text += "  Figures:\n"
+                    for fig_file, fig_info in group.get("figures", {}).items():
+                        elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                element_figs = element.get("figures", {})
+                if element_figs:
+                    elements_text += "Ungrouped figures in this element:\n"
+                    for fig_file, fig_info in element_figs.items():
+                        elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+    else:
+        for element in scaffold_data.get("elements", []):
+            element_name = element.get("name") or f"Element {element.get('number')}"
+            elements_text += f"\n### Scaffold Element: {element_name}\n"
+            elements_text += "Groups in this element:\n"
+            for group in element.get("groups", []):
+                elements_text += f"- Group: {group.get('name', '')}\n"
+                elements_text += f"  Description: {group.get('description', '')}\n"
+                elements_text += "  Figures:\n"
+                for fig_file, fig_info in group.get("figures", {}).items():
+                    elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+            element_figs = element.get("figures", {})
+            if element_figs:
+                elements_text += "Ungrouped figures in this element:\n"
+                for fig_file, fig_info in element_figs.items():
+                    elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
 
     extra_groups_text = ""
     if extra_groups:
@@ -566,19 +594,31 @@ Topic theme and objective:
 {_load_prompt('sequence_figures_with_scaffolds.txt')}
 """.strip()
 
-    structure_info = STORY_SCAFFOLDS.get(story_structure_id)
-    if not structure_info:
-        fallback_id = next(iter(STORY_SCAFFOLDS))
-        logger.warning(
-            "[NARRATIVE] _sequence_figures_with_scaffolds received invalid story_structure_id '%s'; using '%s'.",
-            story_structure_id,
-            fallback_id,
-        )
-        structure_info = STORY_SCAFFOLDS[fallback_id]
-    structure_name = structure_info["name"]
-    structure_description = _load_prompt(structure_info["filename"])
+    if is_multi:
+        # Multi-scaffold: list all scaffold structures instead of one
+        scaffold_names = scaffold_data.get("scaffold_names", [])
+        structure_prompt = f"""
 
-    structure_prompt = f"""
+### Multiple Narrative Structures
+This workspace uses multiple scaffolds: {', '.join(scaffold_names)}.
+Sequence all figures across all scaffolds, respecting each scaffold's internal ordering while finding a coherent overall sequence.
+
+"""
+        base_prompt += structure_prompt
+    else:
+        structure_info = STORY_SCAFFOLDS.get(story_structure_id)
+        if not structure_info:
+            fallback_id = next(iter(STORY_SCAFFOLDS))
+            logger.warning(
+                "[NARRATIVE] _sequence_figures_with_scaffolds received invalid story_structure_id '%s'; using '%s'.",
+                story_structure_id,
+                fallback_id,
+            )
+            structure_info = STORY_SCAFFOLDS[fallback_id]
+        structure_name = structure_info["name"]
+        structure_description = _load_prompt(structure_info["filename"])
+
+        structure_prompt = f"""
 
 ### Provided Story Structure (use this structure)
 Use the following story structure. Its description is given below.
@@ -586,7 +626,7 @@ Use the following story structure. Its description is given below.
 {structure_description}
 
 """
-    base_prompt += structure_prompt
+        base_prompt += structure_prompt
 
     try:
         client = _openai_client()
@@ -618,26 +658,54 @@ def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_f
         sequence: Recommended sequence from sequencing step
         story_structure_id: Optional structure id to determine prompt selection
     """
+    is_multi = scaffold_data.get("multi", False)
     is_flow = story_structure_id in FLOW_SCAFFOLDS if story_structure_id else False
     elements_text = ""
-    for idx, element in enumerate(scaffold_data.get("elements", [])):
-        element_name = element.get("name") or f"Element {element.get('number')}"
-        if is_flow:
-            elements_text += f"\n### Section {idx + 1}\n"
-        else:
-            elements_text += f"\n### Scaffold Element: {element_name}\n"
-        elements_text += "Groups in this element:\n"
-        for group in element.get("groups", []):
-            elements_text += f"- Group: {group.get('name', '')}\n"
-            elements_text += f"  Description: {group.get('description', '')}\n"
-            elements_text += "  Figures:\n"
-            for fig_file, fig_info in group.get("figures", {}).items():
-                elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
-        element_figs = element.get("figures", {})
-        if element_figs:
-            elements_text += "Ungrouped figures in this element:\n"
-            for fig_file, fig_info in element_figs.items():
-                elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+
+    if is_multi:
+        # Group elements by scaffold name for the multi-scaffold prompt
+        from collections import defaultdict
+        scaffold_groups = defaultdict(list)
+        for element in scaffold_data.get("elements", []):
+            scaffold_name = element.get("_scaffold_name", "Unknown")
+            scaffold_groups[scaffold_name].append(element)
+
+        for scaffold_name, elements in scaffold_groups.items():
+            elements_text += f"\n## Scaffold: {scaffold_name}\n"
+            for element in elements:
+                element_name = element.get("name") or f"Element {element.get('number')}"
+                elements_text += f"\n### Element: {element_name}\n"
+                elements_text += "Groups in this element:\n"
+                for group in element.get("groups", []):
+                    elements_text += f"- Group: {group.get('name', '')}\n"
+                    elements_text += f"  Description: {group.get('description', '')}\n"
+                    elements_text += "  Figures:\n"
+                    for fig_file, fig_info in group.get("figures", {}).items():
+                        elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                element_figs = element.get("figures", {})
+                if element_figs:
+                    elements_text += "Ungrouped figures in this element:\n"
+                    for fig_file, fig_info in element_figs.items():
+                        elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+    else:
+        for idx, element in enumerate(scaffold_data.get("elements", [])):
+            element_name = element.get("name") or f"Element {element.get('number')}"
+            if is_flow:
+                elements_text += f"\n### Section {idx + 1}\n"
+            else:
+                elements_text += f"\n### Scaffold Element: {element_name}\n"
+            elements_text += "Groups in this element:\n"
+            for group in element.get("groups", []):
+                elements_text += f"- Group: {group.get('name', '')}\n"
+                elements_text += f"  Description: {group.get('description', '')}\n"
+                elements_text += "  Figures:\n"
+                for fig_file, fig_info in group.get("figures", {}).items():
+                    elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+            element_figs = element.get("figures", {})
+            if element_figs:
+                elements_text += "Ungrouped figures in this element:\n"
+                for fig_file, fig_info in element_figs.items():
+                    elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
 
     extra_groups_text = ""
     if extra_groups:
@@ -665,7 +733,7 @@ Scaffold structure (elements, groups, and figures):
 Sequence:
 {sequence}
 
-{_load_prompt(STORY_SCAFFOLDS[story_structure_id]['filename']) if story_structure_id and story_structure_id in FLOW_SCAFFOLDS else _load_prompt('build_story_with_scaffolds.txt')}
+{_load_prompt('build_story_multi_scaffold.txt') if is_multi else (_load_prompt(STORY_SCAFFOLDS[story_structure_id]['filename']) if story_structure_id and story_structure_id in FLOW_SCAFFOLDS else _load_prompt('build_story_with_scaffolds.txt'))}
 """.strip()
 
     try:
@@ -1326,7 +1394,7 @@ def _build_figure_data(ungrouped_images):
     return _build_figure_dict(ungrouped_images)
 
 
-def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None):
+def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, scaffold_id=None):
     """
     Fetch and organize all storyboard data (scaffolds, groups, images).
     
@@ -1350,76 +1418,98 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None):
         "figure_data": {}
     }
     
-    # Fetch scaffolds
-    # Map story_structure_id (string like 'cause_and_effect') to its number before filtering
-    scaffold_number = None
-    if story_structure_id:
-        scaffold_info = STORY_SCAFFOLDS.get(story_structure_id)
-        if scaffold_info:
-            scaffold_number = scaffold_info['number']
-        else:
-            logger.warning(f"[FETCH_DATA] Unknown story_structure_id '{story_structure_id}', filtering without number")
-    
-    logger.info(f"[SCAFFOLD_NUMBER]: {scaffold_number}")
-    scaffolds = ScaffoldData.objects.filter(user=user, number=scaffold_number) if scaffold_number else ScaffoldData.objects.filter(user=user)
-    scaffold_count = scaffolds.count()
-    
-    logger.info(f"[FETCH_DATA] Found {scaffold_count} scaffold(s)")
-    
-    if scaffold_count > 1:
-        logger.warning(f"[FETCH_DATA] Multiple scaffolds found ({scaffold_count}), using first")
-        output_json["error"] = f"Multiple scaffolds found ({scaffold_count})"
-    
-    scaffold = scaffolds.first() if scaffold_count > 0 else None
-    
     # Fetch all groups and images
     all_groups = GroupData.objects.filter(user=user).prefetch_related('images')
     all_images = ImageData.objects.filter(user=user, in_storyboard=True)
-    
     logger.info(f"[FETCH_DATA] Total: {all_groups.count()} groups, {all_images.count()} storyboard images")
-    
-    # Detailed breakdown for debugging
-    # logger.info(f"[FETCH_DATA] Image breakdown:")
-    # logger.info(f"  Total storyboard images: {all_images.count()}")
-    # logger.info(f"  Images with scaffold_id: {all_images.filter(scaffold_id__isnull=False).count()}")
-    # logger.info(f"  Images without scaffold_id: {all_images.filter(scaffold_id__isnull=True).count()}")
-    # logger.info(f"  Images with group_id: {all_images.filter(group_id__isnull=False).count()}")
-    # logger.info(f"  Images without group_id: {all_images.filter(group_id__isnull=True).count()}")
-    # logger.info(f"  Images with long_desc: {all_images.exclude(long_desc__exact='').count()}")
-    # logger.info(f"  Images without long_desc: {all_images.filter(long_desc__exact='').count()}")
-    
-    if scaffold:
-        scaffold_images_all = all_images.filter(scaffold_id=scaffold)
-        # logger.info(f"[FETCH_DATA] Scaffold '{scaffold.name}' image breakdown:")
-        # logger.info(f"  Total images in scaffold: {scaffold_images_all.count()}")
-        # logger.info(f"  Images in groups: {scaffold_images_all.filter(group_id__isnull=False).count()}")
-        # logger.info(f"  Images not in groups: {scaffold_images_all.filter(group_id__isnull=True).count()}")
-        for img in scaffold_images_all:
-            pass
-            # logger.info(f"    Image: {img.filepath}, group_id={img.group_id}, scaffold_group_number={img.scaffold_group_number}, has_long_desc={bool(img.long_desc)}")
-    
-    # Build scaffold_data if scaffold exists
-    if scaffold:
-        output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order)
-        
-        # Non-scaffold groups
-        non_scaffold_groups = all_groups.filter(scaffold_id__isnull=True)
-        output_json["group_data"] = _build_group_data(non_scaffold_groups, all_images)
-        
-        # Ungrouped, non-scaffold images
-        ungrouped_non_scaffold = all_images.filter(
-            scaffold_id__isnull=True,
-            group_id__isnull=True
-        )
-        output_json["figure_data"] = _build_figure_data(ungrouped_non_scaffold)
+
+    # Determine scaffold mode: specific scaffold, multi-scaffold, or no scaffold
+    if scaffold_id:
+        # Specific scaffold requested
+        try:
+            scaffold = ScaffoldData.objects.get(id=scaffold_id, user=user)
+            logger.info(f"[FETCH_DATA] Using specific scaffold: {scaffold.name} ({scaffold_id})")
+            if not story_structure_id:
+                from .pydandtic import STORY_SCAFFOLDS as _SS
+                for sid, info in _SS.items():
+                    if info.get('number') == scaffold.number:
+                        story_structure_id = sid
+                        break
+            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order)
+        except ScaffoldData.DoesNotExist:
+            logger.warning(f"[FETCH_DATA] Scaffold {scaffold_id} not found")
+
+    elif not story_structure_id:
+        # All workspace — no specific structure type, fetch all scaffolds
+        all_scaffolds = ScaffoldData.objects.filter(user=user)
+        scaffold_count = all_scaffolds.count()
+        logger.info(f"[FETCH_DATA] All workspace mode: {scaffold_count} scaffold(s)")
+
+        if scaffold_count == 1:
+            # Single scaffold — use it directly
+            scaffold = all_scaffolds.first()
+            # Infer structure id
+            for sid, info in STORY_SCAFFOLDS.items():
+                if info.get('number') == scaffold.number:
+                    story_structure_id = sid
+                    break
+            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order)
+
+        elif scaffold_count > 1:
+            # Multi-scaffold — build combined structure
+            scaffold_names = []
+            scaffold_structure_ids = []
+            combined_elements = []
+
+            for s in all_scaffolds:
+                # Infer structure id for this scaffold
+                s_structure_id = None
+                for sid, info in STORY_SCAFFOLDS.items():
+                    if info.get('number') == s.number:
+                        s_structure_id = sid
+                        break
+
+                scaffold_data = _build_scaffold_data(s, all_groups, all_images, s_structure_id)
+                if scaffold_data:
+                    scaffold_names.append(scaffold_data.get("name", "Unknown"))
+                    if s_structure_id:
+                        scaffold_structure_ids.append(s_structure_id)
+                    # Tag each element with its scaffold name for the prompt
+                    for element in scaffold_data.get("elements", []):
+                        element["_scaffold_name"] = scaffold_data.get("name", "")
+                        combined_elements.append(element)
+
+            output_json["scaffold_data"] = {
+                "multi": True,
+                "scaffold_names": scaffold_names,
+                "scaffold_structure_ids": scaffold_structure_ids,
+                "name": "Multiple Scaffolds",
+                "number": 0,
+                "story_structure_id": f"multi:{','.join(scaffold_structure_ids)}",
+                "description": f"Combined narrative using: {', '.join(scaffold_names)}",
+                "elements": combined_elements,
+            }
+            story_structure_id = f"multi:{','.join(scaffold_structure_ids)}"
+
     else:
-        
-        # All groups are non-scaffold
-        output_json["group_data"] = _build_group_data(all_groups, all_images)
-        
-        # All ungrouped images
-        ungrouped_images = all_images.filter(group_id__isnull=True)
-        output_json["figure_data"] = _build_figure_data(ungrouped_images)
+        # Specific structure type — filter scaffolds by type
+        scaffold_number = None
+        scaffold_info = STORY_SCAFFOLDS.get(story_structure_id)
+        if scaffold_info:
+            scaffold_number = scaffold_info['number']
+
+        scaffolds_qs = ScaffoldData.objects.filter(user=user, number=scaffold_number) if scaffold_number else ScaffoldData.objects.filter(user=user)
+        scaffold = scaffolds_qs.first()
+        if scaffold:
+            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order)
+
+    # Non-scaffold groups
+    non_scaffold_groups = all_groups.filter(scaffold_id__isnull=True)
+    output_json["group_data"] = _build_group_data(non_scaffold_groups, all_images)
+
+    # Ungrouped, non-scaffold images
+    ungrouped_non_scaffold = all_images.filter(scaffold_id__isnull=True, group_id__isnull=True)
+    output_json["figure_data"] = _build_figure_data(ungrouped_non_scaffold)
     
     # Validation summary
     total_scaffold_figures = 0
@@ -1453,7 +1543,7 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None):
 
 
 @shared_task(bind=True)
-def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=False, slot_order=None):
+def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=False, slot_order=None, scaffold_id=None):
     User = get_user_model()
     ImageData = _get_model('api', 'ImageData')
     GroupData = _get_model('api', 'GroupData')
@@ -1571,15 +1661,30 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         all_descriptions_text = "\n".join(all_descriptions)
 
         _progress(3, "Structuring...")
-        story_structure_id = _resolve_story_structure_id(
-            story_structure_id,
-            all_descriptions_text,
-        )
-        logger.info(f"Using story structure: {story_structure_id}")
+        # For "All workspace" (no scaffold_id and no story_structure_id), defer
+        # structure resolution until after fetching so multi-scaffold detection works.
+        is_all_workspace = not scaffold_id and not (story_structure_id or "").strip()
+        if not is_all_workspace:
+            story_structure_id = _resolve_story_structure_id(
+                story_structure_id,
+                all_descriptions_text,
+            )
+        logger.info(f"Using story structure: {story_structure_id} (all_workspace={is_all_workspace})")
 
         _progress(4, "Fetching...")
-        # Fetch all storyboard data (scaffolds, groups, figures) using the resolved structure id
-        storyboard_data = _fetch_all_storyboard_data(user, story_structure_id, slot_order)
+        # Fetch all storyboard data (scaffolds, groups, figures)
+        storyboard_data = _fetch_all_storyboard_data(user, story_structure_id, slot_order, scaffold_id)
+
+        # For All workspace with multi-scaffold, use the composite structure ID
+        # For All workspace with single scaffold, resolve from what _fetch returned
+        if is_all_workspace:
+            scaffold_data_tmp = storyboard_data.get("scaffold_data")
+            if scaffold_data_tmp and scaffold_data_tmp.get("multi"):
+                story_structure_id = scaffold_data_tmp["story_structure_id"]
+            elif scaffold_data_tmp and scaffold_data_tmp.get("story_structure_id"):
+                story_structure_id = scaffold_data_tmp["story_structure_id"]
+            else:
+                story_structure_id = _resolve_story_structure_id(None, all_descriptions_text)
         logger.info(f"[NARRATIVE] Storyboard data: {json.dumps(storyboard_data, indent=4)}")
 
         scaffold_data = storyboard_data.get("scaffold_data")
@@ -1763,12 +1868,17 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
             generation_mode = "flat"
 
         # Get display name from mapping for logging/caching
-        structure_info = STORY_SCAFFOLDS.get(story_structure_id or "")
-        story_structure_name = (
-            structure_info.get("name")
-            if structure_info and structure_info.get("name")
-            else (story_structure_id or "default")
-        )
+        if story_structure_id and story_structure_id.startswith("multi:"):
+            scaffold_data_for_name = storyboard_data.get("scaffold_data")
+            scaffold_names = scaffold_data_for_name.get("scaffold_names", []) if scaffold_data_for_name else []
+            story_structure_name = f"Multiple ({', '.join(scaffold_names)})" if scaffold_names else "Multiple Scaffolds"
+        else:
+            structure_info = STORY_SCAFFOLDS.get(story_structure_id or "")
+            story_structure_name = (
+                structure_info.get("name")
+                if structure_info and structure_info.get("name")
+                else (story_structure_id or "default")
+            )
 
         with transaction.atomic():
             cache, created = NarrativeCache.objects.get_or_create(
@@ -1805,4 +1915,220 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         logger.exception("Error generating narrative")
         if task_id:
             update_progress(user_id, "narrative", task_id, -1, TOTAL_STAGES, "Error", error=str(e))
+        raise
+
+
+# ---------------------------------------------------------------------------
+# Group with AI
+# ---------------------------------------------------------------------------
+
+PLACEHOLDER_DESC = "Ask AI to create a description for this visual."
+
+
+def _ai_group_images(visuals: list[dict], max_groups: int) -> list[dict]:
+    """
+    Call GPT to cluster visuals into groups.
+
+    Args:
+        visuals: List of {"key": identifier, "description": text}
+        max_groups: Maximum number of groups to create
+
+    Returns:
+        List of {"title": str, "description": str, "members": [key, ...]}
+    """
+    visuals_text = "\n".join(
+        f"- {v['key']}: {v['description']}" for v in visuals
+    )
+    prompt_template = _load_prompt("group_with_ai.txt")
+    prompt = prompt_template.replace("{max_groups}", str(max_groups)).replace(
+        "{visuals_text}", visuals_text
+    )
+
+    client = _openai_client()
+    resp = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that returns only valid JSON."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.1,
+        timeout=30,
+    )
+    raw = resp.choices[0].message.content.strip()
+
+    # Strip markdown fences if present
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```$", "", raw)
+
+    groups = json.loads(raw)
+
+    # Validate: every input key should appear exactly once
+    input_keys = {v["key"] for v in visuals}
+    seen = set()
+    for group in groups:
+        group["members"] = [m for m in group["members"] if m in input_keys]
+        seen.update(group["members"])
+
+    # Any missing keys get added to Miscellaneous
+    missing = input_keys - seen
+    if missing:
+        misc = next((g for g in groups if g["title"] == "Miscellaneous"), None)
+        if misc:
+            misc["members"].extend(missing)
+        else:
+            groups.append({
+                "title": "Miscellaneous",
+                "description": "Items that do not fit a single theme.",
+                "members": list(missing),
+            })
+
+    # Remove empty groups
+    groups = [g for g in groups if g["members"]]
+
+    return groups
+
+
+@shared_task(bind=True)
+def group_with_ai_task(self, user_id, mode="ungrouped"):
+    """
+    AI-powered grouping of workspace visuals.
+
+    Args:
+        user_id: User ID
+        mode: "all" (regroup everything non-scaffold) or "ungrouped" (only ungrouped)
+    """
+    import math
+
+    User = get_user_model()
+    ImageData = _get_model("api", "ImageData")
+    GroupData = _get_model("api", "GroupData")
+
+    task_id = self.request.id
+    TOTAL_STAGES = 3
+
+    def _progress(stage, name):
+        update_progress(user_id, "grouping", task_id, stage, TOTAL_STAGES, name)
+
+    try:
+        _progress(0, "Preparing...")
+        user = User.objects.get(id=user_id)
+
+        # If "all" mode, delete existing non-scaffold groups first
+        if mode == "all":
+            non_scaffold_groups = GroupData.objects.filter(user=user, scaffold_id__isnull=True)
+            count = non_scaffold_groups.count()
+            # Clearing group_id on images happens via SET_NULL on delete
+            non_scaffold_groups.delete()
+            logger.info(f"[AI_GROUP] Deleted {count} non-scaffold groups for user {user.username}")
+
+        # Fetch eligible images
+        base_qs = ImageData.objects.filter(user=user, in_storyboard=True, scaffold_id__isnull=True)
+
+        if mode == "ungrouped":
+            base_qs = base_qs.filter(group_id__isnull=True)
+
+        eligible = []
+        skipped_unannotated = 0
+        total_considered = 0
+        for img in base_qs:
+            # Skip instructor feedback
+            if img.source == "instructor":
+                continue
+            # Determine key and description
+            is_note = not img.filepath
+            if is_note:
+                # Sticky note — skip empty ones
+                text = (img.short_desc or "").strip()
+                if not text:
+                    continue
+                key = img.short_desc[:80] or f"Note {img.index + 1}"
+                description = img.long_desc or img.short_desc or ""
+            else:
+                key = img.filepath
+                description = img.long_desc or ""
+
+            total_considered += 1
+
+            # Skip images without any description
+            if not description or description == PLACEHOLDER_DESC:
+                skipped_unannotated += 1
+                continue
+
+            eligible.append({"key": key, "image_id": str(img.id), "description": description})
+
+        if len(eligible) == 0:
+            _progress(-1, "Error")
+            update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error",
+                            error="No annotated visuals found. Add images and annotate them first.")
+            return "No annotated visuals found."
+
+        if len(eligible) == 1:
+            _progress(-1, "Error")
+            update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error",
+                            error="Too few visuals. Add more in order to group.")
+            return "Too few visuals."
+
+        if skipped_unannotated > len(eligible):
+            _progress(-1, "Error")
+            update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error",
+                            error=f"{skipped_unannotated} of your {total_considered} visuals are not yet annotated. Annotate them first for better grouping results.")
+            return "Too many unannotated visuals."
+
+        max_groups = math.ceil(len(eligible) / 2)
+        logger.info(f"[AI_GROUP] {len(eligible)} eligible visuals, max {max_groups} groups")
+
+        _progress(1, "Analyzing...")
+        proposed_groups = _ai_group_images(eligible, max_groups)
+        logger.info(f"[AI_GROUP] GPT proposed {len(proposed_groups)} groups")
+
+        _progress(2, "Grouping...")
+
+        # Build lookup from key -> image id
+        key_to_id = {v["key"]: v["image_id"] for v in eligible}
+
+        created_groups = []
+        with transaction.atomic():
+            for i, pg in enumerate(proposed_groups):
+                # Offset positions so groups don't stack
+                offset_x = (i % 4) * 350
+                offset_y = (i // 4) * 300
+                group = GroupData.objects.create(
+                    user=user,
+                    name=pg["title"][:100],
+                    description=pg["description"][:500] if pg.get("description") else "",
+                    x=150.0 + offset_x + (i * 17 % 60),
+                    y=150.0 + offset_y + (i * 31 % 50),
+                )
+                # Assign images to this group
+                member_ids = [key_to_id[m] for m in pg["members"] if m in key_to_id]
+                ImageData.objects.filter(id__in=member_ids).update(group_id=group)
+
+                created_groups.append({
+                    "id": str(group.id),
+                    "name": group.name,
+                    "member_count": len(member_ids),
+                })
+
+        _progress(TOTAL_STAGES, "Complete")
+        logger.info(f"[AI_GROUP] Created {len(created_groups)} groups for user {user.username}")
+        return {
+            "status": "success",
+            "groups_created": len(created_groups),
+            "groups": created_groups,
+        }
+
+    except User.DoesNotExist:
+        logger.error(f"User with id {user_id} not found")
+        update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error",
+                        error=f"User with id {user_id} not found")
+        return f"User with id {user_id} not found"
+    except json.JSONDecodeError as e:
+        logger.error(f"[AI_GROUP] Failed to parse GPT response: {e}")
+        update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error",
+                        error="AI returned an invalid response. Please try again.")
+        return "Invalid AI response"
+    except Exception as e:
+        logger.exception("[AI_GROUP] Error grouping with AI")
+        update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error", error=str(e))
         raise

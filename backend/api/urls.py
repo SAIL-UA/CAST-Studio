@@ -6,7 +6,7 @@ from .views import (
     GenerateDescriptionsView, GenerateNarrativeView,
     LogActionView, UploadJupyterLogView,
     ExportJupyterLogsView, RequestFeedbackView,
-    CreateGroupView, GetGroupView, UpdateGroupView, DeleteGroupView,
+    CreateGroupView, GetGroupView, UpdateGroupView, DeleteGroupView, AIGroupView,
     LogMousePositionView, LogScrollView,
     ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView,
     TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, InstructorUsersView, InstructorWorkspaceView,
@@ -50,6 +50,7 @@ urlpatterns = [
     path("groups/create/", CreateGroupView.as_view(), name="group-create"),
     path("groups/<uuid:group_id>/update/", UpdateGroupView.as_view(), name="group-update"),
     path("groups/<uuid:group_id>/delete/", DeleteGroupView.as_view(), name="group-delete"),
+    path("groups/ai/", AIGroupView.as_view(), name="group-ai"),
 
     # Narrative
     path("narrative/generate/async/", GenerateNarrativeAsyncView.as_view(), name="narrative-generate-async"),

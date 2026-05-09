@@ -1,0 +1,25 @@
+You are organizing a set of visuals (images and notes) into logical groups for a data storytelling workspace.
+
+Given the list of visuals below, create groups that cluster related items together by theme, topic, or purpose.
+
+Rules:
+1. Create no more than {max_groups} groups.
+2. Every visual must appear in exactly one group. Do not skip any.
+3. Each group must have a concise title (3-6 words) and a one-sentence description explaining what the group covers.
+4. If a visual does not fit any coherent theme, place it in a group titled "Miscellaneous" with description "Items that do not fit a single theme."
+5. Only create a "Miscellaneous" group if truly necessary. Prefer finding meaningful connections.
+6. Do not create single-item groups unless there is genuinely no other visual it relates to.
+
+Return ONLY valid JSON. No markdown, no commentary. The format must be:
+[
+  {
+    "title": "Group Title",
+    "description": "One sentence describing this group.",
+    "members": ["filename1.png", "filename2.png"]
+  }
+]
+
+Use the exact identifiers from the input list as member values. Do not rename or modify them.
+
+Visuals:
+{visuals_text}

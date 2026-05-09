@@ -1,12 +1,13 @@
 // Import dependencies
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { captureActionContext, logAction } from '../utils/userActionLogger';
 import { generateNarrativeAsync, getImageDataAll, getNarrativeCache } from '../services/api';
 import { useTaskProgress } from '../hooks/useTaskProgress';
-import ProgressButton from './ProgressButton';
+import { SCAFFOLD_NUMBER_TO_PATTERN } from '../types/scaffoldMappings';
 
 // Import types
-import { ImageData } from '../types/types';
+import { ImageData, ScaffoldData } from '../types/types';
 const DESCRIPTION_PLACEHOLDER = 'Ask AI to create a description for this visual.';
 
 // Props interface
@@ -18,16 +19,33 @@ type CraftStoryButtonProps = {
     selectedPattern: string;
     onStoryGenerated?: () => Promise<void>;
     slotOrder?: number[] | null;
+    scaffolds?: ScaffoldData[];
 }
 
 // Craft Story button component
-const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroups = false, selectedPattern, onStoryGenerated, slotOrder }: CraftStoryButtonProps) => {
+const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroups = false, selectedPattern, onStoryGenerated, slotOrder, scaffolds = [] }: CraftStoryButtonProps) => {
 
     const [taskId, setTaskId] = useState<string | null>(null);
     const [alertModal, setAlertModal] = useState<string | null>(null);
     const [confirmModal, setConfirmModal] = useState<string | null>(null);
     const [pendingGeneration, setPendingGeneration] = useState<(() => void) | null>(null);
+    const targetScaffoldIdRef = useRef<string | null>(null);
     const { progress, stageName, error, isComplete } = useTaskProgress(taskId);
+
+    // Listen for scaffold-specific story generation events (from play buttons on scaffolds)
+    useEffect(() => {
+        const handleGenerateEvent = (e: Event) => {
+            const scaffoldId = (e as CustomEvent).detail?.scaffoldId;
+            if (scaffoldId && !storyLoading) {
+                targetScaffoldIdRef.current = scaffoldId;
+                // Create a synthetic mouse event to pass to handleCraft
+                const syntheticEvent = { preventDefault: () => {}, currentTarget: document.getElementById('craft-story-button') } as any;
+                handleCraft(syntheticEvent);
+            }
+        };
+        window.addEventListener('generateScaffoldStory', handleGenerateEvent);
+        return () => window.removeEventListener('generateScaffoldStory', handleGenerateEvent);
+    }, [storyLoading, images, scaffolds, selectedPattern, hasGroups, slotOrder]);
 
     // Handle error from progress tracking
     if (error && storyLoading) {
@@ -59,30 +77,52 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
         const unannotatedImages = actualImages.filter(img => !hasValidDescription(img));
         const contentNotes = stickyNotes.filter(img => hasContent(img));
 
-        // --- Validation ---
-        const missing: string[] = [];
+        const scaffoldId = targetScaffoldIdRef.current;
 
-        // 1. At least one annotated image is required
-        if (annotatedImages.length === 0) {
-            missing.push('Upload visuals to the workspace and annotate them');
-        }
+        if (scaffoldId) {
+            // --- Scaffold-specific validation ---
+            const scaffoldItems = storyboardItems.filter(img => img.scaffoldId === scaffoldId);
+            if (scaffoldItems.length === 0) {
+                setAlertModal('Add visuals to the scaffold to continue.');
+                return;
+            }
 
-        // 2. Has a narrative pattern been selected?
-        if (!selectedPattern || selectedPattern === '') {
-            missing.push('Select a narrative structure (with AI or manually)');
-        }
+            const scaffoldImages = scaffoldItems.filter(img => img.filepath && img.filepath !== '');
+            const scaffoldAnnotated = scaffoldImages.filter(img => hasValidDescription(img));
+            const scaffoldUnannotated = scaffoldImages.filter(img => !hasValidDescription(img));
 
-        // If hard checks failed, show alert and return
-        if (missing.length > 0) {
-            setAlertModal('Before generating a story, please:\n\n' + missing.map(m => `• ${m}`).join('\n'));
-            return;
-        }
+            if (scaffoldAnnotated.length === 0) {
+                setAlertModal('Before generating a story, please:\n\n• Add at least one annotated visual to the scaffold');
+                return;
+            }
 
-        // 3. Warn about unannotated images (soft check — user can proceed)
-        if (unannotatedImages.length > 0) {
-            setConfirmModal(`${unannotatedImages.length} image(s) don't have descriptions and will be excluded from the story. Continue?`);
-            setPendingGeneration(() => () => startGeneration(ctx));
-            return;
+            if (scaffoldUnannotated.length > 0) {
+                setConfirmModal(`${scaffoldUnannotated.length} image(s) in this scaffold don't have descriptions and will be excluded. Continue?`);
+                setPendingGeneration(() => () => startGeneration(ctx));
+                return;
+            }
+        } else {
+            // --- Workspace-wide validation ---
+            const missing: string[] = [];
+
+            if (annotatedImages.length === 0) {
+                missing.push('Upload visuals to the workspace and annotate them');
+            }
+
+            if (!selectedPattern || selectedPattern === '') {
+                missing.push('Select a narrative structure (with AI or manually)');
+            }
+
+            if (missing.length > 0) {
+                setAlertModal('Before generating a story, please:\n\n' + missing.map(m => `• ${m}`).join('\n'));
+                return;
+            }
+
+            if (unannotatedImages.length > 0) {
+                setConfirmModal(`${unannotatedImages.length} image(s) don't have descriptions and will be excluded from the story. Continue?`);
+                setPendingGeneration(() => () => startGeneration(ctx));
+                return;
+            }
         }
 
         // All checks passed — generate
@@ -113,7 +153,24 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
             }
 
             // Generate the story (async with polling)
-            const taskResponse = await generateNarrativeAsync(selectedPattern || undefined, hasGroups, slotOrder || undefined);
+            // Determine the story structure and scaffold for the selected target
+            const scaffoldId = targetScaffoldIdRef.current;
+            let storyStructureId: string | undefined;
+            let scaffoldSlotOrder = slotOrder || undefined;
+            if (scaffoldId && scaffolds.length > 0) {
+                // Specific scaffold — use its structure type
+                const targetScaffold = scaffolds.find(s => s.id === scaffoldId);
+                if (targetScaffold) {
+                    storyStructureId = SCAFFOLD_NUMBER_TO_PATTERN[targetScaffold.number] || selectedPattern || undefined;
+                }
+            } else if (!scaffoldId && scaffolds.length > 0) {
+                // All workspace with scaffolds — don't filter by structure type
+                storyStructureId = undefined;
+            } else {
+                // No scaffolds — use selected pattern
+                storyStructureId = selectedPattern || undefined;
+            }
+            const taskResponse = await generateNarrativeAsync(storyStructureId, hasGroups, scaffoldSlotOrder, scaffoldId || undefined);
 
             if (taskResponse.status === 'success' && taskResponse.task_id) {
                 // Start progress tracking
@@ -198,21 +255,82 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
 
     }
 
+    // Build scaffold options for dropdown
+    const scaffoldOptions = scaffolds.map((s, idx) => ({
+        id: s.id,
+        label: `${SCAFFOLD_NUMBER_TO_PATTERN[s.number]?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || `Scaffold ${idx + 1}`}`,
+        number: s.number,
+    }));
+
     // Visible component
     return (
         <>
-            <ProgressButton
-                id="craft-story-button"
-                logId="craft-story-button"
-                color="#348b94"
-                label="Generate Story"
-                progress={progress}
-                isRunning={storyLoading}
-                onClick={handleCraft}
-                disabled={storyLoading}
-            >
-                {storyLoading ? (stageName || 'Generating...') : 'Generate Story'}
-            </ProgressButton>
+            {scaffolds.length > 0 ? (
+                <DropdownMenu.Root>
+                    <DropdownMenu.Trigger asChild disabled={storyLoading}>
+                        <button
+                            id="craft-story-button"
+                            log-id="craft-story-button"
+                            className="relative overflow-hidden flex items-center text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ backgroundColor: storyLoading ? '#348b9466' : '#348b94' }}
+                            disabled={storyLoading}
+                        >
+                            {storyLoading && (
+                                <div className="absolute top-0 left-0 h-full transition-[width] duration-500 ease-out" style={{ width: `${progress}%`, backgroundColor: '#348b94' }} />
+                            )}
+                            <span className="invisible whitespace-nowrap flex items-center gap-2"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"/></svg>Generate Story <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path></svg></span>
+                            <span className="absolute inset-0 flex items-center justify-center z-10 gap-2">
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"/></svg>
+                                {storyLoading ? (stageName || 'Generating...') : 'Generate Story'}
+                                {!storyLoading && <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path></svg>}
+                            </span>
+                        </button>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Portal>
+                        <DropdownMenu.Content
+                            className="mt-1 ml-1 shadow-lg z-[400] bg-white rounded-lg py-1 min-w-[200px]"
+                            sideOffset={4}
+                            align="start"
+                            onCloseAutoFocus={(e) => e.preventDefault()}
+                        >
+                            <DropdownMenu.Item
+                                className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
+                                onSelect={(e) => { targetScaffoldIdRef.current = null; handleCraft(e as any); }}
+                            >
+                                All workspace
+                            </DropdownMenu.Item>
+                            <div className="h-px mx-3 bg-grey" />
+                            {scaffoldOptions.map((opt, idx) => (
+                                <DropdownMenu.Item
+                                    key={opt.id}
+                                    className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
+                                    onSelect={(e) => { targetScaffoldIdRef.current = opt.id; handleCraft(e as any); }}
+                                >
+                                    {idx + 1}. {opt.label}
+                                </DropdownMenu.Item>
+                            ))}
+                        </DropdownMenu.Content>
+                    </DropdownMenu.Portal>
+                </DropdownMenu.Root>
+            ) : (
+                <button
+                    id="craft-story-button"
+                    log-id="craft-story-button"
+                    className="relative overflow-hidden flex items-center text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: storyLoading ? '#348b9466' : '#348b94' }}
+                    disabled={storyLoading}
+                    onClick={handleCraft}
+                >
+                    {storyLoading && (
+                        <div className="absolute top-0 left-0 h-full transition-[width] duration-500 ease-out" style={{ width: `${progress}%`, backgroundColor: '#348b94' }} />
+                    )}
+                    <span className="invisible whitespace-nowrap flex items-center gap-2"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"/></svg>Generate Story</span>
+                    <span className="absolute inset-0 flex items-center justify-center z-10 gap-2">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"/></svg>
+                        {storyLoading ? (stageName || 'Generating...') : 'Generate Story'}
+                    </span>
+                </button>
+            )}
 
             {alertModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">

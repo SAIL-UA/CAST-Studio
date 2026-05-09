@@ -10,12 +10,12 @@ type DeleteAllButtonProps = {
     onDeleteComplete: () => Promise<void>;
     setImages?: React.Dispatch<React.SetStateAction<ImageData[]>>;
     setGroupDivs?: React.Dispatch<React.SetStateAction<GroupData[]>>;
-    setScaffold?: React.Dispatch<React.SetStateAction<ScaffoldData | null>>;
+    setScaffolds?: React.Dispatch<React.SetStateAction<ScaffoldData[]>>;
     setSelectedPattern?: React.Dispatch<React.SetStateAction<string>>;
 }
 
 // DeleteAll component
-const DeleteAllButton = ({ images, onDeleteComplete, setImages, setGroupDivs, setScaffold, setSelectedPattern }: DeleteAllButtonProps) => {
+const DeleteAllButton = ({ images, onDeleteComplete, setImages, setGroupDivs, setScaffolds, setSelectedPattern }: DeleteAllButtonProps) => {
     const [showModal, setShowModal] = useState<boolean>(false);
     const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const [groupCount, setGroupCount] = useState<number>(0);
@@ -97,8 +97,8 @@ const DeleteAllButton = ({ images, onDeleteComplete, setImages, setGroupDivs, se
             if (setGroupDivs) {
                 setGroupDivs([]);
             }
-            if (setScaffold) {
-                setScaffold(null);
+            if (setScaffolds) {
+                setScaffolds([]);
             }
             if (setSelectedPattern) {
                 setSelectedPattern('');

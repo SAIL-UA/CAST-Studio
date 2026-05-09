@@ -229,11 +229,17 @@ export const deleteGroup = async(groupId: string) => {
   return response;
 };
 
-export const generateNarrativeAsync = async(story_structure_id?: string, use_groups?: boolean, slot_order?: number[]) => {
+export const aiGroupImages = async(mode: 'all' | 'ungrouped') => {
+  const response = await API.post('/groups/ai/', { mode });
+  return response.data;
+};
+
+export const generateNarrativeAsync = async(story_structure_id?: string, use_groups?: boolean, slot_order?: number[], scaffold_id?: string) => {
   const response = await API.post('/narrative/generate/async/', {
     story_structure_id: story_structure_id || null,
     use_groups: use_groups || false,
     slot_order: slot_order || null,
+    scaffold_id: scaffold_id || null,
   })
   return response.data;
 };
@@ -445,7 +451,7 @@ export const updateScaffold = async(scaffoldId: string, data: any) => {
   return response;
 };
 
-export const deleteScaffold = async() => {
-  const response = await API.post(`/scaffolds/delete/`, {});
+export const deleteScaffold = async(scaffoldId?: string) => {
+  const response = await API.post(`/scaffolds/delete/`, scaffoldId ? { scaffold_id: scaffoldId } : {});
   return response;
 };

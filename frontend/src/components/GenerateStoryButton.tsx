@@ -73,6 +73,7 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
                     disabled={storyLoading}
                 >
                     <span className="flex items-center justify-center gap-2">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="10" height="5" rx="1"/><rect x="3" y="9" width="10" height="5" rx="1"/></svg>
                         {storyLoading ? 'Generating...' : formatPatternName(selectedPattern || '')}
                         <svg
                             className="fill-current h-4 w-4"
