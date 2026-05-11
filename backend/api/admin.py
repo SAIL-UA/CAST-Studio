@@ -5,7 +5,7 @@ from io import StringIO
 from django.http import StreamingHttpResponse
 from django.utils.timezone import now
 from django.utils.html import format_html
-from .models import ImageData, NarrativeCache, UserAction, JupyterLog, User, FeatureFlags
+from .models import ImageData, NarrativeCache, UserAction, JupyterLog, User, FeatureFlags, Study, StudyReferralCode
 
 
 
@@ -209,3 +209,34 @@ class UsersAdmin(admin.ModelAdmin):
 @admin.register(FeatureFlags)
 class FeatureFlagsAdmin(admin.ModelAdmin):
     list_display = ("id", "annotate_with_ai", "select_with_ai")
+
+
+### Research Studies ###
+class StudyReferralCodeInline(admin.TabularInline):
+    model = StudyReferralCode
+    extra = 0
+    fields = ("code", "is_active", "uses_count", "max_uses", "expires_at", "created_at")
+    readonly_fields = ("uses_count", "created_at")
+
+
+@admin.register(Study)
+class StudyAdmin(admin.ModelAdmin):
+    list_display = (
+        "id", "name", "is_active",
+        "annotate_with_ai", "select_with_ai", "ai_feedback",
+        "created_by", "created_at",
+    )
+    list_filter = ("is_active", "annotate_with_ai", "select_with_ai", "ai_feedback")
+    search_fields = ("name", "created_by__username", "created_by__email")
+    list_select_related = ("created_by",)
+    readonly_fields = ("created_at", "last_modified")
+    inlines = [StudyReferralCodeInline]
+
+
+@admin.register(StudyReferralCode)
+class StudyReferralCodeAdmin(admin.ModelAdmin):
+    list_display = ("code", "study", "is_active", "uses_count", "max_uses", "expires_at", "created_at")
+    list_filter = ("is_active", "study")
+    search_fields = ("code", "study__name")
+    list_select_related = ("study",)
+    readonly_fields = ("uses_count", "created_at", "last_modified")

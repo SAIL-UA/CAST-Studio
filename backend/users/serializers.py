@@ -12,12 +12,25 @@ User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
   password = serializers.CharField(write_only=True)
+  referral_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
+  study = serializers.SerializerMethodField()
 
   class Meta:
     model = User
-    fields = ('id', 'username', 'password', 'email', 'first_name', 'last_name', 'is_instructor')
+    fields = ('id', 'username', 'password', 'email', 'first_name', 'last_name', 'is_instructor', 'referral_code', 'study')
+
+  def get_study(self, obj):
+    s = getattr(obj, 'study', None)
+    if s is None:
+      return None
+    return {
+      'id': str(s.id),
+      'name': s.name,
+      'is_active': s.is_active,
+    }
 
   def create(self, validated_data):
+    validated_data.pop('referral_code', None)  # consumed by RegisterView, not a User field
     user = User.objects.create_user(
       username=validated_data['username'],
       password=validated_data['password'],

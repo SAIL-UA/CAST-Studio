@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/Auth';
-import { getFeatureFlags, updateFeatureFlags, getInstructorUsers, exportWorkspaceReport, getEngagementReport } from '../services/api';
+import {
+    getFeatureFlags, updateFeatureFlags, getInstructorUsers,
+    exportWorkspaceReport, getEngagementReport,
+    listResearchStudies, createResearchStudy, updateResearchStudy, deleteResearchStudy,
+    createStudyReferralCode, updateStudyReferralCode, deleteStudyReferralCode,
+    type ResearchStudy,
+} from '../services/api';
 import Header from '../components/Header';
 import CompactSidebar from '../components/CompactSidebar';
 import Footer from '../components/Footer';
@@ -41,9 +47,148 @@ const Instructor = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [engagementData, setEngagementData] = useState<any[] | null>(null);
     const [engagementCategories, setEngagementCategories] = useState<string[]>([]);
-    const [activeTab, setActiveTab] = useState<'accounts' | 'engagement'>('accounts');
+    const [activeTab, setActiveTab] = useState<'accounts' | 'engagement' | 'studies'>('accounts');
     const [sortColumn, setSortColumn] = useState<SortColumn>('last_name');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+    // Research studies state
+    const [studies, setStudies] = useState<ResearchStudy[]>([]);
+    const [studiesLoading, setStudiesLoading] = useState(false);
+    const [newStudyName, setNewStudyName] = useState('');
+    const [newStudyAnnotate, setNewStudyAnnotate] = useState(true);
+    const [newStudySelect, setNewStudySelect] = useState(true);
+    const [newStudyFeedback, setNewStudyFeedback] = useState(true);
+    const [creatingStudy, setCreatingStudy] = useState(false);
+    const [busyStudyId, setBusyStudyId] = useState<string | null>(null);
+
+    const refreshStudies = async () => {
+        setStudiesLoading(true);
+        try {
+            const list = await listResearchStudies();
+            setStudies(list);
+        } catch (err) {
+            console.error('Error loading studies:', err);
+            setAlertModal('Could not load research studies.');
+        } finally {
+            setStudiesLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isInstructor && activeTab === 'studies' && studies.length === 0 && !studiesLoading) {
+            refreshStudies();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isInstructor, activeTab]);
+
+    const handleCreateStudy = async () => {
+        const name = newStudyName.trim();
+        if (!name) {
+            setAlertModal('Please enter a study name.');
+            return;
+        }
+        setCreatingStudy(true);
+        try {
+            const created = await createResearchStudy({
+                name,
+                annotate_with_ai: newStudyAnnotate,
+                select_with_ai: newStudySelect,
+                ai_feedback: newStudyFeedback,
+            });
+            setStudies(prev => [created, ...prev]);
+            setNewStudyName('');
+            setNewStudyAnnotate(true);
+            setNewStudySelect(true);
+            setNewStudyFeedback(true);
+        } catch (err) {
+            console.error('Error creating study:', err);
+            setAlertModal('Could not create study.');
+        } finally {
+            setCreatingStudy(false);
+        }
+    };
+
+    const handlePatchStudy = async (studyId: string, patch: Partial<ResearchStudy>) => {
+        setBusyStudyId(studyId);
+        try {
+            const updated = await updateResearchStudy(studyId, patch as any);
+            setStudies(prev => prev.map(s => s.id === studyId ? { ...updated, referral_codes: s.referral_codes } : s));
+        } catch (err) {
+            console.error('Error updating study:', err);
+            setAlertModal('Could not update study.');
+        } finally {
+            setBusyStudyId(null);
+        }
+    };
+
+    const handleDeleteStudy = async (studyId: string) => {
+        if (!window.confirm('Delete this study? Its referral codes will be removed and participants will be detached. This cannot be undone.')) return;
+        setBusyStudyId(studyId);
+        try {
+            await deleteResearchStudy(studyId);
+            setStudies(prev => prev.filter(s => s.id !== studyId));
+        } catch (err) {
+            console.error('Error deleting study:', err);
+            setAlertModal('Could not delete study.');
+        } finally {
+            setBusyStudyId(null);
+        }
+    };
+
+    const handleGenerateCode = async (studyId: string) => {
+        setBusyStudyId(studyId);
+        try {
+            const code = await createStudyReferralCode(studyId);
+            setStudies(prev => prev.map(s => s.id === studyId
+                ? { ...s, referral_codes: [code, ...s.referral_codes] }
+                : s));
+        } catch (err) {
+            console.error('Error creating code:', err);
+            setAlertModal('Could not generate a referral code.');
+        } finally {
+            setBusyStudyId(null);
+        }
+    };
+
+    const handleToggleCode = async (studyId: string, codeId: string, is_active: boolean) => {
+        setBusyStudyId(studyId);
+        try {
+            const updated = await updateStudyReferralCode(codeId, { is_active });
+            setStudies(prev => prev.map(s => s.id === studyId
+                ? { ...s, referral_codes: s.referral_codes.map(c => c.id === codeId ? updated : c) }
+                : s));
+        } catch (err) {
+            console.error('Error toggling code:', err);
+            setAlertModal('Could not update the code.');
+        } finally {
+            setBusyStudyId(null);
+        }
+    };
+
+    const handleDeleteCode = async (studyId: string, codeId: string) => {
+        if (!window.confirm('Delete this referral code? It will no longer work for signup.')) return;
+        setBusyStudyId(studyId);
+        try {
+            await deleteStudyReferralCode(codeId);
+            setStudies(prev => prev.map(s => s.id === studyId
+                ? { ...s, referral_codes: s.referral_codes.filter(c => c.id !== codeId) }
+                : s));
+        } catch (err) {
+            console.error('Error deleting code:', err);
+            setAlertModal('Could not delete the code.');
+        } finally {
+            setBusyStudyId(null);
+        }
+    };
+
+    const copyToClipboard = async (text: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setAlertModal(`Copied "${text}" to clipboard.`);
+        } catch {
+            setAlertModal('Could not copy to clipboard.');
+        }
+    };
 
     // Redirect non-instructor users
     useEffect(() => {
@@ -235,6 +380,16 @@ const Instructor = () => {
                             >
                                 User Engagement
                             </button>
+                            <button
+                                onClick={() => setActiveTab('studies')}
+                                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-150 ${
+                                    activeTab === 'studies'
+                                        ? 'bg-white text-grey-darkest border border-grey-light border-b-white'
+                                        : 'bg-grey-lighter text-grey-dark hover:text-grey-darkest'
+                                }`}
+                            >
+                                Research Studies
+                            </button>
                         </div>
                         {activeTab === 'engagement' && (
                             <div className="flex items-center gap-2 mb-1">
@@ -333,6 +488,229 @@ const Instructor = () => {
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+                    )}
+
+                    {activeTab === 'studies' && (
+                        <div className="bg-white rounded-b-lg rounded-tr-lg shadow-sm border border-grey-light min-h-[200px] p-6 space-y-6">
+                            {/* Create new study */}
+                            <div className="border border-grey-light rounded-lg p-4">
+                                <h3 className="text-sm font-semibold text-grey-darkest mb-3">Create a new study</h3>
+                                <div className="flex flex-wrap items-end gap-3">
+                                    <div className="flex flex-col flex-1 min-w-[220px]">
+                                        <label className="text-xs text-grey-dark mb-1">Study name</label>
+                                        <input
+                                            type="text"
+                                            value={newStudyName}
+                                            onChange={(e) => setNewStudyName(e.target.value)}
+                                            placeholder="e.g. Spring 2026 Pilot"
+                                            className="border border-grey-light rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-bama-crimson"
+                                        />
+                                    </div>
+                                    <label className="flex items-center gap-2 text-sm text-grey-darkest cursor-pointer">
+                                        <input type="checkbox" className="w-4 h-4 accent-bama-crimson" checked={newStudyAnnotate} onChange={(e) => setNewStudyAnnotate(e.target.checked)} />
+                                        Annotate w/ AI
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm text-grey-darkest cursor-pointer">
+                                        <input type="checkbox" className="w-4 h-4 accent-bama-crimson" checked={newStudySelect} onChange={(e) => setNewStudySelect(e.target.checked)} />
+                                        Select w/ AI
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm text-grey-darkest cursor-pointer">
+                                        <input type="checkbox" className="w-4 h-4 accent-bama-crimson" checked={newStudyFeedback} onChange={(e) => setNewStudyFeedback(e.target.checked)} />
+                                        AI feedback
+                                    </label>
+                                    <button
+                                        onClick={handleCreateStudy}
+                                        disabled={creatingStudy || !newStudyName.trim()}
+                                        className="bg-bama-crimson text-sm text-white rounded-full px-4 py-1.5 hover:brightness-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {creatingStudy ? 'Creating...' : 'Create study'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Existing studies */}
+                            {studiesLoading && studies.length === 0 ? (
+                                <p className="text-sm text-grey-dark text-center">Loading studies...</p>
+                            ) : studies.length === 0 ? (
+                                <p className="text-sm text-grey-dark text-center">No studies yet. Create one above.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {studies.map((study) => {
+                                        const busy = busyStudyId === study.id;
+                                        return (
+                                            <div key={study.id} className={`border rounded-lg p-4 ${study.is_active ? 'border-grey-light' : 'border-grey-light bg-grey-lighter opacity-80'}`}>
+                                                <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                                                    <div>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <h4 className="text-base font-semibold text-grey-darkest">{study.name}</h4>
+                                                            {!study.is_active && (
+                                                                <span className="text-xs px-2 py-0.5 rounded-full bg-grey-light text-grey-darkest">Inactive</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs text-grey-dark mt-1">
+                                                            Created by {study.created_by_username ?? '—'} · {formatDate(study.created_at)} · {study.participants_count} participant{study.participants_count === 1 ? '' : 's'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => handlePatchStudy(study.id, { is_active: !study.is_active })}
+                                                            disabled={busy}
+                                                            className="text-xs rounded-full px-3 py-1 border border-grey-light text-grey-darkest hover:bg-grey-lighter disabled:opacity-50"
+                                                        >
+                                                            {study.is_active ? 'Deactivate' : 'Activate'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteStudy(study.id)}
+                                                            disabled={busy}
+                                                            className="text-xs rounded-full px-3 py-1 bg-bama-crimson text-white hover:brightness-95 disabled:opacity-50"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-wrap gap-6 mb-4">
+                                                    <label className="flex items-center gap-2 text-sm text-grey-darkest cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="w-4 h-4 accent-bama-crimson"
+                                                            checked={study.annotate_with_ai}
+                                                            disabled={busy}
+                                                            onChange={(e) => handlePatchStudy(study.id, { annotate_with_ai: e.target.checked })}
+                                                        />
+                                                        Annotate visuals with AI
+                                                    </label>
+                                                    <label className="flex items-center gap-2 text-sm text-grey-darkest cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="w-4 h-4 accent-bama-crimson"
+                                                            checked={study.select_with_ai}
+                                                            disabled={busy}
+                                                            onChange={(e) => handlePatchStudy(study.id, { select_with_ai: e.target.checked })}
+                                                        />
+                                                        Select narrative with AI
+                                                    </label>
+                                                    <label className="flex items-center gap-2 text-sm text-grey-darkest cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="w-4 h-4 accent-bama-crimson"
+                                                            checked={study.ai_feedback}
+                                                            disabled={busy}
+                                                            onChange={(e) => handlePatchStudy(study.id, { ai_feedback: e.target.checked })}
+                                                        />
+                                                        AI feedback
+                                                    </label>
+                                                </div>
+
+                                                <div className="border-t border-grey-light pt-3 mb-4">
+                                                    <h5 className="text-sm font-medium text-grey-darkest mb-2">
+                                                        Participants
+                                                        <span className="text-xs text-grey-dark font-normal ml-2">({study.participants.length})</span>
+                                                    </h5>
+                                                    {study.participants.length === 0 ? (
+                                                        <p className="text-xs text-grey-dark">No participants yet. Share a referral code below to enroll users.</p>
+                                                    ) : (
+                                                        <div className="overflow-x-auto border border-grey-light rounded">
+                                                            <table className="w-full text-xs">
+                                                                <thead>
+                                                                    <tr className="bg-grey-lighter border-b border-grey-light">
+                                                                        <th className="text-left p-2 font-medium text-grey-darkest">Username</th>
+                                                                        <th className="text-left p-2 font-medium text-grey-darkest">Name</th>
+                                                                        <th className="text-left p-2 font-medium text-grey-darkest">Email</th>
+                                                                        <th className="text-left p-2 font-medium text-grey-darkest">Role</th>
+                                                                        <th className="text-left p-2 font-medium text-grey-darkest whitespace-nowrap">Joined</th>
+                                                                        <th className="text-left p-2 font-medium text-grey-darkest">Actions</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {study.participants.map((p) => (
+                                                                        <tr key={p.id} className="border-b border-grey-lightest last:border-b-0 hover:bg-grey-lighter">
+                                                                            <td className="p-2 text-grey-darkest">{p.username}</td>
+                                                                            <td className="p-2 text-grey-darkest whitespace-nowrap">{p.first_name} {p.last_name}</td>
+                                                                            <td className="p-2 text-grey-darkest">{p.email}</td>
+                                                                            <td className="p-2">
+                                                                                <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.is_instructor ? 'bg-bama-crimson text-white' : 'bg-grey-lighter text-grey-darkest'}`}>
+                                                                                    {p.is_instructor ? 'Instructor' : 'Student'}
+                                                                                </span>
+                                                                            </td>
+                                                                            <td className="p-2 text-grey-darkest whitespace-nowrap">{formatDate(p.date_joined)}</td>
+                                                                            <td className="p-2">
+                                                                                {!p.is_instructor && (
+                                                                                    <button
+                                                                                        onClick={() => window.open(`/workspace/${p.id}`, '_blank')}
+                                                                                        className="bg-bama-crimson text-[11px] text-white rounded-full px-2.5 py-0.5 hover:brightness-95 transition"
+                                                                                    >
+                                                                                        View Workspace
+                                                                                    </button>
+                                                                                )}
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="border-t border-grey-light pt-3">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <h5 className="text-sm font-medium text-grey-darkest">Referral codes</h5>
+                                                        <button
+                                                            onClick={() => handleGenerateCode(study.id)}
+                                                            disabled={busy}
+                                                            className="text-xs rounded-full px-3 py-1 bg-bama-crimson text-white hover:brightness-95 disabled:opacity-50"
+                                                        >
+                                                            Generate new code
+                                                        </button>
+                                                    </div>
+                                                    {study.referral_codes.length === 0 ? (
+                                                        <p className="text-xs text-grey-dark">No codes yet. Generate one to share with participants.</p>
+                                                    ) : (
+                                                        <ul className="space-y-1">
+                                                            {study.referral_codes.map((c) => (
+                                                                <li key={c.id} className="flex items-center justify-between gap-2 text-sm">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <code className="font-mono px-2 py-0.5 bg-grey-lighter rounded text-grey-darkest">{c.code}</code>
+                                                                        <span className={`text-xs px-2 py-0.5 rounded-full ${c.is_active && c.is_redeemable ? 'bg-green-100 text-green-800' : 'bg-grey-light text-grey-darkest'}`}>
+                                                                            {c.is_active && c.is_redeemable ? 'Active' : 'Inactive'}
+                                                                        </span>
+                                                                        <span className="text-xs text-grey-dark">
+                                                                            {c.uses_count} use{c.uses_count === 1 ? '' : 's'}{c.max_uses != null ? ` / ${c.max_uses}` : ''}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <button
+                                                                            onClick={() => copyToClipboard(c.code)}
+                                                                            className="text-xs px-2 py-0.5 rounded border border-grey-light text-grey-darkest hover:bg-grey-lighter"
+                                                                        >
+                                                                            Copy
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleToggleCode(study.id, c.id, !c.is_active)}
+                                                                            disabled={busy}
+                                                                            className="text-xs px-2 py-0.5 rounded border border-grey-light text-grey-darkest hover:bg-grey-lighter disabled:opacity-50"
+                                                                        >
+                                                                            {c.is_active ? 'Disable' : 'Enable'}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleDeleteCode(study.id, c.id)}
+                                                                            disabled={busy}
+                                                                            className="text-xs px-2 py-0.5 rounded text-bama-crimson hover:underline disabled:opacity-50"
+                                                                        >
+                                                                            Delete
+                                                                        </button>
+                                                                    </div>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     )}
 

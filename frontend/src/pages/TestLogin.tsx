@@ -146,6 +146,7 @@ const TestLogin = () => {
     const [email, setEmail] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
+    const [referralCode, setReferralCode] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
@@ -174,13 +175,44 @@ const TestLogin = () => {
         e.preventDefault(); setLoading(true); setError(''); setSuccess('');
         if (password!==confirmPassword) { setError('Passwords do not match.'); setLoading(false); return; }
         if (!usernameInput||!password||!email||!firstName||!lastName) { setError('Please fill in all fields.'); setLoading(false); return; }
-        register({ username: usernameInput, password, email, first_name: firstName, last_name: lastName } as any)
-            .then(r => { if (r.status===201) { setSuccess('Registration successful! Please sign in.'); setIsRegisterMode(false); setConfirmPassword(''); setEmail(''); setFirstName(''); setLastName(''); } else setError('Registration failed.'); })
-            .catch(err => { if (err.response?.data?.username) setError('Username already exists.'); else if (err.response?.data?.email) setError('Email already exists.'); else setError('An error occurred.'); })
+        const trimmedCode = referralCode.trim();
+        register({
+            username: usernameInput,
+            password,
+            email,
+            first_name: firstName,
+            last_name: lastName,
+            ...(trimmedCode ? { referral_code: trimmedCode } : {}),
+        })
+            .then(r => {
+                if (r.status === 201) {
+                    const studyName = r.data?.study?.name;
+                    setSuccess(studyName
+                        ? `Registration successful! You've been added to "${studyName}". Please sign in.`
+                        : 'Registration successful! Please sign in.');
+                    setIsRegisterMode(false);
+                    setConfirmPassword(''); setEmail(''); setFirstName(''); setLastName(''); setReferralCode('');
+                } else {
+                    setError('Registration failed.');
+                }
+            })
+            .catch(err => {
+                const data = err.response?.data;
+                if (data?.referral_code) {
+                    const msg = Array.isArray(data.referral_code) ? data.referral_code[0] : data.referral_code;
+                    setError(msg || 'Invalid referral code.');
+                } else if (data?.username) {
+                    setError('Username already exists.');
+                } else if (data?.email) {
+                    setError('Email already exists.');
+                } else {
+                    setError('An error occurred.');
+                }
+            })
             .finally(() => setLoading(false));
     };
 
-    const toggleMode = () => { setIsRegisterMode(!isRegisterMode); setUsernameInput(''); setPassword(''); setConfirmPassword(''); setEmail(''); setFirstName(''); setLastName(''); setError(''); setSuccess(''); };
+    const toggleMode = () => { setIsRegisterMode(!isRegisterMode); setUsernameInput(''); setPassword(''); setConfirmPassword(''); setEmail(''); setFirstName(''); setLastName(''); setReferralCode(''); setError(''); setSuccess(''); };
 
     return (
         <div style={{ background: '#fff', color: '#0a0a0a', fontFamily: SANS, display: 'flex', flexDirection: 'column', minHeight: '100vh', WebkitFontSmoothing: 'antialiased' as any }}>
@@ -255,6 +287,7 @@ const TestLogin = () => {
                         <FormField label="Username" placeholder="you@studio.com" value={usernameInput} onChange={setUsernameInput} inputRef={usernameRef} />
                         <FormField label="Password" placeholder="Your password" type="password" value={password} onChange={setPassword} />
                         {isRegisterMode && <FormField label="Confirm password" placeholder="Confirm" type="password" value={confirmPassword} onChange={setConfirmPassword} />}
+                        {isRegisterMode && <FormField label="Referral code (optional)" placeholder="e.g. ABDC4CFS" value={referralCode} onChange={(v) => setReferralCode(v.toUpperCase())} />}
 
                         {!isRegisterMode && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>

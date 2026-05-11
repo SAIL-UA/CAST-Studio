@@ -4,6 +4,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { captureActionContext, logAction } from '../utils/userActionLogger';
 import { generateNarrativeAsync, getImageDataAll, getNarrativeCache } from '../services/api';
 import { useTaskProgress } from '../hooks/useTaskProgress';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { SCAFFOLD_NUMBER_TO_PATTERN } from '../types/scaffoldMappings';
 
 // Import types
@@ -25,12 +26,14 @@ type CraftStoryButtonProps = {
 // Craft Story button component
 const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroups = false, selectedPattern, onStoryGenerated, slotOrder, scaffolds = [] }: CraftStoryButtonProps) => {
 
+    const { selectWithAI, loading: flagsLoading } = useFeatureFlags();
     const [taskId, setTaskId] = useState<string | null>(null);
     const [alertModal, setAlertModal] = useState<string | null>(null);
     const [confirmModal, setConfirmModal] = useState<string | null>(null);
     const [pendingGeneration, setPendingGeneration] = useState<(() => void) | null>(null);
     const targetScaffoldIdRef = useRef<string | null>(null);
     const { progress, stageName, error, isComplete } = useTaskProgress(taskId);
+    const aiEnabled = flagsLoading || selectWithAI;
 
     // Listen for scaffold-specific story generation events (from play buttons on scaffolds)
     useEffect(() => {
@@ -57,6 +60,11 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
     // Handle craft
     const handleCraft = async (e: React.MouseEvent) => {
         const ctx = captureActionContext(e);
+
+        if (!flagsLoading && !selectWithAI) {
+            setAlertModal('AI story generation is disabled for your study.');
+            return;
+        }
 
         // --- Categorize storyboard items ---
         const storyboardItems = images.filter(img => img.in_storyboard && img.source !== 'instructor');
@@ -265,7 +273,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
     // Visible component
     return (
         <>
-            {scaffolds.length > 0 ? (
+            {aiEnabled && (scaffolds.length > 0 ? (
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger asChild disabled={storyLoading}>
                         <button
@@ -330,7 +338,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                         {storyLoading ? (stageName || 'Generating...') : 'Generate Story'}
                     </span>
                 </button>
-            )}
+            ))}
 
             {alertModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">

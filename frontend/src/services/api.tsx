@@ -135,7 +135,14 @@ export const login = async (credentials: { username: string; password: string })
 };
 
 
-export const register = async(userData: { username: string; email: string; password: string }) => {
+export const register = async(userData: {
+  username: string;
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+  referral_code?: string;
+}) => {
   const response = await USER_API.post('/register/', userData)
   return response;
 };
@@ -271,6 +278,18 @@ export const getFeatureFlags = async () => {
   return response.data;
 };
 
+export type EffectiveFeatureFlags = {
+  annotate_with_ai: boolean;
+  select_with_ai: boolean;
+  ai_feedback: boolean;
+  study: { id: string; name: string; is_active: boolean } | null;
+};
+
+export const getEffectiveFeatureFlags = async (): Promise<EffectiveFeatureFlags> => {
+  const response = await API.get('/feature-flags/effective/');
+  return response.data;
+};
+
 export const updateFeatureFlags = async (flags: { annotate_with_ai: boolean; select_with_ai: boolean }) => {
   const response = await API.post('/instructor/features/update/', flags);
   return response.data;
@@ -298,6 +317,91 @@ export const getEngagementReport = async () => {
 export const getInstructorUsers = async () => {
   const response = await API.get('/instructor/users/');
   return response.data;
+};
+
+// ===== Research studies (instructor) =====
+
+export type ResearchStudyCode = {
+  id: string;
+  study: string;
+  code: string;
+  is_active: boolean;
+  max_uses: number | null;
+  uses_count: number;
+  expires_at: string | null;
+  created_at: string;
+  last_modified: string;
+  is_redeemable: boolean;
+};
+
+export type StudyParticipant = {
+  id: string;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_instructor: boolean;
+  date_joined: string | null;
+};
+
+export type ResearchStudy = {
+  id: string;
+  name: string;
+  is_active: boolean;
+  annotate_with_ai: boolean;
+  select_with_ai: boolean;
+  ai_feedback: boolean;
+  created_by: string | null;
+  created_by_username: string | null;
+  created_at: string;
+  last_modified: string;
+  referral_codes: ResearchStudyCode[];
+  participants_count: number;
+  participants: StudyParticipant[];
+};
+
+export const listResearchStudies = async (): Promise<ResearchStudy[]> => {
+  const response = await API.get('/instructor/studies/');
+  return response.data?.studies ?? [];
+};
+
+export const createResearchStudy = async (
+  payload: { name: string; annotate_with_ai?: boolean; select_with_ai?: boolean; ai_feedback?: boolean }
+): Promise<ResearchStudy> => {
+  const response = await API.post('/instructor/studies/', payload);
+  return response.data;
+};
+
+export const updateResearchStudy = async (
+  studyId: string,
+  payload: Partial<Pick<ResearchStudy, 'name' | 'is_active' | 'annotate_with_ai' | 'select_with_ai' | 'ai_feedback'>>
+): Promise<ResearchStudy> => {
+  const response = await API.patch(`/instructor/studies/${studyId}/`, payload);
+  return response.data;
+};
+
+export const deleteResearchStudy = async (studyId: string): Promise<void> => {
+  await API.delete(`/instructor/studies/${studyId}/`);
+};
+
+export const createStudyReferralCode = async (
+  studyId: string,
+  payload: { code?: string; max_uses?: number | null; expires_at?: string | null } = {}
+): Promise<ResearchStudyCode> => {
+  const response = await API.post(`/instructor/studies/${studyId}/codes/`, payload);
+  return response.data;
+};
+
+export const updateStudyReferralCode = async (
+  codeId: string,
+  payload: Partial<Pick<ResearchStudyCode, 'is_active' | 'max_uses' | 'expires_at'>>
+): Promise<ResearchStudyCode> => {
+  const response = await API.patch(`/instructor/codes/${codeId}/`, payload);
+  return response.data;
+};
+
+export const deleteStudyReferralCode = async (codeId: string): Promise<void> => {
+  await API.delete(`/instructor/codes/${codeId}/`);
 };
 
 export const getInstructorWorkspace = async (studentId: string) => {

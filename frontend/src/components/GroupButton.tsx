@@ -5,6 +5,7 @@ import { GroupData } from '../types/types';
 import { formatGroupMetadata } from '../utils/groupUtils';
 import { aiGroupImages } from '../services/api';
 import { useTaskProgress } from '../hooks/useTaskProgress';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 interface GroupButtonProps {
     onClick?: () => Promise<GroupData | undefined>;
@@ -14,9 +15,11 @@ interface GroupButtonProps {
 }
 
 const GroupButton = ({ onClick, onGroupComplete, onError, images = [] }: GroupButtonProps) => {
+    const { selectWithAI, loading: flagsLoading } = useFeatureFlags();
     const [aiTaskId, setAiTaskId] = useState<string | null>(null);
     const { progress, stageName, error, isComplete } = useTaskProgress(aiTaskId);
     const isLoading = aiTaskId !== null && !isComplete && !error;
+    const aiEnabled = flagsLoading || selectWithAI;
 
     // Reset task when complete
     React.useEffect(() => {
@@ -100,36 +103,40 @@ const GroupButton = ({ onClick, onGroupComplete, onError, images = [] }: GroupBu
                     align="start"
                     onCloseAutoFocus={(e) => e.preventDefault()}
                 >
-                    {/* Group with AI - nested submenu */}
-                    <DropdownMenu.Sub>
-                        <DropdownMenu.SubTrigger
-                            className="flex w-full items-center justify-between text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none data-[state=open]:bg-grey-lighter"
-                        >
-                            Group with AI
-                            <svg className="fill-current h-3 w-3 ml-2 opacity-60" viewBox="0 0 20 20"><path d="M7.293 4.293l1.414 1.414L5.414 9H17v2H5.414l3.293 3.293-1.414 1.414L1.586 10z" transform="rotate(180 10 10)"/></svg>
-                        </DropdownMenu.SubTrigger>
-                        <DropdownMenu.Portal>
-                            <DropdownMenu.SubContent
-                                className="shadow-lg z-[401] bg-white rounded-lg py-1 min-w-[180px]"
-                                sideOffset={4}
-                            >
-                                <DropdownMenu.Item
-                                    className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
-                                    onSelect={() => handleAIGroup('all')}
+                    {aiEnabled && (
+                        <>
+                            {/* Group with AI - nested submenu */}
+                            <DropdownMenu.Sub>
+                                <DropdownMenu.SubTrigger
+                                    className="flex w-full items-center justify-between text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none data-[state=open]:bg-grey-lighter"
                                 >
-                                    All images
-                                </DropdownMenu.Item>
-                                <DropdownMenu.Item
-                                    className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
-                                    onSelect={() => handleAIGroup('ungrouped')}
-                                >
-                                    Ungrouped only
-                                </DropdownMenu.Item>
-                            </DropdownMenu.SubContent>
-                        </DropdownMenu.Portal>
-                    </DropdownMenu.Sub>
+                                    Group with AI
+                                    <svg className="fill-current h-3 w-3 ml-2 opacity-60" viewBox="0 0 20 20"><path d="M7.293 4.293l1.414 1.414L5.414 9H17v2H5.414l3.293 3.293-1.414 1.414L1.586 10z" transform="rotate(180 10 10)"/></svg>
+                                </DropdownMenu.SubTrigger>
+                                <DropdownMenu.Portal>
+                                    <DropdownMenu.SubContent
+                                        className="shadow-lg z-[401] bg-white rounded-lg py-1 min-w-[180px]"
+                                        sideOffset={4}
+                                    >
+                                        <DropdownMenu.Item
+                                            className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
+                                            onSelect={() => handleAIGroup('all')}
+                                        >
+                                            All images
+                                        </DropdownMenu.Item>
+                                        <DropdownMenu.Item
+                                            className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
+                                            onSelect={() => handleAIGroup('ungrouped')}
+                                        >
+                                            Ungrouped only
+                                        </DropdownMenu.Item>
+                                    </DropdownMenu.SubContent>
+                                </DropdownMenu.Portal>
+                            </DropdownMenu.Sub>
 
-                    <div className="h-px mx-3 bg-grey" />
+                            <div className="h-px mx-3 bg-grey" />
+                        </>
+                    )}
 
                     {/* Group Manually */}
                     <DropdownMenu.Item

@@ -39,14 +39,16 @@ from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
   JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress, FeatureFlags,
-  SharedSession, SessionParticipant
+  SharedSession, SessionParticipant,
+  Study, StudyReferralCode,
 )
 
 # Serializers
 from .serializers import (
   ImageDataSerializer, NarrativeCacheSerializer,
   JupyterLogsSerializer, MousePositionLogSerializer,
-  UserActionSerializer, ScrollLogSerializer, GroupDataSerializer, ScaffoldDataSerializer
+  UserActionSerializer, ScrollLogSerializer, GroupDataSerializer, ScaffoldDataSerializer,
+  StudySerializer, StudyReferralCodeSerializer,
 )
 
 # Tasks
@@ -88,6 +90,44 @@ def resolve_target_user(request):
 
     from rest_framework.exceptions import PermissionDenied
     raise PermissionDenied("Access denied")
+
+
+# Human-readable labels used in 403 responses when a study disables an AI feature.
+_FLAG_LABELS = {
+  'annotate_with_ai': 'AI annotation',
+  'select_with_ai': 'AI narrative selection',
+  'ai_feedback': 'AI feedback',
+}
+
+
+def check_effective_flag(request, flag_name):
+  """
+  Server-side enforcement of per-study feature flags. Returns a 403 Response if
+  the requesting user does not have the named effective flag enabled, otherwise
+  returns None so the caller can proceed.
+
+  Usage:
+    gate = check_effective_flag(request, 'annotate_with_ai')
+    if gate is not None:
+      return gate
+  """
+  user = getattr(request, 'user', None)
+  if user is None or not user.is_authenticated:
+    return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+  flags = user.get_effective_flags()
+  if not flags.get(flag_name, True):
+    label = _FLAG_LABELS.get(flag_name, flag_name)
+    study = flags.get('study')
+    detail = (
+      f"{label} is disabled for your study ('{study['name']}')."
+      if study else f"{label} is currently disabled."
+    )
+    return Response(
+      {'error': detail, 'flag': flag_name, 'study': study},
+      status=status.HTTP_403_FORBIDDEN,
+    )
+  return None
   return request.user
 
 
@@ -732,6 +772,9 @@ class AIGroupView(APIView):
 
   def post(self, request):
     """Kick off AI grouping as a Celery task. Returns task_id for progress polling."""
+    gate = check_effective_flag(request, 'select_with_ai')
+    if gate is not None:
+      return gate
     try:
       mode = request.data.get("mode", "ungrouped")
       if mode not in ("all", "ungrouped"):
@@ -757,6 +800,9 @@ class GenerateNarrativeAsyncView(APIView):
 
   def post(self, request):
     """Generate narrative asynchronously using Celery task"""
+    gate = check_effective_flag(request, 'select_with_ai')
+    if gate is not None:
+      return gate
     try:
       # Get story structure ID and use_groups from request
       story_structure_id = request.data.get('story_structure_id') if request.data else None
@@ -865,6 +911,185 @@ class UpdateFeatureFlagsView(APIView):
       "annotate_with_ai": flags.annotate_with_ai,
       "select_with_ai": flags.select_with_ai,
     })
+
+
+class EffectiveFeatureFlagsView(APIView):
+  """
+  Return the effective AI feature flags for the requesting user, computed as the
+  logical AND of (a) the global FeatureFlags row and (b) the user's Study (if any).
+  Instructors are not subject to study restrictions.
+  """
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    return Response(request.user.get_effective_flags())
+
+
+def _generate_referral_code(length=8):
+  """Generate a uniformly random uppercase alphanumeric code, retry on rare collisions."""
+  import secrets
+  alphabet = 'ABCDEFGHIJKLMNPQRSTUVWXYZ23456789'  # excludes O/0/1/I/L for readability
+  for _ in range(8):
+    candidate = ''.join(secrets.choice(alphabet) for _ in range(length))
+    if not StudyReferralCode.objects.filter(code=candidate).exists():
+      return candidate
+  raise RuntimeError('Could not generate a unique referral code after 8 attempts')
+
+
+class InstructorStudiesView(APIView):
+  """
+  Instructor-only endpoints for managing research studies.
+  GET  -> list all studies (with nested referral codes)
+  POST -> create a new study with optional initial toggles
+  """
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    studies = Study.objects.all().prefetch_related('referral_codes')
+    return Response({"studies": StudySerializer(studies, many=True).data})
+
+  def post(self, request):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    data = request.data if isinstance(request.data, dict) else {}
+    name = (data.get('name') or '').strip()
+    if not name:
+      return Response({"error": "Study 'name' is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    study = Study.objects.create(
+      name=name,
+      created_by=request.user,
+      is_active=bool(data.get('is_active', True)),
+      annotate_with_ai=bool(data.get('annotate_with_ai', True)),
+      select_with_ai=bool(data.get('select_with_ai', True)),
+      ai_feedback=bool(data.get('ai_feedback', True)),
+    )
+    return Response(StudySerializer(study).data, status=status.HTTP_201_CREATED)
+
+
+class InstructorStudyDetailView(APIView):
+  """
+  Instructor-only endpoints for a single study.
+  PATCH  -> update name / toggles / is_active
+  DELETE -> delete the study (cascades to its codes, detaches participants)
+  """
+  permission_classes = [IsAuthenticated]
+
+  def _get(self, study_id):
+    try:
+      return Study.objects.get(id=study_id)
+    except Study.DoesNotExist:
+      return None
+
+  def patch(self, request, study_id):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    study = self._get(study_id)
+    if study is None:
+      return Response({"error": "Study not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    data = request.data if isinstance(request.data, dict) else {}
+    if 'name' in data:
+      new_name = (data.get('name') or '').strip()
+      if not new_name:
+        return Response({"error": "name must be non-empty"}, status=status.HTTP_400_BAD_REQUEST)
+      study.name = new_name
+    for field in ('is_active', 'annotate_with_ai', 'select_with_ai', 'ai_feedback'):
+      if field in data:
+        setattr(study, field, bool(data.get(field)))
+    study.save()
+    return Response(StudySerializer(study).data)
+
+  def delete(self, request, study_id):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    study = self._get(study_id)
+    if study is None:
+      return Response({"error": "Study not found"}, status=status.HTTP_404_NOT_FOUND)
+    study.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class InstructorStudyCodesView(APIView):
+  """
+  Instructor-only endpoint to create a referral code for a study.
+  POST body (all optional): { code, max_uses, expires_at }
+  If 'code' is omitted, a random 8-char uppercase code is generated.
+  """
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request, study_id):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+      study = Study.objects.get(id=study_id)
+    except Study.DoesNotExist:
+      return Response({"error": "Study not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    data = request.data if isinstance(request.data, dict) else {}
+    code = (data.get('code') or '').strip().upper() or _generate_referral_code()
+    if StudyReferralCode.objects.filter(code=code).exists():
+      return Response({"error": f"code '{code}' is already in use"}, status=status.HTTP_400_BAD_REQUEST)
+
+    obj = StudyReferralCode.objects.create(
+      study=study,
+      code=code,
+      is_active=bool(data.get('is_active', True)),
+      max_uses=data.get('max_uses') if isinstance(data.get('max_uses'), int) else None,
+      expires_at=data.get('expires_at') or None,
+    )
+    return Response(StudyReferralCodeSerializer(obj).data, status=status.HTTP_201_CREATED)
+
+
+class InstructorCodeDetailView(APIView):
+  """
+  Instructor-only endpoint for a single referral code.
+  PATCH  -> update is_active, max_uses, expires_at
+  DELETE -> delete the code
+  """
+  permission_classes = [IsAuthenticated]
+
+  def _get(self, code_id):
+    try:
+      return StudyReferralCode.objects.get(id=code_id)
+    except StudyReferralCode.DoesNotExist:
+      return None
+
+  def patch(self, request, code_id):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    obj = self._get(code_id)
+    if obj is None:
+      return Response({"error": "Code not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    data = request.data if isinstance(request.data, dict) else {}
+    if 'is_active' in data:
+      obj.is_active = bool(data['is_active'])
+    if 'max_uses' in data:
+      val = data['max_uses']
+      obj.max_uses = val if (isinstance(val, int) and val >= 0) else None
+    if 'expires_at' in data:
+      obj.expires_at = data['expires_at'] or None
+    obj.save()
+    return Response(StudyReferralCodeSerializer(obj).data)
+
+  def delete(self, request, code_id):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    obj = self._get(code_id)
+    if obj is None:
+      return Response({"error": "Code not found"}, status=status.HTTP_404_NOT_FOUND)
+    obj.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class InstructorUsersView(APIView):
@@ -1432,6 +1657,9 @@ class GenerateDescriptionsView(APIView):
   throttle_classes = [BurstRateThrottle]
   
   def post(self, request):
+    gate = check_effective_flag(request, 'annotate_with_ai')
+    if gate is not None:
+      return gate
     image_id = request.query_params.get("image_id")
 
     if image_id:
@@ -1468,6 +1696,9 @@ class GenerateNarrativeView(APIView):
 
   def post(self, request):
     """Generate narrative synchronously (blocking) using Celery task"""
+    gate = check_effective_flag(request, 'select_with_ai')
+    if gate is not None:
+      return gate
     try:
       # Run the narrative generation task synchronously
       workspace_user = get_workspace_user(request)
@@ -1505,6 +1736,9 @@ class RequestFeedbackView(APIView):
     Body optional: { "storyboard_id": string }
     Returns 202 with { task_id }.
     """
+    gate = check_effective_flag(request, 'ai_feedback')
+    if gate is not None:
+      return gate
     try:
       storyboard_id = None
       if isinstance(request.data, dict):

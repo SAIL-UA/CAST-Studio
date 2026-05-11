@@ -41,11 +41,62 @@ class User(AbstractUser):
   first_name = models.CharField(max_length=32)
   last_name = models.CharField(max_length=64)
   is_instructor = models.BooleanField(default=False)
+  study = models.ForeignKey(
+    'api.Study',
+    null=True,
+    blank=True,
+    on_delete=models.SET_NULL,
+    related_name='participants',
+    db_column='study_id',
+  )
 
   objects = CustomUserManager()
 
   def __str__(self):
     return f"{self.first_name} {self.last_name}"
+
+  def get_effective_flags(self):
+    """
+    Compute the effective feature flags for this user.
+
+    Combines the global FeatureFlags (instructor-controlled) with the user's
+    Study (if any) by taking the logical AND of each flag. Instructors are
+    not subject to study restrictions and always see every feature.
+
+    Returns a dict: {annotate_with_ai, select_with_ai, ai_feedback, study}
+    where 'study' is None or a small dict describing the user's study.
+    """
+    if getattr(self, 'is_instructor', False):
+      return {
+        'annotate_with_ai': True,
+        'select_with_ai': True,
+        'ai_feedback': True,
+        'study': None,
+      }
+
+    from api.models import FeatureFlags  # local import: avoid circular import
+
+    global_flags = FeatureFlags.objects.first()
+    annotate = True if global_flags is None else global_flags.annotate_with_ai
+    select = True if global_flags is None else global_flags.select_with_ai
+    feedback = True  # no global toggle yet, defaults to allowed
+
+    study = getattr(self, 'study', None)
+    if study is not None and study.is_active:
+      annotate = annotate and study.annotate_with_ai
+      select = select and study.select_with_ai
+      feedback = feedback and study.ai_feedback
+
+    return {
+      'annotate_with_ai': annotate,
+      'select_with_ai': select,
+      'ai_feedback': feedback,
+      'study': None if study is None else {
+        'id': str(study.id),
+        'name': study.name,
+        'is_active': study.is_active,
+      },
+    }
 
   class Meta:
     db_table = 'users'

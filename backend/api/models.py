@@ -256,3 +256,82 @@ class SessionParticipant(models.Model):
 
   def __str__(self):
     return f"{self.user.username} in {self.session.share_token}"
+
+
+class Study(models.Model):
+  """
+  A research study managed by an instructor. Users who sign up with one of the
+  study's referral codes inherit the study's feature toggles, overriding the
+  global FeatureFlags for their account.
+  """
+  id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  name = models.CharField(max_length=200)
+  created_by = models.ForeignKey(
+    User,
+    null=True,
+    blank=True,
+    on_delete=models.SET_NULL,
+    related_name='created_studies',
+    db_column='created_by_id',
+  )
+  is_active = models.BooleanField(default=True)
+
+  annotate_with_ai = models.BooleanField(default=True)
+  select_with_ai = models.BooleanField(default=True)
+  ai_feedback = models.BooleanField(default=True)
+
+  created_at = models.DateTimeField(auto_now_add=True)
+  last_modified = models.DateTimeField(auto_now=True)
+
+  def __str__(self):
+    return f"{self.name} (active={self.is_active})"
+
+  class Meta:
+    db_table = 'studies'
+    managed = True
+    ordering = ['-created_at']
+
+
+class StudyReferralCode(models.Model):
+  """
+  A referral code that grants signup access into a Study. Codes are unique
+  and normalized to upper-case on save. Each code may optionally expire and/or
+  have a max number of redemptions.
+  """
+  id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  study = models.ForeignKey(
+    Study,
+    on_delete=models.CASCADE,
+    related_name='referral_codes',
+    db_column='study_id',
+  )
+  code = models.CharField(max_length=64, unique=True)
+  is_active = models.BooleanField(default=True)
+  max_uses = models.PositiveIntegerField(null=True, blank=True, help_text='Null means unlimited uses')
+  uses_count = models.PositiveIntegerField(default=0)
+  expires_at = models.DateTimeField(null=True, blank=True)
+  created_at = models.DateTimeField(auto_now_add=True)
+  last_modified = models.DateTimeField(auto_now=True)
+
+  def save(self, *args, **kwargs):
+    if self.code:
+      self.code = self.code.strip().upper()
+    super().save(*args, **kwargs)
+
+  def is_redeemable(self):
+    from django.utils import timezone
+    if not self.is_active or not self.study.is_active:
+      return False
+    if self.expires_at is not None and self.expires_at <= timezone.now():
+      return False
+    if self.max_uses is not None and self.uses_count >= self.max_uses:
+      return False
+    return True
+
+  def __str__(self):
+    return f"{self.code} -> {self.study.name}"
+
+  class Meta:
+    db_table = 'study_referral_codes'
+    managed = True
+    ordering = ['-created_at']

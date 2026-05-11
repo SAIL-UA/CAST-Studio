@@ -9,9 +9,12 @@ from .views import (
     CreateGroupView, GetGroupView, UpdateGroupView, DeleteGroupView, AIGroupView,
     LogMousePositionView, LogScrollView,
     ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView,
-    TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, InstructorUsersView, InstructorWorkspaceView,
+    TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, EffectiveFeatureFlagsView,
+    InstructorUsersView, InstructorWorkspaceView,
     HostSessionView, CloseSessionView, SessionStatusView, JoinSessionView,
-    TakeControlView, ReturnControlView, ExportWorkspaceReportView, UploadSlidesView
+    TakeControlView, ReturnControlView, ExportWorkspaceReportView, UploadSlidesView,
+    InstructorStudiesView, InstructorStudyDetailView,
+    InstructorStudyCodesView, InstructorCodeDetailView,
 )
 
 urlpatterns = [
@@ -22,12 +25,21 @@ urlpatterns = [
     path("actions/requestfeedback/", RequestFeedbackView.as_view(), name="request-feedback"),
     path("task/progress/", TaskProgressView.as_view(), name="task-progress"),
 
+    # Feature flags (effective per-user)
+    path("feature-flags/effective/", EffectiveFeatureFlagsView.as_view(), name="feature-flags-effective"),
+
     # Instructor
     path("instructor/features/", GetFeatureFlagsView.as_view(), name="instructor-features-get"),
     path("instructor/features/update/", UpdateFeatureFlagsView.as_view(), name="instructor-features-update"),
     path("instructor/users/", InstructorUsersView.as_view(), name="instructor-users"),
     path("instructor/workspace/<uuid:student_id>/", InstructorWorkspaceView.as_view(), name="instructor-workspace"),
     path("instructor/report/export/", ExportWorkspaceReportView.as_view(), name="instructor-report-export"),
+
+    # Instructor research studies
+    path("instructor/studies/", InstructorStudiesView.as_view(), name="instructor-studies"),
+    path("instructor/studies/<uuid:study_id>/", InstructorStudyDetailView.as_view(), name="instructor-study-detail"),
+    path("instructor/studies/<uuid:study_id>/codes/", InstructorStudyCodesView.as_view(), name="instructor-study-codes"),
+    path("instructor/codes/<uuid:code_id>/", InstructorCodeDetailView.as_view(), name="instructor-code-detail"),
 
     # Collaborate
     path("collaborate/host/", HostSessionView.as_view(), name="collaborate-host"),

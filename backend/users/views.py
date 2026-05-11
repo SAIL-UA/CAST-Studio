@@ -1,5 +1,6 @@
 #Backend/users/views.py
 from django.conf import settings
+from django.db import transaction
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,14 +16,74 @@ import os
 
 User = get_user_model()
 
+
+def _resolve_referral_code(raw_code):
+  """
+  Validate a referral code submitted at registration time.
+  Returns (code_obj, error_message). Exactly one is non-None.
+  Caller is expected to be inside a transaction.atomic() block.
+  """
+  from api.models import StudyReferralCode  # local import: avoid circular import at module load
+
+  if not raw_code:
+    return None, None
+  code_str = str(raw_code).strip().upper()
+  if not code_str:
+    return None, None
+
+  try:
+    code = (
+      StudyReferralCode.objects
+      .select_for_update()
+      .select_related('study')
+      .get(code=code_str)
+    )
+  except StudyReferralCode.DoesNotExist:
+    return None, 'Invalid referral code.'
+
+  if not code.is_redeemable():
+    if not code.is_active:
+      return None, 'This referral code has been disabled.'
+    if not code.study.is_active:
+      return None, 'This study is no longer accepting new participants.'
+    if code.expires_at is not None:
+      return None, 'This referral code has expired.'
+    if code.max_uses is not None and code.uses_count >= code.max_uses:
+      return None, 'This referral code has reached its usage limit.'
+    return None, 'This referral code cannot be redeemed.'
+
+  return code, None
+
+
 class RegisterView(APIView):
   permission_classes = [AllowAny]
+
   def post(self, request):
+    raw_code = (request.data or {}).get('referral_code') if isinstance(request.data, dict) else None
     serializer = UserSerializer(data=request.data)
-    if serializer.is_valid():
-      user = serializer.save()
-      return Response({'detail': 'User created'}, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if not serializer.is_valid():
+      return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+      with transaction.atomic():
+        code, code_error = _resolve_referral_code(raw_code)
+        if code_error:
+          return Response({'referral_code': [code_error]}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.save()
+
+        if code is not None:
+          user.study = code.study
+          user.save(update_fields=['study'])
+          code.uses_count = code.uses_count + 1
+          code.save(update_fields=['uses_count', 'last_modified'])
+    except Exception as e:
+      return Response({'detail': f'Could not complete registration: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({
+      'detail': 'User created',
+      'study': UserSerializer(user).data.get('study'),
+    }, status=status.HTTP_201_CREATED)
 
 
 class LoginView(APIView):

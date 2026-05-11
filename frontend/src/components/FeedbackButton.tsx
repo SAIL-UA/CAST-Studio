@@ -3,11 +3,13 @@ import { useState } from 'react';
 import { requestFeedback, requestFeedbackStatus } from '../services/api';
 import { logAction, captureActionContext } from '../utils/userActionLogger';
 import { useTaskProgress } from '../hooks/useTaskProgress';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import ProgressButton from './ProgressButton';
 
 type FeedbackItem = { title: string; text: string };
 
 const FeedbackButton = () => {
+    const { aiFeedback, loading: flagsLoading } = useFeatureFlags();
     const [taskId, setTaskId] = useState<string | null>(null);
     const [feedbackLoading, setFeedbackLoading] = useState(false);
     const { progress, stageName, error } = useTaskProgress(taskId);
@@ -80,6 +82,8 @@ const FeedbackButton = () => {
             setTaskId(null);
         }
     };
+
+    if (!flagsLoading && !aiFeedback) return null;
 
     return (
         <ProgressButton
