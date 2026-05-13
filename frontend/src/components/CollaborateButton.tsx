@@ -36,13 +36,13 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
     }, []);
 
     const handleStartSession = async (e: React.MouseEvent) => {
-        logAction(e, { action: 'start_session' });
         try {
             const data = await hostSession();
             setShareToken(data.share_token);
             setParticipantCount(data.participant_count);
             setMaxParticipants(data.max_participants);
             onSessionChange?.(data.share_token);
+            logAction({ actionType: 'click', elementId: 'collaborate-host-session' }, { share_token: data.share_token });
         } catch (err) {
             console.error('Error starting session:', err);
             setAlertModal('An error occurred while starting the session.');
@@ -52,6 +52,7 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
     const handleCloseSession = async () => {
         try {
             await closeSession();
+            logAction({ actionType: 'click', elementId: 'collaborate-close-session' }, { share_token: shareToken });
             setShareToken(null);
             setParticipantCount(0);
             setShowConfirmClose(false);
@@ -85,6 +86,7 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
             // Not a URL — use as raw token
         }
 
+        logAction({ actionType: 'click', elementId: 'collaborate-join-session' }, { token });
         navigate(`/session/${token}`);
     };
 

@@ -248,6 +248,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     groups: []
                 };
                 setScaffolds(prev => [...prev, newScaffold]);
+                logAction({ actionType: 'click', elementId: 'scaffold-create' }, { scaffoldType: pattern, scaffoldId: response.scaffold.id });
             }
         } catch (error) {
             console.error('Error creating scaffold:', error);

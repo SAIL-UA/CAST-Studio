@@ -1,5 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { takeControl, returnControl } from '../services/api';
+import { logAction } from '../utils/userActionLogger';
 
 const menuItemClass = "block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm !font-light rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 cursor-pointer outline-none text-left";
 
@@ -19,6 +20,7 @@ const ControlWorkspaceButton = ({ shareToken, controlledBy, currentUserId, isHos
         try {
             const data = await takeControl(shareToken);
             onControlChanged(data.controlled_by, data.controlled_by_name);
+            logAction({ actionType: 'click', elementId: 'collaborate-take-control' }, { share_token: shareToken });
         } catch (err: any) {
             const msg = err?.response?.data?.error || 'Failed to take control';
             alert(msg);
@@ -29,6 +31,7 @@ const ControlWorkspaceButton = ({ shareToken, controlledBy, currentUserId, isHos
         try {
             const data = await returnControl(shareToken);
             onControlChanged(data.controlled_by, data.controlled_by_name);
+            logAction({ actionType: 'click', elementId: 'collaborate-return-control' }, { share_token: shareToken });
         } catch (err: any) {
             const msg = err?.response?.data?.error || 'Failed to return control';
             alert(msg);

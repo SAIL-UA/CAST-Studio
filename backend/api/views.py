@@ -926,19 +926,20 @@ class ExportWorkspaceReportView(APIView):
 
   # Category definitions: category_name -> list of log-id element values
   CATEGORIES = {
-    'Uploads': ['import-from-jupyter', 'upload-submit-button'],
+    'Uploads': ['import-from-jupyter', 'upload-submit-button', 'upload-from-computer', 'upload-slides'],
     'Notes': ['add-text-note'],
-    'Groups': ['group-create-button'],
+    'Groups': ['group-create-button', 'group-ai-all', 'group-ai-ungrouped'],
     'Editing': ['edit-figure-button', 'save-and-close-figure-button', 'visual-inline-title-save', 'visual-inline-desc-save', 'group-inline-name-input', 'group-save-changes-button'],
     'AI Descriptions': ['description-generated', 'annotate-visuals-ai-complete'],
     'Examples Viewed': ['narrative-examples-button'],
     'AI Narrative': ['select-narrative-ai-button'],
-    'Scaffolds': ['scaffold-card-add', 'scaffold-card-remove', 'scaffold-group-add', 'scaffold-group-remove', 'scaffold-slot-add', 'scaffold-slot-remove', 'scaffold-close'],
+    'Scaffolds': ['scaffold-create', 'scaffold-card-add', 'scaffold-card-remove', 'scaffold-group-add', 'scaffold-group-remove', 'scaffold-slot-add', 'scaffold-slot-remove', 'scaffold-close'],
     'Story Generation': ['craft-story-button'],
     'Story Review': ['data-stories-story-button', 'data-stories-narrative-button'],
     'Feedback': ['feedback-button'],
     'Export': ['export-pdf-button'],
     'Delete': ['delete-figure-button', 'move-figure-to-recycle-bin-button'],
+    'Collaboration': ['collaborate-host-session', 'collaborate-close-session', 'collaborate-join-session', 'collaborate-take-control', 'collaborate-return-control'],
   }
 
   def _gather_data(self):
@@ -1006,6 +1007,44 @@ class ExportWorkspaceReportView(APIView):
       if uid in user_data:
         timestamps = [t for t in [ut['last_image'], ut['last_group'], ut['last_scaffold']] if t is not None]
         user_data[uid]['last_modified'] = max(timestamps) if timestamps else None
+
+    # Per-scaffold-type creation counts (Raw sheet only, not in CATEGORIES)
+    SCAFFOLD_TYPES = [
+      'cause_and_effect', 'question_answer', 'time_based', 'factor_analysis',
+      'overview_to_detail', 'problem_solution', 'comparative', 'shock_lead',
+      'workflow_process', 'linear', 'inverted_pyramid',
+    ]
+    scaffold_create_elements = []
+    for stype in SCAFFOLD_TYPES:
+      col_name = f"scaffold-create-{stype.replace('_', '-')}"
+      scaffold_create_elements.append(col_name)
+
+      # Future logs: scaffold-create with scaffoldType metadata
+      future_counts = (
+        UserAction.objects
+        .filter(action='click', element='scaffold-create', state_info__scaffoldType=stype)
+        .values('user__id')
+        .annotate(count=Count('id'))
+      )
+      # Historical logs: select-narrative-button with narrative_pattern metadata
+      historical_counts = (
+        UserAction.objects
+        .filter(action='click', element='select-narrative-button', state_info__narrative_pattern=stype)
+        .values('user__id')
+        .annotate(count=Count('id'))
+      )
+
+      for row in future_counts:
+        uid = row['user__id']
+        if uid in user_data:
+          user_data[uid]['elements'][col_name] = user_data[uid]['elements'].get(col_name, 0) + row['count']
+
+      for row in historical_counts:
+        uid = row['user__id']
+        if uid in user_data:
+          user_data[uid]['elements'][col_name] = user_data[uid]['elements'].get(col_name, 0) + row['count']
+
+    all_elements.extend(scaffold_create_elements)
 
     # Sort users by last_name
     sorted_users = sorted(user_data.values(), key=lambda u: (u['last_name'] or '').lower())
