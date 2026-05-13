@@ -263,6 +263,13 @@ class Study(models.Model):
   A research study managed by an instructor. Users who sign up with one of the
   study's referral codes inherit the study's feature toggles, overriding the
   global FeatureFlags for their account.
+
+  Flag semantics:
+  - annotate_with_ai: AI-assisted image descriptions (annotate visuals).
+  - select_with_ai: AI-assisted narrative *selection* (e.g. AI Assistance pattern,
+    AI grouping). Does not block Generate Story once the user has chosen a
+    structure manually or via scaffold.
+  - ai_feedback: AI-generated feedback on the storyboard.
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
   name = models.CharField(max_length=200)

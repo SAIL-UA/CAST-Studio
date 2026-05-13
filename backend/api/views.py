@@ -799,10 +799,12 @@ class GenerateNarrativeAsyncView(APIView):
   throttle_classes = [BurstRateThrottle]
 
   def post(self, request):
-    """Generate narrative asynchronously using Celery task"""
-    gate = check_effective_flag(request, 'select_with_ai')
-    if gate is not None:
-      return gate
+    """Generate narrative asynchronously using Celery task.
+
+    Not gated by select_with_ai: that flag covers AI-assisted *selection*
+    (AI Assistance pattern, AI grouping). Participants may still generate a
+    story once they have chosen a narrative structure manually or via scaffold.
+    """
     try:
       # Get story structure ID and use_groups from request
       story_structure_id = request.data.get('story_structure_id') if request.data else None
@@ -1695,10 +1697,10 @@ class GenerateNarrativeView(APIView):
   throttle_classes = [BurstRateThrottle]
 
   def post(self, request):
-    """Generate narrative synchronously (blocking) using Celery task"""
-    gate = check_effective_flag(request, 'select_with_ai')
-    if gate is not None:
-      return gate
+    """Generate narrative synchronously (blocking) using Celery task.
+
+    See GenerateNarrativeAsyncView: not gated by select_with_ai.
+    """
     try:
       # Run the narrative generation task synchronously
       workspace_user = get_workspace_user(request)
