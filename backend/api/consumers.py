@@ -1,10 +1,16 @@
 import json
 import logging
+import uuid
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+# Longest chat message relayed. Over-length input is truncated rather than dropped, so a
+# large paste is never silently discarded.
+MAX_CHAT_MESSAGE_LENGTH = 2000
 
 
 class SessionConsumer(AsyncJsonWebsocketConsumer):
@@ -76,6 +82,31 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
                 }
             )
 
+        elif msg_type == 'chat_message':
+            # Chat is relayed, not stored: the group is scoped to this session's share
+            # token, and connect() has already verified membership, so anyone receiving
+            # this is entitled to see it.
+            body = content.get('body')
+            if not isinstance(body, str):
+                return
+            body = body.strip()[:MAX_CHAT_MESSAGE_LENGTH]
+            if not body:
+                return
+
+            identity = await self.get_sender_identity()
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    'type': 'chat_message',
+                    'message_id': str(uuid.uuid4()),
+                    'body': body,
+                    'sender_id': identity['id'],
+                    'sender_username': identity['username'],
+                    'sender_name': identity['display_name'],
+                    'sent_at': timezone.now().isoformat(),
+                }
+            )
+
     # --- Group message handlers ---
 
     async def participant_joined(self, event):
@@ -103,6 +134,18 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
             'panel': event.get('panel'),
             'items': event.get('items'),
             'sender': event.get('sender'),
+        })
+
+    async def chat_message(self, event):
+        """Relay a chat message to everyone in the session, sender included."""
+        await self.send_json({
+            'type': 'chat_message',
+            'message_id': event.get('message_id'),
+            'body': event.get('body'),
+            'sender_id': event.get('sender_id'),
+            'sender_username': event.get('sender_username'),
+            'sender_name': event.get('sender_name'),
+            'sent_at': event.get('sent_at'),
         })
 
     async def control_changed(self, event):
@@ -150,6 +193,22 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
         if self.user and not self.user.is_anonymous:
             return self.user.username
         return 'anonymous'
+
+    @database_sync_to_async
+    def get_sender_identity(self):
+        """
+        Identity attached to each chat message. Wrapped like get_username for consistency
+        with the rest of this consumer, even though these fields are already loaded.
+        """
+        if not self.user or self.user.is_anonymous:
+            return {'id': None, 'username': 'anonymous', 'display_name': 'Anonymous'}
+
+        full_name = f"{self.user.first_name} {self.user.last_name}".strip()
+        return {
+            'id': str(self.user.id),
+            'username': self.user.username,
+            'display_name': full_name or self.user.username,
+        }
 
     @database_sync_to_async
     def _return_control_if_held(self):

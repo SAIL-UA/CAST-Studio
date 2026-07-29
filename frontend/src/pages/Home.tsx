@@ -8,6 +8,8 @@ import { useAuth } from '../contexts/Auth';
 // Import components
 import Header from '../components/Header';
 import DataStories from '../components/DataStories';
+import SessionChat from '../components/SessionChat';
+import { useSessionChat } from '../hooks/useSessionChat';
 import FeedbackPanel, { FeedbackCardData, InstructorNote } from '../components/FeedbackPanel';
 import NarrativePatterns from '../components/NarrativePatterns'
 import Workspace from '../components/Workspace'
@@ -145,6 +147,11 @@ const Home = () => {
     const wsRef = useRef<WebSocket | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Session chat rides the socket below. ingest() is stable, so capturing it in the
+    // handler does not re-key the effect and force a reconnect.
+    const chat = useSessionChat(wsRef, username);
+    const ingestChatMessage = chat.ingest;
+
     useEffect(() => {
         if (!sessionShareToken) return;
 
@@ -160,6 +167,7 @@ const Home = () => {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
+                if (ingestChatMessage(data)) return;
                 if (data.type === 'participant_joined') {
                     // Skip host's own join message — host avatar is rendered separately
                     if (data.username === username) return;
@@ -196,7 +204,9 @@ const Home = () => {
                 ws.close();
             }
         };
-    }, [sessionShareToken]);
+        // ingestChatMessage is stable by construction, so listing it cannot retrigger
+        // this effect and reconnect the socket.
+    }, [sessionShareToken, ingestChatMessage]);
 
     // Feedback event handler
     // Also broadcast to other viewers via WebSocket
@@ -289,6 +299,16 @@ const Home = () => {
                         <div className="h-screen">
                             <Workspace setRightNarrativePatternsOpen={setRightNarrativePatternsOpen} setSelectedPattern={setSelectedPattern} selectedPattern={selectedPattern} storyLoading={storyLoading} setStoryLoading={setStoryLoading} onSessionChange={handleSessionChange} readOnly={controlledBy !== null} refreshTrigger={hostRefreshTrigger} />
                         </div>
+                    )}
+
+                    {/* Session chat — only meaningful while hosting a session */}
+                    {sessionShareToken && (
+                        <SessionChat
+                            messages={chat.messages}
+                            unreadCount={chat.unreadCount}
+                            onSend={chat.send}
+                            onOpenChange={chat.setPanelOpen}
+                        />
                     )}
 
                     {/* DataStories — bottom-anchored overlay */}

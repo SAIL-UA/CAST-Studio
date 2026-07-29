@@ -6,6 +6,8 @@ import { getAvatarColor } from '../utils/avatarUtils';
 import Header from '../components/Header';
 import Workspace from '../components/Workspace';
 import DataStories from '../components/DataStories';
+import SessionChat from '../components/SessionChat';
+import { useSessionChat } from '../hooks/useSessionChat';
 import FeedbackPanel, { FeedbackCardData, InstructorNote } from '../components/FeedbackPanel';
 import CompactSidebar from '../components/CompactSidebar';
 import ControlWorkspaceButton from '../components/ControlWorkspaceButton';
@@ -21,7 +23,7 @@ type ParticipantInfo = {
 const SessionWorkspace = () => {
     const { shareToken } = useParams<{ shareToken: string }>();
     const navigate = useNavigate();
-    const { userAuthenticated, userId } = useAuth();
+    const { userAuthenticated, userId, username } = useAuth();
 
     const [hostId, setHostId] = useState<string | null>(null);
     const [hostName, setHostName] = useState('');
@@ -152,6 +154,11 @@ const SessionWorkspace = () => {
     const wsRef = useRef<WebSocket | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Session chat rides the socket below. ingest() is stable, so capturing it in the
+    // handler does not re-key the effect and force a reconnect.
+    const chat = useSessionChat(wsRef, username);
+    const ingestChatMessage = chat.ingest;
+
     useEffect(() => {
         if (!shareToken || !hostId) return;
 
@@ -173,6 +180,7 @@ const SessionWorkspace = () => {
                 const data = JSON.parse(event.data);
                 console.log('[WS] Message:', data);
 
+                if (ingestChatMessage(data)) return;
                 if (data.type === 'participant_joined') {
                     console.log(`[WS] ${data.username} joined the session`);
                     setParticipants(prev => {
@@ -220,7 +228,9 @@ const SessionWorkspace = () => {
                 ws.close();
             }
         };
-    }, [shareToken, hostId]);
+        // ingestChatMessage is stable by construction, so listing it cannot
+        // retrigger this effect and reconnect the socket.
+    }, [shareToken, hostId, ingestChatMessage]);
 
     if (error) {
         return (
@@ -333,6 +343,14 @@ const SessionWorkspace = () => {
                     refreshTrigger={refreshTrigger}
                 />
             </div>
+
+            {/* Session chat — bottom-left, clear of DataStories and the feedback panel */}
+            <SessionChat
+                messages={chat.messages}
+                unreadCount={chat.unreadCount}
+                onSend={chat.send}
+                onOpenChange={chat.setPanelOpen}
+            />
 
             {/* DataStories — bottom-anchored overlay */}
             <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-1/2 z-[300] flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
