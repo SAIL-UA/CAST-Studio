@@ -352,7 +352,16 @@ const SessionWorkspace = () => {
                 </button>
                 <div className={`flex-1 min-h-0 overflow-y-auto px-1 pb-1 ${dataStoriesExpanded ? '' : 'hidden'}`}>
                     <div className="bg-grey-lighter-2 rounded-lg px-4 pb-4">
-                        <DataStories targetUser={hostId || undefined} readOnly={true} refreshTrigger={refreshTrigger} />
+                        {/* Editable only while this participant holds control, matching the
+                            Workspace above. The backend enforces the same rule, so losing
+                            control mid-edit fails the save rather than silently succeeding.
+                            readOnly stays true, preserving the existing no-export behaviour. */}
+                        <DataStories
+                            targetUser={hostId || undefined}
+                            readOnly={true}
+                            canEdit={controlledBy === userId}
+                            refreshTrigger={refreshTrigger}
+                        />
                     </div>
                 </div>
             </div>

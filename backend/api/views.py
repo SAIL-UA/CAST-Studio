@@ -51,7 +51,7 @@ from .serializers import (
 
 # Tasks
 from .tasks import generate_description_task, generate_narrative_task, generate_feedback_task, group_with_ai_task
-from .middleware import get_workspace_user
+from .middleware import get_workspace_user, get_workspace_write_user
 
 # Scaffold mappings (moved to pydandtic.py)
 from .pydandtic import STORY_SCAFFOLDS
@@ -1401,26 +1401,62 @@ class ReturnControlView(APIView):
 
 class UpdateNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
+
+  # Only these NarrativeCache fields may be set by a client. Anything else in the
+  # payload (notably 'user') is dropped so a caller cannot reassign ownership.
+  ALLOWED_FIELDS = {
+    'story_structure_id',
+    'narrative',
+    'order',
+    'theme',
+    'categories',
+    'sequence_justification',
+  }
+
   def post(self, request):
     cache_data = request.data.get('data')
-    
-    cache = NarrativeCache.objects.get(user=get_workspace_user(request))
-    if not cache:
+    if not isinstance(cache_data, dict):
+      return Response(
+        {'status': 'error', 'message': 'Expected a JSON object in "data"'},
+        status=status.HTTP_400_BAD_REQUEST,
+      )
+
+    # get_workspace_write_user, NOT get_workspace_user: the latter also resolves
+    # ?target_user for plain read-only participants and instructors, any of whom could
+    # then overwrite the host's story. Writes are limited to the owner or whoever
+    # currently holds control of the owner's session. Raises PermissionDenied (403).
+    workspace_user = get_workspace_write_user(request)
+
+    try:
+      cache = NarrativeCache.objects.get(user=workspace_user)
+    except NarrativeCache.DoesNotExist:
       return Response({"status": "error", "message": "Cache not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    serializer = NarrativeCacheSerializer(cache, data={'data': cache_data}, partial=True)
+    filtered = {k: v for k, v in cache_data.items() if k in self.ALLOWED_FIELDS}
+    if not filtered:
+      return Response(
+        {'status': 'error', 'message': 'No updatable fields in "data"'},
+        status=status.HTTP_400_BAD_REQUEST,
+      )
+
+    serializer = NarrativeCacheSerializer(cache, data=filtered, partial=True)
     if serializer.is_valid():
       serializer.save()
       return Response({"status": "success"}, status=status.HTTP_200_OK)
     else:
-      return Response({'status': 'error', 'message': 'Invalid data'}, status=status.HTTP_400_BAD_REQUEST)
+      return Response(
+        {'status': 'error', 'message': 'Invalid data', 'errors': serializer.errors},
+        status=status.HTTP_400_BAD_REQUEST,
+      )
 
 
 class ClearNarrativeCacheView(APIView):
   permission_classes = [IsAuthenticated]
   def post(self, request):
+    # Same restriction as the update view: deleting someone's story is a mutation, so a
+    # read-only participant must not be able to do it via ?target_user.
     try:
-      cache = NarrativeCache.objects.get(user=get_workspace_user(request))
+      cache = NarrativeCache.objects.get(user=get_workspace_write_user(request))
       cache.delete()
     except ObjectDoesNotExist:
       pass

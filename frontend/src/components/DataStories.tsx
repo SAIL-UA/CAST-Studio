@@ -1,15 +1,18 @@
 // Import dependencies
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { getNarrativeCache, getImageDataAll } from '../services/api';
+import { getNarrativeCache, getImageDataAll, updateNarrativeCache } from '../services/api';
+import { storyDataToNarrativeCachePayload } from '../utils/narrativeCacheMapping';
 import { GeneratingPlaceholder } from './GeneratingPlaceholder';
 import { logAction } from '../utils/userActionLogger';
 import { getImageUrl } from '../utils/imageUtils';
 import { scrollTracker } from '../utils/scrollTracker';
+import { setStoryUserEdited } from '../utils/storyEditState';
 
 // Import components
 import ExportButton from './ExportButton';
 import FeedbackButton from './FeedbackButton';
+import { DataStoryLexicalField } from './dataStory/DataStoryLexicalField';
 
 
 // Story data interface
@@ -22,14 +25,40 @@ interface StoryData {
     sequence_response?: string;
 }
 
+/**
+ * Canonicalises raw narrative markdown before it is either rendered or edited.
+ *
+ * Two fixups, both driven by what the generator actually emits:
+ *  - Section headers appear inconsistently ("### Introduction", "**Main Body**", or a bare
+ *    "Conclusion" line) and the read view has always stripped them. Applying that here, to
+ *    the raw text, keeps the editor and the read view identical — otherwise entering edit
+ *    mode would make hidden headings suddenly appear.
+ *  - Figure tags are sometimes doubled up as "[FIGURE: [FIGURE: x.png]]". The read view's
+ *    regex swallows both closing brackets, but the editor's transformer matches only the
+ *    inner tag and would leave a stray "]" sitting in the prose.
+ */
+const normalizeNarrativeMarkdown = (markdown: string): string =>
+    markdown
+        .replace(/\[FIGURE:\s*\[FIGURE:\s*([^[\]]+)\]\s*\]/gi, '[FIGURE: $1]')
+        .replace(/^#{1,3}\s*(Introduction|Main Body|Conclusion)\s*:?\s*$/gim, '\n')
+        .replace(/^\s*-?\s*\*\*(Introduction|Main Body|Conclusion)\*\*\s*:?\s*$/gim, '\n')
+        .replace(/^\s*(Introduction|Main Body|Conclusion)\s*:?\s*$/gim, '\n');
+
 // DataStories component
 type DataStoriesProps = {
     targetUser?: string;
+    /** Non-owner view: hides Export. Kept separate from canEdit so a host who has delegated
+     *  control can still export while being unable to edit. */
     readOnly?: boolean;
+    /** Whether story editing is permitted. Defaults to !readOnly for callers that don't
+     *  distinguish the two. The backend enforces this independently. */
+    canEdit?: boolean;
     refreshTrigger?: number;
 };
 
-const DataStories = ({ targetUser, readOnly = false, refreshTrigger }: DataStoriesProps) => {
+const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: DataStoriesProps) => {
+
+    const editingAllowed = canEdit ?? !readOnly;
 
     // State
     const [narrativeSelected, setNarrativeSelected] = useState(true);
@@ -42,6 +71,23 @@ const DataStories = ({ targetUser, readOnly = false, refreshTrigger }: DataStori
     const [isProcessingImages, setIsProcessingImages] = useState(false);
     const [processedRecommended, setProcessedRecommended] = useState<string[]>([]);
     const [imageDescriptions, setImageDescriptions] = useState<Record<string, string>>({});
+
+    // Story editing state
+    const [isEditing, setIsEditing] = useState(false);
+    const [editNarrative, setEditNarrative] = useState('');
+    const [editSessionId, setEditSessionId] = useState(0);
+    const [saveLoading, setSaveLoading] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+
+    // Mirrors isEditing for listeners registered once on mount, which would otherwise
+    // close over a stale value.
+    const isEditingRef = useRef(false);
+    useEffect(() => {
+        isEditingRef.current = isEditing;
+    }, [isEditing]);
+
+    // Set when a workspace_update was suppressed because the editor was open.
+    const missedUpdateRef = useRef(false);
 
     // Check for existing cached narrative on component mount
     const loadCachedNarrative = async () => {
@@ -98,6 +144,12 @@ const DataStories = ({ targetUser, readOnly = false, refreshTrigger }: DataStori
             setIsGenerating(false);
             console.log('Story data received:', data);
 
+            // A fresh generation supersedes any edit in progress, and the user already
+            // confirmed the overwrite in CraftStoryButton before we got here.
+            setIsEditing(false);
+            setEditNarrative('');
+            setSaveError(null);
+
             // Story data already has processed figures from GenerateStoryButton
             setStoryData(data);
             loadImageDescriptions();
@@ -125,10 +177,37 @@ const DataStories = ({ targetUser, readOnly = false, refreshTrigger }: DataStori
     // Refetch when refreshTrigger changes (from WebSocket workspace_update)
     useEffect(() => {
         if (refreshTrigger && refreshTrigger > 0) {
+            // Never reload underneath an open editor. Saving the narrative fires a post_save
+            // signal that broadcasts workspace_update, which comes straight back to the host's
+            // own socket — reloading here would wipe the buffer mid-edit. Remember that we
+            // skipped one so we can catch up on exit instead of staying silently stale.
+            if (isEditingRef.current) {
+                missedUpdateRef.current = true;
+                return;
+            }
             loadCachedNarrative();
             loadImageDescriptions();
         }
     }, [refreshTrigger]);
+
+    // Catch up on any update that arrived while the editor was open.
+    useEffect(() => {
+        if (!isEditing && missedUpdateRef.current) {
+            missedUpdateRef.current = false;
+            loadCachedNarrative();
+            loadImageDescriptions();
+        }
+    }, [isEditing]);
+
+    // Control can be handed back mid-edit, revoking edit permission. Close the editor
+    // rather than leaving a field open that the server will now reject writes from.
+    useEffect(() => {
+        if (!editingAllowed && isEditing) {
+            setIsEditing(false);
+            setEditNarrative('');
+            setSaveError('Editing stopped: control of this workspace changed. Unsaved changes were discarded.');
+        }
+    }, [editingAllowed, isEditing]);
 
 
     // Process narrative text to replace [FIGURE: filename] with blob URLs
@@ -201,7 +280,7 @@ const DataStories = ({ targetUser, readOnly = false, refreshTrigger }: DataStori
             setIsProcessingImages(true);
 
             try {
-                const processedNarrativeTextPromise = processNarrativeWithImages(storyData.narrative || '');
+                const processedNarrativeTextPromise = processNarrativeWithImages(normalizeNarrativeMarkdown(storyData.narrative || ''));
                 const processedThemeTextPromise = processNarrativeWithImages(storyData.theme_response || '');
                 const processedSequenceTextPromise = processNarrativeWithImages(storyData.sequence_response || '');
 
@@ -303,6 +382,91 @@ const DataStories = ({ targetUser, readOnly = false, refreshTrigger }: DataStori
         return url;
     };
 
+    // Caption shown under an inline figure while editing — mirrors the read view's caption.
+    const getCaption = useCallback((filename: string) => {
+        const desc = imageDescriptions[filename];
+        return desc
+            ? `Figure: ${desc.slice(0, 100)}${desc.length > 100 ? '...' : ''}`
+            : 'Figure';
+    }, [imageDescriptions]);
+
+    // The saved narrative as the editor represents it, used as both the seed and the
+    // baseline for the dirty check.
+    const editableNarrative = useMemo(
+        () => normalizeNarrativeMarkdown(storyData?.narrative || ''),
+        [storyData?.narrative]
+    );
+
+    const isDirty = isEditing && editNarrative !== editableNarrative;
+
+    // Export must reflect what the user currently sees, including an unsaved buffer.
+    const exportStoryData = useMemo(() => {
+        if (!storyData) return storyData;
+        return isEditing ? { ...storyData, narrative: editNarrative } : storyData;
+    }, [storyData, isEditing, editNarrative]);
+
+    // Enter edit mode. The bumped session id remounts the composer with fresh content.
+    const handleBeginEdit = (e: React.MouseEvent) => {
+        logAction(e);
+        setEditNarrative(editableNarrative);
+        setEditSessionId(id => id + 1);
+        setSaveError(null);
+        setIsEditing(true);
+    };
+
+    const handleCancelEdit = (e: React.MouseEvent) => {
+        logAction(e);
+        setIsEditing(false);
+        setEditNarrative('');
+        setSaveError(null);
+    };
+
+    const handleSaveEdit = async (e: React.MouseEvent) => {
+        if (!storyData || saveLoading) return;
+        logAction(e);
+
+        const previousNarrative = storyData.narrative || '';
+        const updated: StoryData = { ...storyData, narrative: editNarrative };
+
+        setSaveLoading(true);
+        setSaveError(null);
+        try {
+            const result = await updateNarrativeCache(
+                storyDataToNarrativeCachePayload(updated),
+                targetUser
+            );
+            if (result?.status !== 'success') {
+                setSaveError(typeof result?.message === 'string' ? result.message : 'Save failed');
+                return;
+            }
+
+            setStoryData(updated);
+            setIsEditing(false);
+            setEditNarrative('');
+            setStoryUserEdited(true, targetUser);
+
+            // Research record: the generated text is overwritten in the DB, so keep both
+            // versions in the action log where they stay recoverable.
+            logAction(
+                { actionType: 'click', elementId: 'data-stories-save-story-result' },
+                { previous_narrative: previousNarrative, new_narrative: editNarrative }
+            );
+        } catch (error) {
+            console.error('Error saving story:', error);
+            // A 403 here means control changed hands mid-edit; surface the server's reason
+            // rather than axios's generic "Request failed with status code 403".
+            const detail = (error as any)?.response?.data?.detail
+                ?? (error as any)?.response?.data?.message;
+            setSaveError(
+                typeof detail === 'string'
+                    ? detail
+                    : error instanceof Error ? error.message : 'Save failed'
+            );
+        } finally {
+            setSaveLoading(false);
+        }
+    };
+
     // Handle narrative button
     const handleNarrative = (e: React.MouseEvent) => {
         logAction(e);
@@ -339,7 +503,42 @@ const DataStories = ({ targetUser, readOnly = false, refreshTrigger }: DataStori
             <div id="data-stories-header" className="flex w-full items-center bg-grey-lighter-2 rounded-t-lg p-3">
                 <div id="data-stories-header-left" className="flex items-center gap-3">
                     <span className="bg-bama-crimson text-white text-lg font-roboto-semibold px-3 py-1.5 rounded-lg">Data Stories</span>
-                    {!readOnly && <ExportButton storyData={storyData} />}
+                    {!readOnly && <ExportButton storyData={exportStoryData} />}
+
+                    {/* Editing controls — Story tab only, and only when editing is permitted */}
+                    {editingAllowed && storySelected && storyData?.narrative && (
+                        isEditing ? (
+                            <>
+                                <button
+                                    id="save-story-button"
+                                    log-id="data-stories-save-story-button"
+                                    onClick={handleSaveEdit}
+                                    disabled={saveLoading || !isDirty}
+                                    className="flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                                >
+                                    {saveLoading ? 'Saving...' : 'Save'}
+                                </button>
+                                <button
+                                    id="cancel-edit-story-button"
+                                    log-id="data-stories-cancel-edit-story-button"
+                                    onClick={handleCancelEdit}
+                                    disabled={saveLoading}
+                                    className="flex items-center bg-grey-lightest text-grey-darkest border border-grey-light text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Cancel
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                id="edit-story-button"
+                                log-id="data-stories-edit-story-button"
+                                onClick={handleBeginEdit}
+                                className="flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                            >
+                                Edit Story
+                            </button>
+                        )
+                    )}
                 </div>
                 <div id="data-stories-header-right" className="flex flex-1 items-center justify-end text-sm">
 
@@ -430,19 +629,37 @@ const DataStories = ({ targetUser, readOnly = false, refreshTrigger }: DataStori
                             <GeneratingPlaceholder contentName="processing images" lines={4} />
                         ) : storyData?.narrative ? (
                             <div className="p-4 rounded-lg">
-                                <div className="prose max-w-none text-grey-darkest leading-relaxed text-base">
-                                    <ReactMarkdown
-                                        components={markdownComponents}
-                                        urlTransform={urlTransform}
-                                        skipHtml={false}
-                                    >
-                                        {processedNarrative
-                                            .replace(/^#{1,3}\s*(Introduction|Main Body|Conclusion)\s*:?\s*$/gim, '\n')
-                                            .replace(/^\s*-?\s*\*\*(Introduction|Main Body|Conclusion)\*\*\s*:?\s*$/gim, '\n')
-                                            .replace(/^\s*(Introduction|Main Body|Conclusion)\s*:?\s*$/gim, '\n')
-                                        }
-                                    </ReactMarkdown>
-                                </div>
+                                {isEditing ? (
+                                    /* Seeded from the raw narrative, never from processedNarrative —
+                                       that one has [FIGURE: …] tokens rewritten into image URLs, and
+                                       saving it would destroy the placeholders permanently. */
+                                    <DataStoryLexicalField
+                                        composerKey={`story-${editSessionId}`}
+                                        initialMarkdown={editNarrative}
+                                        editable={true}
+                                        getCaption={getCaption}
+                                        onMarkdownChange={setEditNarrative}
+                                        trackChanges={true}
+                                        placeholder="Write your data story..."
+                                        aria-label="Edit generated story"
+                                    />
+                                ) : (
+                                    <div className="prose max-w-none text-grey-darkest leading-relaxed text-base">
+                                        <ReactMarkdown
+                                            components={markdownComponents}
+                                            urlTransform={urlTransform}
+                                            skipHtml={false}
+                                        >
+                                            {processedNarrative}
+                                        </ReactMarkdown>
+                                    </div>
+                                )}
+
+                                {/* Rendered outside the editor branch so a message set while losing
+                                    control (which closes the editor) is still visible. */}
+                                {saveError && (
+                                    <p className="mt-3 text-sm text-bama-crimson">{saveError}</p>
+                                )}
                             </div>
                         ) : (
                             <div className="text-center text-grey-darkest mt-8">

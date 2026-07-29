@@ -311,7 +311,10 @@ const Home = () => {
                         {/* DataStories content — always mounted, hidden when collapsed */}
                         <div className={`flex-1 min-h-0 overflow-y-auto px-1 pb-1 ${dataStoriesExpanded ? '' : 'hidden'}`}>
                             <div className="bg-grey-lighter-2 rounded-lg px-4 pb-4">
-                                <DataStories refreshTrigger={hostRefreshTrigger} />
+                                {/* Editing is locked while a participant holds control, mirroring
+                                    the Workspace above, so there is exactly one writer per story.
+                                    readOnly stays false so the host can still export. */}
+                                <DataStories canEdit={controlledBy === null} refreshTrigger={hostRefreshTrigger} />
                             </div>
                         </div>
                     </div>

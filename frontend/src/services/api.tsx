@@ -335,9 +335,10 @@ export const returnControl = async (shareToken: string) => {
   return response.data;
 };
 
-export const updateNarrativeCache = async(data: any) => {
-  const response = await API.post('/narrative/cache/update/', { data })
-  return response.data; 
+export const updateNarrativeCache = async(data: any, targetUser?: string) => {
+  const params = targetUser ? { target_user: targetUser } : {};
+  const response = await API.post('/narrative/cache/update/', { data }, { params })
+  return response.data;
 };
 
 export const clearNarrativeCache = async() => {
