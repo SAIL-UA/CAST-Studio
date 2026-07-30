@@ -390,9 +390,9 @@ const SessionWorkspace = () => {
             </div>
 
             {/* Feedback — right-anchored collapsible panel */}
-            <div className="fixed top-1/2 -translate-y-1/2 right-0 z-[300] flex flex-row-reverse items-start transition-all duration-300">
+            <div className="fixed top-1/2 -translate-y-1/2 right-0 z-[300] flex flex-row-reverse items-start transition-all duration-300 pointer-events-none">
                 <button
-                    className="flex items-center justify-center bg-bama-crimson text-xs text-white hover:brightness-110 rounded-l-xl transition-colors duration-150 flex-shrink-0 px-1.5 py-3"
+                    className="pointer-events-auto flex items-center justify-center bg-bama-crimson text-xs text-white hover:brightness-110 rounded-l-xl transition-colors duration-150 flex-shrink-0 px-1.5 py-3"
                     onClick={() => setFeedbackExpanded(!feedbackExpanded)}
                     style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
                 >
@@ -405,7 +405,7 @@ const SessionWorkspace = () => {
                     {feedbackExpanded ? 'Collapse' : 'Expand'} Feedback
                 </button>
                 <div
-                    className={`rounded-l-xl overflow-hidden shadow-2xl transition-all duration-300 ${
+                    className={`pointer-events-auto rounded-l-xl overflow-hidden shadow-2xl transition-all duration-300 ${
                         feedbackExpanded ? 'w-[288px] opacity-100' : 'w-0 opacity-0'
                     }`}
                     style={{ height: '80vh' }}

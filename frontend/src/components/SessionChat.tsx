@@ -18,12 +18,18 @@ const formatTime = (iso: string) => {
 };
 
 /**
- * Bottom-left collapsible chat for a collaboration session.
+ * Right-edge collapsible chat, stacked directly beneath the Feedback tab.
  *
- * Mirrors the DataStories overlay's visual language (crimson toggle bar, rounded top,
- * z-[300]) and sits bottom-left so it clears DataStories (bottom-centre) and the feedback
- * panel (right edge).
+ * Deliberately mirrors the feedback panel: same vertical tab, same rounded-l-xl edge, same
+ * 288px drawer. It sits on the right rather than bottom-left because the recycle bin's
+ * DeleteAll/ClearAll buttons occupy `absolute bottom-6 left-4` (Recycle.tsx) at z-[350].
+ *
+ * The feedback panel is centred at top-1/2 with an 80vh body, so its container spans
+ * 10vh–90vh and its tab sits at the top of that range. Offsetting from 10vh by roughly one
+ * tab-height puts this tab immediately below it.
  */
+const TAB_TOP = 'calc(10vh + 10.5rem)';
+
 const SessionChat = ({ messages, unreadCount, onSend, onOpenChange }: SessionChatProps) => {
     const [expanded, setExpanded] = useState(false);
     const [draft, setDraft] = useState('');
@@ -49,7 +55,7 @@ const SessionChat = ({ messages, unreadCount, onSend, onOpenChange }: SessionCha
             setDraft('');
             setSendError(null);
         } else {
-            setSendError('Not connected — message not sent. Check your connection and try again.');
+            setSendError('Not connected — message not sent.');
         }
     };
 
@@ -69,32 +75,46 @@ const SessionChat = ({ messages, unreadCount, onSend, onOpenChange }: SessionCha
     return (
         <div
             id="session-chat"
-            className={`fixed bottom-0 left-4 z-[300] w-80 max-w-[90vw] flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
-                expanded ? 'max-h-[60vh]' : 'max-h-[32px]'
-            }`}
+            className="fixed right-0 z-[300] flex flex-row-reverse items-start transition-all duration-300 pointer-events-none"
+            style={{ top: TAB_TOP }}
         >
+            {/* Vertical tab, matching the Feedback tab above it.
+                pointer-events are re-enabled per child: these right-edge overlays keep a tall
+                box even when collapsed, and an inert container would otherwise swallow clicks
+                meant for whatever sits beneath it. */}
             <button
                 id="session-chat-toggle"
                 log-id="session-chat-toggle"
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 flex-shrink-0"
+                className="pointer-events-auto relative flex items-center justify-center bg-bama-crimson text-xs text-white hover:brightness-110 rounded-l-xl transition-colors duration-150 flex-shrink-0 px-1.5 py-3 shadow-lg"
                 onClick={handleToggle}
+                style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
             >
                 <svg
-                    className={`w-3 h-3 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
+                    className={`w-3 h-3 mb-1.5 transition-transform duration-300 ${expanded ? 'rotate-0' : 'rotate-180'}`}
                     fill="none" stroke="currentColor" viewBox="0 0 24 24"
                 >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-                {expanded ? 'Collapse' : 'Expand'} Chat
+                Chat
                 {!expanded && unreadCount > 0 && (
-                    <span className="ml-1 bg-white text-bama-crimson rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none">
+                    // Horizontal writing mode so the number isn't rotated with the tab.
+                    <span
+                        className="absolute -left-1 top-1 bg-white text-bama-crimson rounded-full px-1 text-[10px] font-semibold leading-tight shadow"
+                        style={{ writingMode: 'horizontal-tb' }}
+                    >
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
             </button>
 
-            <div className={`flex-1 min-h-0 flex flex-col px-1 pb-1 ${expanded ? '' : 'hidden'}`}>
-                <div className="flex-1 min-h-0 flex flex-col bg-grey-lighter-2 rounded-lg overflow-hidden">
+            {/* Drawer — same width and slide behaviour as the feedback panel */}
+            <div
+                className={`pointer-events-auto rounded-l-xl overflow-hidden shadow-2xl transition-all duration-300 ${
+                    expanded ? 'w-[288px] opacity-100' : 'w-0 opacity-0'
+                }`}
+                style={{ height: '55vh' }}
+            >
+                <div className="h-full bg-grey-lighter-2 flex flex-col">
                     <div
                         ref={scrollRef}
                         id="session-chat-messages"

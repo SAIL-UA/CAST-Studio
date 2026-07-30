@@ -306,8 +306,13 @@ const Home = () => {
                         </div>
                     )}
 
-                    {/* Session chat — only meaningful while hosting a session */}
-                    {sessionShareToken && (
+                    {/* Session chat — only when the workspace is genuinely shared.
+                        A hosted session stays is_active until explicitly closed, so having a
+                        share token is not enough: an abandoned session would show chat forever
+                        on what is effectively a personal workspace. Require someone else to be
+                        actually present, which the backend derives from a 15s last_seen window
+                        and the socket keeps current via participant_joined/left. */}
+                    {sessionShareToken && sessionParticipants.some(p => p.is_online !== false) && (
                         <SessionChat
                             messages={chat.messages}
                             unreadCount={chat.unreadCount}
@@ -346,10 +351,10 @@ const Home = () => {
 
                     {/* Feedback — right-anchored collapsible panel */}
                     {/* Feedback — right-anchored collapsible panel */}
-                    <div className="fixed top-1/2 -translate-y-1/2 right-0 z-[300] flex flex-row-reverse items-start transition-all duration-300">
+                    <div className="fixed top-1/2 -translate-y-1/2 right-0 z-[300] flex flex-row-reverse items-start transition-all duration-300 pointer-events-none">
                         {/* Collapse/Expand toggle bar — vertical on the left edge */}
                         <button
-                            className="flex items-center justify-center bg-bama-crimson text-xs text-white hover:brightness-110 rounded-l-xl transition-colors duration-150 flex-shrink-0 px-1.5 py-3 shadow-lg"
+                            className="pointer-events-auto flex items-center justify-center bg-bama-crimson text-xs text-white hover:brightness-110 rounded-l-xl transition-colors duration-150 flex-shrink-0 px-1.5 py-3 shadow-lg"
                             onClick={() => setFeedbackExpanded(!feedbackExpanded)}
                             style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
                         >
@@ -363,7 +368,7 @@ const Home = () => {
                         </button>
                         {/* Feedback content — fixed height, scrollable */}
                         <div
-                            className={`rounded-l-xl overflow-hidden shadow-2xl transition-all duration-300 ${
+                            className={`pointer-events-auto rounded-l-xl overflow-hidden shadow-2xl transition-all duration-300 ${
                                 feedbackExpanded ? 'w-[288px] opacity-100' : 'w-0 opacity-0'
                             }`}
                             style={{ height: '80vh' }}
