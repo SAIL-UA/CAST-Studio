@@ -1,6 +1,6 @@
 // Import dependencies
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 
 // Import context
 import { useAuth } from '../contexts/Auth';
@@ -149,7 +149,12 @@ const Home = () => {
 
     // Session chat rides the socket below. ingest() is stable, so capturing it in the
     // handler does not re-key the effect and force a reconnect.
-    const chat = useSessionChat(wsRef, username);
+    // The host is the workspace owner, so hostId is this user.
+    const chatSessionContext = useMemo(
+        () => ({ shareToken: sessionShareToken, hostId: userId }),
+        [sessionShareToken, userId]
+    );
+    const chat = useSessionChat(wsRef, username, chatSessionContext);
     const ingestChatMessage = chat.ingest;
 
     useEffect(() => {
