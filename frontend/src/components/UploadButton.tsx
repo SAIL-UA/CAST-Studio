@@ -141,6 +141,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
         <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
                 <button id="upload-button"
+                    data-tour-target="create-button"
                     className="bg-bama-crimson text-sm text-white rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
                 >
                     <span className="flex items-center justify-center gap-2">

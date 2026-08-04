@@ -122,6 +122,16 @@ const DataStories = ({ targetUser, readOnly = false, refreshTrigger }: DataStori
         };
     }, [])
 
+    // Whenever a story becomes available — either freshly generated OR loaded
+    // from cache on mount — default to the Story tab so users land on the
+    // output rather than the Reasoning tab.
+    useEffect(() => {
+        if (storyData) {
+            setStorySelected(true);
+            setNarrativeSelected(false);
+        }
+    }, [storyData]);
+
     // Refetch when refreshTrigger changes (from WebSocket workspace_update)
     useEffect(() => {
         if (refreshTrigger && refreshTrigger > 0) {

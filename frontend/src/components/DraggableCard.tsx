@@ -393,6 +393,13 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
       <div
         ref={draggable ? dragRef : undefined}
         style={getCardStyle()}
+        data-tour-target={
+          image.filepath === '' && index === 0
+            ? 'note-1'
+            : image.filepath !== '' && image.long_desc === 'Opportunity to enroll'
+              ? 'visual-3'
+              : undefined
+        }
       >
         <div id="card-container"
           log-id={"draggable-card"}

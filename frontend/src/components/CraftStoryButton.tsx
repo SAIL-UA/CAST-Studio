@@ -271,6 +271,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                         <button
                             id="craft-story-button"
                             log-id="craft-story-button"
+                            data-tour-target="story"
                             className="relative overflow-hidden flex items-center text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                             style={{ backgroundColor: storyLoading ? '#348b9466' : '#348b94' }}
                             disabled={storyLoading}
@@ -316,6 +317,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                 <button
                     id="craft-story-button"
                     log-id="craft-story-button"
+                    data-tour-target="story"
                     className="relative overflow-hidden flex items-center text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ backgroundColor: storyLoading ? '#348b9466' : '#348b94' }}
                     disabled={storyLoading}
