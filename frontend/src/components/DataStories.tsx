@@ -56,6 +56,17 @@ type DataStoriesProps = {
     refreshTrigger?: number;
 };
 
+// Shared geometry for the header's story-editing buttons so they line up as one row: identical
+// padding, a border on every variant (a border on only some made them differ in height), and no
+// horizontal margin — the header's `gap-3` is the single source of spacing.
+const storyActionButton =
+    'flex items-center justify-center whitespace-nowrap shrink-0 text-sm border ' +
+    'rounded-t-2xl rounded-b-2xl px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg ' +
+    'hover:brightness-95 transition duration-200 disabled:opacity-50 ' +
+    'disabled:cursor-not-allowed disabled:hover:translate-y-0';
+const storyActionPrimary = `${storyActionButton} bg-bama-crimson text-white border-transparent`;
+const storyActionSecondary = `${storyActionButton} bg-grey-lightest text-grey-darkest border-grey-light`;
+
 const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: DataStoriesProps) => {
 
     const editingAllowed = canEdit ?? !readOnly;
@@ -514,7 +525,7 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                                     log-id="data-stories-save-story-button"
                                     onClick={handleSaveEdit}
                                     disabled={saveLoading || !isDirty}
-                                    className="flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                                    className={`${storyActionPrimary} min-w-[5.25rem]`}
                                 >
                                     {saveLoading ? 'Saving...' : 'Save'}
                                 </button>
@@ -523,7 +534,7 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                                     log-id="data-stories-cancel-edit-story-button"
                                     onClick={handleCancelEdit}
                                     disabled={saveLoading}
-                                    className="flex items-center bg-grey-lightest text-grey-darkest border border-grey-light text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className={`${storyActionSecondary} min-w-[5.25rem]`}
                                 >
                                     Cancel
                                 </button>
@@ -533,7 +544,7 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                                 id="edit-story-button"
                                 log-id="data-stories-edit-story-button"
                                 onClick={handleBeginEdit}
-                                className="flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+                                className={storyActionPrimary}
                             >
                                 Edit Story
                             </button>
