@@ -14,12 +14,14 @@ import Workspace from '../components/Workspace'
 import NarrativeExamples from '../components/NarrativeExamples'
 import CompactSidebar from '../components/CompactSidebar'
 import Footer from '../components/Footer'
+import GuestWelcomeTutorial from '../components/GuestWelcomeTutorial'
 
 // Import utils
 import { handleAuthRequired } from '../utils/utils';
 import { getImageDataAll, getSessionStatus } from '../services/api';
 import { getAvatarColor } from '../utils/avatarUtils';
 import ControlWorkspaceButton from '../components/ControlWorkspaceButton';
+import { useGuestTourOpen } from '../utils/useGuestTourOpen';
 
 // Login page component
 const Home = () => {
@@ -46,11 +48,16 @@ const Home = () => {
     // Session state for host avatars
     const [sessionShareToken, setSessionShareToken] = useState<string | null>(null);
     const [sessionParticipants, setSessionParticipants] = useState<{username: string; first_name: string; last_name: string; is_online?: boolean}[]>([]);
+    const [guestTutorialDismissed, setGuestTutorialDismissed] = useState(false);
     const [controlledBy, setControlledBy] = useState<string | null>(null);
     const [controlledByName, setControlledByName] = useState<string | null>(null);
 
     // Derived: right panel is open when narrative patterns or examples are active
-    const rightPanelOpen = rightNarrativePatternsOpen;
+    // Guest tour: on the "narrative" screen, force the right-hand
+    // narrative patterns panel open. It auto-closes when the user advances
+    // past screen 4 because the tour attribute clears.
+    const tourNarrative = useGuestTourOpen('narrative');
+    const rightPanelOpen = rightNarrativePatternsOpen || tourNarrative;
 
     // Check authentication
     useEffect(() => {
@@ -217,8 +224,13 @@ const Home = () => {
     }, []);
 
     // Visible component
+    const isGuest = !!username && username.startsWith('guest-');
+
     return (
         <>
+            {isGuest && !guestTutorialDismissed && (
+                <GuestWelcomeTutorial onDismiss={() => setGuestTutorialDismissed(true)} />
+            )}
             <Header onMenuOpen={() => setLeftMenuOpen(prev => !prev)} floating menuOpen={leftMenuOpen} subtitle="Workspace" onRecycleBinOpen={() => window.dispatchEvent(new CustomEvent('openRecycleBin'))} />
 
             {/* Session info — under the pill, visible when host has active session with participants */}
@@ -292,7 +304,9 @@ const Home = () => {
                     )}
 
                     {/* DataStories — bottom-anchored overlay */}
-                    <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-1/2 z-[300] flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
+                    <div
+                        data-tour-target="story-browser"
+                        className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-1/2 z-[300] flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
                         dataStoriesExpanded ? 'max-h-[75vh]' : 'max-h-[32px]'
                     }`}>
                         {/* Collapse/Expand toggle bar */}

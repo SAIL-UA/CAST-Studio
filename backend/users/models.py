@@ -41,6 +41,7 @@ class User(AbstractUser):
   first_name = models.CharField(max_length=32)
   last_name = models.CharField(max_length=64)
   is_instructor = models.BooleanField(default=False)
+  is_guest = models.BooleanField(default=False)
 
   objects = CustomUserManager()
 

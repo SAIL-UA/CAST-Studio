@@ -3,13 +3,15 @@ from .views import (
   LoginView, CurrentUserView, LogoutView,
   CheckAuthView, RegisterView, PasswordResetRequestView,
   PasswordResetConfirmView, PasswordResetCodeVerifyView,
-  RefreshTokenView
+  RefreshTokenView, GuestLoginView, GuestCleanupView
 )
 
 urlpatterns = [
   path("token/refresh/", RefreshTokenView.as_view(), name="token-refresh"),
   path("register/", RegisterView.as_view(), name="register"),
   path("login/", LoginView.as_view(), name="login"),
+  path("guest-login/", GuestLoginView.as_view(), name="guest_login"),
+  path("guest-cleanup/", GuestCleanupView.as_view(), name="guest_cleanup"),
   path("logout/", LogoutView.as_view(), name="logout"),
   path("me/", CurrentUserView.as_view(), name="current_user"),
   path("check_auth/", CheckAuthView.as_view(), name="check_auth"),

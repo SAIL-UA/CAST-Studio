@@ -1,10 +1,12 @@
 // Import dependencies
+import { useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 
 // Import components
 import SelectNarrativeButton from './SelectNarrativeButton';
 import NarrativeExamplesButton from './NarrativeExamplesButton';
 import { logAction } from '../utils/userActionLogger';
+import { useGuestTourOpen } from '../utils/useGuestTourOpen';
 
 // Import images
 import questionanswer from '../assets/images/questionanswer.png'
@@ -164,13 +166,19 @@ const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, 
 
     const tabTriggerClass = "px-4 py-1.5 rounded-full text-sm font-medium transition-colors duration-150 outline-none cursor-pointer data-[state=active]:bg-bama-crimson data-[state=active]:text-white text-grey-darker hover:text-grey-darkest";
 
+    // Guest tour: force the "flow" tab when on the narrative screen; user has
+    // full control otherwise.
+    const tourNarrative = useGuestTourOpen('narrative');
+    const [userTab, setUserTab] = useState<string>('content');
+    const activeTab = tourNarrative ? 'flow' : userTab;
+
     return (
         <div id="narrative-patterns" className="p-0 m-0">
             <div className="flex flex-row w-full mb-4">
                 <p className={`${center ? 'text-2xl mt-2' : 'text-sm text-gray-500 font-regular ml-4'}`}>Narrative Structures</p>
             </div>
 
-            <Tabs.Root defaultValue="content">
+            <Tabs.Root value={activeTab} onValueChange={setUserTab}>
                 <Tabs.List className="flex gap-1 bg-grey-lighter rounded-full p-1 mb-4 ml-4 mr-4 w-fit">
                     <Tabs.Trigger value="content" className={tabTriggerClass}>Content</Tabs.Trigger>
                     <Tabs.Trigger value="flow" className={tabTriggerClass}>Flow</Tabs.Trigger>

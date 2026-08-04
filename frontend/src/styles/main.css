@@ -287,5 +287,25 @@ background-color: #eaf1f7;
   50% { opacity: 1; }
 }
 
+/* Guest tutorial highlighting is done via cutout backdrop + JS-measured
+   coordinates in GuestWelcomeTutorial.tsx — no CSS needed for the cutout.
+
+   When the tour is active (body has data-guest-tour-open), any dropdown menu
+   content that we forced open — plus the right-hand narrative patterns panel —
+   should be visually shown but non-interactive. Radix portals its content to
+   document root at a z-index above our click-catcher, so we can't rely on the
+   backdrop to absorb those clicks. pointer-events: none on the popper wrapper
+   (and forced on all descendants) takes it out of the hit-testing entirely. */
+body[data-guest-tour-open] [data-radix-popper-content-wrapper],
+body[data-guest-tour-open] [data-radix-popper-content-wrapper] *,
+body[data-guest-tour-open] [role="menu"],
+body[data-guest-tour-open] [role="menu"] *,
+body[data-guest-tour-open] #right-home,
+body[data-guest-tour-open] #right-home *,
+body[data-guest-tour-open] #narrative-patterns,
+body[data-guest-tour-open] #narrative-patterns * {
+  pointer-events: none !important;
+}
+
 
 

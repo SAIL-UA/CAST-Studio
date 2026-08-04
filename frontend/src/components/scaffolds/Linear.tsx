@@ -357,6 +357,7 @@ const Linear = ({
     return (
         <div
             ref={outerRef}
+            data-tour-target="scaffold-linear"
             style={{
                 position: 'absolute',
                 left: position.x + (dragOffset ? dragOffset.x : 0),
