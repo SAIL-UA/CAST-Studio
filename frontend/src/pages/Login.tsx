@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 
 // Import context
 import { useAuth } from '../contexts/Auth';
-import { login, register } from '../services/api';
+import { login, register, guestLogin } from '../services/api';
 
 // Import components
 
@@ -61,6 +61,33 @@ const Login = () => {
             } else {
               setError('An error occurred during login. Please try again.');
             }
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+    };
+
+    // Guest login: creates an ephemeral user server-side and logs in immediately
+    const handleGuestLogin = () => {
+        setLoading(true);
+        setError('');
+        setSuccess('');
+
+        guestLogin()
+          .then(response => {
+            if (response.status === 200 || response.status === 201) {
+              setUserAuthenticated(true);
+              setUsername(response.data.user.username);
+              setUserId(String(response.data.user.id));
+              setIsInstructor(response.data.user.is_instructor || false);
+              navigate('/home');
+            } else {
+              setError('Could not start guest session. Please try again.');
+            }
+          })
+          .catch(error => {
+            console.error('Guest login error:', error);
+            setError('Could not start guest session. Please try again.');
           })
           .finally(() => {
             setLoading(false);
@@ -271,9 +298,17 @@ const Login = () => {
                             onClick={toggleMode}
                             className="text-white text-sm underline hover:text-grey-lightest transition"
                         >
-                            {isRegisterMode 
-                                ? 'Already have an account? Login' 
+                            {isRegisterMode
+                                ? 'Already have an account? Login'
                                 : 'Need an account? Register'}
+                        </button><br/>
+                        <button
+                            type="button"
+                            onClick={handleGuestLogin}
+                            disabled={loading}
+                            className="text-white text-sm underline hover:text-grey-lightest transition disabled:opacity-50"
+                        >
+                            In a hurry? Use as guest
                         </button>
                         </div>
                     )}

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { checkAuth } from "../services/api";
+import { checkAuth, guestCleanup } from "../services/api";
 
 // Create context instance
 type AuthContextType = {
@@ -72,6 +72,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         checkAuthWithRetry();
     }, []);
+
+    // Guest cleanup on tab close: if the current user is a guest
+    // (username starts with 'guest-'), fire a sendBeacon to delete them
+    // and their seeded data when the tab is unloaded.
+    useEffect(() => {
+        if (!username || !username.startsWith('guest-')) return;
+        const handler = () => guestCleanup();
+        window.addEventListener('pagehide', handler);
+        return () => window.removeEventListener('pagehide', handler);
+    }, [username]);
 
     // Return context provider
     return (

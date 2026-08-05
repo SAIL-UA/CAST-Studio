@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/Auth';
-import { login, register } from '../services/api';
+import { login, register, guestLogin } from '../services/api';
 
 const ACCENT = '#00849E';
 const SANS = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
@@ -182,6 +182,14 @@ const TestLogin = () => {
 
     const toggleMode = () => { setIsRegisterMode(!isRegisterMode); setUsernameInput(''); setPassword(''); setConfirmPassword(''); setEmail(''); setFirstName(''); setLastName(''); setError(''); setSuccess(''); };
 
+    const handleGuestLogin = () => {
+        setLoading(true); setError(''); setSuccess('');
+        guestLogin()
+            .then(r => { if (r.status === 200 || r.status === 201) { setUserAuthenticated(true); setUsername(r.data.user.username); setUserId(String(r.data.user.id)); setIsInstructor(r.data.user.is_instructor || false); navigate('/home'); } else setError('Could not start guest session.'); })
+            .catch(err => { console.error('Guest login error:', err); setError('Could not start guest session.'); })
+            .finally(() => setLoading(false));
+    };
+
     return (
         <div style={{ background: '#fff', color: '#0a0a0a', fontFamily: SANS, display: 'flex', flexDirection: 'column', minHeight: '100vh', WebkitFontSmoothing: 'antialiased' as any }}>
             {/* ── Navbar (frosted glass, sticky) ─────────────────── */}
@@ -284,6 +292,14 @@ const TestLogin = () => {
                                 {isRegisterMode ? 'Sign in' : 'Sign up for an account'}
                             </button>
                         </div>
+                        {!isRegisterMode && (
+                            <div style={{ textAlign: 'center', fontSize: 13, color: '#6b6b6b', marginTop: -12 }}>
+                                Don't want to create an account?{' '}
+                                <button type="button" onClick={handleGuestLogin} disabled={loading} style={{ color: '#0a0a0a', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, opacity: loading ? 0.5 : 1 }}>
+                                    Use as guest
+                                </button>
+                            </div>
+                        )}
                     </form>
                 </aside>
             </section>

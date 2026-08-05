@@ -185,8 +185,9 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
         };
     }, [])
 
-    // Whenever story content becomes available (cache load, fresh generation, saved edit),
-    // land the user on the Story tab rather than Reasoning.
+    // Whenever a story becomes available — either freshly generated OR loaded
+    // from cache on mount — default to the Story tab so users land on the
+    // output rather than the Reasoning tab.
     useEffect(() => {
         if (storyData) {
             setStorySelected(true);

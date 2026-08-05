@@ -4,6 +4,7 @@ import { generateDescription, getImageDataAll } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { useGuestTourOpen } from '../utils/useGuestTourOpen';
 import type { ImageData } from '../types/types';
 
 // Legacy placeholder text — kept for backward compatibility with existing images
@@ -26,6 +27,11 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
   const [progress, setProgress] = useState(0);
   const [totalToDescribe, setTotalToDescribe] = useState(0);
   const isDisabled = aiRunning || storyLoading;
+
+  // Force-open during the guest tour screen for annotate
+  const tourOpen = useGuestTourOpen('annotate');
+  const [userOpen, setUserOpen] = useState(false);
+  const menuOpen = tourOpen || userOpen;
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -159,11 +165,12 @@ const AnnotateVisualsButton = ({ images, storyLoading = false, onDescriptionsUpd
 
   return (
     <>
-      <DropdownMenu.Root>
+      <DropdownMenu.Root open={menuOpen} onOpenChange={setUserOpen}>
         <DropdownMenu.Trigger asChild disabled={isDisabled}>
           <button
             id="annotate-visuals-button"
             log-id="annotate-visuals-button"
+            data-tour-target="annotate"
             className="relative overflow-hidden flex items-center text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: bgColor }}
             disabled={isDisabled}

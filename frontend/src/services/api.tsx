@@ -135,6 +135,35 @@ export const login = async (credentials: { username: string; password: string })
 };
 
 
+// Fire-and-forget cleanup call for guest users on tab close.
+// Uses sendBeacon so it survives page unload. Backend refuses to delete
+// non-guest users so this is safe to call unconditionally, but callers
+// should still gate on "am I a guest" to avoid useless network noise.
+export const guestCleanup = () => {
+  const token = localStorage.getItem('access');
+  if (!token) return;
+  try {
+    const blob = new Blob([JSON.stringify({ token })], { type: 'application/json' });
+    navigator.sendBeacon('/users/guest-cleanup/', blob);
+  } catch (e) {
+    // Best-effort; can't do much during unload.
+  }
+};
+
+export const guestLogin = async () => {
+  const response = await USER_API.post('/guest-login/', {});
+
+  if (response.data.access && response.data.refresh) {
+    localStorage.setItem('access', response.data.access);
+    localStorage.setItem('refresh', response.data.refresh);
+    API.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+    USER_API.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+  }
+
+  return response;
+};
+
+
 export const register = async(userData: { username: string; email: string; password: string }) => {
   const response = await USER_API.post('/register/', userData)
   return response;

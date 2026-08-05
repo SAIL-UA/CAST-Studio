@@ -1,8 +1,9 @@
 // Import dependencies
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { logAction } from '../utils/userActionLogger';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { useGuestTourOpen } from '../utils/useGuestTourOpen';
 
 const menuItemClass = "block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm !font-light rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 cursor-pointer outline-none text-left";
 
@@ -18,6 +19,11 @@ type GenerateStoryButtonProps = {
 const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern, selectedPattern, storyLoading }: GenerateStoryButtonProps) => {
 
     const { selectWithAI } = useFeatureFlags();
+
+    // Force-open during the guest tour screen for narrative
+    const tourOpen = useGuestTourOpen('narrative');
+    const [userOpen, setUserOpen] = useState(false);
+    const menuOpen = tourOpen || userOpen;
 
     // Reset stale AI pattern if feature is disabled
     useEffect(() => {
@@ -65,10 +71,11 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
 
     // Visible component
     return (
-        <DropdownMenu.Root>
+        <DropdownMenu.Root open={menuOpen} onOpenChange={setUserOpen}>
             <DropdownMenu.Trigger asChild disabled={storyLoading}>
                 <button
                     id="select-narrative-button"
+                    data-tour-target="narrative"
                     className="flex items-center whitespace-nowrap bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={storyLoading}
                 >

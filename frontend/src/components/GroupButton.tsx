@@ -5,6 +5,7 @@ import { GroupData } from '../types/types';
 import { formatGroupMetadata } from '../utils/groupUtils';
 import { aiGroupImages } from '../services/api';
 import { useTaskProgress } from '../hooks/useTaskProgress';
+import { useGuestTourOpen } from '../utils/useGuestTourOpen';
 
 interface GroupButtonProps {
     onClick?: () => Promise<GroupData | undefined>;
@@ -17,6 +18,11 @@ const GroupButton = ({ onClick, onGroupComplete, onError, images = [] }: GroupBu
     const [aiTaskId, setAiTaskId] = useState<string | null>(null);
     const { progress, stageName, error, isComplete } = useTaskProgress(aiTaskId);
     const isLoading = aiTaskId !== null && !isComplete && !error;
+
+    // Force-open during the guest tour screen for group
+    const tourOpen = useGuestTourOpen('group');
+    const [userOpen, setUserOpen] = useState(false);
+    const menuOpen = tourOpen || userOpen;
 
     // Reset task when complete
     React.useEffect(() => {
@@ -75,9 +81,10 @@ const GroupButton = ({ onClick, onGroupComplete, onError, images = [] }: GroupBu
     };
 
     return (
-        <DropdownMenu.Root>
+        <DropdownMenu.Root open={menuOpen} onOpenChange={setUserOpen}>
             <DropdownMenu.Trigger asChild disabled={isLoading}>
                 <button id="group-button"
+                    data-tour-target="group"
                     className="relative overflow-hidden bg-bama-crimson text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:cursor-not-allowed"
                     style={isLoading ? { backgroundColor: '#005c8466' } : undefined}
                     disabled={isLoading}
