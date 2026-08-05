@@ -73,20 +73,11 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
         setTaskId(null);
     }
 
-    // Handle craft — warn about destroying saved edits first, then run the normal checks.
+    // Handle craft — run the normal checks. The user-edits overwrite warning is disabled
+    // for now (see storyEditState.ts): the localStorage flag isn't scoped per account, so
+    // it fires false positives across logins. Reinstate once that's fixed.
     const handleCraft = async (e: React.MouseEvent) => {
         const ctx = captureActionContext(e);
-
-        if (hasUserEdits) {
-            setConfirmModal('Generating a new story will replace the story you edited, and your edits cannot be recovered. Continue?');
-            setPendingGeneration(() => () => {
-                // Clear this prompt before validation, which may raise its own.
-                setConfirmModal(null);
-                setPendingGeneration(null);
-                runValidationAndGenerate(ctx);
-            });
-            return;
-        }
 
         runValidationAndGenerate(ctx);
     };
