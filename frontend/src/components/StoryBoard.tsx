@@ -696,6 +696,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                         hasGroups={groupDivs.length > 0}
                         selectedPattern={selectedPattern}
                         onStoryGenerated={refreshImageDataAfterStoryGeneration}
+                        targetUser={targetUser}
                         scaffolds={scaffolds}
                         slotOrder={(() => {
                             const linearScaffold = scaffolds.find(s => {

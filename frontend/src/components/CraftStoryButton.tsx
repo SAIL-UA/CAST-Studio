@@ -5,6 +5,7 @@ import { captureActionContext, logAction } from '../utils/userActionLogger';
 import { generateNarrativeAsync, getImageDataAll, getNarrativeCache } from '../services/api';
 import { useTaskProgress } from '../hooks/useTaskProgress';
 import { SCAFFOLD_NUMBER_TO_PATTERN } from '../types/scaffoldMappings';
+import { getStoryUserEdited, setStoryUserEdited, STORY_EDIT_STATE_EVENT } from '../utils/storyEditState';
 
 // Import types
 import { ImageData, ScaffoldData } from '../types/types';
@@ -20,10 +21,12 @@ type CraftStoryButtonProps = {
     onStoryGenerated?: () => Promise<void>;
     slotOrder?: number[] | null;
     scaffolds?: ScaffoldData[];
+    /** Workspace owner when acting on someone else's workspace (session control). */
+    targetUser?: string;
 }
 
 // Craft Story button component
-const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroups = false, selectedPattern, onStoryGenerated, slotOrder, scaffolds = [] }: CraftStoryButtonProps) => {
+const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroups = false, selectedPattern, onStoryGenerated, slotOrder, scaffolds = [], targetUser }: CraftStoryButtonProps) => {
 
     const [taskId, setTaskId] = useState<string | null>(null);
     const [alertModal, setAlertModal] = useState<string | null>(null);
@@ -31,6 +34,20 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
     const [pendingGeneration, setPendingGeneration] = useState<(() => void) | null>(null);
     const targetScaffoldIdRef = useRef<string | null>(null);
     const { progress, stageName, error, isComplete } = useTaskProgress(taskId);
+
+    // Whether this workspace has saved manual edits that regeneration would destroy.
+    const [hasUserEdits, setHasUserEdits] = useState(() => getStoryUserEdited(targetUser));
+    useEffect(() => {
+        setHasUserEdits(getStoryUserEdited(targetUser));
+        const handleEditStateChange = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            // Ignore edits made to a different workspace than the one this button targets.
+            if ((detail?.workspaceOwner || undefined) !== targetUser) return;
+            setHasUserEdits(Boolean(detail?.edited));
+        };
+        window.addEventListener(STORY_EDIT_STATE_EVENT, handleEditStateChange);
+        return () => window.removeEventListener(STORY_EDIT_STATE_EVENT, handleEditStateChange);
+    }, [targetUser]);
 
     // Listen for scaffold-specific story generation events (from play buttons on scaffolds)
     useEffect(() => {
@@ -45,7 +62,9 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
         };
         window.addEventListener('generateScaffoldStory', handleGenerateEvent);
         return () => window.removeEventListener('generateScaffoldStory', handleGenerateEvent);
-    }, [storyLoading, images, scaffolds, selectedPattern, hasGroups, slotOrder]);
+        // hasUserEdits included so the scaffold play-button path sees the current flag and
+        // shows the same overwrite warning as the main button.
+    }, [storyLoading, images, scaffolds, selectedPattern, hasGroups, slotOrder, hasUserEdits]);
 
     // Handle error from progress tracking
     if (error && storyLoading) {
@@ -54,10 +73,16 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
         setTaskId(null);
     }
 
-    // Handle craft
+    // Handle craft — run the normal checks. The user-edits overwrite warning is disabled
+    // for now (see storyEditState.ts): the localStorage flag isn't scoped per account, so
+    // it fires false positives across logins. Reinstate once that's fixed.
     const handleCraft = async (e: React.MouseEvent) => {
         const ctx = captureActionContext(e);
 
+        runValidationAndGenerate(ctx);
+    };
+
+    const runValidationAndGenerate = async (ctx: any) => {
         // --- Categorize storyboard items ---
         const storyboardItems = images.filter(img => img.in_storyboard && img.source !== 'instructor');
         const actualImages = storyboardItems.filter(img => img.filepath && img.filepath !== '');
@@ -221,6 +246,8 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                                 window.dispatchEvent(storyEvent);
 
                                 console.log('New story generated successfully');
+                                // The row now holds fresh AI output, so prior edits are gone.
+                                setStoryUserEdited(false, targetUser);
                                 setStoryLoading(false);
                                 setTaskId(null);
                                 logAction(ctx, { "story_data": cacheData })
