@@ -14,10 +14,14 @@ import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { HeadingNode, QuoteNode } from '@lexical/rich-text';
 import {
     $getRoot,
+    $getSelection,
+    $isRangeSelection,
     CAN_REDO_COMMAND,
     CAN_UNDO_COMMAND,
     COMMAND_PRIORITY_LOW,
+    FORMAT_TEXT_COMMAND,
     REDO_COMMAND,
+    TextFormatType,
     UNDO_COMMAND,
 } from 'lexical';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -99,7 +103,56 @@ function OnChangeMarkdownPlugin({
  * History lives in memory inside the composer, so it is per-edit-session by construction:
  * remounting on a new edit (via composerKey) starts a fresh stack, and nothing is persisted.
  */
-function HistoryToolbar() {
+const pillBaseClass =
+    'flex items-center justify-center min-w-[1.75rem] h-7 px-3 text-xs text-grey-darkest ' +
+    'border border-grey-light rounded-full bg-white hover:bg-grey-lighter transition duration-150 ' +
+    'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white';
+const pillActiveClass = 'bg-grey-light hover:bg-grey-light text-grey-darkest';
+
+function FormatPill({
+    format,
+    label,
+    title,
+    glyphClass,
+}: {
+    format: TextFormatType;
+    label: string;
+    title: string;
+    glyphClass: string;
+}) {
+    const [editor] = useLexicalComposerContext();
+    const [isActive, setIsActive] = useState(false);
+
+    useEffect(() => {
+        return editor.registerUpdateListener(({ editorState }) => {
+            editorState.read(() => {
+                const selection = $getSelection();
+                if ($isRangeSelection(selection)) {
+                    setIsActive(selection.hasFormat(format));
+                } else {
+                    setIsActive(false);
+                }
+            });
+        });
+    }, [editor, format]);
+
+    return (
+        <button
+            type="button"
+            log-id={`data-story-format-${format}-button`}
+            title={title}
+            aria-label={title}
+            aria-pressed={isActive}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)}
+            className={`${pillBaseClass} ${isActive ? pillActiveClass : ''}`}
+        >
+            <span className={glyphClass}>{label}</span>
+        </button>
+    );
+}
+
+function EditorToolbar() {
     const [editor] = useLexicalComposerContext();
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
@@ -127,27 +180,27 @@ function HistoryToolbar() {
         };
     }, [editor]);
 
-    const buttonClass =
-        'flex items-center gap-1 text-xs text-grey-darkest border border-grey-light rounded px-2 py-1 ' +
-        'hover:bg-grey-lighter transition duration-150 disabled:opacity-40 disabled:cursor-not-allowed ' +
-        'disabled:hover:bg-transparent';
-
     return (
-        <div className="flex items-center gap-1 mb-2">
+        <div className="flex items-center gap-1 px-3 py-2 bg-grey-lighter-2 border-b border-[#d9dde1]">
+            <FormatPill format="bold" label="B" title="Bold (Cmd/Ctrl+B)" glyphClass="font-bold" />
+            <FormatPill format="italic" label="I" title="Italic (Cmd/Ctrl+I)" glyphClass="italic font-serif" />
+
+            <span className="mx-2 w-px h-4 bg-grey-light" aria-hidden="true" />
+
             <button
                 type="button"
                 log-id="data-story-undo-button"
                 title="Undo (Cmd/Ctrl+Z)"
                 aria-label="Undo"
                 disabled={!canUndo}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
-                className={buttonClass}
+                className={pillBaseClass}
             >
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 8h7a3 3 0 0 1 0 6H7" />
                     <path d="M6 5 3 8l3 3" />
                 </svg>
-                Undo
             </button>
             <button
                 type="button"
@@ -155,14 +208,14 @@ function HistoryToolbar() {
                 title="Redo (Cmd/Ctrl+Shift+Z)"
                 aria-label="Redo"
                 disabled={!canRedo}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
-                className={buttonClass}
+                className={pillBaseClass}
             >
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M13 8H6a3 3 0 0 0 0 6h3" />
                     <path d="M10 5l3 3-3 3" />
                 </svg>
-                Redo
             </button>
         </div>
     );
@@ -233,8 +286,8 @@ export function DataStoryLexicalField({
                 <InitialMarkdownPlugin markdown={initialMarkdown} />
                 <EditablePlugin editable={editable} />
                 <OnChangeMarkdownPlugin onMarkdownChange={onMarkdownChange} enabled={trackChanges} />
-                {editable && <HistoryToolbar />}
-                <div className="relative">
+                {editable && <EditorToolbar />}
+                <div className={`relative ${editable ? 'p-4 bg-white' : ''}`}>
                     <RichTextPlugin
                         contentEditable={
                             <ContentEditable

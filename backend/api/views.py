@@ -1595,7 +1595,9 @@ class ExportStoryView(APIView):
 
   def post(self, request):
     try:
-      payload = (request.data or {}).get('storyData') or {}
+      body = request.data or {}
+      payload = body.get('storyData') or {}
+      export_format = (body.get('format') or 'pdf').lower()
 
       # If no payload provided, attempt to pull latest from NarrativeCache
       if not payload:
@@ -1621,6 +1623,143 @@ class ExportStoryView(APIView):
         reasoning_sections.append(("Sequence Justification", str(payload.get('sequence_response')).strip()))
 
       timestamp = now().strftime("%Y%m%dT%H%M%SZ")
+
+      # DOCX branch — mirrors the PDF walker but emits python-docx runs/paragraphs.
+      # Kept separate from the PDF path to avoid regressing the existing export.
+      if export_format == 'docx':
+        import re
+        from docx import Document
+        from docx.shared import Inches
+        from PIL import Image as PILImage
+
+        data_path = os.getenv('DATA_PATH') or ''
+        figure_pattern = re.compile(r"\[\s*FIGURE\s*[:：﹕]\s*([^\]]+?)\s*\]", re.IGNORECASE | re.UNICODE)
+        # Tokenize inline **bold** and *italic* into (text, bold, italic) runs. Sequential regexes
+        # like the PDF path can't work here because docx runs are flat (no HTML nesting), so we
+        # walk the string left-to-right, emitting runs on delimiter transitions.
+        def emit_runs(paragraph, text):
+          i, n = 0, len(text)
+          bold = italic = False
+          buf = []
+          def flush():
+            if buf:
+              run = paragraph.add_run(''.join(buf))
+              run.bold = bold
+              run.italic = italic
+              buf.clear()
+          while i < n:
+            if text.startswith('**', i):
+              flush(); bold = not bold; i += 2; continue
+            if text[i] == '*':
+              flush(); italic = not italic; i += 1; continue
+            buf.append(text[i]); i += 1
+          flush()
+
+        # Cap image height so tall/portrait screenshots don't blow across pages.
+        # Word preserves aspect ratio if only one dimension is set — we pick the smaller
+        # dimension after reading actual pixel size via Pillow.
+        MAX_IMG_W_IN = 6.0   # matches typical Letter content width
+        MAX_IMG_H_IN = 5.5   # roughly half a Letter page
+        def add_figure(doc, filename):
+          fname = re.sub(r"[^A-Za-z0-9._-]", "", filename.strip())
+          fpath = os.path.join(data_path, fname)
+          if not os.path.exists(fpath):
+            doc.add_paragraph(f"[Missing image: {fname}]")
+            return
+          try:
+            with PILImage.open(fpath) as im:
+              iw, ih = im.size
+            if not iw or not ih:
+              raise ValueError("zero dimensions")
+            aspect = ih / iw
+            # Fit into the max box, preserving aspect
+            w_from_h = MAX_IMG_H_IN / aspect if aspect else MAX_IMG_W_IN
+            width_in = min(MAX_IMG_W_IN, w_from_h)
+            doc.add_picture(fpath, width=Inches(width_in))
+          except Exception:
+            # python-docx doesn't support WebP/SVG; fall back to a placeholder rather than 500.
+            doc.add_paragraph(f"[Unsupported image: {fname}]")
+
+        def render_section(doc, title, md_text):
+          doc.add_heading(title, level=2)
+          list_buffer = []
+          def flush_list():
+            for item in list_buffer:
+              p = doc.add_paragraph(style='List Bullet')
+              emit_runs(p, item)
+            list_buffer.clear()
+
+          for raw in md_text.splitlines():
+            line = raw.rstrip()
+            if not line.strip():
+              flush_list()
+              doc.add_paragraph()
+              continue
+            if line.lstrip().startswith(("- ", "* ")):
+              content = line.lstrip()[2:].strip()
+              if figure_pattern.search(content):
+                # Bullet-with-figure: match PDF behavior — break list and render inline
+                flush_list()
+                line = content
+              else:
+                list_buffer.append(content)
+                continue
+            flush_list()
+
+            # Split on figures; render text runs and images inline in order
+            parts = []
+            last = 0
+            for m in figure_pattern.finditer(line):
+              if m.start() > last:
+                parts.append(('text', line[last:m.start()]))
+              parts.append(('img', m.group(1)))
+              last = m.end()
+            if last < len(line):
+              parts.append(('text', line[last:]))
+
+            if any(p[0] == 'img' for p in parts):
+              text_only = ''.join(t for k, t in parts if k == 'text').strip()
+              if text_only:
+                p = doc.add_paragraph()
+                emit_runs(p, text_only)
+              for kind, val in parts:
+                if kind == 'img':
+                  add_figure(doc, val)
+            else:
+              p = doc.add_paragraph()
+              emit_runs(p, line)
+          flush_list()
+
+        doc = Document()
+        doc.add_heading("Data Story", level=1)
+        meta = doc.add_paragraph(f"Exported: {timestamp}")
+        meta.runs[0].italic = True
+
+        for title, content in story_sections:
+          render_section(doc, title, content)
+
+        if reasoning_sections:
+          doc.add_page_break()
+          doc.add_heading("Reasoning", level=1)
+          for title, content in reasoning_sections:
+            render_section(doc, title, content)
+
+        if not story_sections and not reasoning_sections:
+          doc.add_paragraph("No story content provided.")
+
+        buf = BytesIO()
+        doc.save(buf)
+        docx_bytes = buf.getvalue()
+        buf.close()
+
+        response = FileResponse(
+          BytesIO(docx_bytes),
+          content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        response["Content-Disposition"] = f'attachment; filename="data-story-{timestamp}.docx"'
+        response["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response["Access-Control-Allow-Credentials"] = "true"
+        return response
 
       # Compose PDF with platypus
       buffer = BytesIO()

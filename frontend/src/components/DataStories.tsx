@@ -185,6 +185,15 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
         };
     }, [])
 
+    // Whenever story content becomes available (cache load, fresh generation, saved edit),
+    // land the user on the Story tab rather than Reasoning.
+    useEffect(() => {
+        if (storyData) {
+            setStorySelected(true);
+            setNarrativeSelected(false);
+        }
+    }, [storyData]);
+
     // Refetch when refreshTrigger changes (from WebSocket workspace_update)
     useEffect(() => {
         if (refreshTrigger && refreshTrigger > 0) {
@@ -514,6 +523,7 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
             <div id="data-stories-header" className="flex w-full items-center bg-grey-lighter-2 rounded-t-lg p-3">
                 <div id="data-stories-header-left" className="flex items-center gap-3">
                     <span className="bg-bama-crimson text-white text-lg font-roboto-semibold px-3 py-1.5 rounded-lg">Data Stories</span>
+
                     {!readOnly && <ExportButton storyData={exportStoryData} />}
 
                     {/* Editing controls — Story tab only, and only when editing is permitted */}
@@ -546,7 +556,7 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                                 onClick={handleBeginEdit}
                                 className={storyActionPrimary}
                             >
-                                Edit Story
+                                Edit
                             </button>
                         )
                     )}
@@ -639,7 +649,7 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                         ) : isProcessingImages ? (
                             <GeneratingPlaceholder contentName="processing images" lines={4} />
                         ) : storyData?.narrative ? (
-                            <div className="p-4 rounded-lg">
+                            <div className={`rounded-lg overflow-hidden ${isEditing ? 'border border-[#d9dde1] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.6)]' : 'p-4'}`}>
                                 {isEditing ? (
                                     /* Seeded from the raw narrative, never from processedNarrative —
                                        that one has [FIGURE: …] tokens rewritten into image URLs, and
@@ -669,7 +679,7 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                                 {/* Rendered outside the editor branch so a message set while losing
                                     control (which closes the editor) is still visible. */}
                                 {saveError && (
-                                    <p className="mt-3 text-sm text-bama-crimson">{saveError}</p>
+                                    <p className={`text-sm text-bama-crimson ${isEditing ? 'mx-4 mb-3' : 'mt-3'}`}>{saveError}</p>
                                 )}
                             </div>
                         ) : (

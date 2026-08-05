@@ -428,8 +428,8 @@ export const confirmPasswordReset = async(email: string, code: string, newPasswo
   return response;
 };
 
-export const exportStory = async(storyData: StoryDataRaw) => {
-  const response = await API.post('/export/', { storyData }, { responseType: 'blob' })
+export const exportStory = async(storyData: StoryDataRaw, format: 'pdf' | 'docx' = 'pdf') => {
+  const response = await API.post('/export/', { storyData, format }, { responseType: 'blob' })
   return response;
 };
 
