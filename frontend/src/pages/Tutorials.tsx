@@ -27,21 +27,15 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom'
 
 // Import compopnents
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import NavDropdown from '../components/NavDropdown';
-import CompactSidebar from '../components/CompactSidebar';
+import LandingHeader, { SANS } from '../components/LandingHeader';
+import DocsSidebar, { DocsMenuStructure } from '../components/DocsSidebar';
 
 
 // Visible component
 const Tutorials = () => {
 
-//States
-  const [centerNarrativePatternsOpen, setCenterNarrativePatternsOpen] = useState(false);
-  const [rightNarrativePatternsOpen, setRightNarrativePatternsOpen] = useState(false);
-  const [leftMenuOpen, setLeftMenuOpen] = useState(false);
-
   const scroll_location = useLocation();
+  const [activeSection, setActiveSection] = useState<string>('tutorial_one');
 
   useEffect(() => {
     if (scroll_location.state && scroll_location.state.targetId) {
@@ -52,32 +46,55 @@ const Tutorials = () => {
     }
   }, [scroll_location.state]); // Re-run if location.state changes
 
+  // Scroll-spy: highlight the section pill matching the section currently in view.
+  useEffect(() => {
+    const ids = ['tutorial_one', 'tutorial_two', 'tutorial_three', 'tutorial_four'];
+    const targets = ids.map(id => document.getElementById(id)).filter((el): el is HTMLElement => !!el);
+    if (targets.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pick the first heading whose top has crossed the pill-strip line (roughly 40% down the viewport).
+        const visible = entries
+          .filter(e => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) {
+          setActiveSection(visible[0].target.id);
+        }
+      },
+      { rootMargin: '-40% 0px -55% 0px', threshold: 0 },
+    );
+    targets.forEach(t => observer.observe(t));
+    return () => observer.disconnect();
+  }, []);
+
+  // Docs menu structure — grouped for extensibility. Add another group (e.g. Deep Dive)
+  // by appending to this array; the sidebar picks up new entries automatically.
+  const DOCS_MENU: DocsMenuStructure = [
+    {
+      label: 'Getting Started',
+      items: [
+        { label: 'Gather Data',          targetId: 'tutorial_one'   },
+        { label: 'Create Insights',      targetId: 'tutorial_two'   },
+        { label: 'Structure Narratives', targetId: 'tutorial_three' },
+        { label: 'Create Story',         targetId: 'tutorial_four'  },
+      ],
+    },
+  ];
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
 // Visible Component
   return (
-    <>
-    <Header onMenuOpen={() => setLeftMenuOpen(prev => !prev)} floating menuOpen={leftMenuOpen} subtitle="Docs" />
-    <div id="home-container" className="flex w-full font-roboto-light">
-
-        {/* Left Panel — overlay menu, only visible when hamburger is clicked */}
-        {leftMenuOpen && (
-            <>
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-30 z-[400]"
-                    onClick={() => setLeftMenuOpen(false)}
-                />
-                <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto pt-8">
-                    <CompactSidebar setCenterNarrativePatternsOpen={(val: boolean) => {
-                        setCenterNarrativePatternsOpen(val);
-                        setLeftMenuOpen(false);
-                    }} />
-                    <div id="footer" className="flex flex-col justify-start items-start">
-                        <Footer />
-                    </div>
-                </div>
-            </>
-        )}
-
-      <div id="middle-home" className="w-full px-4 flex flex-col mt-14">
+    <div style={{ background: '#fff', color: '#0a0a0a', fontFamily: SANS, minHeight: '100vh', WebkitFontSmoothing: 'antialiased', MozOsxFontSmoothing: 'grayscale' } as any}>
+    <LandingHeader active="docs" subtitle="Docs" />
+    <div className="docs-layout">
+      <aside className="docs-sidebar">
+        <DocsSidebar menu={DOCS_MENU} activeId={activeSection} onSelect={scrollToSection} />
+      </aside>
+      <div id="middle-home" className="docs-main flex flex-col">
         <div className="w-full min-h-screen p-4">
           <br />
           <h1 className="text-2xl" id="tutorial_one">1. Getting Started</h1>
@@ -201,11 +218,11 @@ const Tutorials = () => {
 </p>
           </div>
 
-      </div>
+        </div>
       </div>
     </div>
 
-    </>
+    </div>
   );
 };
 

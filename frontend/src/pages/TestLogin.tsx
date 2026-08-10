@@ -4,8 +4,10 @@ import { useAuth } from '../contexts/Auth';
 import { login, register, guestLogin } from '../services/api';
 import HighlightWord from '../components/HighlightWord';
 import FeatureVisual from '../components/FeatureVisual';
+import { LandingHeader, ACCENT as SHARED_ACCENT, SANS as SHARED_SANS, MONO as SHARED_MONO } from '../components/LandingHeader';
 
-const ACCENT = '#00849E';
+// Re-alias shared constants so existing usages in this file don't need renaming.
+const ACCENT = SHARED_ACCENT;
 
 // Feature bands data — was previously rendered as a horizontal carousel; now one full-width band per item.
 // `highlight` is matched case-insensitively against `t`; the matched substring is wrapped in
@@ -17,27 +19,11 @@ const FEATURES: { t: string; d: string; icon: string; highlight: string }[] = [
     { t: 'Collaborate with Classmates', d: 'Share your workspace with up to three classmates to collaboratively craft data-driven stories.', icon: 'chain', highlight: 'collaborate' },
     { t: 'Receive Feedback', d: 'Provide and receive AI or instructor feedback seamlessly during a data-storytelling workflow.', icon: 'reply', highlight: 'feedback' },
 ];
-const SANS = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
-const MONO = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+const SANS = SHARED_SANS;
+const MONO = SHARED_MONO;
 
-// ── Bulb Icon ───────────────────────────────────────────────────────
-const Bulb = ({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-        <path d="M9 18h6" /><path d="M10 21h4" />
-        <path d="M12 3a6 6 0 0 0-3.5 10.9c.6.45.9.9.9 1.6V18h5.2v-2.5c0-.7.3-1.15.9-1.6A6 6 0 0 0 12 3z" />
-        <path d="M12 7v6" />
-    </svg>
-);
-
-const LogoMark = () => (
-    <span style={{ width: 30, height: 30, borderRadius: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: ACCENT, color: '#fff' }}>
-        <Bulb size={16} />
-    </span>
-);
-
-const Wordmark = () => (
-    <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 17, letterSpacing: '-0.015em', lineHeight: 1, color: '#0a0a0a' }}>StoryStudio</span>
-);
+// Bulb / LogoMark / Wordmark / NAV_LINKS now live in ../components/LandingHeader
+// and are consumed via <LandingHeader />. Local copies removed.
 
 const Tag = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
     <span style={{
@@ -199,10 +185,6 @@ const FormField = ({ label, placeholder, type = 'text', value, onChange, inputRe
     );
 };
 
-const NAV_LINKS = [
-    { label: 'About', href: 'http://cast.tahahassan.info' },
-    { label: 'Docs', href: '/tutorials' },
-];
 
 // ════════════════════════════════════════════════════════════════════
 const TestLogin = () => {
@@ -222,14 +204,7 @@ const TestLogin = () => {
 
     useEffect(() => { if (userAuthenticated) navigate('/home'); }, [userAuthenticated, navigate]);
 
-    // Load Inter font
-    useEffect(() => {
-        const link = document.createElement('link');
-        link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap';
-        link.rel = 'stylesheet';
-        document.head.appendChild(link);
-        return () => { document.head.removeChild(link); };
-    }, []);
+    // Inter font now loads globally via public/index.html so every route has it.
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault(); setLoading(true); setError(''); setSuccess('');
@@ -261,29 +236,11 @@ const TestLogin = () => {
 
     return (
         <div style={{ background: '#fff', color: '#0a0a0a', fontFamily: SANS, display: 'flex', flexDirection: 'column', minHeight: '100vh', WebkitFontSmoothing: 'antialiased' as any }}>
-            {/* ── Navbar (frosted glass, sticky) ─────────────────── */}
-            <header style={{
-                background: 'rgba(255,255,255,0.85)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-                borderBottom: '1px solid rgba(10,10,10,0.08)', padding: '14px 32px',
-                position: 'sticky', top: 0, zIndex: 10,
-            }}>
-              <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <a href="/login" style={{ display: 'flex', alignItems: 'center', gap: 11, textDecoration: 'none' }}><LogoMark /><Wordmark /></a>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {NAV_LINKS.map(l => (
-                        <a key={l.label} href={l.href} target={l.href.startsWith('http')?'_blank':undefined} rel={l.href.startsWith('http')?'noreferrer':undefined} style={{
-                            fontSize: 13.5, fontWeight: 500, letterSpacing: '-0.005em', color: '#1a1a1a',
-                            padding: '8px 14px', borderRadius: 999, textDecoration: 'none',
-                        }}>{l.label}</a>
-                    ))}
-                    <button onClick={toggleMode} style={{
-                        padding: '9px 18px', borderRadius: 999, border: 'none',
-                        fontSize: 13.5, fontWeight: 600, letterSpacing: '-0.005em',
-                        background: ACCENT, color: '#fff', cursor: 'pointer',
-                    }}>{isRegisterMode ? 'Sign in' : 'Sign up'}</button>
-                </div>
-              </div>
-            </header>
+            {/* ── Shared frosted-glass sticky navbar ─────────────── */}
+            <LandingHeader
+                onSignUp={toggleMode}
+                signUpLabel={isRegisterMode ? 'Sign in' : 'Sign up'}
+            />
 
             {/* ── Hero: Headline + Login Card ────────────────────── */}
             <section

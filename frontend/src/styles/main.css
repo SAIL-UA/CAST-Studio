@@ -14,6 +14,13 @@
 @import "@fontsource/roboto/600.css"; /* Semi-bold */
 @import "@fontsource/roboto/700.css"; /* Bold */
 
+/* Global font smoothing so text renders identically across all pages.
+   Without this, WebKit defaults to subpixel-antialiased which reads bolder. */
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 /* Custom font weight utilities */
 .font-roboto-light {
   font-family: theme('fontFamily.roboto');
@@ -97,6 +104,56 @@
 .hx-5--gated.hx-5--play .char,
 .hx-5--gated.hx-5--play::after {
   animation-play-state: running;
+}
+
+/* Landing/docs nav-link hover: soft teal wash. !important because the nav link's
+   `background: transparent` inline style would otherwise outrank the CSS rule. */
+.landing-nav-link:hover {
+  background: rgba(0, 132, 158, 0.06) !important;
+}
+
+/* Desktop-only vs mobile-only nav visibility. Below 768px, the four nav buttons
+   collapse into a single "Menu" dropdown. */
+.landing-nav-mobile { display: none; }
+@media (max-width: 768px) {
+  .landing-nav-desktop { display: none !important; }
+  .landing-nav-mobile  { display: block; }
+}
+
+/* ── Docs page (Tutorials) layout ────────────────────────────────── */
+/* Two-column grid: persistent left rail + main reading column. Both cap at
+   1280px combined. Sidebar is sticky under the top nav. */
+.docs-layout {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 32px 96px;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 48px;
+  align-items: start;
+}
+.docs-sidebar {
+  position: sticky;
+  top: 76px; /* under the ~60px sticky top nav + a small breathing gap */
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+}
+.docs-main {
+  min-width: 0;
+  max-width: 780px;
+}
+@media (max-width: 900px) {
+  .docs-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 24px 20px 64px;
+  }
+  .docs-sidebar {
+    position: static;
+    max-height: none;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(10,10,10,0.08);
+  }
 }
 
 /* ── Landing page (TestLogin) responsive layout ───────────────────── */
