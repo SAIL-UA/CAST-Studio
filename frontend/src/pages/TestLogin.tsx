@@ -2,8 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/Auth';
 import { login, register, guestLogin } from '../services/api';
+import HighlightWord from '../components/HighlightWord';
+import FeatureVisual from '../components/FeatureVisual';
 
 const ACCENT = '#00849E';
+
+// Feature bands data — was previously rendered as a horizontal carousel; now one full-width band per item.
+// `highlight` is matched case-insensitively against `t`; the matched substring is wrapped in
+// <HighlightWord scrollTrigger> so it animates when the band scrolls into view.
+const FEATURES: { t: string; d: string; icon: string; highlight: string }[] = [
+    { t: 'Integrated with JupyterHub', d: 'Import visuals and annotations from Jupyter notebooks into an interactive workspace to filter, annotate and group.', icon: 'notebook', highlight: 'jupyterhub' },
+    { t: 'Structure Narratives', d: 'Use narrative structure scaffolds to sort data insights into narratives.', icon: 'graph', highlight: 'narratives' },
+    { t: 'Synthesize Stories', d: 'Use AI to synthesize notes, visuals, and annotations into a compelling data-driven story. Support your creative voice.', icon: 'plus', highlight: 'stories' },
+    { t: 'Collaborate with Classmates', d: 'Share your workspace with up to three classmates to collaboratively craft data-driven stories.', icon: 'chain', highlight: 'collaborate' },
+    { t: 'Receive Feedback', d: 'Provide and receive AI or instructor feedback seamlessly during a data-storytelling workflow.', icon: 'reply', highlight: 'feedback' },
+];
 const SANS = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 const MONO = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 
@@ -40,9 +53,18 @@ const Tag = ({ children, style }: { children: React.ReactNode; style?: React.CSS
 );
 
 // ── Feature Icons ───────────────────────────────────────────────────
-const FeatureIcon = ({ kind }: { kind: string }) => {
-    const box: React.CSSProperties = { width: 64, height: 64, borderRadius: 16, background: `${ACCENT}12`, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-    const svgProps = { width: 32, height: 32, viewBox: '0 0 24 24', fill: 'none', stroke: ACCENT, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+type FeatureIconProps = {
+    kind: string;
+    boxSize?: number;
+    boxRadius?: number;
+    boxBg?: string;
+    iconSize?: number;
+    stroke?: string;
+    strokeWidth?: number;
+};
+const FeatureIcon = ({ kind, boxSize = 64, boxRadius = 16, boxBg = `${ACCENT}12`, iconSize = 32, stroke = ACCENT, strokeWidth = 1.8 }: FeatureIconProps) => {
+    const box: React.CSSProperties = { width: boxSize, height: boxSize, borderRadius: boxRadius, background: boxBg, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+    const svgProps = { width: iconSize, height: iconSize, viewBox: '0 0 24 24', fill: 'none', stroke, strokeWidth, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 
     if (kind === 'notebook') return (
         <div style={box}>
@@ -58,11 +80,11 @@ const FeatureIcon = ({ kind }: { kind: string }) => {
     if (kind === 'graph') return (
         <div style={box}>
             <svg {...svgProps}>
-                <circle cx="6" cy="6" r="2" fill={ACCENT} fillOpacity="0.2" />
-                <circle cx="18" cy="6" r="2" fill={ACCENT} fillOpacity="0.2" />
-                <circle cx="6" cy="18" r="2" fill={ACCENT} fillOpacity="0.2" />
-                <circle cx="18" cy="18" r="2" fill={ACCENT} fillOpacity="0.2" />
-                <circle cx="12" cy="12" r="2.5" fill={ACCENT} fillOpacity="0.3" />
+                <circle cx="6" cy="6" r="2" fill={stroke} fillOpacity="0.2" />
+                <circle cx="18" cy="6" r="2" fill={stroke} fillOpacity="0.2" />
+                <circle cx="6" cy="18" r="2" fill={stroke} fillOpacity="0.2" />
+                <circle cx="18" cy="18" r="2" fill={stroke} fillOpacity="0.2" />
+                <circle cx="12" cy="12" r="2.5" fill={stroke} fillOpacity="0.3" />
                 <path d="M8 8l2.5 2.5" /><path d="M16 8l-2.5 2.5" />
                 <path d="M8 16l2.5-2.5" /><path d="M16 16l-2.5-2.5" />
             </svg>
@@ -92,6 +114,53 @@ const FeatureIcon = ({ kind }: { kind: string }) => {
         </div>
     );
     return <div style={box} />;
+};
+
+// ── Feature Band ────────────────────────────────────────────────────
+// One full-width band per feature. Alternating text/card side per row (zigzag) and
+// alternating background so bands read as distinct. The `feature-band__row` class
+// stacks card-below-text on narrow viewports (see main.css).
+// Case-insensitively find `highlight` inside `title` and wrap the matched substring
+// in <HighlightWord>. Preserves the original casing from the title (so "jupyterhub"
+// in the data still renders as "JupyterHub" on screen). Falls back to the plain
+// title if no match or no highlight specified.
+const renderTitle = (title: string, highlight?: string) => {
+    if (!highlight) return title;
+    const idx = title.toLowerCase().indexOf(highlight.toLowerCase());
+    if (idx < 0) return title;
+    const before = title.slice(0, idx);
+    const match = title.slice(idx, idx + highlight.length);
+    const after = title.slice(idx + highlight.length);
+    return <>{before}<HighlightWord scrollTrigger>{match}</HighlightWord>{after}</>;
+};
+
+const FeatureBand = ({ title, description, icon, index, highlight }: { title: string; description: string; icon: string; index: number; highlight?: string }) => {
+    const isOdd = index % 2 === 1;
+    const isReverse = index % 2 === 0; // Band 0 shows card on the left, text on the right; then alternate.
+    const bandBg = isOdd ? '#f5f5f7' : '#ffffff';
+    return (
+        <section className="feature-band" style={{ background: bandBg, padding: '96px 48px' }}>
+            <div className={`feature-band__row ${isReverse ? 'feature-band__row--reverse' : ''}`}>
+                <div className="feature-band__text">
+                    <h2 style={{ margin: 0, fontSize: 60, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.1 }}>{renderTitle(title, highlight)}</h2>
+                    <p style={{ marginTop: 20, marginBottom: 0, fontSize: 19, lineHeight: 1.55, color: '#555', maxWidth: 520, letterSpacing: '-0.005em' }}>{description}</p>
+                </div>
+                <div className="feature-band__card-wrap">
+                    <div style={{
+                        width: '100%', aspectRatio: '1 / 1', maxWidth: 420,
+                        borderRadius: 40, background: ACCENT,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 1px 2px rgba(10,10,10,0.04), 0 24px 60px rgba(0,132,158,0.18)',
+                        padding: 32,
+                    }}>
+                        <div style={{ width: '100%', height: '100%', maxWidth: 300, maxHeight: 300 }}>
+                            <FeatureVisual kind={icon} />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
 };
 
 // ── Mini Chart ──────────────────────────────────────────────────────
@@ -196,9 +265,9 @@ const TestLogin = () => {
             <header style={{
                 background: 'rgba(255,255,255,0.85)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)',
                 borderBottom: '1px solid rgba(10,10,10,0.08)', padding: '14px 32px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 position: 'sticky', top: 0, zIndex: 10,
             }}>
+              <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <a href="/login" style={{ display: 'flex', alignItems: 'center', gap: 11, textDecoration: 'none' }}><LogoMark /><Wordmark /></a>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {NAV_LINKS.map(l => (
@@ -213,17 +282,18 @@ const TestLogin = () => {
                         background: ACCENT, color: '#fff', cursor: 'pointer',
                     }}>{isRegisterMode ? 'Sign in' : 'Sign up'}</button>
                 </div>
+              </div>
             </header>
 
             {/* ── Hero: Headline + Login Card ────────────────────── */}
-            <section style={{
-                padding: '72px 48px 88px',
-                display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 380px', gap: 64, alignItems: 'start',
-                background: 'linear-gradient(180deg,#fff 0%,#fafafc 100%)',
-            }}>
-                <div>
+            <section
+                className="landing-hero"
+                style={{ background: '#f5f5f5' }}
+            >
+              <div className="landing-hero__inner">
+                <div className="landing-hero__text">
                     <h1 style={{ margin: 0, fontFamily: SANS, fontWeight: 700, fontSize: 120, lineHeight: 1.0, letterSpacing: '-0.045em' }}>
-                        Create <mark style={{ background: ACCENT, color: '#fff', borderRadius: 8, padding: '0 8px' }}>compelling</mark> stories with data<span style={{ color: ACCENT }}>.</span>
+                        Create <HighlightWord>compelling</HighlightWord> stories with data<span style={{ color: ACCENT }}>.</span>
                     </h1>
                     <p style={{ marginTop: 28, marginBottom: 0, fontSize: 19, lineHeight: 1.5, color: '#444', maxWidth: 560, letterSpacing: '-0.005em' }}>
                         StoryStudio is a platform which enables educators, entrepreneurs, and students to transform data into compelling narratives, guided by AI annotations, collaboration, and feedback.
@@ -241,7 +311,7 @@ const TestLogin = () => {
                 </div>
 
                 {/* Right: Login card */}
-                <aside>
+                <aside className="landing-hero__login">
                     <form onSubmit={isRegisterMode ? handleRegister : handleLogin} style={{
                         background: '#fff', border: '1px solid rgba(10,10,10,0.08)',
                         boxShadow: '0 1px 2px rgba(10,10,10,0.04), 0 16px 48px rgba(10,10,10,0.07)',
@@ -302,45 +372,28 @@ const TestLogin = () => {
                         )}
                     </form>
                 </aside>
+              </div>
             </section>
 
-            {/* ── Features carousel ──────────────────────────────── */}
-            <section style={{ padding: '88px 0 96px', background: '#f5f5f7' }}>
-                <div style={{ padding: '0 48px', marginBottom: 48 }}>
-                    <h2 style={{ margin: 0, fontSize: 36, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.2, maxWidth: 900 }}>
-                        A platform for creating coherent, compelling, and evidence-driven stories to power business meetings, data science education, and research writing.
-                    </h2>
-                </div>
-                <div style={{ display: 'flex', gap: 20, overflowX: 'auto', padding: '0 48px 16px', scrollSnapType: 'x mandatory' }}>
-                    {([
-                        { t: 'Integrated with JupyterHub', d: 'Import visuals and annotations from Jupyter notebooks into an interactive workspace to filter, annotate and group.', icon: 'notebook' },
-                        { t: 'Structure Narratives', d: 'Use narrative structure scaffolds to sort data insights into narratives.', icon: 'graph' },
-                        { t: 'Synthesize Stories', d: 'Use AI to synthesize notes, visuals, and annotations into a compelling data-driven story. Support your creative voice.', icon: 'plus' },
-                        { t: 'Collaborate with Classmates', d: 'Share your workspace with up to three classmates to collaboratively craft data-driven stories.', icon: 'chain' },
-                        { t: 'Receive Feedback', d: 'Provide and receive AI or instructor feedback seamlessly during a data-storytelling workflow.', icon: 'reply' },
-                    ]).map((x, i) => (
-                        <article key={i} style={{
-                            display: 'flex', flexDirection: 'column', gap: 18,
-                            padding: 26, borderRadius: 26, background: '#fff',
-                            border: '1px solid rgba(10,10,10,0.06)',
-                            boxShadow: '0 1px 2px rgba(10,10,10,0.03), 0 8px 28px rgba(10,10,10,0.04)',
-                            minWidth: 280, maxWidth: 300, flexShrink: 0, scrollSnapAlign: 'start',
-                        }}>
-                            <FeatureIcon kind={x.icon} />
-                            <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{x.t}</div>
-                            <div style={{ fontSize: 14, lineHeight: 1.55, color: '#555' }}>{x.d}</div>
-                        </article>
-                    ))}
-                </div>
+            {/* ── Feature bands (one per feature) ─────────────────── */}
+            {/* Previous intro tagline (kept commented in case we want it back as a lede above the bands):
+            <section style={{ padding: '88px 48px 24px', background: '#f5f5f7' }}>
+                <h2 style={{ margin: 0, fontSize: 36, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.2, maxWidth: 900 }}>
+                    A platform for creating coherent, compelling, and evidence-driven stories to power business meetings, data science education, and research writing.
+                </h2>
             </section>
+            */}
+            {FEATURES.map((f, i) => (
+                <FeatureBand key={i} title={f.t} description={f.d} icon={f.icon} highlight={f.highlight} index={i} />
+            ))}
 
             {/* ── Footer ─────────────────────────────────────────── */}
             <footer style={{
-                background: 'linear-gradient(180deg,#fff 0%,#f5f5f7 100%)',
+                background: '#f5f5f5',
                 borderTop: '1px solid rgba(10,10,10,0.06)',
                 padding: '56px 32px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 48,
             }}>
+              <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 48 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <span style={{ fontSize: 13, color: '#6b6b6b' }}>An NSF-supported collaborative effort by:</span>
                     <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 40, lineHeight: 1.3, letterSpacing: '-0.02em' }}>
@@ -359,18 +412,20 @@ const TestLogin = () => {
                         }}>Learn more about NSF RITEL</a>
                     </div>
                 </div>
+              </div>
             </footer>
 
             {/* ── Bottom footer bar ──────────────────────────────── */}
             <div style={{
                 borderTop: '1px solid rgba(10,10,10,0.08)', padding: '14px 32px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 background: 'rgba(255,255,255,0.85)',
             }}>
+              <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <a href="mailto:thassan1@ua.edu" style={{ fontSize: 11, color: '#999', textDecoration: 'none' }}>
                     Got questions? <span style={{ textDecoration: 'underline' }}>Contact us.</span>
                 </a>
                 <span style={{ fontSize: 11, color: '#999' }}>StoryStudio 2026. All rights reserved.</span>
+              </div>
             </div>
         </div>
     );
