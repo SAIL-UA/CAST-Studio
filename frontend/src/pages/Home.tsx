@@ -18,7 +18,9 @@ import GuestWelcomeTutorial from '../components/GuestWelcomeTutorial'
 
 // Import utils
 import { handleAuthRequired } from '../utils/utils';
-import { getImageDataAll, getSessionStatus } from '../services/api';
+import { getImageDataAll, getSessionStatus, getGroups } from '../services/api';
+import ResearchQuestionsPanel, { LinkableCard } from '../components/ResearchQuestionsPanel';
+import { useResearchQuestions } from '../contexts/ResearchQuestions';
 import { getAvatarColor } from '../utils/avatarUtils';
 import ControlWorkspaceButton from '../components/ControlWorkspaceButton';
 import { useGuestTourOpen } from '../utils/useGuestTourOpen';
@@ -30,6 +32,7 @@ const Home = () => {
 
     // Contexts
     const { userAuthenticated, username, userId } = useAuth();
+    const { refreshRqLinks } = useResearchQuestions();
 
     // State
     const [centerNarrativePatternsOpen, setCenterNarrativePatternsOpen] = useState(false);
@@ -44,6 +47,8 @@ const Home = () => {
 
     const [leftMenuOpen, setLeftMenuOpen] = useState(false);
     const [dataStoriesExpanded, setDataStoriesExpanded] = useState(false);
+    const [rqExpanded, setRqExpanded] = useState(false);
+    const [rqCards, setRqCards] = useState<LinkableCard[]>([]);
 
     // Session state for host avatars
     const [sessionShareToken, setSessionShareToken] = useState<string | null>(null);
@@ -100,12 +105,66 @@ const Home = () => {
         }
     };
 
+    // Build the linkable-card list for the research questions panel. Visuals and notes are
+    // both ImageData (a note has no filepath); groups come from GroupData. Instructor notes
+    // are feedback artifacts rather than the user's own material, so they're left out.
+    const fetchRqCards = async () => {
+        try {
+            const [imageResponse, groups] = await Promise.all([
+                getImageDataAll(),
+                getGroups(),
+            ]);
+            const images = imageResponse.data?.images || [];
+            const imageCards: LinkableCard[] = images
+                .filter((img: any) => img.source !== 'instructor')
+                .map((img: any) => ({
+                    id: img.id,
+                    label: img.short_desc || img.filepath || 'Untitled',
+                    kind: img.filepath ? 'visual' : 'note',
+                }));
+            const groupCards: LinkableCard[] = (groups || []).map((g: any) => ({
+                id: g.id,
+                label: g.name || 'Untitled Group',
+                kind: 'group' as const,
+            }));
+            setRqCards([...imageCards, ...groupCards]);
+        } catch (err) {
+            console.error('Error fetching linkable cards:', err);
+        }
+    };
+
     // Load instructor notes on mount
     useEffect(() => {
         if (userAuthenticated) {
             fetchInstructorNotes();
         }
     }, [userAuthenticated]);
+
+    // Populate RQ badges on the storyboard cards once the user is known.
+    useEffect(() => {
+        if (userAuthenticated) {
+            refreshRqLinks();
+        }
+    }, [userAuthenticated, refreshRqLinks]);
+
+    // Refresh the card list whenever the RQ panel opens, so newly added cards appear.
+    useEffect(() => {
+        if (userAuthenticated && rqExpanded) {
+            fetchRqCards();
+        }
+    }, [userAuthenticated, rqExpanded]);
+
+    // Keep the link checklist and badges current when cards are added or removed while the
+    // panel is already open.
+    useEffect(() => {
+        const onCardsChanged = () => {
+            if (!userAuthenticated) return;
+            fetchRqCards();
+            refreshRqLinks();
+        };
+        window.addEventListener('workspaceCardsChanged', onCardsChanged as EventListener);
+        return () => window.removeEventListener('workspaceCardsChanged', onCardsChanged as EventListener);
+    }, [userAuthenticated, refreshRqLinks]);
 
     // Refetch instructor notes when feedback panel expands
     useEffect(() => {
@@ -333,7 +392,42 @@ const Home = () => {
                         </div>
                     </div>
 
-                    {/* Feedback — right-anchored collapsible panel */}
+                    {/* Research Questions — left-anchored collapsible panel, mirrors Feedback */}
+                    {/* items-center (not items-start) keeps the tab centred against the 80vh panel */}
+                    <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[300] flex flex-row items-center transition-all duration-300">
+                        {/* Toggle bar — vertical on the right edge */}
+                        <button
+                            id="rq-toggle"
+                            log-id="research-questions-toggle"
+                            className="flex items-center justify-center bg-bama-crimson text-xs text-white hover:brightness-110 rounded-r-xl transition-colors duration-150 flex-shrink-0 px-1.5 py-2.5 shadow-lg"
+                            onClick={() => setRqExpanded(!rqExpanded)}
+                            style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+                        >
+                            <svg
+                                className={`w-3 h-3 mb-1.5 transition-transform duration-300 ${rqExpanded ? 'rotate-180' : 'rotate-0'}`}
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                            Research Questions
+                        </button>
+                        {/* Panel content — fixed height, scrollable */}
+                        <div
+                            className={`rounded-r-xl overflow-hidden shadow-2xl transition-all duration-300 ${
+                                rqExpanded ? 'w-[288px] opacity-100' : 'w-0 opacity-0'
+                            }`}
+                            style={{ height: '80vh' }}
+                        >
+                            <div className="h-full bg-grey-lighter-2 overflow-y-auto">
+                                <ResearchQuestionsPanel
+                                    cards={rqCards}
+                                    readOnly={controlledBy !== null}
+                                    onLinksChanged={() => { fetchRqCards(); refreshRqLinks(); }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Feedback — right-anchored collapsible panel */}
                     <div className="fixed top-1/2 -translate-y-1/2 right-0 z-[300] flex flex-row-reverse items-start transition-all duration-300">
                         {/* Collapse/Expand toggle bar — vertical on the left edge */}

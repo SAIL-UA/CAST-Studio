@@ -8,6 +8,9 @@ import { formatImageMetadata } from '../utils/imageUtils';
 import { formatGroupMetadata } from '../utils/groupUtils';
 import { logAction } from '../utils/userActionLogger';
 import { captureActionContext } from '../utils/userActionLogger';
+import { useResearchQuestions } from '../contexts/ResearchQuestions';
+import RqLinkPicker from './RqLinkPicker';
+import RqBadges from './RqBadges';
 
 const GroupDiv: React.FC<GroupDivProps> = ({
   id,
@@ -42,6 +45,8 @@ const GroupDiv: React.FC<GroupDivProps> = ({
   const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
   const dragEventContext = useRef<any>(null);
   const groupRef = useRef<HTMLDivElement>(null);
+  const { rqLabelsByCard } = useResearchQuestions();
+  const rqLabels = rqLabelsByCard[id] || [];
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(name);
   const [tempDescription, setTempDescription] = useState(description);
@@ -523,7 +528,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     >
       {/* Header */}
       <div className="flex justify-between items-center p-2 bg-bama-crimson text-white">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="flex-shrink-0"><circle cx="3" cy="8" r="2"/><circle cx="13" cy="4" r="2"/><circle cx="13" cy="12" r="2"/><path d="M5 8l6-3M5 8l6 3"/></svg>
         {editingName ? (
           <input
@@ -545,7 +550,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
           />
         ) : (
           <h4
-            className="text-xs font-bold cursor-pointer hover:underline"
+            className="text-xs font-bold cursor-pointer hover:underline truncate min-w-0"
             onClick={(e) => {
               e.stopPropagation();
               setEditingName(true);
@@ -554,11 +559,20 @@ const GroupDiv: React.FC<GroupDivProps> = ({
             {name || `Group ${number}`}
           </h4>
         )}
+        {/* Linked research questions — capped so they can't crowd out the group name */}
+        <RqBadges labels={rqLabels} max={2} />
         </div>
 
         {/* Action buttons — hidden in read-only/disabled drag mode */}
         {!disableDrag && (
           <div className="flex items-center space-x-1">
+            {/* Link research questions */}
+            <RqLinkPicker
+              cardId={id}
+              isGroup
+              buttonClassName="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200 z-[210] flex-shrink-0"
+              iconSize={11}
+            />
             {/* Edit button */}
             <button
               log-id="group-edit-button"

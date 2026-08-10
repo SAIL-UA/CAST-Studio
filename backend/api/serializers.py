@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
   ImageData, NarrativeCache, JupyterLog,
   UserAction, MousePositionLog, ScrollLog,
-  GroupData, ScaffoldData
+  GroupData, ScaffoldData, ResearchQuestion
 )
 
 class UserActionSerializer(serializers.ModelSerializer):
@@ -48,4 +48,12 @@ class JupyterLogsSerializer(serializers.ModelSerializer):
 class ScaffoldDataSerializer(serializers.ModelSerializer):
   class Meta:
     model = ScaffoldData
+    fields = '__all__'
+
+class ResearchQuestionSerializer(serializers.ModelSerializer):
+  # M2M fields serialize to lists of ids, which is what the panel's checklist sends back.
+  text = serializers.CharField(allow_blank=True, required=False)
+
+  class Meta:
+    model = ResearchQuestion
     fields = '__all__'

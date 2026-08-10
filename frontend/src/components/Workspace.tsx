@@ -62,6 +62,10 @@ const Workspace = ({ setRightNarrativePatternsOpen, setSelectedPattern, selected
         })
         .finally(() => {
             setLoading(false);
+            // Single chokepoint for card additions/removals — uploads and notes reach here via
+            // UploadButton's onUploaded, plus mount, refreshTrigger and post-story-generation.
+            // The research questions panel listens so its link checklist stays current.
+            window.dispatchEvent(new CustomEvent('workspaceCardsChanged'));
         });
     };
 
