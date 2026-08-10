@@ -142,17 +142,61 @@ html, body {
   min-width: 0;
   max-width: 780px;
 }
+/* Hamburger toggle for the docs sidebar: hidden on desktop, shown on mobile. */
+.docs-sidebar__toggle {
+  display: none;
+}
 @media (max-width: 900px) {
   .docs-layout {
     grid-template-columns: 1fr;
-    gap: 24px;
-    padding: 24px 20px 64px;
+    gap: 0;
+    padding: 0 0 64px;
   }
+  /* Sidebar becomes a sticky strip at the top on mobile — sits under the ~60px
+     top nav and always stays visible while the content scrolls beneath it. */
   .docs-sidebar {
-    position: static;
+    position: sticky;
+    top: 60px;
+    z-index: 5;
     max-height: none;
-    padding-bottom: 8px;
+    overflow: visible;
+    background: #fff;
+    padding: 10px 20px;
     border-bottom: 1px solid rgba(10,10,10,0.08);
+  }
+  .docs-sidebar__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    color: #1a1a1a;
+    text-transform: uppercase;
+  }
+  .docs-sidebar__toggle:focus-visible {
+    outline: 2px solid rgba(0, 132, 158, 0.5);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* Collapsed state on mobile: hide the group list, leaving only the toggle bar. */
+  nav[data-collapsed="true"] .docs-sidebar__groups {
+    display: none !important;
+  }
+  /* Expanded state on mobile: give the group list a little breathing space above. */
+  .docs-sidebar__groups {
+    padding-top: 8px;
+  }
+  /* Push docs content back into a reasonable inner padding since the layout lost its outer padding. */
+  .docs-main {
+    padding: 24px 20px 0;
   }
 }
 

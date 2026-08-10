@@ -46,25 +46,30 @@ const Tutorials = () => {
     }
   }, [scroll_location.state]); // Re-run if location.state changes
 
-  // Scroll-spy: highlight the section pill matching the section currently in view.
+  // Scroll-spy: on each scroll, pick the section whose heading is the LAST one
+  // above the trigger line. Handles bidirectional scrolling without dead zones
+  // (an IntersectionObserver approach would leave the highlight stuck when the
+  // user scrolls into a gap between adjacent sections).
   useEffect(() => {
     const ids = ['tutorial_one', 'tutorial_two', 'tutorial_three', 'tutorial_four'];
-    const targets = ids.map(id => document.getElementById(id)).filter((el): el is HTMLElement => !!el);
-    if (targets.length === 0) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // Pick the first heading whose top has crossed the pill-strip line (roughly 40% down the viewport).
-        const visible = entries
-          .filter(e => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0) {
-          setActiveSection(visible[0].target.id);
+    const onScroll = () => {
+      const triggerY = window.innerHeight * 0.3;
+      let current = ids[0];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= triggerY) {
+          current = id;
+        } else {
+          break;
         }
-      },
-      { rootMargin: '-40% 0px -55% 0px', threshold: 0 },
-    );
-    targets.forEach(t => observer.observe(t));
-    return () => observer.disconnect();
+      }
+      setActiveSection(current);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll(); // initial call to set the right section on mount
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   // Docs menu structure — grouped for extensibility. Add another group (e.g. Deep Dive)
