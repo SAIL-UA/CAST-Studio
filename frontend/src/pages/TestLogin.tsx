@@ -148,9 +148,9 @@ const FeatureBand = ({ title, description, icon, index, highlight }: { title: st
                 <div className="feature-band__card-wrap">
                     <div style={{
                         width: '100%', aspectRatio: '1 / 1', maxWidth: 420,
-                        borderRadius: 40, background: ACCENT,
+                        borderRadius: 40, background: '#e9e9e9',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 1px 2px rgba(10,10,10,0.04), 0 24px 60px rgba(0,132,158,0.18)',
+                        boxShadow: '0 1px 2px rgba(10,10,10,0.04), 0 20px 48px rgba(10,10,10,0.08)',
                         padding: 32,
                     }}>
                         <div style={{ width: '100%', height: '100%', maxWidth: 300, maxHeight: 300 }}>
