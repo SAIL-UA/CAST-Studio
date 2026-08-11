@@ -1694,8 +1694,13 @@ class RequestFeedbackView(APIView):
       if res.state == "SUCCESS":
         data = res.result
         if isinstance(data, list):
+          # section is carried through so the panel can label the rubric area a note came from
           items = [
-            {"title": str(it.get("title", "")), "text": str(it.get("text", ""))}
+            {
+              "title": str(it.get("title", "")),
+              "text": str(it.get("text", "")),
+              "section": str(it.get("section", "")),
+            }
             for it in data if isinstance(it, dict)
           ]
         else:

@@ -880,17 +880,26 @@ def _extract_json_object(text: str) -> dict | None:
     return None
 
 
-def _generate_feedback(groups_data: list, ungrouped_data: dict, counts: dict) -> list[dict]:
+def _format_rq_labels(labels: list[str]) -> str:
+    """Inline suffix marking which research questions a figure or group answers."""
+    if not labels:
+        return " [linked research questions: none]"
+    return f" [answers: {', '.join(labels)}]"
+
+
+def _generate_feedback(groups_data: list, ungrouped_data: dict, counts: dict, rqs_data: list | None = None) -> list[dict]:
     """
     Use OpenAI to generate structured feedback items for the storyboard context.
 
     Input shapes:
-        groups_data: [{ "name": str, "description": str, "figures": { filepath: {"description": str, "data_url": str|None} } }, ...]
-        ungrouped_data: { filepath: {"description": str, "data_url": str|None} }
-        counts: { groups, storyboard_images, nongrouped_images }
+        groups_data: [{ "name": str, "description": str, "rq_labels": [str],
+                        "figures": { filepath: {"description": str, "data_url": str|None, "rq_labels": [str]} } }, ...]
+        ungrouped_data: { filepath: {"description": str, "data_url": str|None, "rq_labels": [str]} }
+        counts: { groups, storyboard_images, nongrouped_images, research_questions, unlinked_research_questions }
+        rqs_data: [{ "label": "RQ1", "text": str, "linked_figures": [str], "linked_groups": [str] }, ...]
 
-    Returns: a list of up to 4 items with fields:
-        [{ section: "missing_items"|"item_quality"|"grouping_quality", title: str, text: str }]
+    Returns: a list of up to 5 items with fields:
+        [{ section: "missing_items"|"item_quality"|"grouping_quality"|"rq_alignment", title: str, text: str }]
     """
     # Format narrative-ready context strings
     groups_text = ""
@@ -898,14 +907,14 @@ def _generate_feedback(groups_data: list, ungrouped_data: dict, counts: dict) ->
     for group in groups_data:
         group_name = group.get('name', '')
         group_desc = group.get('description', '')
-        groups_text += f"\n### Group: {group_name}\n"
+        groups_text += f"\n### Group: {group_name}{_format_rq_labels(group.get('rq_labels') or [])}\n"
         groups_text += f"Description: {group_desc}\n"
         groups_text += "Figures in this group:\n"
         for fig_file, fig_info in group.get('figures', {}).items():
             desc = fig_info.get('description', '')
             title = fig_info.get('title', fig_file)
             data_url = fig_info.get('data_url')
-            groups_text += f"  - {title}: {desc}\n"
+            groups_text += f"  - {title}{_format_rq_labels(fig_info.get('rq_labels') or [])}: {desc}\n"
             caption_desc = desc if len(desc) <= 280 else f"{desc[:277]}..."
             grouped_image_entries.append((group_name, title, caption_desc, data_url))
 
@@ -915,20 +924,38 @@ def _generate_feedback(groups_data: list, ungrouped_data: dict, counts: dict) ->
         desc = fig_info.get('description', '')
         title = fig_info.get('title', fig_file)
         data_url = fig_info.get('data_url')
-        ungrouped_text += f"  - {title}: {desc}\n"
+        ungrouped_text += f"  - {title}{_format_rq_labels(fig_info.get('rq_labels') or [])}: {desc}\n"
         caption_desc = desc if len(desc) <= 280 else f"{desc[:277]}..."
         ungrouped_image_entries.append(("Ungrouped", title, caption_desc, data_url))
+
+    # Research questions and what each one currently claims, so the model can judge both the
+    # questions themselves and whether the links to them hold up.
+    rqs_data = rqs_data or []
+    if rqs_data:
+        rqs_text = "\n### Research Questions:\n"
+        for rq in rqs_data:
+            linked_groups = rq.get('linked_groups') or []
+            linked_figures = rq.get('linked_figures') or []
+            rqs_text += f"\n{rq.get('label', 'RQ')}: {rq.get('text', '')}\n"
+            rqs_text += f"  Linked groups: {', '.join(linked_groups) if linked_groups else 'none'}\n"
+            rqs_text += f"  Linked figures: {', '.join(linked_figures) if linked_figures else 'none'}\n"
+    else:
+        rqs_text = "\n### Research Questions:\nThe user has not written any research questions yet.\n"
 
     counts_text = (
         f"Total groups: {counts.get('groups', 0)}\n"
         f"Storyboard images: {counts.get('storyboard_images', 0)}\n"
         f"Ungrouped images: {counts.get('nongrouped_images', 0)}\n"
+        f"Research questions: {counts.get('research_questions', 0)}\n"
+        f"Research questions with no linked cards: {counts.get('unlinked_research_questions', 0)}\n"
+        f"Storyboard images linked to no research question: {counts.get('unlinked_images', 0)}\n"
     )
 
     prompt = f"""
 ### Input
 Storyboard counts:
 {counts_text}
+{rqs_text}
 {groups_text}
 {ungrouped_text}
 
@@ -949,14 +976,14 @@ Attached images correspond to the figures listed above.
                     "items": {
                         "type": "array",
                         "minItems": 1,
-                        "maxItems": 4,
+                        "maxItems": 5,
                         "items": {
                             "type": "object",
                             "additionalProperties": False,
                             "properties": {
                                 "section": {
                                     "type": "string",
-                                    "enum": ["missing_items", "item_quality", "grouping_quality"]
+                                    "enum": ["missing_items", "item_quality", "grouping_quality", "rq_alignment"]
                                 },
                                 "title": {"type": "string"},
                                 "text": {"type": "string"}
@@ -1031,8 +1058,8 @@ Attached images correspond to the figures listed above.
                     if isinstance(section, str):
                         item["section"] = section
                     items.append(item)
-            # Enforce max 4
-            return items[:4] if items else []
+            # Enforce max 5
+            return items[:5] if items else []
 
         # Fallback: synthesize a single generic item from raw content
         fallback_text = (resp.choices[0].message.content or "").strip()
@@ -1072,6 +1099,7 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
         User = get_user_model()
         ImageData = _get_model('api', 'ImageData')
         GroupData = _get_model('api', 'GroupData')
+        ResearchQuestion = _get_model('api', 'ResearchQuestion')
 
         try:
             user = User.objects.get(id=user_id)
@@ -1092,10 +1120,52 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
         groups_count = groups_qs.count()
         nongrouped_count = storyboard_images_qs.filter(group_id__isnull=True).count()
 
+        # Research questions, labelled RQ1..RQn in the same order the panel and the card badges
+        # use, so feedback can name a question the way the user sees it on screen.
+        rqs_qs = ResearchQuestion.objects.filter(user=user).prefetch_related('images', 'groups')
+        storyboard_image_ids = set(storyboard_images_qs.values_list('id', flat=True))
+        rq_labels_by_image: dict = {}
+        rq_labels_by_group: dict = {}
+        rqs_data = []
+        for idx, rq in enumerate(rqs_qs):
+            label = f"RQ{idx + 1}"
+            linked_figures = []
+            for img in rq.images.all():
+                rq_labels_by_image.setdefault(img.id, []).append(label)
+                title = img.short_desc or f"Visual {img.index + 1}"
+                # Flagged rather than dropped: a question answered only by cards the user left off
+                # the storyboard is exactly the kind of gap the feedback should call out.
+                if img.id not in storyboard_image_ids:
+                    title += " (not on the storyboard)"
+                linked_figures.append(title)
+            linked_groups = []
+            for grp in rq.groups.all():
+                rq_labels_by_group.setdefault(grp.id, []).append(label)
+                linked_groups.append(grp.name or "Untitled group")
+            rqs_data.append({
+                "label": label,
+                "text": rq.text or "",
+                "linked_figures": linked_figures,
+                "linked_groups": linked_groups,
+            })
+
+        unlinked_rq_count = sum(
+            1 for rq in rqs_data if not rq["linked_figures"] and not rq["linked_groups"]
+        )
+        # A figure counts as covered if it is linked itself or sits in a linked group.
+        unlinked_image_count = sum(
+            1 for img in storyboard_images_qs
+            if not rq_labels_by_image.get(img.id)
+            and not (img.group_id_id and rq_labels_by_group.get(img.group_id_id))
+        )
+
         counts = {
             "groups": groups_count,
             "storyboard_images": storyboard_images_count,
             "nongrouped_images": nongrouped_count,
+            "research_questions": len(rqs_data),
+            "unlinked_research_questions": unlinked_rq_count,
+            "unlinked_images": unlinked_image_count,
         }
 
         # Build groups data structure with descriptions
@@ -1107,6 +1177,7 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
                 groups_data.append({
                     "name": group.name,
                     "description": group.description or "",
+                    "rq_labels": rq_labels_by_group.get(group.id, []),
                     "figures": {}
                 })
                 continue
@@ -1116,7 +1187,11 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
                 desc = img.long_desc or ""
                 title = img.short_desc or f"Visual {img.index + 1}"
                 data_url = _image_to_data_url(img.filepath)
-                figure_payload = {"description": desc, "title": title}
+                figure_payload = {
+                    "description": desc,
+                    "title": title,
+                    "rq_labels": rq_labels_by_image.get(img.id, []),
+                }
                 if data_url:
                     figure_payload["data_url"] = data_url
                 figures[img.filepath] = figure_payload
@@ -1124,6 +1199,7 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
             groups_data.append({
                 "name": group.name,
                 "description": group.description or "",
+                "rq_labels": rq_labels_by_group.get(group.id, []),
                 "figures": figures,
             })
 
@@ -1134,7 +1210,11 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
             desc = img.long_desc or ""
             title = img.short_desc or f"Visual {img.index + 1}"
             data_url = _image_to_data_url(img.filepath)
-            payload = {"description": desc, "title": title}
+            payload = {
+                "description": desc,
+                "title": title,
+                "rq_labels": rq_labels_by_image.get(img.id, []),
+            }
             if data_url:
                 payload["data_url"] = data_url
             ungrouped_data[img.filepath] = payload
@@ -1149,10 +1229,10 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
 
         _progress(1, "Analyzing...")
         # Call OpenAI to generate feedback
-        items = _generate_feedback(groups_data, ungrouped_data, counts)
+        items = _generate_feedback(groups_data, ungrouped_data, counts, rqs_data)
         # Ensure items have the minimal shape expected by the GET mapper
         safe_items = []
-        for it in items[:4]:
+        for it in items[:5]:
             if isinstance(it, dict):
                 t = str(it.get("title", "")).strip()
                 x = str(it.get("text", "")).strip()

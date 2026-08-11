@@ -4,7 +4,17 @@ import squares from '../assets/images/squares.svg';
 export type FeedbackCardData = {
   title: string;
   text: string;
+  /** Rubric area the note came from, e.g. "rq_alignment". */
+  section?: string;
   source?: string;
+};
+
+/** Readable names for the rubric sections the feedback task returns. */
+const SECTION_LABEL: Record<string, string> = {
+  missing_items: 'Missing items',
+  item_quality: 'Item quality',
+  grouping_quality: 'Grouping quality',
+  rq_alignment: 'Research questions',
 };
 
 export type InstructorNote = {
@@ -81,11 +91,16 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ items, instructorNotes = 
             <div className="p-3">
               <p className="text-sm text-grey-darkest whitespace-pre-wrap">{it.text}</p>
 
-              {/* Source badge at bottom */}
-              <div className="mt-3">
+              {/* Source badge at bottom, plus the rubric area this note came from */}
+              <div className="flex items-center flex-wrap gap-1.5 mt-3">
                 <span className="inline-block text-xs font-medium text-white bg-[#be6d6d] rounded-full px-3 py-1">
                   {it.source || 'Story Studio AI'}
                 </span>
+                {it.section && SECTION_LABEL[it.section] && (
+                  <span className="inline-block text-xs font-medium text-grey-darkest bg-grey-lighter rounded-full px-3 py-1">
+                    {SECTION_LABEL[it.section]}
+                  </span>
+                )}
               </div>
             </div>
           </div>

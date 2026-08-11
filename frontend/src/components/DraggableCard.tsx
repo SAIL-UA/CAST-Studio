@@ -452,28 +452,32 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
                   {tempTitle}
                 </p>
               )}
-              {/* Linked research questions — capped so they can't crowd out the title */}
-              <RqBadges labels={rqLabels} max={2} />
             </div>
-            {/* Right block is sized to its icons rather than half the header, so the title keeps the rest */}
-            {!readOnly && (
-              <div id="card-header-right" className="flex justify-end items-center gap-1 flex-shrink-0 ml-1">
-                <RqLinkPicker
-                  cardId={image.id}
-                  buttonClassName="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200 flex-shrink-0"
-                  iconSize={8}
-                />
-                <button
-                  log-id="edit-figure-button"
-                  onClick={handleShow}
-                  className="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
-                  style={{ fontSize: '0.5rem' }}
-                  title="Edit figure"
-                >
-                  ✎
-                </button>
-              </div>
-            )}
+            {/* Right block is sized to its contents rather than half the header, so the title keeps the rest.
+                Rendered even when read-only, since the RQ badges live here and still need showing. */}
+            <div id="card-header-right" className="flex justify-end items-center gap-1 flex-shrink-0 ml-1">
+              {/* Linked research questions — right-aligned beside the link button, capped so a
+                  heavily-linked card can't crowd out the title */}
+              <RqBadges labels={rqLabels} max={2} />
+              {!readOnly && (
+                <>
+                  <RqLinkPicker
+                    cardId={image.id}
+                    buttonClassName="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200 flex-shrink-0"
+                    iconSize={8}
+                  />
+                  <button
+                    log-id="edit-figure-button"
+                    onClick={handleShow}
+                    className="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                    style={{ fontSize: '0.5rem' }}
+                    title="Edit figure"
+                  >
+                    ✎
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           {image.filepath && (
             <div id="card-body">
