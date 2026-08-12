@@ -566,7 +566,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         <div className="flex items-center space-x-1 flex-shrink-0 ml-1">
           {/* Linked research questions — right-aligned beside the link button, capped so a
               heavily-linked group can't crowd out its name */}
-          <RqBadges labels={rqLabels} max={2} />
+          <RqBadges labels={rqLabels} max={1} />
           {!disableDrag && (
             <>
               {/* Link research questions */}

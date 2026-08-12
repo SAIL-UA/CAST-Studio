@@ -194,6 +194,10 @@ class NarrativeCache(models.Model):
   theme = models.TextField(default="")
   categories = models.JSONField(default=list)
   sequence_justification = models.TextField(default="")
+  # [{"label": "Q1", "how_informed": "..."}, ...] — how each research question
+  # shaped the final story. Populated after story-build in a separate LLM call.
+  # Empty list when the user wrote no RQs.
+  rq_reasoning = models.JSONField(default=list, blank=True)
 
   
   def __str__(self):

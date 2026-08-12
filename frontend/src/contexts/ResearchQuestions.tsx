@@ -57,7 +57,7 @@ export const ResearchQuestionsProvider = ({ children }: { children: React.ReactN
       const data = await getResearchQuestions(targetUser);
       const summaries: RqSummary[] = (data || []).map((rq: any, idx: number) => ({
         id: rq.id,
-        label: `RQ${idx + 1}`,
+        label: `Q${idx + 1}`,
         text: rq.text || '',
         images: rq.images || [],
         groups: rq.groups || [],

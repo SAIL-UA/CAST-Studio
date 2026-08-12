@@ -189,6 +189,19 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Feature flags for research-question aware story generation. All default True; toggle
+# any of them off (env var: "0"/"false") to disable RQ injection for that stage without
+# a code deploy — useful for isolating a regression to a specific prompt.
+def _flag(name: str, default: bool = True) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() not in {"0", "false", "no", "off", ""}
+
+AI_RQS_IN_STRUCTURE = _flag("AI_RQS_IN_STRUCTURE")
+AI_RQS_IN_SEQUENCE = _flag("AI_RQS_IN_SEQUENCE")
+AI_RQS_IN_STORY = _flag("AI_RQS_IN_STORY")
+
 
 # settings.py
 REST_FRAMEWORK = {

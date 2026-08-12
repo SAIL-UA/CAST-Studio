@@ -1643,7 +1643,8 @@ class GenerateNarrativeView(APIView):
           "recommended_order": narrative_cache.order,
           "theme": narrative_cache.theme,
           "categories": narrative_cache.categories,
-          "sequence_justification": narrative_cache.sequence_justification
+          "sequence_justification": narrative_cache.sequence_justification,
+          "rq_reasoning": narrative_cache.rq_reasoning,
         }, status=status.HTTP_200_OK)
       except NarrativeCache.DoesNotExist:
         return Response({

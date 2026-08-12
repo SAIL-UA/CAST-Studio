@@ -23,6 +23,7 @@ interface StoryData {
     categorize_figures_response?: string;
     theme_response?: string;
     sequence_response?: string;
+    rq_reasoning?: { label: string; how_informed: string }[];
 }
 
 /**
@@ -112,7 +113,8 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                     recommended_order: cacheData.order,
                     categorize_figures_response: cacheData.categories,
                     theme_response: cacheData.theme,
-                    sequence_response: cacheData.sequence_justification
+                    sequence_response: cacheData.sequence_justification,
+                    rq_reasoning: cacheData.rq_reasoning,
                 });
                 console.log('Loaded cached narrative data:', cacheData);
             }
@@ -630,6 +632,28 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                                                 {processedSequence}
                                             </ReactMarkdown>
                                         </div>
+                                    </div>
+                                )}
+
+                                {/* Research Questions — hidden when the user wrote none. Kept
+                                    intentionally plain (no ReactMarkdown, no figure token
+                                    processing) so figure previews never render inside it. */}
+                                {storyData.rq_reasoning && storyData.rq_reasoning.length > 0 && (
+                                    <div className="p-4 rounded-lg mt-6">
+                                        <h4 className="font-semibold text-grey-darkest mb-2">Research Questions</h4>
+                                        <ul className="space-y-3">
+                                            {storyData.rq_reasoning.map((item) => {
+                                                // Strip any [FIGURE: name] tokens the LLM slipped in — the RQ
+                                                // subsection is explicitly figureless.
+                                                const clean = (item.how_informed || '').replace(/\[FIGURE:\s*[^\]]+\]/gi, '').replace(/\s{2,}/g, ' ').trim();
+                                                return (
+                                                    <li key={item.label} className="text-grey-darkest">
+                                                        <span className="font-semibold">{item.label}:</span>{' '}
+                                                        <span>{clean}</span>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
                                     </div>
                                 )}
                             </>

@@ -458,7 +458,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
             <div id="card-header-right" className="flex justify-end items-center gap-1 flex-shrink-0 ml-1">
               {/* Linked research questions — right-aligned beside the link button, capped so a
                   heavily-linked card can't crowd out the title */}
-              <RqBadges labels={rqLabels} max={2} />
+              <RqBadges labels={rqLabels} max={1} />
               {!readOnly && (
                 <>
                   <RqLinkPicker

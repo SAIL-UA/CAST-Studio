@@ -147,4 +147,7 @@ export interface StoryDataRaw {
   categorize_figures_response?: string;
   theme_response?: string;
   sequence_response?: string;
+  /** How each research question shaped the finished story. Populated by the
+   *  post-hoc rq_reasoning LLM call and rendered in the reasoning tab. */
+  rq_reasoning?: { label: string; how_informed: string }[];
 }

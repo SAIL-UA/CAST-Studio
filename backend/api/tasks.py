@@ -163,13 +163,27 @@ This is a single figure description:
         return f"Error categorizing figure: {e}"
 
 
-def _understand_theme_objective(fig_descriptions: str) -> str:
-    """Identify theme and objective based on all figure descriptions."""
+def _understand_theme_objective(fig_descriptions: str, rqs_data: list | None = None) -> str:
+    """
+    Identify theme and objective based on all figure descriptions.
+
+    When AI_RQS_IN_STRUCTURE is on and rqs_data is provided, the research questions
+    are fed in so the theme can be framed in terms of what the user is trying to
+    answer, not just what the figures happen to show.
+    """
+    rqs_block = ""
+    if getattr(settings, "AI_RQS_IN_STRUCTURE", True) and rqs_data:
+        rqs_block = (
+            _format_rqs_prompt_section(rqs_data)
+            + "\nFrame the theme and objective around what the user is trying to answer with these questions. "
+            "Trust the user's linked figures — do not second-guess them.\n"
+        )
+
     prompt = f"""
 ### Input
 Descriptions of figures:
 {fig_descriptions}
-
+{rqs_block}
 {_load_prompt('understand_theme_objective.txt')}
 """.strip()
 
@@ -190,21 +204,37 @@ Descriptions of figures:
         return f"Error understanding theme and objective: {e}"
 
 
-def _choose_story_structure_id(all_descriptions_text: str) -> str:
+def _choose_story_structure_id(all_descriptions_text: str, rqs_data: list | None = None) -> str:
     """
     Ask the LLM to choose the best story structure id for the given figures.
 
     The returned id will always be one of the keys in STORY_SCAFFOLDS.
+
+    When AI_RQS_IN_STRUCTURE is on and rqs_data is provided, the user's research
+    questions are prepended so the model can bias structure choice toward the
+    kind of question being asked (comparative questions favour Comparative, causal
+    ones favour Cause/Effect, etc.).
     """
     # Build prompt using the shared story_definition reference
     story_definitions = _load_prompt("story_definition.txt")
     allowed_ids = list(STORY_SCAFFOLDS.keys())
 
+    rqs_block = ""
+    if getattr(settings, "AI_RQS_IN_STRUCTURE", True) and rqs_data:
+        rqs_block = (
+            _format_rqs_prompt_section(rqs_data)
+            + "\nThe user's research questions above are directive: prefer the "
+            "structure that best answers them. Comparative questions favour Comparative; "
+            "cause/effect questions favour Cause and Effect; questions about progression "
+            "over time favour Time-Based; overview-then-detail questions favour "
+            "Overview to Detail. Trust the user's linked figures — do not second-guess them.\n"
+        )
+
     prompt = f"""
 ### Input
 Descriptions of figures for this story:
 {all_descriptions_text}
-
+{rqs_block}
 Reference narrative structures:
 {story_definitions}
 
@@ -270,11 +300,12 @@ Respond ONLY with a JSON object of the form:
         return list(STORY_SCAFFOLDS.keys())[0]
 
 
-def _resolve_story_structure_id(story_structure_id: str | None, all_descriptions_text: str) -> str:
+def _resolve_story_structure_id(story_structure_id: str | None, all_descriptions_text: str, rqs_data: list | None = None) -> str:
     """
     Resolve the final story structure id used for generation.
 
-    Keeps a valid caller-provided id, otherwise auto-selects one.
+    Keeps a valid caller-provided id, otherwise auto-selects one. When rqs_data is
+    supplied and AI_RQS_IN_STRUCTURE is on, structure choice is biased by the RQs.
     """
     normalized_id = (story_structure_id or "").strip()
     if normalized_id in STORY_SCAFFOLDS:
@@ -287,7 +318,7 @@ def _resolve_story_structure_id(story_structure_id: str | None, all_descriptions
             story_structure_id,
         )
 
-    chosen = _choose_story_structure_id(all_descriptions_text)
+    chosen = _choose_story_structure_id(all_descriptions_text, rqs_data=rqs_data)
     if chosen in STORY_SCAFFOLDS:
         return chosen
 
@@ -300,8 +331,18 @@ def _resolve_story_structure_id(story_structure_id: str | None, all_descriptions
     return fallback_id
 
 
-def _sequence_figures(fig_descriptions_category: dict, theme: str, story_structure_id: str) -> str:
+def _sequence_figures(fig_descriptions_category: dict, theme: str, story_structure_id: str, rqs_data: list | None = None) -> str:
     """Generate a recommended figure sequence given per-figure categories, theme, and the provided story structure."""
+    rqs_block = ""
+    if getattr(settings, "AI_RQS_IN_SEQUENCE", True) and rqs_data:
+        rqs_block = (
+            _format_rqs_prompt_section(rqs_data)
+            + "\nSequence the figures so the research questions get answered in a "
+            "coherent progression — foundational questions first, dependent ones after. "
+            "Prioritise figures the user has linked to a question; the user's links are "
+            "authoritative signal of importance, not to be second-guessed.\n"
+        )
+
     base_prompt = f"""
 ### Input
 Descriptions and categories of figures:
@@ -309,7 +350,7 @@ Descriptions and categories of figures:
 
 Topic theme and objective:
 {theme}
-
+{rqs_block}
 {_load_prompt('sequence_figures.txt')}
 """.strip()
 
@@ -353,8 +394,24 @@ Use the following story structure. Its description is given below.
         return f"Error sequencing figures: {e}"
 
 
-def _build_story(fig_descriptions_category: dict, sequence: str) -> str:
-    """Build a narrative using per-figure categories and the recommended sequence."""
+def _build_story(fig_descriptions_category: dict, sequence: str, rqs_data: list | None = None) -> str:
+    """Build a narrative using per-figure categories and the recommended sequence.
+
+    When AI_RQS_IN_STORY is on and rqs_data is provided, the research questions
+    are passed as directive context. Per product decision the narrative itself keeps
+    them implicit — do not name RQs in the story prose. The reasoning tab surfaces
+    a separate "how each RQ informed the story" section instead.
+    """
+    rqs_block = ""
+    if getattr(settings, "AI_RQS_IN_STORY", True) and rqs_data:
+        rqs_block = (
+            _format_rqs_prompt_section(rqs_data)
+            + "\nWrite the narrative so it answers these research questions in the "
+            "order suggested by the sequence. Keep the RQs IMPLICIT — do not name "
+            "them in the prose; instead, emphasise the figures the user has linked "
+            "to each question. Trust the user's links.\n"
+        )
+
     prompt = f"""
 ### Input
 Descriptions and categories of figures:
@@ -362,7 +419,7 @@ Descriptions and categories of figures:
 
 Sequence:
 {sequence}
-
+{rqs_block}
 {_load_prompt('build_story.txt')}
 """.strip()
 
@@ -383,7 +440,7 @@ Sequence:
         return f"Error building story: {e}"
 
 
-def _sequence_figures_with_groups(groups_data: list, ungrouped_data: dict, theme: str, story_structure_id: str) -> str:
+def _sequence_figures_with_groups(groups_data: list, ungrouped_data: dict, theme: str, story_structure_id: str, rqs_data: list | None = None) -> str:
     """
     Sequence figures considering both groups and ungrouped figures.
 
@@ -392,20 +449,36 @@ def _sequence_figures_with_groups(groups_data: list, ungrouped_data: dict, theme
         ungrouped_data: Dict of ungrouped figures with descriptions/categories
         theme: Overall theme and objective
         story_structure_id: Story structure ID
+        rqs_data: Optional research questions; each figure/group carries its own
+            rq_labels which get inlined below when the AI_RQS_IN_SEQUENCE flag is on.
     """
+    rq_aware = getattr(settings, "AI_RQS_IN_SEQUENCE", True) and bool(rqs_data)
+
     # Format groups for the prompt
     groups_text = ""
     for group in groups_data:
-        groups_text += f"\n### Group: {group['name']}\n"
+        rq_suffix = _format_rq_labels(group.get('rq_labels') or []) if rq_aware else ""
+        groups_text += f"\n### Group: {group['name']}{rq_suffix}\n"
         groups_text += f"Description: {group['description']}\n"
         groups_text += "Figures in this group:\n"
         for fig_file, fig_info in group['figures'].items():
-            groups_text += f"  - {fig_file}: {fig_info['description']} (Category: {fig_info['category']})\n"
+            fig_rq_suffix = _format_rq_labels(fig_info.get('rq_labels') or []) if rq_aware else ""
+            groups_text += f"  - {fig_file}{fig_rq_suffix}: {fig_info['description']} (Category: {fig_info['category']})\n"
 
     # Format ungrouped figures
     ungrouped_text = "\n### Ungrouped Figures:\n"
     for fig_file, fig_info in ungrouped_data.items():
-        ungrouped_text += f"  - {fig_file}: {fig_info['description']} (Category: {fig_info['category']})\n"
+        fig_rq_suffix = _format_rq_labels(fig_info.get('rq_labels') or []) if rq_aware else ""
+        ungrouped_text += f"  - {fig_file}{fig_rq_suffix}: {fig_info['description']} (Category: {fig_info['category']})\n"
+
+    rqs_block = ""
+    if rq_aware:
+        rqs_block = (
+            _format_rqs_prompt_section(rqs_data)
+            + "\nSequence the figures so the research questions get answered in a "
+            "coherent progression. The user's linked figures/groups are authoritative "
+            "signal of relevance — do not second-guess them.\n"
+        )
 
     base_prompt = f"""
 ### Input
@@ -414,7 +487,7 @@ def _sequence_figures_with_groups(groups_data: list, ungrouped_data: dict, theme
 
 Topic theme and objective:
 {theme}
-
+{rqs_block}
 {_load_prompt('sequence_figures_with_groups.txt')}
 """.strip()
 
@@ -458,7 +531,7 @@ Use the following story structure. Its description is given below.
         return f"Error sequencing figures with groups: {e}"
 
 
-def _build_story_with_groups(groups_data: list, ungrouped_data: dict, sequence: str) -> str:
+def _build_story_with_groups(groups_data: list, ungrouped_data: dict, sequence: str, rqs_data: list | None = None) -> str:
     """
     Build a narrative that respects group structure and integrates ungrouped figures.
 
@@ -466,20 +539,35 @@ def _build_story_with_groups(groups_data: list, ungrouped_data: dict, sequence: 
         groups_data: List of dicts with group info and figures
         ungrouped_data: Dict of ungrouped figures with descriptions/categories
         sequence: Recommended sequence from sequencing step
+        rqs_data: Optional research questions. See _build_story docstring for the
+            implicit-in-prose policy.
     """
+    rq_aware = getattr(settings, "AI_RQS_IN_STORY", True) and bool(rqs_data)
+    def _rq(entry):
+        return _format_rq_labels(entry.get('rq_labels') or []) if rq_aware else ""
+
     # Format groups for the prompt
     groups_text = ""
     for group in groups_data:
-        groups_text += f"\n### Group: {group['name']}\n"
+        groups_text += f"\n### Group: {group['name']}{_rq(group)}\n"
         groups_text += f"Description: {group['description']}\n"
         groups_text += "Figures in this group:\n"
         for fig_file, fig_info in group['figures'].items():
-            groups_text += f"  - {fig_file}: {fig_info['description']} (Category: {fig_info['category']})\n"
+            groups_text += f"  - {fig_file}{_rq(fig_info)}: {fig_info['description']} (Category: {fig_info['category']})\n"
 
     # Format ungrouped figures
     ungrouped_text = "\n### Ungrouped Figures:\n"
     for fig_file, fig_info in ungrouped_data.items():
-        ungrouped_text += f"  - {fig_file}: {fig_info['description']} (Category: {fig_info['category']})\n"
+        ungrouped_text += f"  - {fig_file}{_rq(fig_info)}: {fig_info['description']} (Category: {fig_info['category']})\n"
+
+    rqs_block = ""
+    if rq_aware:
+        rqs_block = (
+            _format_rqs_prompt_section(rqs_data)
+            + "\nWrite the narrative so it answers these questions in the order the "
+            "sequence implies. Keep the questions IMPLICIT — do not name them in prose. "
+            "Emphasise figures the user has linked to each question. Trust the user's links.\n"
+        )
 
     prompt = f"""
 ### Input
@@ -488,7 +576,7 @@ def _build_story_with_groups(groups_data: list, ungrouped_data: dict, sequence: 
 
 Sequence:
 {sequence}
-
+{rqs_block}
 {_load_prompt('build_story_with_groups.txt')}
 """.strip()
 
@@ -509,7 +597,7 @@ Sequence:
         return f"Error building story with groups: {e}"
 
 
-def _sequence_figures_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, theme: str, story_structure_id: str) -> str:
+def _sequence_figures_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, theme: str, story_structure_id: str, rqs_data: list | None = None) -> str:
     """
     Sequence figures considering scaffold elements, their groups, and any extra non-scaffold groups/figures.
 
@@ -519,7 +607,14 @@ def _sequence_figures_with_scaffolds(scaffold_data: dict, extra_groups: list, ex
         extra_figures: Dict of non-scaffold, ungrouped figures
         theme: Overall theme and objective
         story_structure_id: Story structure ID
+        rqs_data: Optional research questions. When AI_RQS_IN_SEQUENCE is on and rqs_data
+            is truthy, every figure/group carrying rq_labels gets an inline
+            [answers: Q1, Q3] suffix and the Research Questions block is prepended.
     """
+    rq_aware = getattr(settings, "AI_RQS_IN_SEQUENCE", True) and bool(rqs_data)
+    def _rq(entry):
+        return _format_rq_labels(entry.get('rq_labels') or []) if rq_aware else ""
+
     is_multi = scaffold_data.get("multi", False)
     elements_text = ""
 
@@ -538,48 +633,57 @@ def _sequence_figures_with_scaffolds(scaffold_data: dict, extra_groups: list, ex
                 elements_text += f"\n### Element: {element_name}\n"
                 elements_text += "Groups in this element:\n"
                 for group in element.get("groups", []):
-                    elements_text += f"- Group: {group.get('name', '')}\n"
+                    elements_text += f"- Group: {group.get('name', '')}{_rq(group)}\n"
                     elements_text += f"  Description: {group.get('description', '')}\n"
                     elements_text += "  Figures:\n"
                     for fig_file, fig_info in group.get("figures", {}).items():
-                        elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                        elements_text += f"    - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
                 element_figs = element.get("figures", {})
                 if element_figs:
                     elements_text += "Ungrouped figures in this element:\n"
                     for fig_file, fig_info in element_figs.items():
-                        elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                        elements_text += f"  - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
     else:
         for element in scaffold_data.get("elements", []):
             element_name = element.get("name") or f"Element {element.get('number')}"
             elements_text += f"\n### Scaffold Element: {element_name}\n"
             elements_text += "Groups in this element:\n"
             for group in element.get("groups", []):
-                elements_text += f"- Group: {group.get('name', '')}\n"
+                elements_text += f"- Group: {group.get('name', '')}{_rq(group)}\n"
                 elements_text += f"  Description: {group.get('description', '')}\n"
                 elements_text += "  Figures:\n"
                 for fig_file, fig_info in group.get("figures", {}).items():
-                    elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                    elements_text += f"    - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
             element_figs = element.get("figures", {})
             if element_figs:
                 elements_text += "Ungrouped figures in this element:\n"
                 for fig_file, fig_info in element_figs.items():
-                    elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                    elements_text += f"  - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
 
     extra_groups_text = ""
     if extra_groups:
         extra_groups_text += "\n### Additional Non-Scaffold Groups:\n"
         for group in extra_groups:
-            extra_groups_text += f"- Group: {group.get('name', '')}\n"
+            extra_groups_text += f"- Group: {group.get('name', '')}{_rq(group)}\n"
             extra_groups_text += f"  Description: {group.get('description', '')}\n"
             extra_groups_text += "  Figures:\n"
             for fig_file, fig_info in group.get("figures", {}).items():
-                extra_groups_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                extra_groups_text += f"    - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
 
     extra_figs_text = ""
     if extra_figures:
         extra_figs_text += "\n### Additional Ungrouped Figures (Non-Scaffold):\n"
         for fig_file, fig_info in extra_figures.items():
-            extra_figs_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+            extra_figs_text += f"  - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+
+    rqs_block = ""
+    if rq_aware:
+        rqs_block = (
+            _format_rqs_prompt_section(rqs_data)
+            + "\nWithin each scaffold element, sequence figures so the research questions "
+            "get answered in a coherent progression. The user's linked figures/groups are "
+            "authoritative signal of relevance — do not second-guess them.\n"
+        )
 
     base_prompt = f"""
 ### Input
@@ -590,7 +694,7 @@ Scaffold structure (elements, groups, and figures):
 
 Topic theme and objective:
 {theme}
-
+{rqs_block}
 {_load_prompt('sequence_figures_with_scaffolds.txt')}
 """.strip()
 
@@ -647,7 +751,7 @@ Use the following story structure. Its description is given below.
 
 FLOW_SCAFFOLDS = {'linear', 'inverted_pyramid'}
 
-def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, sequence: str, story_structure_id: str | None = None) -> str:
+def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, sequence: str, story_structure_id: str | None = None, rqs_data: list | None = None) -> str:
     """
     Build a narrative that explicitly reflects scaffold elements, their groups, and any extra groups/figures.
 
@@ -657,7 +761,12 @@ def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_f
         extra_figures: Dict of non-scaffold, ungrouped figures
         sequence: Recommended sequence from sequencing step
         story_structure_id: Optional structure id to determine prompt selection
+        rqs_data: Optional research questions; see _build_story docstring for policy.
     """
+    rq_aware = getattr(settings, "AI_RQS_IN_STORY", True) and bool(rqs_data)
+    def _rq(entry):
+        return _format_rq_labels(entry.get('rq_labels') or []) if rq_aware else ""
+
     is_multi = scaffold_data.get("multi", False)
     is_flow = story_structure_id in FLOW_SCAFFOLDS if story_structure_id else False
     elements_text = ""
@@ -677,16 +786,16 @@ def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_f
                 elements_text += f"\n### Element: {element_name}\n"
                 elements_text += "Groups in this element:\n"
                 for group in element.get("groups", []):
-                    elements_text += f"- Group: {group.get('name', '')}\n"
+                    elements_text += f"- Group: {group.get('name', '')}{_rq(group)}\n"
                     elements_text += f"  Description: {group.get('description', '')}\n"
                     elements_text += "  Figures:\n"
                     for fig_file, fig_info in group.get("figures", {}).items():
-                        elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                        elements_text += f"    - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
                 element_figs = element.get("figures", {})
                 if element_figs:
                     elements_text += "Ungrouped figures in this element:\n"
                     for fig_file, fig_info in element_figs.items():
-                        elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                        elements_text += f"  - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
     else:
         for idx, element in enumerate(scaffold_data.get("elements", [])):
             element_name = element.get("name") or f"Element {element.get('number')}"
@@ -696,32 +805,41 @@ def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_f
                 elements_text += f"\n### Scaffold Element: {element_name}\n"
             elements_text += "Groups in this element:\n"
             for group in element.get("groups", []):
-                elements_text += f"- Group: {group.get('name', '')}\n"
+                elements_text += f"- Group: {group.get('name', '')}{_rq(group)}\n"
                 elements_text += f"  Description: {group.get('description', '')}\n"
                 elements_text += "  Figures:\n"
                 for fig_file, fig_info in group.get("figures", {}).items():
-                    elements_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                    elements_text += f"    - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
             element_figs = element.get("figures", {})
             if element_figs:
                 elements_text += "Ungrouped figures in this element:\n"
                 for fig_file, fig_info in element_figs.items():
-                    elements_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                    elements_text += f"  - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
 
     extra_groups_text = ""
     if extra_groups:
         extra_groups_text += "\n### Additional Non-Scaffold Groups:\n"
         for group in extra_groups:
-            extra_groups_text += f"- Group: {group.get('name', '')}\n"
+            extra_groups_text += f"- Group: {group.get('name', '')}{_rq(group)}\n"
             extra_groups_text += f"  Description: {group.get('description', '')}\n"
             extra_groups_text += "  Figures:\n"
             for fig_file, fig_info in group.get("figures", {}).items():
-                extra_groups_text += f"    - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+                extra_groups_text += f"    - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
 
     extra_figs_text = ""
     if extra_figures:
         extra_figs_text += "\n### Additional Ungrouped Figures (Non-Scaffold):\n"
         for fig_file, fig_info in extra_figures.items():
-            extra_figs_text += f"  - {fig_file}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+            extra_figs_text += f"  - {fig_file}{_rq(fig_info)}: {fig_info.get('description', '')} (Category: {fig_info.get('category', '')})\n"
+
+    rqs_block = ""
+    if rq_aware:
+        rqs_block = (
+            _format_rqs_prompt_section(rqs_data)
+            + "\nWrite the narrative so it answers these questions in the order the "
+            "sequence implies. Keep the questions IMPLICIT — do not name them in prose. "
+            "Emphasise figures the user has linked to each question. Trust the user's links.\n"
+        )
 
     prompt = f"""
 ### Input
@@ -732,7 +850,7 @@ Scaffold structure (elements, groups, and figures):
 
 Sequence:
 {sequence}
-
+{rqs_block}
 {_load_prompt('build_story_multi_scaffold.txt') if is_multi else (_load_prompt(STORY_SCAFFOLDS[story_structure_id]['filename']) if story_structure_id and story_structure_id in FLOW_SCAFFOLDS else _load_prompt('build_story_with_scaffolds.txt'))}
 """.strip()
 
@@ -751,6 +869,106 @@ Sequence:
     except Exception as e:
         logger.error(f"Error building story with scaffolds: {e}")
         return f"Error building story with scaffolds: {e}"
+
+
+def _generate_rq_reasoning(rqs_data: list, story_text: str, sequence: str, story_structure_id: str | None = None) -> list[dict]:
+    """
+    After the story is built, ask the LLM to explain how each research question
+    shaped it. Populates NarrativeCache.rq_reasoning and drives the frontend's
+    Research Questions section under the reasoning tab.
+
+    Returns [{"label": "Q1", "how_informed": "..."}]; empty list when there are
+    no RQs. Failure returns an empty list rather than raising — the story is
+    already saved by this point and shouldn't be blocked on this side call.
+    """
+    if not rqs_data:
+        return []
+
+    rqs_section = _format_rqs_prompt_section(rqs_data)
+    labels = [rq.get("label", "") for rq in rqs_data if rq.get("label")]
+    structure_hint = f"Narrative structure used: {story_structure_id}\n" if story_structure_id else ""
+
+    prompt = f"""
+### Input
+{structure_hint}The following narrative was generated for the user:
+
+--- BEGIN STORY ---
+{story_text}
+--- END STORY ---
+
+Recommended figure sequence:
+{sequence}
+{rqs_section}
+### Task
+For each research question above, in 1-2 sentences, describe how it informed
+the final story: which sections it drove, which figures it emphasised, or
+which decisions it shaped. Be specific about the story's actual content, not
+generic. If a question was linked to no cards or its influence is limited,
+say so honestly.
+
+Formatting rules for each answer:
+- Write plain prose, no headings or labels.
+- Do NOT begin the sentence with "Justification", "Answer", or the question label — the UI already shows the label.
+- Do NOT include figure filenames or [FIGURE: ...] tokens. Refer to visuals by what they show, not by filename.
+
+Respond ONLY with a JSON object:
+{{
+  "items": [
+    {{ "label": "<Q1 | Q2 | ...>", "how_informed": "<1-2 sentences>" }}
+  ]
+}}
+Return one item per research question, in order.
+""".strip()
+
+    try:
+        client = _openai_client()
+        schema = {
+            "name": "rq_reasoning",
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {
+                                "label": {"type": "string", "enum": labels or [""]},
+                                "how_informed": {"type": "string"},
+                            },
+                            "required": ["label", "how_informed"],
+                        },
+                    },
+                },
+                "required": ["items"],
+            },
+            "strict": True,
+        }
+        resp = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+            timeout=30,
+            response_format={"type": "json_schema", "json_schema": schema},
+        )
+        content = (resp.choices[0].message.content or "").strip()
+        parsed = _extract_json_object(content)
+        if isinstance(parsed, dict) and isinstance(parsed.get("items"), list):
+            # Only keep items whose labels correspond to real RQs to guard against drift.
+            valid_labels = set(labels)
+            return [
+                {"label": item.get("label", ""), "how_informed": item.get("how_informed", "")}
+                for item in parsed["items"]
+                if item.get("label") in valid_labels
+            ]
+        return []
+    except Exception as e:
+        logger.error(f"Error generating RQ reasoning: {e}")
+        return []
 
 
 def extract_figure_filenames(sequence_response: str) -> list[str]:
@@ -887,6 +1105,95 @@ def _format_rq_labels(labels: list[str]) -> str:
     return f" [answers: {', '.join(labels)}]"
 
 
+def _load_rqs_for_prompts(user, storyboard_image_ids: set | None = None) -> dict:
+    """
+    Load and pre-shape research questions for any prompt-building path.
+
+    Consumed by both the feedback pipeline and the story-generation pipeline so
+    the two see identical RQ context (labels, link semantics, "not on the
+    storyboard" flagging, coverage counts).
+
+    Args:
+        user: the workspace owner whose questions to load.
+        storyboard_image_ids: optional set of image ids that are on the
+            storyboard. When supplied, figures linked to an RQ that aren't
+            on the storyboard get a "(not on the storyboard)" title suffix
+            so the model can flag coverage gaps. When None, all links are
+            treated equally (used when the caller doesn't care about board
+            membership).
+
+    Returns:
+        {
+            "rqs_data": [{ "label": "Q1", "text": str,
+                           "linked_figures": [str], "linked_groups": [str] }, ...],
+            "rq_labels_by_image": { image_id: ["Q1", "Q3"] },
+            "rq_labels_by_group": { group_id: ["Q2"] },
+            "counts": { "research_questions": int,
+                        "unlinked_research_questions": int },
+        }
+    """
+    ResearchQuestion = _get_model('api', 'ResearchQuestion')
+    rqs_qs = ResearchQuestion.objects.filter(user=user).prefetch_related('images', 'groups')
+    rq_labels_by_image: dict = {}
+    rq_labels_by_group: dict = {}
+    rqs_data: list[dict] = []
+    # Enumerate matches the UI's Q1..Qn labelling, which the RQ panel and the
+    # per-card badges both compute in creation order.
+    for idx, rq in enumerate(rqs_qs):
+        label = f"Q{idx + 1}"
+        linked_figures = []
+        for img in rq.images.all():
+            rq_labels_by_image.setdefault(img.id, []).append(label)
+            title = img.short_desc or f"Visual {img.index + 1}"
+            if storyboard_image_ids is not None and img.id not in storyboard_image_ids:
+                title += " (not on the storyboard)"
+            linked_figures.append(title)
+        linked_groups = []
+        for grp in rq.groups.all():
+            rq_labels_by_group.setdefault(grp.id, []).append(label)
+            linked_groups.append(grp.name or "Untitled group")
+        rqs_data.append({
+            "label": label,
+            "text": rq.text or "",
+            "linked_figures": linked_figures,
+            "linked_groups": linked_groups,
+        })
+
+    unlinked_rq_count = sum(
+        1 for rq in rqs_data if not rq["linked_figures"] and not rq["linked_groups"]
+    )
+
+    return {
+        "rqs_data": rqs_data,
+        "rq_labels_by_image": rq_labels_by_image,
+        "rq_labels_by_group": rq_labels_by_group,
+        "counts": {
+            "research_questions": len(rqs_data),
+            "unlinked_research_questions": unlinked_rq_count,
+        },
+    }
+
+
+def _format_rqs_prompt_section(rqs_data: list) -> str:
+    """
+    Render an `### Research Questions:` block for any prompt that wants it.
+
+    Kept identical across pipelines so the model sees the same shape whether
+    it's judging alignment (feedback) or using RQs as directive (story-gen).
+    Returns an empty string when there are no RQs — callers can just concat.
+    """
+    if not rqs_data:
+        return ""
+    lines = ["\n### Research Questions:"]
+    for rq in rqs_data:
+        linked_groups = rq.get('linked_groups') or []
+        linked_figures = rq.get('linked_figures') or []
+        lines.append(f"\n{rq.get('label', 'Q')}: {rq.get('text', '')}")
+        lines.append(f"  Linked groups: {', '.join(linked_groups) if linked_groups else 'none'}")
+        lines.append(f"  Linked figures: {', '.join(linked_figures) if linked_figures else 'none'}")
+    return "\n".join(lines) + "\n"
+
+
 def _generate_feedback(groups_data: list, ungrouped_data: dict, counts: dict, rqs_data: list | None = None) -> list[dict]:
     """
     Use OpenAI to generate structured feedback items for the storyboard context.
@@ -932,13 +1239,7 @@ def _generate_feedback(groups_data: list, ungrouped_data: dict, counts: dict, rq
     # questions themselves and whether the links to them hold up.
     rqs_data = rqs_data or []
     if rqs_data:
-        rqs_text = "\n### Research Questions:\n"
-        for rq in rqs_data:
-            linked_groups = rq.get('linked_groups') or []
-            linked_figures = rq.get('linked_figures') or []
-            rqs_text += f"\n{rq.get('label', 'RQ')}: {rq.get('text', '')}\n"
-            rqs_text += f"  Linked groups: {', '.join(linked_groups) if linked_groups else 'none'}\n"
-            rqs_text += f"  Linked figures: {', '.join(linked_figures) if linked_figures else 'none'}\n"
+        rqs_text = _format_rqs_prompt_section(rqs_data)
     else:
         rqs_text = "\n### Research Questions:\nThe user has not written any research questions yet.\n"
 
@@ -1099,7 +1400,6 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
         User = get_user_model()
         ImageData = _get_model('api', 'ImageData')
         GroupData = _get_model('api', 'GroupData')
-        ResearchQuestion = _get_model('api', 'ResearchQuestion')
 
         try:
             user = User.objects.get(id=user_id)
@@ -1120,38 +1420,14 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
         groups_count = groups_qs.count()
         nongrouped_count = storyboard_images_qs.filter(group_id__isnull=True).count()
 
-        # Research questions, labelled RQ1..RQn in the same order the panel and the card badges
-        # use, so feedback can name a question the way the user sees it on screen.
-        rqs_qs = ResearchQuestion.objects.filter(user=user).prefetch_related('images', 'groups')
+        # Research questions in Q1..Qn order. Shared with the story pipeline via
+        # _load_rqs_for_prompts so both surfaces see the same shape.
         storyboard_image_ids = set(storyboard_images_qs.values_list('id', flat=True))
-        rq_labels_by_image: dict = {}
-        rq_labels_by_group: dict = {}
-        rqs_data = []
-        for idx, rq in enumerate(rqs_qs):
-            label = f"RQ{idx + 1}"
-            linked_figures = []
-            for img in rq.images.all():
-                rq_labels_by_image.setdefault(img.id, []).append(label)
-                title = img.short_desc or f"Visual {img.index + 1}"
-                # Flagged rather than dropped: a question answered only by cards the user left off
-                # the storyboard is exactly the kind of gap the feedback should call out.
-                if img.id not in storyboard_image_ids:
-                    title += " (not on the storyboard)"
-                linked_figures.append(title)
-            linked_groups = []
-            for grp in rq.groups.all():
-                rq_labels_by_group.setdefault(grp.id, []).append(label)
-                linked_groups.append(grp.name or "Untitled group")
-            rqs_data.append({
-                "label": label,
-                "text": rq.text or "",
-                "linked_figures": linked_figures,
-                "linked_groups": linked_groups,
-            })
+        rq_ctx = _load_rqs_for_prompts(user, storyboard_image_ids=storyboard_image_ids)
+        rqs_data = rq_ctx["rqs_data"]
+        rq_labels_by_image = rq_ctx["rq_labels_by_image"]
+        rq_labels_by_group = rq_ctx["rq_labels_by_group"]
 
-        unlinked_rq_count = sum(
-            1 for rq in rqs_data if not rq["linked_figures"] and not rq["linked_groups"]
-        )
         # A figure counts as covered if it is linked itself or sits in a linked group.
         unlinked_image_count = sum(
             1 for img in storyboard_images_qs
@@ -1163,8 +1439,8 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
             "groups": groups_count,
             "storyboard_images": storyboard_images_count,
             "nongrouped_images": nongrouped_count,
-            "research_questions": len(rqs_data),
-            "unlinked_research_questions": unlinked_rq_count,
+            "research_questions": rq_ctx["counts"]["research_questions"],
+            "unlinked_research_questions": rq_ctx["counts"]["unlinked_research_questions"],
             "unlinked_images": unlinked_image_count,
         }
 
@@ -1296,16 +1572,19 @@ def generate_description_task(image_id):
         return f"Error generating description for image {image_id}: {e}"
 
 
-def _build_figure_dict(images_queryset, skip_missing_desc=True):
+def _build_figure_dict(images_queryset, skip_missing_desc=True, rq_labels_by_image: dict | None = None):
     """
     Build a dictionary of figures from an images queryset.
-    
+
     Args:
         images_queryset: QuerySet of ImageData objects
         skip_missing_desc: If True, skip images without long_desc
-    
+        rq_labels_by_image: Optional {image_id: ["Q1", "Q3"]} map. When supplied,
+            each figure gets an "rq_labels" list so downstream prompts can annotate
+            them with [answers: Q1, Q3].
+
     Returns:
-        Dict mapping filepath to {"description": str, "category": str}
+        Dict mapping filepath to {"description": str, "category": str, "rq_labels": list}
     """
     figures = {}
     for image in images_queryset:
@@ -1317,35 +1596,44 @@ def _build_figure_dict(images_queryset, skip_missing_desc=True):
         # Notes use their title as key; images use filepath
         key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
         category = _categorize_figure(image.long_desc)
-        figures[key] = {
+        entry = {
             "description": image.long_desc,
-            "category": category
+            "category": category,
         }
+        if rq_labels_by_image is not None:
+            entry["rq_labels"] = rq_labels_by_image.get(image.id, [])
+        figures[key] = entry
     return figures
 
 
-def _build_group_structure(group, images_queryset):
+def _build_group_structure(group, images_queryset, rq_labels_by_image: dict | None = None, rq_labels_by_group: dict | None = None):
     """
     Build a group structure with its figures.
-    
+
     Args:
         group: GroupData instance
         images_queryset: QuerySet of ImageData objects (already filtered for this group)
-    
+        rq_labels_by_image: Optional map; forwarded to _build_figure_dict.
+        rq_labels_by_group: Optional {group_id: ["Q1"]} map; when supplied, the
+            group's own rq_labels are attached.
+
     Returns:
-        Dict with "name", "description", "figures"
+        Dict with "name", "description", "figures", "rq_labels"
     """
     # images_queryset is already filtered for this group, no need to filter again
-    figures = _build_figure_dict(images_queryset)
-    
-    return {
+    figures = _build_figure_dict(images_queryset, rq_labels_by_image=rq_labels_by_image)
+
+    result = {
         "name": group.name or "",
         "description": group.description or "",
-        "figures": figures
+        "figures": figures,
     }
+    if rq_labels_by_group is not None:
+        result["rq_labels"] = rq_labels_by_group.get(group.id, [])
+    return result
 
 
-def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: str | None = None, slot_order: list | None = None):
+def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: str | None = None, slot_order: list | None = None, rq_labels_by_image: dict | None = None, rq_labels_by_group: dict | None = None):
     """
     Build the scaffold_data structure with elements, groups, and figures.
     
@@ -1400,7 +1688,7 @@ def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: s
             # FIX: Images in groups are found by group_id only (like frontend does)
             # The group's scaffold_id determines scaffold membership, not the image's scaffold_id
             group_images = all_images.filter(group_id=group)
-            element_groups_list.append(_build_group_structure(group, group_images))
+            element_groups_list.append(_build_group_structure(group, group_images, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group))
         
         # Ungrouped images in this element (not in any group)
         # Image must be in scaffold, not in any group, AND have scaffold_group_number matching element_num
@@ -1408,7 +1696,7 @@ def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: s
             group_id__isnull=True,
             scaffold_group_number=element_num,
         )
-        element_figures = _build_figure_dict(element_ungrouped_images)
+        element_figures = _build_figure_dict(element_ungrouped_images, rq_labels_by_image=rq_labels_by_image)
 
         # Resolve element metadata (stable id + human label)
         element_id = f"element_{element_num}"
@@ -1440,28 +1728,29 @@ def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: s
     }
 
 
-def _build_group_data(non_scaffold_groups, all_images):
+def _build_group_data(non_scaffold_groups, all_images, rq_labels_by_image: dict | None = None, rq_labels_by_group: dict | None = None):
     """
     Build the group_data structure for groups not in scaffolds.
-    
+
     Args:
         non_scaffold_groups: QuerySet of GroupData not in scaffolds
         all_images: QuerySet of all ImageData for user
-    
+        rq_labels_by_image, rq_labels_by_group: forwarded to _build_group_structure
+
     Returns:
         List of group structures
     """
-    
+
     groups_list = []
     for group in non_scaffold_groups:
         # Only get images that are also not in scaffolds
         group_images = all_images.filter(group_id=group, scaffold_id__isnull=True)
-        groups_list.append(_build_group_structure(group, group_images))
-    
+        groups_list.append(_build_group_structure(group, group_images, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group))
+
     return groups_list
 
 
-def _build_figure_data(ungrouped_images):
+def _build_figure_data(ungrouped_images, rq_labels_by_image: dict | None = None):
     """
     Build the figure_data structure for images not in scaffolds or groups.
     
@@ -1471,37 +1760,49 @@ def _build_figure_data(ungrouped_images):
     Returns:
         Dict mapping filepath to figure info
     """
-    return _build_figure_dict(ungrouped_images)
+    return _build_figure_dict(ungrouped_images, rq_labels_by_image=rq_labels_by_image)
 
 
 def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, scaffold_id=None):
     """
     Fetch and organize all storyboard data (scaffolds, groups, images).
-    
+
     Args:
         user: User instance
         story_structure_id: Optional scaffold number to filter by
-    
+
     Returns:
-        Dict with scaffold_data, group_data, figure_data
+        Dict with scaffold_data, group_data, figure_data, rqs_data, rq_counts.
+        Every figure/group inside those structures also carries an rq_labels list
+        so downstream prompts can annotate them with [answers: Q1, Q3].
     """
     ImageData = _get_model('api', 'ImageData')
     GroupData = _get_model('api', 'GroupData')
     ScaffoldData = _get_model('api', 'ScaffoldData')
-    
+
     logger.info(f"[FETCH_DATA] Fetching storyboard data for user {user.id}, story_structure_id={story_structure_id}")
-    
-    # Initialize output
-    output_json = {
-        "scaffold_data": None,
-        "group_data": [],
-        "figure_data": {}
-    }
-    
+
     # Fetch all groups and images
     all_groups = GroupData.objects.filter(user=user).prefetch_related('images')
     all_images = ImageData.objects.filter(user=user, in_storyboard=True)
     logger.info(f"[FETCH_DATA] Total: {all_groups.count()} groups, {all_images.count()} storyboard images")
+
+    # Load RQ context once and thread it through every builder below so figures and
+    # groups carry their rq_labels. Storyboard image ids are passed so the loader can
+    # flag links that point at cards the user left off the board.
+    storyboard_image_ids = set(all_images.values_list('id', flat=True))
+    rq_ctx = _load_rqs_for_prompts(user, storyboard_image_ids=storyboard_image_ids)
+    rq_labels_by_image = rq_ctx["rq_labels_by_image"]
+    rq_labels_by_group = rq_ctx["rq_labels_by_group"]
+
+    # Initialize output
+    output_json = {
+        "scaffold_data": None,
+        "group_data": [],
+        "figure_data": {},
+        "rqs_data": rq_ctx["rqs_data"],
+        "rq_counts": rq_ctx["counts"],
+    }
 
     # Determine scaffold mode: specific scaffold, multi-scaffold, or no scaffold
     if scaffold_id:
@@ -1515,7 +1816,7 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
                     if info.get('number') == scaffold.number:
                         story_structure_id = sid
                         break
-            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order)
+            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
         except ScaffoldData.DoesNotExist:
             logger.warning(f"[FETCH_DATA] Scaffold {scaffold_id} not found")
 
@@ -1533,7 +1834,7 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
                 if info.get('number') == scaffold.number:
                     story_structure_id = sid
                     break
-            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order)
+            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
 
         elif scaffold_count > 1:
             # Multi-scaffold — build combined structure
@@ -1549,7 +1850,7 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
                         s_structure_id = sid
                         break
 
-                scaffold_data = _build_scaffold_data(s, all_groups, all_images, s_structure_id)
+                scaffold_data = _build_scaffold_data(s, all_groups, all_images, s_structure_id, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
                 if scaffold_data:
                     scaffold_names.append(scaffold_data.get("name", "Unknown"))
                     if s_structure_id:
@@ -1581,15 +1882,15 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
         scaffolds_qs = ScaffoldData.objects.filter(user=user, number=scaffold_number) if scaffold_number else ScaffoldData.objects.filter(user=user)
         scaffold = scaffolds_qs.first()
         if scaffold:
-            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order)
+            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
 
     # Non-scaffold groups
     non_scaffold_groups = all_groups.filter(scaffold_id__isnull=True)
-    output_json["group_data"] = _build_group_data(non_scaffold_groups, all_images)
+    output_json["group_data"] = _build_group_data(non_scaffold_groups, all_images, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
 
     # Ungrouped, non-scaffold images
     ungrouped_non_scaffold = all_images.filter(scaffold_id__isnull=True, group_id__isnull=True)
-    output_json["figure_data"] = _build_figure_data(ungrouped_non_scaffold)
+    output_json["figure_data"] = _build_figure_data(ungrouped_non_scaffold, rq_labels_by_image=rq_labels_by_image)
     
     # Validation summary
     total_scaffold_figures = 0
@@ -1740,6 +2041,13 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
         all_descriptions_text = "\n".join(all_descriptions)
 
+        # Load research questions once for the whole pipeline so structure choice, theme,
+        # sequencing, story building, and post-hoc rq_reasoning all see the same context.
+        # `_fetch_all_storyboard_data` also runs its own loader to attach rq_labels onto
+        # every figure/group — an extra query, but the two use sites want different shapes.
+        storyboard_image_ids = set(storyboard_images.values_list('id', flat=True))
+        rqs_data = _load_rqs_for_prompts(user, storyboard_image_ids=storyboard_image_ids)["rqs_data"]
+
         _progress(3, "Structuring...")
         # For "All workspace" (no scaffold_id and no story_structure_id), defer
         # structure resolution until after fetching so multi-scaffold detection works.
@@ -1748,6 +2056,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
             story_structure_id = _resolve_story_structure_id(
                 story_structure_id,
                 all_descriptions_text,
+                rqs_data=rqs_data,
             )
         logger.info(f"Using story structure: {story_structure_id} (all_workspace={is_all_workspace})")
 
@@ -1774,7 +2083,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         # Branch based on presence of scaffold data first, then use_groups flag, to keep backwards compatibility.
         if scaffold_data:
             _progress(5, "Theming...")
-            theme = _understand_theme_objective(all_descriptions_text)
+            theme = _understand_theme_objective(all_descriptions_text, rqs_data=rqs_data)
             _progress(6, "Sequencing...")
             sequence = _sequence_figures_with_scaffolds(
                 scaffold_data,
@@ -1782,6 +2091,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 non_scaffold_figures,
                 theme,
                 story_structure_id,
+                rqs_data=rqs_data,
             )
             _progress(7, "Composing...")
             # Filter notes out of figures for story builder (no [FIGURE:] placeholders for notes)
@@ -1807,6 +2117,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 story_non_scaffold_figures,
                 sequence,
                 story_structure_id,
+                rqs_data=rqs_data,
             )
             recommended_order = extract_figure_filenames(sequence)
 
@@ -1890,10 +2201,10 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
             all_descriptions_grouped_text = "\n".join(all_descriptions_grouped)
 
             _progress(5, "Theming...")
-            theme = _understand_theme_objective(all_descriptions_grouped_text)
+            theme = _understand_theme_objective(all_descriptions_grouped_text, rqs_data=rqs_data)
             _progress(6, "Sequencing...")
             sequence = _sequence_figures_with_groups(
-                groups_data, ungrouped_data, theme, story_structure_id
+                groups_data, ungrouped_data, theme, story_structure_id, rqs_data=rqs_data,
             )
             _progress(7, "Composing...")
             # Filter notes out of figures for story builder
@@ -1902,7 +2213,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 for g in groups_data
             ]
             story_ungrouped_data = {k: v for k, v in ungrouped_data.items() if '.' in k}
-            story = _build_story_with_groups(story_groups_data, story_ungrouped_data, sequence)
+            story = _build_story_with_groups(story_groups_data, story_ungrouped_data, sequence, rqs_data=rqs_data)
             recommended_order = extract_figure_filenames(sequence)
 
             categories = []
@@ -1924,17 +2235,18 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         else:
             # Flat narrative generation (backward compatible)
             _progress(5, "Theming...")
-            theme = _understand_theme_objective(all_descriptions_text)
+            theme = _understand_theme_objective(all_descriptions_text, rqs_data=rqs_data)
             _progress(6, "Sequencing...")
             sequence = _sequence_figures(
                 flat_figures,
                 theme,
                 story_structure_id,
+                rqs_data=rqs_data,
             )
             _progress(7, "Composing...")
             # Exclude notes (no file extension) from the story builder so AI doesn't generate [FIGURE:] for them
             story_figures = {k: v for k, v in flat_figures.items() if '.' in k}
-            story = _build_story(story_figures, sequence)
+            story = _build_story(story_figures, sequence, rqs_data=rqs_data)
             recommended_order = extract_figure_filenames(sequence)
 
             categories = [
@@ -1960,6 +2272,11 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 else (story_structure_id or "default")
             )
 
+        # Post-hoc: ask the LLM how each RQ shaped the finished story. Populates the
+        # "Research Questions" section under the Reasoning tab. Returns [] when no RQs
+        # exist, so the section stays hidden client-side.
+        rq_reasoning = _generate_rq_reasoning(rqs_data, story, sequence, story_structure_id)
+
         with transaction.atomic():
             cache, created = NarrativeCache.objects.get_or_create(
                 user=user,
@@ -1970,6 +2287,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                     'theme': theme,
                     'categories': categories,
                     'sequence_justification': sequence,
+                    'rq_reasoning': rq_reasoning,
                 }
             )
             if not created:
@@ -1979,6 +2297,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 cache.theme = theme
                 cache.categories = categories
                 cache.sequence_justification = sequence
+                cache.rq_reasoning = rq_reasoning
                 cache.save()
 
         # Mark progress complete AFTER cache is written

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import squares from '../assets/images/squares.svg';
 import { useResearchQuestions } from '../contexts/ResearchQuestions';
 import {
   getResearchQuestions,
@@ -61,8 +60,7 @@ const ResearchQuestionsPanel: React.FC<ResearchQuestionsPanelProps> = ({
   const [showComposer, setShowComposer] = useState(false);
   const { questions: ctxQuestions } = useResearchQuestions();
 
-  // With no questions yet the textbox stays open, since an empty panel needs an obvious entry point.
-  const composerOpen = showComposer || questions.length === 0;
+  const composerOpen = showComposer;
 
   const load = useCallback(async () => {
     try {
@@ -80,17 +78,13 @@ const ResearchQuestionsPanel: React.FC<ResearchQuestionsPanelProps> = ({
     load();
   }, [load]);
 
-  // Links can also change from a card's link button. Following the context's link signature
-  // keeps this panel's checkboxes and counts in step with those edits.
-  const ctxLinkSignature = JSON.stringify(
-    ctxQuestions.map((q) => [q.id, q.images.length, q.groups.length]),
-  );
-  useEffect(() => {
-    if (ctxQuestions.length > 0) {
-      load();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctxLinkSignature]);
+  // NOTE: we intentionally do NOT reload from server when ctxQuestions changes.
+  // A card-level link toggle in RqLinkPicker updates the context optimistically and
+  // fires the PUT in the background. If we called load() here, its GET would race
+  // the pending PUT and often return stale data — leaving the "N linked" count and
+  // the panel checkboxes out of sync with what the user just clicked. Instead,
+  // linkedCount() and isLinked() below read from ctxQuestions when possible, which
+  // reflects those optimistic updates immediately.
 
   const handleAdd = async () => {
     const text = draft.trim();
@@ -120,6 +114,20 @@ const ResearchQuestionsPanel: React.FC<ResearchQuestionsPanelProps> = ({
     } catch (e) {
       setError('Could not update the question.');
     }
+  };
+
+  // Blur-to-save wrapper: always exits edit mode (so a bare click-in-and-out doesn't
+  // leave the editor stuck open). Skips the network call when the text is unchanged
+  // or empty, matching how DraggableCard's inline title editing behaves.
+  const handleFinishEdit = async (id: string) => {
+    const text = editingText.trim();
+    const original = (questions.find((q) => q.id === id)?.text || '').trim();
+    if (!text || text === original) {
+      setEditingId(null);
+      setEditingText('');
+      return;
+    }
+    await handleSaveEdit(id);
   };
 
   const handleDelete = async (id: string) => {
@@ -158,19 +166,40 @@ const ResearchQuestionsPanel: React.FC<ResearchQuestionsPanelProps> = ({
     }
   };
 
-  const linkedCount = (rq: ResearchQuestion) => rq.images.length + rq.groups.length;
+  // Prefer context data for links so external toggles (e.g. RqLinkPicker on a card
+   // header) reflect here without a server round-trip. Falls back to local state
+   // for questions that context hasn't loaded yet.
+  const resolveLinks = (rq: ResearchQuestion) => {
+    const ctxRq = ctxQuestions.find((q) => q.id === rq.id);
+    return {
+      images: ctxRq ? ctxRq.images : rq.images,
+      groups: ctxRq ? ctxRq.groups : rq.groups,
+    };
+  };
 
-  const isLinked = (rq: ResearchQuestion, card: LinkableCard) =>
-    card.kind === 'group' ? rq.groups.includes(card.id) : rq.images.includes(card.id);
+  const linkedCount = (rq: ResearchQuestion) => {
+    const { images, groups } = resolveLinks(rq);
+    return images.length + groups.length;
+  };
+
+  const isLinked = (rq: ResearchQuestion, card: LinkableCard) => {
+    const { images, groups } = resolveLinks(rq);
+    return card.kind === 'group' ? groups.includes(card.id) : images.includes(card.id);
+  };
 
   return (
     <div className="w-full p-3">
-      {/* Panel header */}
+      {/* Panel header — pill mirrors the Data Stories treatment. */}
       <div className="flex flex-row w-full">
-        <h3 className="text-sm text-gray-500 font-regular mb-2 mt-0">Research Questions</h3>
+        <span
+          style={{ background: '#348b95' }}
+          className="text-white text-lg font-roboto-semibold px-3 py-1.5 rounded-lg inline-block"
+        >
+          Research Questions
+        </span>
       </div>
 
-      <p className="text-sm text-grey-darkest mb-3">
+      <p className="text-sm text-grey-darkest mt-4 mb-3">
         What questions would you like your data to answer?
       </p>
 
@@ -197,9 +226,10 @@ const ResearchQuestionsPanel: React.FC<ResearchQuestionsPanelProps> = ({
                   log-id="research-questions-add-button"
                   onClick={handleAdd}
                   disabled={!draft.trim()}
-                  className="flex items-center justify-center whitespace-nowrap shrink-0 text-sm border border-transparent rounded-t-2xl rounded-b-2xl px-3 py-1 bg-bama-crimson text-white hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  style={{ background: '#348b95' }}
+                  className="flex items-center justify-center gap-1 whitespace-nowrap shrink-0 text-sm border border-transparent rounded-t-2xl rounded-b-2xl px-3 py-1 text-white hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
-                  Add question
+                  <span className="text-base leading-none">+</span> Add question
                 </button>
                 {questions.length > 0 && (
                   <button
@@ -216,7 +246,8 @@ const ResearchQuestionsPanel: React.FC<ResearchQuestionsPanelProps> = ({
               id="rq-add-toggle"
               log-id="research-questions-add-toggle"
               onClick={() => setShowComposer(true)}
-              className="flex items-center justify-center gap-1 whitespace-nowrap shrink-0 text-sm border border-transparent rounded-t-2xl rounded-b-2xl px-3 py-1 bg-bama-crimson text-white hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+              style={{ background: '#348b95' }}
+              className="flex items-center justify-center gap-1 whitespace-nowrap shrink-0 text-sm border border-transparent rounded-t-2xl rounded-b-2xl px-3 py-1 text-white hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
             >
               <span className="text-base leading-none">+</span> Add question
             </button>
@@ -235,71 +266,110 @@ const ResearchQuestionsPanel: React.FC<ResearchQuestionsPanelProps> = ({
               key={rq.id}
               className="bg-white rounded-md shadow-sm border border-grey-lightest overflow-hidden"
             >
-              {/* Title strip — mirrors the feedback card treatment, a little tighter */}
-              <div className="flex items-center gap-2 bg-bama-crimson text-white px-3 py-1.5">
-                <img src={squares} alt="section" className="w-3.5 h-3.5 opacity-90" />
-                <h4 className="font-semibold text-sm">RQ{idx + 1}</h4>
+              {/* Title strip — mirrors the feedback card treatment, a little tighter.
+                  Pen (edit) and X (delete) icons on the right match the workspace card
+                  header pattern from DraggableCard. */}
+              <div
+                className="flex items-center justify-between gap-2 text-white px-3 py-1.5"
+                style={{ background: '#348b95' }}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-90 flex-shrink-0" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  <h4 className="font-semibold text-sm">Q{idx + 1}</h4>
+                </div>
+                {!readOnly && editingId !== rq.id && (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => { setEditingId(rq.id); setEditingText(rq.text); }}
+                      className="w-4 h-4 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                      title="Edit question"
+                      log-id="research-question-edit-button"
+                    >
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(rq.id)}
+                      className="w-4 h-4 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                      title="Delete question"
+                      log-id="research-question-delete-button"
+                    >
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Body */}
-              <div className="p-2.5">
+              <div
+                className="p-2.5"
+                style={{ background: '#e0f1f6', border: '0.5px dashed #000' }}
+              >
                 {editingId === rq.id ? (
-                  <>
-                    <textarea
-                      value={editingText}
-                      onChange={(e) => setEditingText(e.target.value)}
-                      rows={3}
-                      className="w-full text-sm text-grey-darkest bg-white border border-grey-light rounded-md p-2 resize-none focus:outline-none focus:border-bama-crimson"
-                    />
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => handleSaveEdit(rq.id)}
-                        disabled={!editingText.trim()}
-                        className="flex items-center justify-center whitespace-nowrap shrink-0 text-sm border border-transparent rounded-t-2xl rounded-b-2xl px-3 py-1 bg-bama-crimson text-white hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingId(null)}
-                        className="flex items-center justify-center whitespace-nowrap shrink-0 text-sm border border-grey-light rounded-t-2xl rounded-b-2xl px-3 py-1 bg-grey-lightest text-grey-darkest hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </>
+                  <textarea
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    onBlur={() => handleFinishEdit(rq.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        setEditingId(null);
+                        setEditingText('');
+                      }
+                    }}
+                    autoFocus
+                    rows={3}
+                    className="w-full text-sm text-grey-darkest bg-white border border-grey-light rounded-md p-2 resize-none focus:outline-none focus:border-bama-crimson"
+                  />
                 ) : (
-                  <p className="text-sm text-grey-darkest whitespace-pre-wrap">{rq.text}</p>
+                  <p
+                    className={`text-sm text-grey-darkest whitespace-pre-wrap ${readOnly ? '' : 'cursor-pointer'}`}
+                    onClick={() => {
+                      if (readOnly) return;
+                      setEditingId(rq.id);
+                      setEditingText(rq.text);
+                    }}
+                    title={readOnly ? undefined : 'Click to edit'}
+                  >
+                    {rq.text}
+                  </p>
                 )}
 
-                {/* Linked-card summary + controls */}
+                {/* Linked-card summary — a single dropdown pill.
+                    Read-only mode gets a plain non-clickable pill (no caret). */}
                 <div className="flex items-center flex-wrap gap-1.5 mt-3">
-                  <span className="inline-block text-xs font-medium text-white bg-bama-crimson rounded-full px-3 py-0.5">
-                    {linkedCount(rq)} linked
-                  </span>
-                  {!readOnly && editingId !== rq.id && (
-                    <>
-                      <button
-                        onClick={() => setLinkingId(linkingId === rq.id ? null : rq.id)}
-                        className="text-xs text-grey-darker underline hover:text-bama-crimson transition-colors duration-150"
+                  {readOnly || editingId === rq.id ? (
+                    <span
+                      className="inline-block text-xs font-medium text-white rounded-full px-3 py-0.5"
+                      style={{ background: '#348b95' }}
+                    >
+                      {linkedCount(rq)} linked
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setLinkingId(linkingId === rq.id ? null : rq.id)}
+                      style={{ background: '#348b95' }}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-white rounded-full px-3 py-0.5 hover:brightness-110 transition-all duration-150"
+                      aria-expanded={linkingId === rq.id}
+                      log-id="research-question-linked-dropdown"
+                    >
+                      <span>{linkedCount(rq)} linked</span>
+                      <svg
+                        width="10" height="10" viewBox="0 0 20 20" fill="currentColor"
+                        className={`transition-transform duration-200 ${linkingId === rq.id ? 'rotate-180' : ''}`}
                       >
-                        {linkingId === rq.id ? 'Done' : 'Edit links'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingId(rq.id);
-                          setEditingText(rq.text);
-                        }}
-                        className="text-xs text-grey-darker underline hover:text-bama-crimson transition-colors duration-150"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(rq.id)}
-                        className="text-xs text-grey-darker underline hover:text-bama-crimson transition-colors duration-150"
-                      >
-                        Delete
-                      </button>
-                    </>
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
                   )}
                 </div>
 

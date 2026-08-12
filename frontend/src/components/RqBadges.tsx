@@ -13,7 +13,7 @@ interface RqBadgesProps {
  * Caps the visible count so a card linked to many questions doesn't crowd out its title;
  * the overflow collapses into a single "+N" pill that lists the hidden ones on hover.
  */
-const RqBadges: React.FC<RqBadgesProps> = ({ labels, max = 2 }) => {
+const RqBadges: React.FC<RqBadgesProps> = ({ labels, max = 1 }) => {
   if (labels.length === 0) return null;
 
   const visible = labels.slice(0, max);

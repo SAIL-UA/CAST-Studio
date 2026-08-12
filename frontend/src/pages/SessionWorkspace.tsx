@@ -152,11 +152,17 @@ const SessionWorkspace = () => {
                 getGroups(undefined, hostId),
             ]);
             const images = imageResponse.data?.images || [];
+            // See Home.tsx fetchRqCards for the rationale on preserving the pre-filter index.
+            const OLD_SHORT_DESC_PLACEHOLDER = 'Add a description for this visual.';
             const imageCards: LinkableCard[] = images
-                .filter((img: any) => img.source !== 'instructor')
-                .map((img: any) => ({
+                .map((img: any, i: number) => ({ img, i }))
+                .filter(({ img }: { img: any }) => img.source !== 'instructor')
+                .map(({ img, i }: { img: any; i: number }) => ({
                     id: img.id,
-                    label: img.short_desc || img.filepath || 'Untitled',
+                    label:
+                        img.short_desc && img.short_desc !== OLD_SHORT_DESC_PLACEHOLDER
+                            ? img.short_desc
+                            : `Visual ${i + 1}`,
                     kind: img.filepath ? 'visual' : 'note',
                 }));
             const groupCards: LinkableCard[] = (groups || []).map((g: any) => ({
@@ -423,13 +429,13 @@ const SessionWorkspace = () => {
 
             {/* Research Questions — left-anchored collapsible panel, mirrors Feedback.
                 Reads the host's workspace via targetUser; writable only by whoever holds control. */}
-            <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[300] flex flex-row items-center transition-all duration-300">
+            <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[300] flex flex-row items-start transition-all duration-300">
                 <button
                     id="rq-toggle"
                     log-id="research-questions-toggle"
-                    className="flex items-center justify-center bg-bama-crimson text-xs text-white hover:brightness-110 rounded-r-xl transition-colors duration-150 flex-shrink-0 px-1.5 py-2.5"
+                    className="flex items-center justify-center text-xs text-white hover:brightness-110 rounded-r-xl transition-colors duration-150 flex-shrink-0 px-1.5 py-2.5"
                     onClick={() => setRqExpanded(!rqExpanded)}
-                    style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+                    style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', background: '#348b95' }}
                 >
                     <svg
                         className={`w-3 h-3 mb-1.5 transition-transform duration-300 ${rqExpanded ? 'rotate-180' : 'rotate-0'}`}
@@ -441,7 +447,7 @@ const SessionWorkspace = () => {
                 </button>
                 <div
                     className={`rounded-r-xl overflow-hidden shadow-2xl transition-all duration-300 ${
-                        rqExpanded ? 'w-[288px] opacity-100' : 'w-0 opacity-0'
+                        rqExpanded ? 'w-[374px] opacity-100' : 'w-0 opacity-0'
                     }`}
                     style={{ height: '80vh' }}
                 >
