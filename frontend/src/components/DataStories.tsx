@@ -8,6 +8,7 @@ import { logAction } from '../utils/userActionLogger';
 import { getImageUrl } from '../utils/imageUtils';
 import { scrollTracker } from '../utils/scrollTracker';
 import { setStoryUserEdited } from '../utils/storyEditState';
+import { useResearchQuestions } from '../contexts/ResearchQuestions';
 
 // Import components
 import ExportButton from './ExportButton';
@@ -23,6 +24,7 @@ interface StoryData {
     categorize_figures_response?: string;
     theme_response?: string;
     sequence_response?: string;
+    sequence_summary?: { label: string; why: string }[];
     rq_reasoning?: { label: string; how_informed: string }[];
 }
 
@@ -43,7 +45,15 @@ const normalizeNarrativeMarkdown = (markdown: string): string =>
         .replace(/\[FIGURE:\s*\[FIGURE:\s*([^[\]]+)\]\s*\]/gi, '[FIGURE: $1]')
         .replace(/^#{1,3}\s*(Introduction|Main Body|Conclusion)\s*:?\s*$/gim, '\n')
         .replace(/^\s*-?\s*\*\*(Introduction|Main Body|Conclusion)\*\*\s*:?\s*$/gim, '\n')
-        .replace(/^\s*(Introduction|Main Body|Conclusion)\s*:?\s*$/gim, '\n');
+        .replace(/^\s*(Introduction|Main Body|Conclusion)\s*:?\s*$/gim, '\n')
+        // Strip [FIGURE: X] tokens where X isn't a real image filename (no
+        // recognized extension). Notes get referenced by title (e.g.
+        // "[FIGURE: Note 1]") and would otherwise show as a broken image icon
+        // in edit mode or literal text in read mode. The story-build prompt
+        // tells the LLM not to emit these, but this catches whatever leaks.
+        .replace(/\[FIGURE:\s*([^\]]+)\]/gi, (match, inside) =>
+            /\.(png|jpg|jpeg|gif|webp|bmp|tiff|svg)$/i.test(String(inside).trim()) ? match : ''
+        );
 
 // DataStories component
 type DataStoriesProps = {
@@ -71,6 +81,10 @@ const storyActionSecondary = `${storyActionButton} bg-grey-lightest text-grey-da
 const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: DataStoriesProps) => {
 
     const editingAllowed = canEdit ?? !readOnly;
+
+    // Used to distinguish "user wrote no RQs" (empty state message) from
+    // "LLM call failed to produce reasoning" (error message) in the reasoning tab.
+    const { questions: ctxRqQuestions } = useResearchQuestions();
 
     // State
     const [narrativeSelected, setNarrativeSelected] = useState(true);
@@ -114,6 +128,7 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                     categorize_figures_response: cacheData.categories,
                     theme_response: cacheData.theme,
                     sequence_response: cacheData.sequence_justification,
+                    sequence_summary: cacheData.sequence_summary,
                     rq_reasoning: cacheData.rq_reasoning,
                 });
                 console.log('Loaded cached narrative data:', cacheData);
@@ -359,6 +374,11 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
 
     // Unified components for all ReactMarkdown sections
     const markdownComponents = {
+        // Ancestor `#home-container` sets font-weight: 300 via font-roboto-light. The
+        // browser default `strong { font-weight: bolder }` then computes to 400 (one
+        // step above 300 per the CSS spec), leaving <strong> visually identical to
+        // Regular. Pin to absolute 700 so bold survives regardless of ancestor weight.
+        strong: ({node, ...props}: any) => <strong className="font-bold" {...props} />,
         p: ({node, children, ...props}: any) => {
             // If this paragraph contains an image, render as a div to avoid nesting issues
             const hasImage = Array.isArray(children)
@@ -603,11 +623,16 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                             <GeneratingPlaceholder contentName="processing images" lines={4} />
                         ) : storyData ? (
                             <>
+                                {/* All three sections render plain text — one focused LLM call
+                                    per section produces display-ready content. Each shows a
+                                    fallback line when its call failed rather than hiding, so
+                                    the tab always reads as a consistent 3-section layout. */}
+
                                 {/* Theme and Objective */}
-                                {storyData.theme_response && (
-                                    <div className="p-4 rounded-lg">
-                                        <h4 className="font-semibold text-grey-darkest mb-2">Theme and Objective</h4>
-                                        <div className="text-grey-darkest">
+                                <div className="rounded-lg">
+                                    <h4 className="font-semibold text-grey-darkest mb-2">Theme and Objective</h4>
+                                    <div className="text-grey-darkest">
+                                        {storyData.theme_response ? (
                                             <ReactMarkdown
                                                 components={markdownComponents}
                                                 urlTransform={urlTransform}
@@ -615,36 +640,41 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                                             >
                                                 {processedTheme}
                                             </ReactMarkdown>
-                                        </div>
+                                        ) : (
+                                            <p>Something went wrong. Try generating the story again.</p>
+                                        )}
                                     </div>
-                                )}
+                                </div>
 
-                                {/* Sequence Justification */}
-                                {storyData.sequence_response && (
-                                    <div className="p-4 rounded-lg">
-                                        <h4 className="font-semibold text-grey-darkest mb-2">Sequence Justification</h4>
-                                        <div className="text-grey-darkest">
-                                            <ReactMarkdown
-                                                components={markdownComponents}
-                                                urlTransform={urlTransform}
-                                                skipHtml={false}
-                                            >
-                                                {processedSequence}
-                                            </ReactMarkdown>
-                                        </div>
-                                    </div>
-                                )}
+                                {/* Sequence Justification — reads sequence_summary (a dedicated
+                                    display-ready LLM call): one bullet per workspace item that
+                                    made it into the story, ≤15 words explaining its role. */}
+                                <div className="rounded-lg">
+                                    <h4 className="font-semibold text-grey-darkest mb-2">Sequence Justification</h4>
+                                    {storyData.sequence_summary && storyData.sequence_summary.length > 0 ? (
+                                        <ul className="space-y-2">
+                                            {storyData.sequence_summary.map((item, i) => (
+                                                <li key={`${item.label}-${i}`} className="text-grey-darkest flex gap-2">
+                                                    <span className="text-grey-dark">•</span>
+                                                    <span>
+                                                        <span className="font-semibold">{item.label}:</span>{' '}
+                                                        <span>{item.why}</span>
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-grey-darkest">Something went wrong. Try generating the story again.</p>
+                                    )}
+                                </div>
 
-                                {/* Research Questions — hidden when the user wrote none. Kept
-                                    intentionally plain (no ReactMarkdown, no figure token
-                                    processing) so figure previews never render inside it. */}
-                                {storyData.rq_reasoning && storyData.rq_reasoning.length > 0 && (
-                                    <div className="p-4 rounded-lg mt-6">
-                                        <h4 className="font-semibold text-grey-darkest mb-2">Research Questions</h4>
+                                {/* Research Questions — plain text (no ReactMarkdown, no figure
+                                    processing) so previews never leak in. */}
+                                <div className="rounded-lg">
+                                    <h4 className="font-semibold text-grey-darkest mb-2">Research Questions</h4>
+                                    {storyData.rq_reasoning && storyData.rq_reasoning.length > 0 ? (
                                         <ul className="space-y-3">
                                             {storyData.rq_reasoning.map((item) => {
-                                                // Strip any [FIGURE: name] tokens the LLM slipped in — the RQ
-                                                // subsection is explicitly figureless.
                                                 const clean = (item.how_informed || '').replace(/\[FIGURE:\s*[^\]]+\]/gi, '').replace(/\s{2,}/g, ' ').trim();
                                                 return (
                                                     <li key={item.label} className="text-grey-darkest">
@@ -654,8 +684,12 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                                                 );
                                             })}
                                         </ul>
-                                    </div>
-                                )}
+                                    ) : ctxRqQuestions.length === 0 ? (
+                                        <p className="text-grey-darkest">No research questions found.</p>
+                                    ) : (
+                                        <p className="text-grey-darkest">Something went wrong. Try generating the story again.</p>
+                                    )}
+                                </div>
                             </>
                         ) : (
                             <div className="text-center text-grey-darkest mt-8">

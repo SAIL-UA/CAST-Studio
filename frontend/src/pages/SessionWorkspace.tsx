@@ -152,17 +152,17 @@ const SessionWorkspace = () => {
                 getGroups(undefined, hostId),
             ]);
             const images = imageResponse.data?.images || [];
-            // See Home.tsx fetchRqCards for the rationale on preserving the pre-filter index.
+            // See Home.tsx fetchRqCards — mirror DraggableCard by using img.index for
+            // the "Visual N" fallback, not array position.
             const OLD_SHORT_DESC_PLACEHOLDER = 'Add a description for this visual.';
             const imageCards: LinkableCard[] = images
-                .map((img: any, i: number) => ({ img, i }))
-                .filter(({ img }: { img: any }) => img.source !== 'instructor')
-                .map(({ img, i }: { img: any; i: number }) => ({
+                .filter((img: any) => img.source !== 'instructor')
+                .map((img: any) => ({
                     id: img.id,
                     label:
                         img.short_desc && img.short_desc !== OLD_SHORT_DESC_PLACEHOLDER
                             ? img.short_desc
-                            : `Visual ${i + 1}`,
+                            : `Visual ${(img.index ?? 0) + 1}`,
                     kind: img.filepath ? 'visual' : 'note',
                 }));
             const groupCards: LinkableCard[] = (groups || []).map((g: any) => ({

@@ -33,22 +33,25 @@ interface FeedbackPanelProps {
 const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ items, instructorNotes = [], onClose }) => {
   const hasContent = items.length > 0 || instructorNotes.length > 0;
 
-  if (!hasContent) {
-    return (
-      <div className="w-full p-4 text-grey-darkest">
-        <p>No feedback yet.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full p-3">
-      {/* Panel header */}
+      {/* Panel header — permanent pill, mirrors the "Research Questions" pill in
+          the RQ explorer. Rendered even in the empty state so the panel always
+          has a header when expanded. */}
       <div className="flex flex-row w-full">
-        <h3 className="text-sm text-gray-500 font-regular mb-2 mt-0">Feedback</h3>
+        <span
+          style={{ background: '#015c84' }}
+          className="text-white text-lg font-roboto-semibold px-3 py-1.5 rounded-lg inline-block"
+        >
+          Feedback
+        </span>
       </div>
 
-      <div className="space-y-3">
+      {!hasContent && (
+        <p className="text-grey-darkest mt-4">No feedback yet.</p>
+      )}
+
+      <div className="space-y-3 mt-4">
         {/* Instructor feedback notes — at the top */}
         {instructorNotes.map((note) => (
           <div key={note.id} className="bg-rose-50 rounded-md shadow-sm border border-grey-lightest overflow-hidden">

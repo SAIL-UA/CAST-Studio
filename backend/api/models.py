@@ -194,6 +194,11 @@ class NarrativeCache(models.Model):
   theme = models.TextField(default="")
   categories = models.JSONField(default=list)
   sequence_justification = models.TextField(default="")
+  # Display-ready bullet list for the Reasoning tab's Sequence Justification section.
+  # Shape: [{"label": "Note 1", "why": "..."}, ...] — one bullet per workspace item
+  # that made it into the sequence, ≤15 words each. Populated by a dedicated
+  # post-story LLM call; empty list when that call failed or hasn't run.
+  sequence_summary = models.JSONField(default=list, blank=True)
   # [{"label": "Q1", "how_informed": "..."}, ...] — how each research question
   # shaped the final story. Populated after story-build in a separate LLM call.
   # Empty list when the user wrote no RQs.

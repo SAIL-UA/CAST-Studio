@@ -115,20 +115,20 @@ const Home = () => {
                 getGroups(),
             ]);
             const images = imageResponse.data?.images || [];
-            // Match the friendly title logic that DraggableCard uses in the workspace: the
-            // user's own short_desc when set, otherwise "Visual N" using the item's index in
-            // the full array (before the instructor filter, so the number lines up with what
-            // the workspace grid shows).
+            // Match the friendly title logic that DraggableCard uses in the workspace:
+            // the user's own short_desc when set, otherwise "Visual N" using the item's
+            // ImageData.index (a stable DB field). Array position isn't safe — the API
+            // returns rows in unstable Postgres order, so array index can drift out of
+            // sync with what the workspace grid shows.
             const OLD_SHORT_DESC_PLACEHOLDER = 'Add a description for this visual.';
             const imageCards: LinkableCard[] = images
-                .map((img: any, i: number) => ({ img, i }))
-                .filter(({ img }: { img: any }) => img.source !== 'instructor')
-                .map(({ img, i }: { img: any; i: number }) => ({
+                .filter((img: any) => img.source !== 'instructor')
+                .map((img: any) => ({
                     id: img.id,
                     label:
                         img.short_desc && img.short_desc !== OLD_SHORT_DESC_PLACEHOLDER
                             ? img.short_desc
-                            : `Visual ${i + 1}`,
+                            : `Visual ${(img.index ?? 0) + 1}`,
                     kind: img.filepath ? 'visual' : 'note',
                 }));
             const groupCards: LinkableCard[] = (groups || []).map((g: any) => ({

@@ -7,7 +7,7 @@ Your task:
 2. Connect the scaffolds into one coherent story. Find the thematic thread that links them — shared topics, cause-and-effect across structures, or a progression from one structure's conclusion to another's premise.
 3. Write flowing prose, not a list of sections. Use at most 2-3 section headings for major transitions. Do not create a heading for every element.
 4. Do not name the scaffolds or their types in the story. The reader should not know the story was built from "Question and Answer" and "Timeline" — they should just experience a well-structured narrative.
-5. Reference figures using [FIGURE: filename] where relevant.
+5. Reference figures using [FIGURE: filename] where relevant. Only emit `[FIGURE:]` for items whose key contains a file extension (e.g. `.png`, `.jpg`). Never emit `[FIGURE: Note 1]` or any note title — reference notes by their content in prose only.
 6. Ensure all figures from all scaffolds are referenced at least once.
 
 The tone should be clear, direct, and evidence-driven. Let the data speak through the narrative structure, not the other way around.

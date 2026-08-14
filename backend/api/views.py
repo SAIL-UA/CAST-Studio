@@ -1644,6 +1644,7 @@ class GenerateNarrativeView(APIView):
           "theme": narrative_cache.theme,
           "categories": narrative_cache.categories,
           "sequence_justification": narrative_cache.sequence_justification,
+          "sequence_summary": narrative_cache.sequence_summary,
           "rq_reasoning": narrative_cache.rq_reasoning,
         }, status=status.HTTP_200_OK)
       except NarrativeCache.DoesNotExist:
@@ -1794,7 +1795,9 @@ class ExportStoryView(APIView):
           fname = re.sub(r"[^A-Za-z0-9._-]", "", filename.strip())
           fpath = os.path.join(data_path, fname)
           if not os.path.exists(fpath):
-            doc.add_paragraph(f"[Missing image: {fname}]")
+            # Notes (and any other non-image [FIGURE:] leak) resolve to nothing on
+            # disk. Silently drop rather than surface "[Missing image: …]" or a
+            # Word broken-icon placeholder — the note's text is already in the prose.
             return
           try:
             with PILImage.open(fpath) as im:
@@ -1807,8 +1810,8 @@ class ExportStoryView(APIView):
             width_in = min(MAX_IMG_W_IN, w_from_h)
             doc.add_picture(fpath, width=Inches(width_in))
           except Exception:
-            # python-docx doesn't support WebP/SVG; fall back to a placeholder rather than 500.
-            doc.add_paragraph(f"[Unsupported image: {fname}]")
+            # Unsupported format (WebP/SVG etc.) — same silence policy as missing.
+            pass
 
         def render_section(doc, title, md_text):
           doc.add_heading(title, level=2)

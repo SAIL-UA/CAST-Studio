@@ -190,7 +190,9 @@ Descriptions of figures:
     try:
         client = _openai_client()
         resp = client.chat.completions.create(
-            model="gpt-4o",
+            # gpt-4o-mini: theme is a short summary, no complex reasoning. Mini
+            # runs ~2-3x faster than gpt-4o with negligible quality loss here.
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt},
@@ -871,6 +873,162 @@ Sequence:
         return f"Error building story with scaffolds: {e}"
 
 
+def _collect_in_story_items(recommended_order: list[str], user) -> list[str]:
+    """
+    Map the ordered figure/note tokens to user-facing titles for the sequence
+    bullets. Preserves the sequence order. Deduplicates.
+
+    - Image tokens (filenames): resolved to `short_desc` or "Visual N".
+    - Non-image tokens (e.g. "Note 1"): used as-is — that's already the title
+      the workspace shows.
+    - Groups aren't listed here on purpose; the sequence is figure-level, so
+      one bullet per figure/note reads naturally.
+    """
+    ImageData = _get_model('api', 'ImageData')
+    titles: list[str] = []
+    seen: set[str] = set()
+    for token in recommended_order:
+        # `recommended_order` stores tokens as "[FIGURE: filename.png]" (see
+        # extract_figure_filenames); strip that wrapper before matching against
+        # ImageData.filepath, otherwise the lookup never hits and we'd fall back
+        # to displaying the raw hex-string filename as the bullet label.
+        clean = _normalize_figure_token(token).strip()
+        if not clean:
+            continue
+        img = ImageData.objects.filter(user=user, filepath=clean).first()
+        if img and img.short_desc:
+            label = img.short_desc
+        elif img:
+            label = f"Visual {img.index + 1}"
+        else:
+            label = clean
+        if label not in seen:
+            titles.append(label)
+            seen.add(label)
+    return titles
+
+
+def _generate_sequence_bullets(sequence: str, story_text: str, in_story_items: list[str], story_structure_id: str | None = None) -> list[dict]:
+    """
+    Dedicated LLM call producing the display-ready "Sequence Justification"
+    bullet list for the Reasoning tab. One bullet per workspace item that
+    made it into the story; ≤15 words per bullet explaining the item's role
+    in the sequence.
+
+    `in_story_items` is a list of user-facing titles (e.g. "Note 1",
+    "Visual 3", "Group: Trends") — exactly the items the model may label.
+    The JSON schema enums labels to this set so the model can't hallucinate
+    an item that wasn't in the story.
+
+    Returns [{"label": "...", "why": "..."}], empty list on failure.
+    """
+    if not in_story_items:
+        return []
+
+    structure_hint = f"Narrative structure used: {story_structure_id}\n" if story_structure_id else ""
+    items_text = "\n".join(f"- {t}" for t in in_story_items)
+    prompt = f"""
+### Input
+{structure_hint}The following narrative was generated for the user:
+
+--- BEGIN STORY ---
+{story_text}
+--- END STORY ---
+
+Internal ordering notes from the sequencing step (do not repeat verbatim):
+{sequence}
+
+Workspace items that made it into the story (label each bullet with exactly one of these):
+{items_text}
+
+### Task
+Produce EXACTLY {len(in_story_items)} bullets — one per workspace item listed
+above, no more, no less. Do not skip any item; every listed item must appear.
+For each bullet:
+- `label`: the item's title exactly as listed (must match one of the items above).
+- `why`: 15 words MAX, briefly explaining why the item appears where it does
+  in the sequence and how it supports the story.
+
+Do NOT include filenames, [FIGURE: …] tokens, or numbered prefixes in `why`.
+Do NOT invent items that aren't in the list. Preserve the order the items
+appear in the sequence.
+
+Respond ONLY with a JSON object:
+{{"items": [{{"label": "<one of the items>", "why": "<≤15 words>"}}]}}
+""".strip()
+
+    try:
+        client = _openai_client()
+        schema = {
+            "name": "sequence_bullets",
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {
+                                "label": {"type": "string", "enum": in_story_items},
+                                "why": {"type": "string"},
+                            },
+                            "required": ["label", "why"],
+                        },
+                    },
+                },
+                "required": ["items"],
+            },
+            "strict": True,
+        }
+        resp = client.chat.completions.create(
+            # gpt-4o-mini: schema-strict short strings, one per item. Mini handles
+            # this class of task reliably at ~2-3x the speed of gpt-4o.
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+            timeout=30,
+            response_format={"type": "json_schema", "json_schema": schema},
+        )
+        content = (resp.choices[0].message.content or "").strip()
+        parsed = _extract_json_object(content)
+        if not isinstance(parsed, dict) or not isinstance(parsed.get("items"), list):
+            return []
+        valid = set(in_story_items)
+        bullets: list[dict] = []
+        seen_labels: set[str] = set()
+        for item in parsed["items"]:
+            if not isinstance(item, dict):
+                continue
+            label = item.get("label", "")
+            why = item.get("why", "")
+            if label not in valid or not isinstance(why, str) or label in seen_labels:
+                continue
+            # Defensive strips: remove any [FIGURE:] tokens and trim to 15 words.
+            why_clean = re.sub(r"\[FIGURE:\s*[^\]]+\]", "", why).strip()
+            words = why_clean.split()
+            if len(words) > 15:
+                why_clean = " ".join(words[:15]).rstrip(",.;:") + "…"
+            bullets.append({"label": label, "why": why_clean})
+            seen_labels.add(label)
+        # Coverage safeguard: the LLM sometimes returns fewer bullets than
+        # workspace items despite the prompt saying "one per item". Fill any
+        # missing item with a neutral placeholder so nothing silently disappears.
+        for missing in in_story_items:
+            if missing in seen_labels:
+                continue
+            bullets.append({"label": missing, "why": "Referenced in the story."})
+            seen_labels.add(missing)
+        return bullets
+    except Exception as e:
+        logger.error(f"Error generating sequence bullets: {e}")
+        return []
+
+
 def _generate_rq_reasoning(rqs_data: list, story_text: str, sequence: str, story_structure_id: str | None = None) -> list[dict]:
     """
     After the story is built, ask the LLM to explain how each research question
@@ -946,7 +1104,9 @@ Return one item per research question, in order.
             "strict": True,
         }
         resp = client.chat.completions.create(
-            model="gpt-4o",
+            # gpt-4o-mini: same structured-extraction pattern as sequence bullets —
+            # short strings, one per RQ. Mini is reliable at this shape.
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt},
@@ -1884,13 +2044,16 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
         if scaffold:
             output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
 
-    # Non-scaffold groups
-    non_scaffold_groups = all_groups.filter(scaffold_id__isnull=True)
-    output_json["group_data"] = _build_group_data(non_scaffold_groups, all_images, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
+    # Non-scaffold groups + ungrouped figures are only relevant to All-Workspace mode.
+    # When the caller pinned a specific scaffold (via scaffold_id), including these would
+    # leak every other workspace item into the story — matching a user report where
+    # "generate from this scaffold" produced a story spanning the whole workspace.
+    if not scaffold_id:
+        non_scaffold_groups = all_groups.filter(scaffold_id__isnull=True)
+        output_json["group_data"] = _build_group_data(non_scaffold_groups, all_images, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
 
-    # Ungrouped, non-scaffold images
-    ungrouped_non_scaffold = all_images.filter(scaffold_id__isnull=True, group_id__isnull=True)
-    output_json["figure_data"] = _build_figure_data(ungrouped_non_scaffold, rq_labels_by_image=rq_labels_by_image)
+        ungrouped_non_scaffold = all_images.filter(scaffold_id__isnull=True, group_id__isnull=True)
+        output_json["figure_data"] = _build_figure_data(ungrouped_non_scaffold, rq_labels_by_image=rq_labels_by_image)
     
     # Validation summary
     total_scaffold_figures = 0
@@ -2272,10 +2435,23 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 else (story_structure_id or "default")
             )
 
-        # Post-hoc: ask the LLM how each RQ shaped the finished story. Populates the
-        # "Research Questions" section under the Reasoning tab. Returns [] when no RQs
-        # exist, so the section stays hidden client-side.
-        rq_reasoning = _generate_rq_reasoning(rqs_data, story, sequence, story_structure_id)
+        # Post-hoc: two focused LLM calls, one per Reasoning-tab section. Each returns
+        # display-ready text so the tab isn't dumping any raw prompt output.
+        # Fired in parallel — both take the finished story as input, neither depends
+        # on the other. Celery uses the default prefork pool so ThreadPoolExecutor
+        # inside the task is safe (no gevent/eventlet monkey-patching). Each function
+        # already try/except's internally, so a failure in one doesn't affect the other.
+        in_story_items = _collect_in_story_items(recommended_order, user)
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=2) as _post_pool:
+            _bullets_future = _post_pool.submit(
+                _generate_sequence_bullets, sequence, story, in_story_items, story_structure_id,
+            )
+            _rq_future = _post_pool.submit(
+                _generate_rq_reasoning, rqs_data, story, sequence, story_structure_id,
+            )
+            sequence_summary = _bullets_future.result()
+            rq_reasoning = _rq_future.result()
 
         with transaction.atomic():
             cache, created = NarrativeCache.objects.get_or_create(
@@ -2287,6 +2463,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                     'theme': theme,
                     'categories': categories,
                     'sequence_justification': sequence,
+                    'sequence_summary': sequence_summary,
                     'rq_reasoning': rq_reasoning,
                 }
             )
@@ -2297,6 +2474,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 cache.theme = theme
                 cache.categories = categories
                 cache.sequence_justification = sequence
+                cache.sequence_summary = sequence_summary
                 cache.rq_reasoning = rq_reasoning
                 cache.save()
 

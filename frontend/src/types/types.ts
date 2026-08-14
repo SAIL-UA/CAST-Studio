@@ -146,7 +146,13 @@ export interface StoryDataRaw {
   recommended_order?: string[];
   categorize_figures_response?: string;
   theme_response?: string;
+  /** Raw sequencing prompt output (numbered list + [FIGURE:] tokens). Used
+   *  internally as input to the story-build step; never rendered directly. */
   sequence_response?: string;
+  /** Display-ready bullet list explaining the sequence — one bullet per
+   *  workspace item that made it into the story, ≤15 words per bullet.
+   *  Rendered in the Reasoning tab's Sequence Justification section. */
+  sequence_summary?: { label: string; why: string }[];
   /** How each research question shaped the finished story. Populated by the
    *  post-hoc rq_reasoning LLM call and rendered in the reasoning tab. */
   rq_reasoning?: { label: string; how_informed: string }[];

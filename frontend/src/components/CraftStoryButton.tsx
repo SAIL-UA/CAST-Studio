@@ -240,7 +240,9 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                                         recommended_order: cacheData.order,
                                         categorize_figures_response: cacheData.categories,
                                         theme_response: cacheData.theme,
-                                        sequence_response: cacheData.sequence_justification
+                                        sequence_response: cacheData.sequence_justification,
+                                        sequence_summary: cacheData.sequence_summary,
+                                        rq_reasoning: cacheData.rq_reasoning,
                                     }
                                 });
                                 window.dispatchEvent(storyEvent);
