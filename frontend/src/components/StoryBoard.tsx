@@ -307,6 +307,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     last_modified: backendGroup.last_modified
                 };
                 setGroupDivs(prev => [...prev, newGroup]);
+                // Groups update local state instead of refetching, so signal the research
+                // questions panel directly — otherwise its link checklist misses the new group.
+                window.dispatchEvent(new CustomEvent('workspaceCardsChanged'));
                 setNextGroupNumber(prev => prev + 1);
                 return newGroup;
             }
@@ -364,6 +367,9 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                         : s
                 ));
             }
+
+            // Drop the group from the research questions link checklist too.
+            window.dispatchEvent(new CustomEvent('workspaceCardsChanged'));
         } catch (error) {
             console.error('Error closing group:', error);
         }

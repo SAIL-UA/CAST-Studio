@@ -11,7 +11,9 @@ from .views import (
     ExportStoryView, CreateScaffoldView, GetScaffoldView, UpdateScaffoldView, DeleteScaffoldView,
     TaskProgressView, GetFeatureFlagsView, UpdateFeatureFlagsView, InstructorUsersView, InstructorWorkspaceView,
     HostSessionView, CloseSessionView, SessionStatusView, JoinSessionView,
-    TakeControlView, ReturnControlView, ExportWorkspaceReportView, UploadSlidesView
+    TakeControlView, ReturnControlView, ExportWorkspaceReportView, UploadSlidesView,
+    GetResearchQuestionView, CreateResearchQuestionView, UpdateResearchQuestionView,
+    DeleteResearchQuestionView, UpdateResearchQuestionLinksView
 )
 
 urlpatterns = [
@@ -51,6 +53,13 @@ urlpatterns = [
     path("groups/<uuid:group_id>/update/", UpdateGroupView.as_view(), name="group-update"),
     path("groups/<uuid:group_id>/delete/", DeleteGroupView.as_view(), name="group-delete"),
     path("groups/ai/", AIGroupView.as_view(), name="group-ai"),
+
+    # Research Questions
+    path("research-questions/", GetResearchQuestionView.as_view(), name="rq-list"),  # GET list or single via query param
+    path("research-questions/create/", CreateResearchQuestionView.as_view(), name="rq-create"),
+    path("research-questions/<uuid:rq_id>/update/", UpdateResearchQuestionView.as_view(), name="rq-update"),
+    path("research-questions/<uuid:rq_id>/delete/", DeleteResearchQuestionView.as_view(), name="rq-delete"),
+    path("research-questions/<uuid:rq_id>/links/", UpdateResearchQuestionLinksView.as_view(), name="rq-links"),
 
     # Narrative
     path("narrative/generate/async/", GenerateNarrativeAsyncView.as_view(), name="narrative-generate-async"),

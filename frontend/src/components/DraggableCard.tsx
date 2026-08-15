@@ -10,6 +10,9 @@ import { logAction, captureActionContext } from '../utils/userActionLogger';
 import { formatImageMetadata, getImageUrl } from '../utils/imageUtils';
 import { useAuth } from '../contexts/Auth';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { useResearchQuestions } from '../contexts/ResearchQuestions';
+import RqLinkPicker from './RqLinkPicker';
+import RqBadges from './RqBadges';
 
 const OLD_SHORT_DESC_PLACEHOLDER = 'Add a description for this visual.';
 const OLD_LONG_DESC_PLACEHOLDER = 'Ask AI to create a description for this visual.';
@@ -27,6 +30,8 @@ function getDesc(longDesc: string | undefined): string {
 function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, onUnTrash, draggable = true, readOnly: readOnlyProp = false }: DraggableCardProps) {
   const { isInstructor } = useAuth();
   const { annotateWithAI } = useFeatureFlags();
+  const { rqLabelsByCard } = useResearchQuestions();
+  const rqLabels = rqLabelsByCard[image.id] || [];
   // Instructor notes are read-only for non-admin users
   const isInstructorNote = image.source === 'instructor';
   const readOnly = readOnlyProp || (isInstructorNote && !isInstructor);
@@ -412,7 +417,9 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
           <div id="card-header" className={`flex p-1 text-tiny-bold ${
             image.source === 'instructor' ? 'bg-red-400' : image.filepath ? 'bg-bama-crimson' : 'bg-amber-400'
           }`}>
-            <div id="card-header-left" className="flex items-center overflow-hidden" style={{ width: 'calc(100% - 1.5rem)' }}>
+            {/* flex-1 + min-w-0 so the title truncates instead of being squeezed; the previous
+                fixed width fought with the right block's w-1/2 and lost space to it. */}
+            <div id="card-header-left" className="flex items-center gap-1 overflow-hidden flex-1 min-w-0">
               {editingTitle ? (
                 <input
                   log-id="visual-inline-title-input"
@@ -434,7 +441,7 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
                 />
               ) : (
                 <p
-                  className={`text-white font-sans truncate ${readOnly ? '' : 'cursor-pointer hover:underline'}`}
+                  className={`text-white font-sans truncate min-w-0 ${readOnly ? '' : 'cursor-pointer hover:underline'}`}
                   onClick={(e) => {
                     if (readOnly) return;
                     e.stopPropagation();
@@ -446,19 +453,31 @@ function DraggableCard({ image, index, onDescriptionsUpdate, onDelete, onTrash, 
                 </p>
               )}
             </div>
-            {!readOnly && (
-              <div id="card-header-right" className="flex justify-end w-1/2">
-                <button
-                  log-id="edit-figure-button"
-                  onClick={handleShow}
-                  className="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
-                  style={{ fontSize: '0.5rem' }}
-                  title="Edit figure"
-                >
-                  ✎
-                </button>
-              </div>
-            )}
+            {/* Right block is sized to its contents rather than half the header, so the title keeps the rest.
+                Rendered even when read-only, since the RQ badges live here and still need showing. */}
+            <div id="card-header-right" className="flex justify-end items-center gap-1 flex-shrink-0 ml-1">
+              {/* Linked research questions — right-aligned beside the link button, capped so a
+                  heavily-linked card can't crowd out the title */}
+              <RqBadges labels={rqLabels} max={1} />
+              {!readOnly && (
+                <>
+                  <RqLinkPicker
+                    cardId={image.id}
+                    buttonClassName="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200 flex-shrink-0"
+                    iconSize={8}
+                  />
+                  <button
+                    log-id="edit-figure-button"
+                    onClick={handleShow}
+                    className="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                    style={{ fontSize: '0.5rem' }}
+                    title="Edit figure"
+                  >
+                    ✎
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           {image.filepath && (
             <div id="card-body">

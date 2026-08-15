@@ -4,7 +4,17 @@ import squares from '../assets/images/squares.svg';
 export type FeedbackCardData = {
   title: string;
   text: string;
+  /** Rubric area the note came from, e.g. "rq_alignment". */
+  section?: string;
   source?: string;
+};
+
+/** Readable names for the rubric sections the feedback task returns. */
+const SECTION_LABEL: Record<string, string> = {
+  missing_items: 'Missing items',
+  item_quality: 'Item quality',
+  grouping_quality: 'Grouping quality',
+  rq_alignment: 'Research questions',
 };
 
 export type InstructorNote = {
@@ -23,22 +33,25 @@ interface FeedbackPanelProps {
 const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ items, instructorNotes = [], onClose }) => {
   const hasContent = items.length > 0 || instructorNotes.length > 0;
 
-  if (!hasContent) {
-    return (
-      <div className="w-full p-4 text-grey-darkest">
-        <p>No feedback yet.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full p-3">
-      {/* Panel header */}
+      {/* Panel header — permanent pill, mirrors the "Research Questions" pill in
+          the RQ explorer. Rendered even in the empty state so the panel always
+          has a header when expanded. */}
       <div className="flex flex-row w-full">
-        <h3 className="text-sm text-gray-500 font-regular mb-2 mt-0">Feedback</h3>
+        <span
+          style={{ background: '#015c84' }}
+          className="text-white text-lg font-roboto-semibold px-3 py-1.5 rounded-lg inline-block"
+        >
+          Feedback
+        </span>
       </div>
 
-      <div className="space-y-3">
+      {!hasContent && (
+        <p className="text-grey-darkest mt-4">No feedback yet.</p>
+      )}
+
+      <div className="space-y-3 mt-4">
         {/* Instructor feedback notes — at the top */}
         {instructorNotes.map((note) => (
           <div key={note.id} className="bg-rose-50 rounded-md shadow-sm border border-grey-lightest overflow-hidden">
@@ -81,11 +94,16 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ items, instructorNotes = 
             <div className="p-3">
               <p className="text-sm text-grey-darkest whitespace-pre-wrap">{it.text}</p>
 
-              {/* Source badge at bottom */}
-              <div className="mt-3">
+              {/* Source badge at bottom, plus the rubric area this note came from */}
+              <div className="flex items-center flex-wrap gap-1.5 mt-3">
                 <span className="inline-block text-xs font-medium text-white bg-[#be6d6d] rounded-full px-3 py-1">
                   {it.source || 'Story Studio AI'}
                 </span>
+                {it.section && SECTION_LABEL[it.section] && (
+                  <span className="inline-block text-xs font-medium text-grey-darkest bg-grey-lighter rounded-full px-3 py-1">
+                    {SECTION_LABEL[it.section]}
+                  </span>
+                )}
               </div>
             </div>
           </div>

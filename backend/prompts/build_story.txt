@@ -3,7 +3,7 @@ You are an expert in data storytelling. Your task is to build a comprehensive an
 
 1. Analyze the descriptions, categories, and sequence of figures to understand their purpose and logical connections.  
 2. Write a comprehensive story that incorporates all figures and adheres to the sequence provided.  
-3. **IMPORTANT**: Insert figure placeholders at appropriate points in your narrative using the format `[FIGURE: filename]` where `filename` is the exact filename of the figure being referenced. Place these placeholders immediately after discussing each figure's insights or when transitioning to discuss the next figure.
+3. **IMPORTANT**: Insert figure placeholders at appropriate points in your narrative using the format `[FIGURE: filename]` where `filename` is the exact filename of the figure being referenced. Place these placeholders immediately after discussing each figure's insights or when transitioning to discuss the next figure. **Only emit [FIGURE: ...] for items whose key contains a file extension (e.g. `.png`, `.jpg`). Never emit a [FIGURE:] token for a note title like `Note 1` — reference notes by their content in prose only.**
 4. After crafting the story, perform a self-evaluation based on the following criteria:
    - **Clarity**: Is the story easy to understand and logically structured?
    - **Flow**: Does the narrative flow naturally from the introduction through the main body to the conclusion?

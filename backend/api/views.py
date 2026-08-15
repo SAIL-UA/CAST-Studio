@@ -39,14 +39,15 @@ from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
   JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress, FeatureFlags,
-  SharedSession, SessionParticipant
+  SharedSession, SessionParticipant, ResearchQuestion
 )
 
 # Serializers
 from .serializers import (
   ImageDataSerializer, NarrativeCacheSerializer,
   JupyterLogsSerializer, MousePositionLogSerializer,
-  UserActionSerializer, ScrollLogSerializer, GroupDataSerializer, ScaffoldDataSerializer
+  UserActionSerializer, ScrollLogSerializer, GroupDataSerializer, ScaffoldDataSerializer,
+  ResearchQuestionSerializer
 )
 
 # Tasks
@@ -724,6 +725,129 @@ class DeleteGroupView(APIView):
       return Response({"message": "Group deleted successfully"}, status=status.HTTP_200_OK)
     except GroupData.DoesNotExist:
       return Response({"message": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class GetResearchQuestionView(APIView):
+  permission_classes = [IsAuthenticated]
+  def get(self, request):
+    user = get_workspace_user(request)
+    rq_id = request.query_params.get("rq_id")
+
+    if rq_id:  # single question
+      questions = ResearchQuestion.objects.filter(id=rq_id, user=user).first()
+      if not questions:
+        return Response({"message": "Research question not found"}, status=status.HTTP_404_NOT_FOUND)
+    else:  # all questions for this workspace
+      questions = ResearchQuestion.objects.filter(user=user)
+
+    serialized = ResearchQuestionSerializer(questions, many=False if rq_id else True)
+    return Response({"research_questions": serialized.data}, status=status.HTTP_200_OK)
+
+
+class CreateResearchQuestionView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request):
+    # Outside the try: PermissionDenied must reach DRF's handler as a 403 rather than
+    # being swallowed by the broad except below and reported as a 500.
+    user = get_workspace_write_user(request)
+    try:
+      rq_data = request.data.get('data') or {}
+      rq_data['user'] = user.id
+
+      # New questions land at the bottom of the list.
+      if 'order' not in rq_data:
+        last = ResearchQuestion.objects.filter(user=user).order_by('-order').first()
+        rq_data['order'] = (last.order + 1) if last else 0
+
+      serializer = ResearchQuestionSerializer(data=rq_data)
+      if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Research question created successfully", "research_question": serializer.data}, status=status.HTTP_201_CREATED)
+      else:
+        return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UpdateResearchQuestionView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request, rq_id=None):
+    user = get_workspace_write_user(request)  # outside try so 403 isn't masked as 500
+    try:
+      rq_id = rq_id or request.data.get('rq_id')
+      if not rq_id:
+        return Response({"message": "No research question ID provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+      # Scoped by user so one workspace can't edit another's questions by guessing an id.
+      existing = ResearchQuestion.objects.filter(id=rq_id, user=user).first()
+      if not existing:
+        return Response({"message": "Research question not found"}, status=status.HTTP_404_NOT_FOUND)
+
+      serializer = ResearchQuestionSerializer(existing, data=request.data.get('data') or {}, partial=True)
+      if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Research question updated successfully", "research_question": serializer.data}, status=status.HTTP_200_OK)
+      else:
+        return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DeleteResearchQuestionView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request, rq_id=None):
+    """
+    Expects rq_id from URL path or JSON body with { "rq_id": "<rq_id>" }.
+    Deletes the research question; the M2M rows go with it, the cards do not.
+    """
+    user = get_workspace_write_user(request)  # outside try so 403 isn't masked as 500
+    try:
+      rq_id = rq_id or request.data.get('rq_id')
+      if not rq_id:
+        return Response({"message": "No research question ID provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+      question = ResearchQuestion.objects.filter(id=rq_id, user=user).first()
+      if not question:
+        return Response({"message": "Research question not found"}, status=status.HTTP_404_NOT_FOUND)
+
+      question.delete()
+      return Response({"message": "Research question deleted successfully"}, status=status.HTTP_200_OK)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UpdateResearchQuestionLinksView(APIView):
+  permission_classes = [IsAuthenticated]
+  def post(self, request, rq_id=None):
+    """
+    Replaces the set of cards linked to a question.
+    Expects { "image_ids": [...], "group_ids": [...] } — either key may be omitted.
+
+    Both id lists are filtered to the workspace's own cards before being set, so a
+    caller can't attach another user's figures to their question.
+    """
+    user = get_workspace_write_user(request)  # outside try so 403 isn't masked as 500
+    try:
+      rq_id = rq_id or request.data.get('rq_id')
+      if not rq_id:
+        return Response({"message": "No research question ID provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+      question = ResearchQuestion.objects.filter(id=rq_id, user=user).first()
+      if not question:
+        return Response({"message": "Research question not found"}, status=status.HTTP_404_NOT_FOUND)
+
+      if 'image_ids' in request.data:
+        image_ids = request.data.get('image_ids') or []
+        question.images.set(ImageData.objects.filter(id__in=image_ids, user=user))
+
+      if 'group_ids' in request.data:
+        group_ids = request.data.get('group_ids') or []
+        question.groups.set(GroupData.objects.filter(id__in=group_ids, user=user))
+
+      serializer = ResearchQuestionSerializer(question)
+      return Response({"message": "Links updated successfully", "research_question": serializer.data}, status=status.HTTP_200_OK)
+    except Exception as e:
+      return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AIGroupView(APIView):
@@ -1519,7 +1643,9 @@ class GenerateNarrativeView(APIView):
           "recommended_order": narrative_cache.order,
           "theme": narrative_cache.theme,
           "categories": narrative_cache.categories,
-          "sequence_justification": narrative_cache.sequence_justification
+          "sequence_justification": narrative_cache.sequence_justification,
+          "sequence_summary": narrative_cache.sequence_summary,
+          "rq_reasoning": narrative_cache.rq_reasoning,
         }, status=status.HTTP_200_OK)
       except NarrativeCache.DoesNotExist:
         return Response({
@@ -1570,8 +1696,13 @@ class RequestFeedbackView(APIView):
       if res.state == "SUCCESS":
         data = res.result
         if isinstance(data, list):
+          # section is carried through so the panel can label the rubric area a note came from
           items = [
-            {"title": str(it.get("title", "")), "text": str(it.get("text", ""))}
+            {
+              "title": str(it.get("title", "")),
+              "text": str(it.get("text", "")),
+              "section": str(it.get("section", "")),
+            }
             for it in data if isinstance(it, dict)
           ]
         else:
@@ -1664,7 +1795,9 @@ class ExportStoryView(APIView):
           fname = re.sub(r"[^A-Za-z0-9._-]", "", filename.strip())
           fpath = os.path.join(data_path, fname)
           if not os.path.exists(fpath):
-            doc.add_paragraph(f"[Missing image: {fname}]")
+            # Notes (and any other non-image [FIGURE:] leak) resolve to nothing on
+            # disk. Silently drop rather than surface "[Missing image: …]" or a
+            # Word broken-icon placeholder — the note's text is already in the prose.
             return
           try:
             with PILImage.open(fpath) as im:
@@ -1677,8 +1810,8 @@ class ExportStoryView(APIView):
             width_in = min(MAX_IMG_W_IN, w_from_h)
             doc.add_picture(fpath, width=Inches(width_in))
           except Exception:
-            # python-docx doesn't support WebP/SVG; fall back to a placeholder rather than 500.
-            doc.add_paragraph(f"[Unsupported image: {fname}]")
+            # Unsupported format (WebP/SVG etc.) — same silence policy as missing.
+            pass
 
         def render_section(doc, title, md_text):
           doc.add_heading(title, level=2)

@@ -258,6 +258,52 @@ export const deleteGroup = async(groupId: string) => {
   return response;
 };
 
+export const getResearchQuestions = async(targetUser?: string) => {
+  let url = '/research-questions/';
+  if (targetUser) {
+    url += `?target_user=${encodeURIComponent(targetUser)}`;
+  }
+  const response = await API.get(url);
+  return response.data.research_questions;
+};
+
+export const createResearchQuestion = async(data: any, targetUser?: string) => {
+  const url = targetUser
+    ? `/research-questions/create/?target_user=${encodeURIComponent(targetUser)}`
+    : '/research-questions/create/';
+  const response = await API.post(url, { data });
+  return response;
+};
+
+export const updateResearchQuestion = async(rqId: string, data: any, targetUser?: string) => {
+  const url = targetUser
+    ? `/research-questions/${rqId}/update/?target_user=${encodeURIComponent(targetUser)}`
+    : `/research-questions/${rqId}/update/`;
+  const response = await API.post(url, { data });
+  return response;
+};
+
+export const deleteResearchQuestion = async(rqId: string, targetUser?: string) => {
+  const url = targetUser
+    ? `/research-questions/${rqId}/delete/?target_user=${encodeURIComponent(targetUser)}`
+    : `/research-questions/${rqId}/delete/`;
+  const response = await API.post(url, {});
+  return response;
+};
+
+/** Replaces the full set of cards linked to a question. */
+export const updateResearchQuestionLinks = async(
+  rqId: string,
+  links: { image_ids?: string[]; group_ids?: string[] },
+  targetUser?: string,
+) => {
+  const url = targetUser
+    ? `/research-questions/${rqId}/links/?target_user=${encodeURIComponent(targetUser)}`
+    : `/research-questions/${rqId}/links/`;
+  const response = await API.post(url, links);
+  return response;
+};
+
 export const aiGroupImages = async(mode: 'all' | 'ungrouped') => {
   const response = await API.post('/groups/ai/', { mode });
   return response.data;

@@ -5,7 +5,7 @@ import { logAction, captureActionContext } from '../utils/userActionLogger';
 import { useTaskProgress } from '../hooks/useTaskProgress';
 import ProgressButton from './ProgressButton';
 
-type FeedbackItem = { title: string; text: string };
+type FeedbackItem = { title: string; text: string; section?: string };
 
 const FeedbackButton = () => {
     const [taskId, setTaskId] = useState<string | null>(null);
@@ -66,6 +66,7 @@ const FeedbackButton = () => {
                         items: items.map((it) => ({
                             title: it.title,
                             text: it.text,
+                            section: it.section,
                             source: 'Story Studio AI',
                         })),
                     },

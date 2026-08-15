@@ -194,6 +194,15 @@ class NarrativeCache(models.Model):
   theme = models.TextField(default="")
   categories = models.JSONField(default=list)
   sequence_justification = models.TextField(default="")
+  # Display-ready bullet list for the Reasoning tab's Sequence Justification section.
+  # Shape: [{"label": "Note 1", "why": "..."}, ...] — one bullet per workspace item
+  # that made it into the sequence, ≤15 words each. Populated by a dedicated
+  # post-story LLM call; empty list when that call failed or hasn't run.
+  sequence_summary = models.JSONField(default=list, blank=True)
+  # [{"label": "Q1", "how_informed": "..."}, ...] — how each research question
+  # shaped the final story. Populated after story-build in a separate LLM call.
+  # Empty list when the user wrote no RQs.
+  rq_reasoning = models.JSONField(default=list, blank=True)
 
   
   def __str__(self):
@@ -256,3 +265,33 @@ class SessionParticipant(models.Model):
 
   def __str__(self):
     return f"{self.user.username} in {self.session.share_token}"
+
+
+class ResearchQuestion(models.Model):
+  """
+  A research question belonging to a user's workspace.
+
+  Scoped to the user rather than to a SharedSession, so questions persist across
+  sessions the same way ImageData and GroupData do. Collaborators reach them
+  through the usual ?target_user= workspace resolution.
+
+  Cards are linked many-to-many: one question can span several cards, and one
+  card can answer several questions. Visuals and notes are both ImageData
+  (a note is ImageData with an empty filepath), so there are two link targets.
+  """
+  id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='research_questions')
+  text = models.TextField(default="")
+  order = models.IntegerField(default=0)
+  images = models.ManyToManyField(ImageData, blank=True, related_name='research_questions')
+  groups = models.ManyToManyField(GroupData, blank=True, related_name='research_questions')
+  created_at = models.DateTimeField(auto_now_add=True)
+  last_modified = models.DateTimeField(auto_now=True)
+
+  class Meta:
+    db_table = 'research_questions'
+    managed = True
+    ordering = ['order', 'created_at']
+
+  def __str__(self):
+    return f"{self.user.username}: {self.text[:50]}"

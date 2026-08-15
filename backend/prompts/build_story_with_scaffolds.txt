@@ -8,7 +8,7 @@ Your task is to write a cohesive narrative that:
 - Explicitly reflects the scaffold elements in the structure of the story.
 - Uses the element labels (for example, "Cause", "Effect") as section headings or clear transitions in the narrative.
 - Weaves in the group descriptions and figure descriptions in a natural, reader‑friendly way.
-- **IMPORTANT**: Whenever you refer to a specific figure, insert a figure placeholder immediately after the relevant sentence using the format `[FIGURE: filename]`, where `filename` is the exact filename from the input.
+- **IMPORTANT**: Whenever you refer to a specific figure, insert a figure placeholder immediately after the relevant sentence using the format `[FIGURE: filename]`, where `filename` is the exact filename from the input. **Only emit `[FIGURE:]` for items whose key contains a file extension (e.g. `.png`, `.jpg`). Never emit `[FIGURE: Note 1]` or any note title — reference notes by their content in prose only.**
 
 Guidelines:
 - Keep the overall tone explanatory and accessible to an educated reader.

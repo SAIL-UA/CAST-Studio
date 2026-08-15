@@ -14,6 +14,13 @@
 @import "@fontsource/roboto/600.css"; /* Semi-bold */
 @import "@fontsource/roboto/700.css"; /* Bold */
 
+/* Global font smoothing so text renders identically across all pages.
+   Without this, WebKit defaults to subpixel-antialiased which reads bolder. */
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 /* Custom font weight utilities */
 .font-roboto-light {
   font-family: theme('fontFamily.roboto');
@@ -42,6 +49,232 @@
 
 .text-tiny {
   font-size: 0.5rem;
+}
+
+/* On-load text highlight — ported from Codrops OnScrollTextHighlight (hx-5).
+   Each character fades + scales in with a stagger; a rounded rectangle behind
+   the word scales up simultaneously. Consumed by <HighlightWord>. */
+.hx {
+  background: none;
+  color: inherit;
+  display: inline-block;
+  position: relative;
+  white-space: nowrap;
+}
+.hx-5 {
+  display: inline-flex;
+  isolation: isolate; /* Trap z-index:-1 on ::after so highlight sits behind the chars, not the page bg */
+  color: #fff;
+}
+.hx-5 .char {
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  transform: scale(1.3);
+  animation: hx5-char-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(0.1s + var(--i, 0) * 0.05s);
+}
+@keyframes hx5-char-in {
+  to { opacity: 1; transform: scale(1); }
+}
+.hx-5::after {
+  content: '';
+  position: absolute;
+  left: -2.5%;
+  top: -7.5%;
+  bottom: -7.5%;
+  width: 105%;
+  z-index: -1;
+  background: #00849E;
+  border-radius: 8px;
+  transform: scale(0);
+  animation: hx5-after-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 0.2s;
+}
+@keyframes hx5-after-in {
+  to { transform: scale(1); }
+}
+/* Gated variant: animation is paused (i.e. stays at initial invisible state) until
+   `.hx-5--play` is added — used with the `scrollTrigger` prop on <HighlightWord>. */
+.hx-5--gated .char,
+.hx-5--gated::after {
+  animation-play-state: paused;
+}
+.hx-5--gated.hx-5--play .char,
+.hx-5--gated.hx-5--play::after {
+  animation-play-state: running;
+}
+
+/* Landing/docs nav-link hover: soft teal wash. !important because the nav link's
+   `background: transparent` inline style would otherwise outrank the CSS rule. */
+.landing-nav-link:hover {
+  background: rgba(0, 132, 158, 0.06) !important;
+}
+
+/* Desktop-only vs mobile-only nav visibility. Below 768px, the four nav buttons
+   collapse into a single "Menu" dropdown. */
+.landing-nav-mobile { display: none; }
+@media (max-width: 768px) {
+  .landing-nav-desktop { display: none !important; }
+  .landing-nav-mobile  { display: block; }
+}
+
+/* ── Docs page (Tutorials) layout ────────────────────────────────── */
+/* Two-column grid: persistent left rail + main reading column. Both cap at
+   1280px combined. Sidebar is sticky under the top nav. */
+.docs-layout {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 32px 96px;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 48px;
+  align-items: start;
+}
+.docs-sidebar {
+  position: sticky;
+  top: 76px; /* under the ~60px sticky top nav + a small breathing gap */
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+}
+.docs-main {
+  min-width: 0;
+  max-width: 780px;
+}
+/* Hamburger toggle for the docs sidebar: hidden on desktop, shown on mobile. */
+.docs-sidebar__toggle {
+  display: none;
+}
+@media (max-width: 900px) {
+  .docs-layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 0 0 64px;
+  }
+  /* Sidebar becomes a sticky strip at the top on mobile — sits under the ~60px
+     top nav and always stays visible while the content scrolls beneath it. */
+  .docs-sidebar {
+    position: sticky;
+    top: 60px;
+    z-index: 5;
+    max-height: none;
+    overflow: visible;
+    background: #fff;
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(10,10,10,0.08);
+  }
+  .docs-sidebar__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    color: #1a1a1a;
+    text-transform: uppercase;
+  }
+  .docs-sidebar__toggle:focus-visible {
+    outline: 2px solid rgba(0, 132, 158, 0.5);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* Collapsed state on mobile: hide the group list, leaving only the toggle bar. */
+  nav[data-collapsed="true"] .docs-sidebar__groups {
+    display: none !important;
+  }
+  /* Expanded state on mobile: give the group list a little breathing space above. */
+  .docs-sidebar__groups {
+    padding-top: 8px;
+  }
+  /* Push docs content back into a reasonable inner padding since the layout lost its outer padding. */
+  .docs-main {
+    padding: 24px 20px 0;
+  }
+}
+
+/* ── Landing page (TestLogin) responsive layout ───────────────────── */
+/* Hero: default is a 2-col grid (headline left, login card right). On mobile,
+   collapse to a single column and force the login card above the headline via
+   flex `order`. The visual sequence on mobile becomes: navbar → login → hero
+   → feature bands. */
+/* Hero: the outer .landing-hero holds the padding + background (edge-to-edge);
+   the inner .landing-hero__inner is the max-width-capped grid so ultrawide
+   monitors don't split the headline and login card too far apart. */
+.landing-hero {
+  padding: 72px 48px 88px;
+}
+.landing-hero__inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 64px;
+  align-items: start;
+}
+.landing-hero__login {
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .landing-hero {
+    padding: 40px 24px 56px;
+  }
+  .landing-hero__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+  .landing-hero__login { order: 1; }
+  .landing-hero__text  { order: 2; }
+  /* The 120px hero headline overflows small viewports — scale it down fluidly. */
+  .landing-hero__text h1 { font-size: clamp(44px, 10vw, 120px) !important; }
+}
+
+/* Feature bands: 2-col row on desktop (text + card), stacked on mobile.
+   Zigzag on desktop via row-reverse. On mobile the card is always below the
+   text (no reversing), matching the mental model of "read heading first". */
+.feature-band__row {
+  display: flex;
+  align-items: center;
+  gap: 64px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.feature-band__row--reverse {
+  flex-direction: row-reverse;
+}
+.feature-band__text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.feature-band__card-wrap {
+  flex: 0 0 420px;
+  display: flex;
+  justify-content: center;
+}
+@media (max-width: 900px) {
+  .feature-band {
+    padding: 56px 24px !important;
+  }
+  .feature-band__row,
+  .feature-band__row--reverse {
+    flex-direction: column;
+    gap: 32px;
+    align-items: stretch;
+  }
+  .feature-band__card-wrap {
+    flex: none;
+  }
+  .feature-band__text h2 {
+    font-size: 30px !important;
+  }
 }
 
 .text-somewhat-tiny {

@@ -25,12 +25,12 @@ You will receive:
 - Introduce the group with its name and description
 - Explain why these figures are grouped together
 - Discuss each figure within the group context
-- Insert figure placeholders: `[FIGURE: filename]`
+- Insert figure placeholders: `[FIGURE: filename]`. Only emit these for items whose key contains a file extension (e.g. `.png`, `.jpg`). Never emit a `[FIGURE:]` token for a note title like `Note 1` — reference notes by their content in prose only.
 
 **For Ungrouped Figures:**
 - Provide contextual transitions that connect to surrounding elements
 - Explain the figure's role in the broader narrative
-- Insert figure placeholders: `[FIGURE: filename]`
+- Insert figure placeholders: `[FIGURE: filename]`. Only emit these for items whose key contains a file extension. Never emit a `[FIGURE:]` token for a note title.
 
 **Narrative Elements:**
 1. **Introduction**: Set up the overall theme, mention that the story uses organized groups and additional context. Must include the story structure.

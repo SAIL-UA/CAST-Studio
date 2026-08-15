@@ -1,7 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/Auth';
-import { joinSession, getImageDataAll, setActiveTargetUser } from '../services/api';
+import { joinSession, getImageDataAll, setActiveTargetUser, getGroups } from '../services/api';
+import ResearchQuestionsPanel, { LinkableCard } from '../components/ResearchQuestionsPanel';
+import { useResearchQuestions } from '../contexts/ResearchQuestions';
 import { getAvatarColor } from '../utils/avatarUtils';
 import Header from '../components/Header';
 import Workspace from '../components/Workspace';
@@ -22,6 +24,7 @@ const SessionWorkspace = () => {
     const { shareToken } = useParams<{ shareToken: string }>();
     const navigate = useNavigate();
     const { userAuthenticated, userId } = useAuth();
+    const { refreshRqLinks } = useResearchQuestions();
 
     const [hostId, setHostId] = useState<string | null>(null);
     const [hostName, setHostName] = useState('');
@@ -36,6 +39,8 @@ const SessionWorkspace = () => {
     const [leftMenuOpen, setLeftMenuOpen] = useState(false);
     const [dataStoriesExpanded, setDataStoriesExpanded] = useState(false);
     const [feedbackExpanded, setFeedbackExpanded] = useState(false);
+    const [rqExpanded, setRqExpanded] = useState(false);
+    const [rqCards, setRqCards] = useState<LinkableCard[]>([]);
     const [feedbackItems, setFeedbackItems] = useState<FeedbackCardData[]>([]);
     const [instructorNotes, setInstructorNotes] = useState<InstructorNote[]>([]);
 
@@ -137,6 +142,62 @@ const SessionWorkspace = () => {
         };
         fetchNotes();
     }, [hostId, refreshTrigger]);
+
+    // Linkable cards for the research questions panel, scoped to the host's workspace.
+    const fetchRqCards = useCallback(async () => {
+        if (!hostId) return;
+        try {
+            const [imageResponse, groups] = await Promise.all([
+                getImageDataAll(hostId),
+                getGroups(undefined, hostId),
+            ]);
+            const images = imageResponse.data?.images || [];
+            // See Home.tsx fetchRqCards — mirror DraggableCard by using img.index for
+            // the "Visual N" fallback, not array position.
+            const OLD_SHORT_DESC_PLACEHOLDER = 'Add a description for this visual.';
+            const imageCards: LinkableCard[] = images
+                .filter((img: any) => img.source !== 'instructor')
+                .map((img: any) => ({
+                    id: img.id,
+                    label:
+                        img.short_desc && img.short_desc !== OLD_SHORT_DESC_PLACEHOLDER
+                            ? img.short_desc
+                            : `Visual ${(img.index ?? 0) + 1}`,
+                    kind: img.filepath ? 'visual' : 'note',
+                }));
+            const groupCards: LinkableCard[] = (groups || []).map((g: any) => ({
+                id: g.id,
+                label: g.name || 'Untitled Group',
+                kind: 'group' as const,
+            }));
+            setRqCards([...imageCards, ...groupCards]);
+        } catch (err) {
+            console.error('Error fetching linkable cards:', err);
+        }
+    }, [hostId]);
+
+    useEffect(() => {
+        if (rqExpanded) {
+            fetchRqCards();
+        }
+    }, [rqExpanded, fetchRqCards]);
+
+    // Keep the checklist and badges current when cards change while the panel is open.
+    useEffect(() => {
+        const onCardsChanged = () => {
+            fetchRqCards();
+            if (hostId) refreshRqLinks(hostId);
+        };
+        window.addEventListener('workspaceCardsChanged', onCardsChanged as EventListener);
+        return () => window.removeEventListener('workspaceCardsChanged', onCardsChanged as EventListener);
+    }, [fetchRqCards, hostId, refreshRqLinks]);
+
+    // RQ badges on the host's cards.
+    useEffect(() => {
+        if (hostId) {
+            refreshRqLinks(hostId);
+        }
+    }, [hostId, refreshRqLinks]);
 
     // Set/clear target user interceptor based on control state
     useEffect(() => {
@@ -362,6 +423,43 @@ const SessionWorkspace = () => {
                             canEdit={controlledBy === userId}
                             refreshTrigger={refreshTrigger}
                         />
+                    </div>
+                </div>
+            </div>
+
+            {/* Research Questions — left-anchored collapsible panel, mirrors Feedback.
+                Reads the host's workspace via targetUser; writable only by whoever holds control. */}
+            <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[300] flex flex-row items-start transition-all duration-300">
+                <button
+                    id="rq-toggle"
+                    log-id="research-questions-toggle"
+                    className="flex items-center justify-center text-xs text-white hover:brightness-110 rounded-r-xl transition-colors duration-150 flex-shrink-0 px-1.5 py-2.5"
+                    onClick={() => setRqExpanded(!rqExpanded)}
+                    style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', background: '#348b95' }}
+                >
+                    <svg
+                        className={`w-3 h-3 mb-1.5 transition-transform duration-300 ${rqExpanded ? 'rotate-180' : 'rotate-0'}`}
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    Research Questions
+                </button>
+                <div
+                    className={`rounded-r-xl overflow-hidden shadow-2xl transition-all duration-300 ${
+                        rqExpanded ? 'w-[374px] opacity-100' : 'w-0 opacity-0'
+                    }`}
+                    style={{ height: '80vh' }}
+                >
+                    <div className="h-full rounded-r-xl">
+                        <div className="h-full bg-grey-lighter-2 overflow-y-auto">
+                            <ResearchQuestionsPanel
+                                cards={rqCards}
+                                targetUser={hostId || undefined}
+                                readOnly={controlledBy !== userId}
+                                onLinksChanged={() => { fetchRqCards(); refreshRqLinks(hostId || undefined); }}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
