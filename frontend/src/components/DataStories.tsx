@@ -8,6 +8,7 @@ import { logAction } from '../utils/userActionLogger';
 import { getImageUrl } from '../utils/imageUtils';
 import { scrollTracker } from '../utils/scrollTracker';
 import { setStoryUserEdited } from '../utils/storyEditState';
+import { STORY_STREAM_START, STORY_STREAM_CHUNK, STORY_STREAM_END, STORY_REASONING_READY, STORY_GENERATION_STAGE, StoryStreamChunkDetail, StoryReasoningDetail, StoryGenerationStageDetail } from '../utils/storyStreamEvents';
 import { useResearchQuestions } from '../contexts/ResearchQuestions';
 
 // Import components
@@ -91,6 +92,16 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
     const [storySelected, setStorySelected] = useState(false);
     const [storyData, setStoryData] = useState<StoryData | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    // Live text accumulated from the compose-step WebSocket while a generation is in
+    // flight. Replaces the shimmering placeholder so users watch the story appear.
+    // Cleared once the final `storyGenerated` payload arrives — `processedNarrative`
+    // then takes over, since it has [FIGURE:] tokens swapped for image URLs.
+    const [streamingNarrative, setStreamingNarrative] = useState<string>('');
+    // Latest task-progress stage name (Structuring & Theming, Sequencing, …).
+    // Used to annotate the "AI is writing" placeholder so the user has something
+    // visibly changing during the 5–7 s pre-stream wait instead of a static
+    // shimmer. Cleared on generation start and when generation ends.
+    const [generationStage, setGenerationStage] = useState<string>('');
     const [processedNarrative, setProcessedNarrative] = useState<string>('');
     const [processedTheme, setProcessedTheme] = useState<string>('');
     const [processedSequence, setProcessedSequence] = useState<string>('');
@@ -180,22 +191,71 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
 
             // Story data already has processed figures from GenerateStoryButton
             setStoryData(data);
+            // Final render takes over from the streamed preview (which lacks image URLs).
+            setStreamingNarrative('');
             loadImageDescriptions();
         };
 
         // Listen for story generation start events
         const handleStoryGenerationStarted = () => {
             setIsGenerating(true);
+            setStreamingNarrative('');
+            setGenerationStage('');
+            // Switch to the Story tab immediately so the user watches the placeholder
+            // and streaming text, not the (still-empty) Reasoning tab. Without this,
+            // fresh sessions land on Reasoning because storyData is null until
+            // generation completes, and the "flip to Story on storyData" effect only
+            // fires after the story arrives — too late for the streaming experience.
+            setStorySelected(true);
+            setNarrativeSelected(false);
             console.log('Story generation started');
+        };
+
+        // Stream lifecycle: reset the buffer on 'start', append on 'chunk'. We don't
+        // clear on 'end' — the streamed text stays visible until the final
+        // `storyGenerated` event swaps in the processed narrative (with image URLs).
+        const handleStreamStart = () => setStreamingNarrative('');
+        const handleStreamChunk = (event: Event) => {
+            const detail = (event as CustomEvent<StoryStreamChunkDetail>).detail;
+            if (!detail?.delta) return;
+            setStreamingNarrative(prev => prev + detail.delta);
+        };
+
+        // Second phase of the two-phase completion. Reasoning fields arrive after
+        // the story itself is already rendered — patch them onto whatever storyData
+        // the storyGenerated handler set. Guarded so a stray event with no prior
+        // storyData is a no-op instead of a crash.
+        const handleReasoningReady = (event: Event) => {
+            const detail = (event as CustomEvent<StoryReasoningDetail>).detail;
+            if (!detail) return;
+            setStoryData(prev => prev ? {
+                ...prev,
+                sequence_summary: detail.sequence_summary,
+                rq_reasoning: detail.rq_reasoning,
+            } : prev);
+        };
+
+        const handleGenerationStage = (event: Event) => {
+            const detail = (event as CustomEvent<StoryGenerationStageDetail>).detail;
+            if (!detail?.stageName) return;
+            setGenerationStage(detail.stageName);
         };
 
         window.addEventListener('storyGenerated', handleStoryGenerated as EventListener);
         window.addEventListener('storyGenerationStarted', handleStoryGenerationStarted as EventListener);
+        window.addEventListener(STORY_STREAM_START, handleStreamStart as EventListener);
+        window.addEventListener(STORY_STREAM_CHUNK, handleStreamChunk as EventListener);
+        window.addEventListener(STORY_REASONING_READY, handleReasoningReady as EventListener);
+        window.addEventListener(STORY_GENERATION_STAGE, handleGenerationStage as EventListener);
 
         // Cleanup
         return () => {
             window.removeEventListener('storyGenerated', handleStoryGenerated as EventListener);
             window.removeEventListener('storyGenerationStarted', handleStoryGenerationStarted as EventListener);
+            window.removeEventListener(STORY_STREAM_START, handleStreamStart as EventListener);
+            window.removeEventListener(STORY_STREAM_CHUNK, handleStreamChunk as EventListener);
+            window.removeEventListener(STORY_REASONING_READY, handleReasoningReady as EventListener);
+            window.removeEventListener(STORY_GENERATION_STAGE, handleGenerationStage as EventListener);
 
             // Flush any pending scroll events before unmounting
             scrollTracker.flush();
@@ -618,7 +678,7 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                         <h3 className="text-xl font-semibold text-grey-darkest mb-4">Narrative Structure{headerPattern ? `: ${headerPattern}` : ''}</h3>
                         
                         {isGenerating ? (
-                            <GeneratingPlaceholder contentName="narrative analysis" lines={6} />
+                            <GeneratingPlaceholder contentName="narrative analysis" lines={6} stageName={generationStage} />
                         ) : isProcessingImages ? (
                             <GeneratingPlaceholder contentName="processing images" lines={4} />
                         ) : storyData ? (
@@ -704,7 +764,22 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                         <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story{headerPattern ? `: ${headerPattern}` : ''}</h3>
                         
                         {isGenerating ? (
-                            <GeneratingPlaceholder contentName="data story" lines={8} />
+                            streamingNarrative ? (
+                                // Live preview from the compose-step WebSocket. [FIGURE:] tokens
+                                // are stripped here; the final render (with image URLs) replaces
+                                // this once `storyGenerated` fires.
+                                <div className="prose max-w-none text-grey-darkest leading-relaxed text-base p-4">
+                                    <ReactMarkdown
+                                        components={markdownComponents}
+                                        urlTransform={urlTransform}
+                                        skipHtml={false}
+                                    >
+                                        {streamingNarrative.replace(/\[FIGURE:[^\]]*\]/g, '')}
+                                    </ReactMarkdown>
+                                </div>
+                            ) : (
+                                <GeneratingPlaceholder contentName="data story" lines={8} stageName={generationStage} />
+                            )
                         ) : isProcessingImages ? (
                             <GeneratingPlaceholder contentName="processing images" lines={4} />
                         ) : storyData?.narrative ? (
