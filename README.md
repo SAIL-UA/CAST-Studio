@@ -23,30 +23,9 @@ CAST Story Studio is a full-stack application for story generation and managemen
 
 1. **Set up environment variables**:
 
-    **It will probably be much easier to just reach out to Taha Hassan _(thassan1@ua.edu)_ for the dev .env file, so feel free to do that.**
+    Copy `.env.example` to `.env` in the project root and fill in the blank values (secrets, database credentials, API keys, email). `.env.example` is a development template; reset the insecure defaults before deploying to production.
 
-    Otherwise,
-
-    Create a `.env` file in the project root with:
-
-    ```env
-    DJANGO_SECRET_KEY=your-secret-key
-    DJANGO_DEBUG=True
-    POSTGRES_DB=cast-db
-    POSTGRES_USER=your_postgres_user
-    POSTGRES_PASSWORD=your_postgres_password
-    POSTGRES_HOST=your_postgres_host
-    POSTGRES_PORT=your_postgres_port
-    DATA_PATH=/data/user_images
-    USER_DIR_BASE=/data/CAST_ext
-    STORYSTUDIO_API_URL=http://backend:8051/
-    REACT_APP_IMAGE_BASE_URL=/images
-    CELERY_BROKER_URL=redis://redis:6379/0
-    OPENAI_API_KEY=your-openai-api-key
-    FRONTEND_URL=http://localhost
-    EMAIL_HOST_USER=your-email@gmail.com
-    EMAIL_HOST_PASSWORD=your-app-password
-    ```
+    **It will probably be much easier to just reach out to Taha Hassan _(thassan1@ua.edu)_ for the dev `.env` file, so feel free to do that.**
 
 2. **First-time setup** (run migrations before starting services):
 
