@@ -1,131 +1,141 @@
 services:
-  db:
-    image: postgres:17
-    container_name: cast-db-dev
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    networks:
-      - cast-network
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+    db:
+        image: postgres:17
+        container_name: cast-db-dev
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB}
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        volumes:
+            - db_data:/var/lib/postgresql/data
+        networks:
+            - cast-network
+        restart: always
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
 
-  redis:
-    image: redis:7-alpine
-    container_name: cast-redis-dev
-    ports:
-      - "6379:6379"  # Expose for local development
-    restart: unless-stopped
-    networks:
-      - cast-network
+    redis:
+        image: redis:7-alpine
+        container_name: cast-redis-dev
+        ports:
+            - "6379:6379" # Expose for local development
+        restart: unless-stopped
+        networks:
+            - cast-network
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.arm # Change to Dockerfile.dev for non-ARM devices
-    container_name: cast-backend-dev
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    env_file:
-      - .env
-    volumes:
-      - ./data:/data  # Use local data directory
-      - static:/app/staticfiles
-    networks:
-      - cast-network
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             gunicorn config.wsgi:application --bind 0.0.0.0:8051 --workers 3 --reload"
+    backend:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile.dev
+        container_name: cast-backend-dev
+        restart: unless-stopped
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_started
+        env_file:
+            - .env
+        volumes:
+            - ./backend:/app
+            - ./data:/data # Use local data directory
+            - static:/app/staticfiles
+        networks:
+            - cast-network
+        command: >
+            sh -c "python manage.py migrate &&
+                   python manage.py collectstatic --noinput &&
+                   gunicorn config.wsgi:application --bind 0.0.0.0:8051 --workers 3 --reload --reload-engine=poll"
 
-  daphne:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.arm
-    container_name: cast-daphne-dev
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    env_file:
-      - .env
-    volumes:
-      - ./data:/data
-    networks:
-      - cast-network
-    command: daphne -b 0.0.0.0 -p 8052 config.asgi:application
+    daphne:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile.dev # Change to Dockerfile.dev for non ARM devices
+        container_name: cast-daphne-dev
+        restart: unless-stopped
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_started
+        env_file:
+            - .env
+        volumes:
+            - ./data:/data
+        networks:
+            - cast-network
+        command: daphne -b 0.0.0.0 -p 8052 config.asgi:application
 
-  celery:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.arm # Change to Dockerfile.dev for non-ARM devices
-    container_name: cast-celery-dev
-    restart: unless-stopped
-    volumes:
-      - ./data:/data  # Use local data directory
-    env_file:
-      - .env
-    networks:
-      - cast-network
-    depends_on:
-      - db
-      - redis
-    command: celery -A config worker --loglevel=info
+    celery:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile.dev # Change to Dockerfile.dev for non ARM devices
+        container_name: cast-celery-dev
+        restart: unless-stopped
+        volumes:
+            - ./data:/data # Use local data directory
+        env_file:
+            - .env
+        networks:
+            - cast-network
+        depends_on:
+            - db
+            - redis
+        command: celery -A config worker --loglevel=info
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-      args:
-        - REACT_APP_API_URL=http://localhost
-    container_name: cast-frontend-dev
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=development
-    volumes:
-      - frontend_build:/shared-build  # Share build with nginx
-    depends_on:
-      - backend
-    networks:
-      - cast-network
+    frontend:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile.dev # Same across Windows and Mac
+        container_name: cast-frontend-dev
+        restart: unless-stopped
+        environment:
+            - NODE_ENV=development
+            - CHOKIDAR_USEPOLLING=true
+            - WATCHPACK_POLLING=true
+            - WDS_SOCKET_HOST=localhost
+            - WDS_SOCKET_PATH=/wds
+            - WDS_SOCKET_PORT=80
+            - DANGEROUSLY_DISABLE_HOST_CHECK=true
+            - REACT_APP_API_URL=http://localhost
+            - HOST=0.0.0.0
+            - PORT=8050
+        volumes:
+            - ./frontend:/app
+            - frontend_node_modules:/app/node_modules
+        stdin_open: true
+        tty: true
+        depends_on:
+            - backend
+        networks:
+            - cast-network
 
-  nginx:
-    image: nginx:alpine
-    container_name: cast-nginx-dev
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/project.dev.conf:/etc/nginx/conf.d/default.conf
-      - frontend_build:/var/www/html
-      - static:/staticfiles:ro
-      - ./data/user_images:/data/user_images:ro
-    depends_on:
-      - backend
-      - daphne
-      - frontend
-    networks:
-      - cast-network
-    restart: unless-stopped
+    nginx:
+        image: nginx:alpine
+        container_name: cast-nginx-dev
+        ports:
+            - "80:80"
+        volumes:
+            - ./nginx/project.dev.conf:/etc/nginx/conf.d/default.conf
+            - static:/staticfiles:ro
+            - ./data/user_images:/data/user_images:ro
+        depends_on:
+            - backend
+            - daphne
+            - frontend
+        networks:
+            - cast-network
+        restart: unless-stopped
 
 networks:
-  cast-network:
-    driver: bridge
+    cast-network:
+        driver: bridge
 
 volumes:
-  db_data:
-  static:
-  frontend_build:
+    db_data:
+    static:
+    frontend_node_modules:

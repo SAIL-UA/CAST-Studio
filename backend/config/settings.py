@@ -35,7 +35,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent  # Adjusted to point to
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 DATA_PATH = env('DATA_PATH')
-USER_DIR = env('USER_DIR_BASE')
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_ACCEPT_CONTENT = ['json']
