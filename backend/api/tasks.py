@@ -83,6 +83,60 @@ def _openai_client():
     # create lazily to avoid creating clients during import/migrations
     return OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
+
+def _publish_story_stream_event(user_id, event: str, **payload) -> None:
+    """
+    Push a story-stream event to the requesting user's Channels group so open
+    WebSocket subscribers can render it. No-op on any failure — streaming is a
+    UX enhancement, not required for the task to complete.
+
+    event: 'start' | 'chunk' | 'end' | 'error'
+    """
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        from api.consumers import story_stream_group_name
+
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            return
+        async_to_sync(channel_layer.group_send)(
+            story_stream_group_name(user_id),
+            {'type': 'story.event', 'event': event, **payload},
+        )
+    except Exception:
+        logger.exception("failed to publish story-stream event %s", event)
+
+
+def _run_completion(client, params: dict, on_chunk=None) -> str:
+    """
+    Wrap chat.completions.create with optional streaming. When on_chunk is
+    provided, use stream=True, iterate over deltas, invoke on_chunk(delta) as
+    text arrives, and return the accumulated content. Otherwise, plain
+    non-streaming call.
+    """
+    if on_chunk is None:
+        resp = client.chat.completions.create(**params)
+        return (resp.choices[0].message.content or "").strip()
+
+    streaming_params = dict(params)
+    streaming_params['stream'] = True
+    stream = client.chat.completions.create(**streaming_params)
+    accumulator: list[str] = []
+    for chunk in stream:
+        choices = chunk.choices or []
+        if not choices:
+            continue
+        delta = choices[0].delta.content
+        if not delta:
+            continue
+        accumulator.append(delta)
+        try:
+            on_chunk(delta)
+        except Exception:
+            logger.exception("story stream on_chunk failed")
+    return ''.join(accumulator).strip()
+
 def _get_model(app_label, model_name):
     # late-binding model lookup; safe before app registry 'ready'
     return apps.get_model(app_label, model_name)
@@ -137,30 +191,40 @@ def _image_to_data_url(relative_path: str) -> str | None:
 
 
 def _categorize_figure(description: str) -> str:
-    """Categorize a single figure based on its description using OpenAI API."""
-    prompt = f"""
-### Input
-This is a single figure description:
-{description}
+    """Categorize a single figure based on its description using OpenAI API.
 
-{_load_prompt('categorize_figures.txt')}
-""".strip()
+    DISABLED (2026-08-23): categorization is now a no-op. The label was soft
+    context for Sequence/Compose and never rendered in the UI; modern
+    descriptions carry enough signal that the sequencer + chosen story
+    structure enforce the arc without needing an explicit tag. Skipping the
+    call saves roughly one sequential gpt-4o round-trip per figure — the
+    dominant pre-stream cost on larger workspaces. To restore, delete the
+    early return below and uncomment the original body."""
+    return ""
 
-    try:
-        client = _openai_client()
-        resp = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.1,
-            timeout=30,
-        )
-        return resp.choices[0].message.content.strip()
-    except Exception as e:
-        logger.error(f"Error categorizing figure: {e}")
-        return f"Error categorizing figure: {e}"
+    # prompt = f"""
+    # ### Input
+    # This is a single figure description:
+    # {description}
+    #
+    # {_load_prompt('categorize_figures.txt')}
+    # """.strip()
+    #
+    # try:
+    #     client = _openai_client()
+    #     resp = client.chat.completions.create(
+    #         model="gpt-4o",
+    #         messages=[
+    #             {"role": "system", "content": "You are a helpful assistant."},
+    #             {"role": "user", "content": prompt},
+    #         ],
+    #         temperature=0.1,
+    #         timeout=30,
+    #     )
+    #     return resp.choices[0].message.content.strip()
+    # except Exception as e:
+    #     logger.error(f"Error categorizing figure: {e}")
+    #     return f"Error categorizing figure: {e}"
 
 
 def _understand_theme_objective(fig_descriptions: str, rqs_data: list | None = None) -> str:
@@ -268,8 +332,11 @@ Respond ONLY with a JSON object of the form:
             "strict": True,
         }
 
+        # Structure choice is a strict-schema JSON classification into ~6 enum
+        # values — mini is more than capable and shaves ~1–2 s off the AI Assistance
+        # pre-stream wait. If picks start looking odd, revert to gpt-4o here.
         resp = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt},
@@ -396,7 +463,7 @@ Use the following story structure. Its description is given below.
         return f"Error sequencing figures: {e}"
 
 
-def _build_story(fig_descriptions_category: dict, sequence: str, rqs_data: list | None = None) -> str:
+def _build_story(fig_descriptions_category: dict, sequence: str, rqs_data: list | None = None, on_chunk=None) -> str:
     """Build a narrative using per-figure categories and the recommended sequence.
 
     When AI_RQS_IN_STORY is on and rqs_data is provided, the research questions
@@ -427,16 +494,19 @@ Sequence:
 
     try:
         client = _openai_client()
-        resp = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.1,
-            timeout=30,
+        return _run_completion(
+            client,
+            {
+                'model': "gpt-4o",
+                'messages': [
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": prompt},
+                ],
+                'temperature': 0.1,
+                'timeout': 60,
+            },
+            on_chunk=on_chunk,
         )
-        return resp.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Error building story: {e}")
         return f"Error building story: {e}"
@@ -533,7 +603,7 @@ Use the following story structure. Its description is given below.
         return f"Error sequencing figures with groups: {e}"
 
 
-def _build_story_with_groups(groups_data: list, ungrouped_data: dict, sequence: str, rqs_data: list | None = None) -> str:
+def _build_story_with_groups(groups_data: list, ungrouped_data: dict, sequence: str, rqs_data: list | None = None, on_chunk=None) -> str:
     """
     Build a narrative that respects group structure and integrates ungrouped figures.
 
@@ -584,16 +654,19 @@ Sequence:
 
     try:
         client = _openai_client()
-        resp = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.1,
-            timeout=30,
+        return _run_completion(
+            client,
+            {
+                'model': "gpt-4o",
+                'messages': [
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": prompt},
+                ],
+                'temperature': 0.1,
+                'timeout': 60,
+            },
+            on_chunk=on_chunk,
         )
-        return resp.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Error building story with groups: {e}")
         return f"Error building story with groups: {e}"
@@ -753,7 +826,7 @@ Use the following story structure. Its description is given below.
 
 FLOW_SCAFFOLDS = {'linear', 'inverted_pyramid'}
 
-def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, sequence: str, story_structure_id: str | None = None, rqs_data: list | None = None) -> str:
+def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, sequence: str, story_structure_id: str | None = None, rqs_data: list | None = None, on_chunk=None) -> str:
     """
     Build a narrative that explicitly reflects scaffold elements, their groups, and any extra groups/figures.
 
@@ -858,16 +931,19 @@ Sequence:
 
     try:
         client = _openai_client()
-        resp = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.1,
-            timeout=30,
+        return _run_completion(
+            client,
+            {
+                'model': "gpt-4o",
+                'messages': [
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": prompt},
+                ],
+                'temperature': 0.1,
+                'timeout': 60,
+            },
+            on_chunk=on_chunk,
         )
-        return resp.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Error building story with scaffolds: {e}")
         return f"Error building story with scaffolds: {e}"
@@ -2212,15 +2288,35 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         rqs_data = _load_rqs_for_prompts(user, storyboard_image_ids=storyboard_image_ids)["rqs_data"]
 
         _progress(3, "Structuring...")
-        # For "All workspace" (no scaffold_id and no story_structure_id), defer
-        # structure resolution until after fetching so multi-scaffold detection works.
+        # Structure resolution and Theme both only read the flat description text +
+        # rqs_data, so they can run concurrently. Structure was the pacing item on the
+        # pre-stream critical path; running Theme underneath it hides ~1.5s of latency.
+        # For "All workspace" (no scaffold_id and no story_structure_id), structure is
+        # deferred until after fetching (multi-scaffold detection). Theme still runs now.
         is_all_workspace = not scaffold_id and not (story_structure_id or "").strip()
-        if not is_all_workspace:
-            story_structure_id = _resolve_story_structure_id(
-                story_structure_id,
-                all_descriptions_text,
-                rqs_data=rqs_data,
+        from concurrent.futures import ThreadPoolExecutor
+
+        def _timed(label, fn, *args, **kwargs):
+            _t0 = time.perf_counter()
+            _out = fn(*args, **kwargs)
+            logger.info(f"[TIMING] {label}: {time.perf_counter() - _t0:.2f}s")
+            return _out
+
+        _t_pre = time.perf_counter()
+        with ThreadPoolExecutor(max_workers=2) as _pre_pool:
+            _theme_future = _pre_pool.submit(
+                _timed, "theme", _understand_theme_objective, all_descriptions_text, rqs_data,
             )
+            _struct_future = (
+                None if is_all_workspace
+                else _pre_pool.submit(
+                    _timed, "structure", _resolve_story_structure_id, story_structure_id, all_descriptions_text, rqs_data,
+                )
+            )
+            theme = _theme_future.result()
+            if _struct_future is not None:
+                story_structure_id = _struct_future.result()
+        logger.info(f"[TIMING] structuring (parallel wall): {time.perf_counter() - _t_pre:.2f}s")
         logger.info(f"Using story structure: {story_structure_id} (all_workspace={is_all_workspace})")
 
         _progress(4, "Fetching...")
@@ -2243,12 +2339,19 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         non_scaffold_groups = storyboard_data.get("group_data") or []
         non_scaffold_figures = storyboard_data.get("figure_data") or {}
 
+        # Streaming: publish each chunk of the Compose LLM call to the user's
+        # story-stream channel group. Any open WebSocket subscribers see the story
+        # as it's written. All three branches share the same callback.
+        def _publish_chunk(delta: str) -> None:
+            _publish_story_stream_event(user_id, 'chunk', delta=delta)
+
         # Branch based on presence of scaffold data first, then use_groups flag, to keep backwards compatibility.
+        # Theme was computed in parallel with Structure resolution above, so we skip
+        # the standalone Theming stage and go straight to Sequencing.
         if scaffold_data:
-            _progress(5, "Theming...")
-            theme = _understand_theme_objective(all_descriptions_text, rqs_data=rqs_data)
             _progress(6, "Sequencing...")
-            sequence = _sequence_figures_with_scaffolds(
+            sequence = _timed(
+                "sequence (scaffold)", _sequence_figures_with_scaffolds,
                 scaffold_data,
                 non_scaffold_groups,
                 non_scaffold_figures,
@@ -2274,14 +2377,18 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                     for g in element.get("groups", [])
                 ]
                 story_scaffold_data["elements"].append(new_element)
-            story = _build_story_with_scaffolds(
+            _publish_story_stream_event(user_id, 'start')
+            story = _timed(
+                "compose (scaffold)", _build_story_with_scaffolds,
                 story_scaffold_data,
                 story_non_scaffold_groups,
                 story_non_scaffold_figures,
                 sequence,
                 story_structure_id,
                 rqs_data=rqs_data,
+                on_chunk=_publish_chunk,
             )
+            _publish_story_stream_event(user_id, 'end')
             recommended_order = extract_figure_filenames(sequence)
 
             # Build categories from scaffold elements + any non-scaffold groups/figures
@@ -2354,19 +2461,9 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                     "category": category,
                 }
 
-            all_descriptions_grouped = []
-            for group in groups_data:
-                for fig_file, fig_info in group["figures"].items():
-                    all_descriptions_grouped.append(f"{fig_file}: {fig_info['description']}")
-            for fig_file, fig_info in ungrouped_data.items():
-                all_descriptions_grouped.append(f"{fig_file}: {fig_info['description']}")
-
-            all_descriptions_grouped_text = "\n".join(all_descriptions_grouped)
-
-            _progress(5, "Theming...")
-            theme = _understand_theme_objective(all_descriptions_grouped_text, rqs_data=rqs_data)
             _progress(6, "Sequencing...")
-            sequence = _sequence_figures_with_groups(
+            sequence = _timed(
+                "sequence (groups)", _sequence_figures_with_groups,
                 groups_data, ungrouped_data, theme, story_structure_id, rqs_data=rqs_data,
             )
             _progress(7, "Composing...")
@@ -2376,7 +2473,12 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 for g in groups_data
             ]
             story_ungrouped_data = {k: v for k, v in ungrouped_data.items() if '.' in k}
-            story = _build_story_with_groups(story_groups_data, story_ungrouped_data, sequence, rqs_data=rqs_data)
+            _publish_story_stream_event(user_id, 'start')
+            story = _timed(
+                "compose (groups)", _build_story_with_groups,
+                story_groups_data, story_ungrouped_data, sequence, rqs_data=rqs_data, on_chunk=_publish_chunk,
+            )
+            _publish_story_stream_event(user_id, 'end')
             recommended_order = extract_figure_filenames(sequence)
 
             categories = []
@@ -2397,10 +2499,9 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
         else:
             # Flat narrative generation (backward compatible)
-            _progress(5, "Theming...")
-            theme = _understand_theme_objective(all_descriptions_text, rqs_data=rqs_data)
             _progress(6, "Sequencing...")
-            sequence = _sequence_figures(
+            sequence = _timed(
+                "sequence (flat)", _sequence_figures,
                 flat_figures,
                 theme,
                 story_structure_id,
@@ -2409,7 +2510,12 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
             _progress(7, "Composing...")
             # Exclude notes (no file extension) from the story builder so AI doesn't generate [FIGURE:] for them
             story_figures = {k: v for k, v in flat_figures.items() if '.' in k}
-            story = _build_story(story_figures, sequence, rqs_data=rqs_data)
+            _publish_story_stream_event(user_id, 'start')
+            story = _timed(
+                "compose (flat)", _build_story,
+                story_figures, sequence, rqs_data=rqs_data, on_chunk=_publish_chunk,
+            )
+            _publish_story_stream_event(user_id, 'end')
             recommended_order = extract_figure_filenames(sequence)
 
             categories = [
@@ -2435,24 +2541,15 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 else (story_structure_id or "default")
             )
 
-        # Post-hoc: two focused LLM calls, one per Reasoning-tab section. Each returns
-        # display-ready text so the tab isn't dumping any raw prompt output.
-        # Fired in parallel — both take the finished story as input, neither depends
-        # on the other. Celery uses the default prefork pool so ThreadPoolExecutor
-        # inside the task is safe (no gevent/eventlet monkey-patching). Each function
-        # already try/except's internally, so a failure in one doesn't affect the other.
-        in_story_items = _collect_in_story_items(recommended_order, user)
-        from concurrent.futures import ThreadPoolExecutor
-        with ThreadPoolExecutor(max_workers=2) as _post_pool:
-            _bullets_future = _post_pool.submit(
-                _generate_sequence_bullets, sequence, story, in_story_items, story_structure_id,
-            )
-            _rq_future = _post_pool.submit(
-                _generate_rq_reasoning, rqs_data, story, sequence, story_structure_id,
-            )
-            sequence_summary = _bullets_future.result()
-            rq_reasoning = _rq_future.result()
-
+        # Two-phase completion so the user's Story tab unfreezes as soon as Compose
+        # finishes rather than waiting on the Reasoning-tab post-hoc calls:
+        #   Phase 1: persist the narrative + everything Compose produced, then push
+        #     'complete' over the WebSocket with the full Story payload. Client can
+        #     swap the streamed preview for the image-inlined final render immediately.
+        #   Phase 2: run the Reasoning-tab helpers in parallel, patch the cache with
+        #     their output, then push 'reasoning' with just those two fields.
+        # Reasoning tab starts empty and hydrates a second later — acceptable because
+        # most users are staring at the Story tab, not the Reasoning tab.
         with transaction.atomic():
             cache, created = NarrativeCache.objects.get_or_create(
                 user=user,
@@ -2463,8 +2560,8 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                     'theme': theme,
                     'categories': categories,
                     'sequence_justification': sequence,
-                    'sequence_summary': sequence_summary,
-                    'rq_reasoning': rq_reasoning,
+                    'sequence_summary': [],
+                    'rq_reasoning': "",
                 }
             )
             if not created:
@@ -2474,11 +2571,54 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 cache.theme = theme
                 cache.categories = categories
                 cache.sequence_justification = sequence
-                cache.sequence_summary = sequence_summary
-                cache.rq_reasoning = rq_reasoning
+                cache.sequence_summary = []
+                cache.rq_reasoning = ""
                 cache.save()
 
-        # Mark progress complete AFTER cache is written
+        _publish_story_stream_event(
+            user_id, 'complete',
+            story_structure_id=story_structure_id or "",
+            narrative=story,
+            recommended_order=recommended_order,
+            categorize_figures_response=categories,
+            theme_response=theme,
+            sequence_response=sequence,
+            sequence_summary=[],
+            rq_reasoning="",
+        )
+
+        # Post-hoc: two focused LLM calls, one per Reasoning-tab section. Each returns
+        # display-ready text so the tab isn't dumping any raw prompt output.
+        # Fired in parallel — both take the finished story as input, neither depends
+        # on the other. Celery uses the default prefork pool so ThreadPoolExecutor
+        # inside the task is safe (no gevent/eventlet monkey-patching). Each function
+        # already try/except's internally, so a failure in one doesn't affect the other.
+        in_story_items = _collect_in_story_items(recommended_order, user)
+        from concurrent.futures import ThreadPoolExecutor
+        _t_post = time.perf_counter()
+        with ThreadPoolExecutor(max_workers=2) as _post_pool:
+            _bullets_future = _post_pool.submit(
+                _timed, "post_hoc.bullets", _generate_sequence_bullets, sequence, story, in_story_items, story_structure_id,
+            )
+            _rq_future = _post_pool.submit(
+                _timed, "post_hoc.rq_reasoning", _generate_rq_reasoning, rqs_data, story, sequence, story_structure_id,
+            )
+            sequence_summary = _bullets_future.result()
+            rq_reasoning = _rq_future.result()
+        logger.info(f"[TIMING] post_hoc (parallel wall): {time.perf_counter() - _t_post:.2f}s")
+
+        NarrativeCache.objects.filter(user=user).update(
+            sequence_summary=sequence_summary,
+            rq_reasoning=rq_reasoning,
+        )
+
+        _publish_story_stream_event(
+            user_id, 'reasoning',
+            sequence_summary=sequence_summary,
+            rq_reasoning=rq_reasoning,
+        )
+
+        # Mark progress complete AFTER reasoning is written
         _progress(TOTAL_STAGES, "Complete")
 
         logger.info(f"Successfully generated {generation_mode} narrative for user {user.username} using structure: {story_structure_name}")

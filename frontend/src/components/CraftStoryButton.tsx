@@ -6,6 +6,7 @@ import { generateNarrativeAsync, getImageDataAll, getNarrativeCache } from '../s
 import { useTaskProgress } from '../hooks/useTaskProgress';
 import { SCAFFOLD_NUMBER_TO_PATTERN } from '../types/scaffoldMappings';
 import { getStoryUserEdited, setStoryUserEdited, STORY_EDIT_STATE_EVENT } from '../utils/storyEditState';
+import { STORY_STREAM_START, STORY_STREAM_CHUNK, STORY_STREAM_END, STORY_REASONING_READY, STORY_GENERATION_STAGE } from '../utils/storyStreamEvents';
 
 // Import types
 import { ImageData, ScaffoldData } from '../types/types';
@@ -33,7 +34,107 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
     const [confirmModal, setConfirmModal] = useState<string | null>(null);
     const [pendingGeneration, setPendingGeneration] = useState<(() => void) | null>(null);
     const targetScaffoldIdRef = useRef<string | null>(null);
+    const streamSocketRef = useRef<WebSocket | null>(null);
+    // Set to true when the WebSocket signals 'complete' — polling in
+    // pollForCompletion checks this and bails so we don't dispatch a duplicate
+    // storyGenerated event a beat later.
+    const earlyCompleteRef = useRef(false);
     const { progress, stageName, error, isComplete } = useTaskProgress(taskId);
+
+    // Forward the current task-progress stage to any listener (DataStories) so
+    // the "AI is writing" placeholder can annotate itself with the live stage
+    // name — Structuring & Theming, Sequencing, Composing — turning a static
+    // spinner into visible motion during the 5–7 s pre-stream wait.
+    useEffect(() => {
+        if (storyLoading && stageName) {
+            window.dispatchEvent(new CustomEvent(STORY_GENERATION_STAGE, { detail: { stageName } }));
+        }
+    }, [stageName, storyLoading]);
+
+    // Stream socket lifecycle. Opened at the start of a generation, closed when the
+    // task completes, times out, or errors. Kept in a ref so cleanup paths in different
+    // closures can share the same handle.
+    const closeStreamSocket = () => {
+        const sock = streamSocketRef.current;
+        if (sock) {
+            try { sock.close(); } catch { /* ignore */ }
+            streamSocketRef.current = null;
+        }
+    };
+
+    // Captures the current per-generation logging context so the WS 'complete'
+    // handler (which lives on the component and doesn't share startGeneration's
+    // closure) can still emit the same story_data log entry the poll path emits.
+    const generationCtxRef = useRef<any>(null);
+
+    const openStreamSocket = () => {
+        closeStreamSocket();
+        const accessToken = localStorage.getItem('access');
+        // Guests (no JWT) fall back to the non-streamed final render. The consumer
+        // rejects anonymous connections, so skip the open rather than log a WS 4xx.
+        if (!accessToken) return;
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/story-stream/?access_token=${accessToken}`;
+        const ws = new WebSocket(wsUrl);
+        streamSocketRef.current = ws;
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'start') {
+                    window.dispatchEvent(new CustomEvent(STORY_STREAM_START));
+                } else if (data.type === 'chunk') {
+                    window.dispatchEvent(new CustomEvent(STORY_STREAM_CHUNK, { detail: { delta: data.delta || '' } }));
+                } else if (data.type === 'end') {
+                    window.dispatchEvent(new CustomEvent(STORY_STREAM_END));
+                } else if (data.type === 'complete') {
+                    // Phase 1 of the two-phase completion — the story is written and
+                    // saved; reasoning fields will land in a follow-up 'reasoning'
+                    // event. Dispatch storyGenerated with the empty-reasoning payload
+                    // so DataStories can swap in the image-inlined final render right
+                    // away instead of waiting on the 2.5 s poll tick.
+                    if (earlyCompleteRef.current) return;
+                    earlyCompleteRef.current = true;
+                    const detail = {
+                        story_structure_id: data.story_structure_id,
+                        narrative: data.narrative,
+                        recommended_order: data.recommended_order,
+                        categorize_figures_response: data.categorize_figures_response,
+                        theme_response: data.theme_response,
+                        sequence_response: data.sequence_response,
+                        sequence_summary: data.sequence_summary,
+                        rq_reasoning: data.rq_reasoning,
+                    };
+                    if (onStoryGenerated) {
+                        onStoryGenerated().catch(refreshError => {
+                            console.error('Error refreshing image data after story generation:', refreshError);
+                        });
+                    }
+                    window.dispatchEvent(new CustomEvent('storyGenerated', { detail }));
+                    setStoryUserEdited(false, targetUser);
+                    setStoryLoading(false);
+                    setTaskId(null);
+                    if (generationCtxRef.current) {
+                        logAction(generationCtxRef.current, { story_data: detail });
+                    }
+                    // Don't close the socket yet — the 'reasoning' event still needs
+                    // to come through to hydrate the Reasoning tab.
+                } else if (data.type === 'reasoning') {
+                    window.dispatchEvent(new CustomEvent(STORY_REASONING_READY, {
+                        detail: {
+                            sequence_summary: data.sequence_summary,
+                            rq_reasoning: data.rq_reasoning,
+                        },
+                    }));
+                    closeStreamSocket();
+                }
+            } catch (err) {
+                console.error('Story stream parse error:', err);
+            }
+        };
+        ws.onerror = (err) => console.error('Story stream socket error:', err);
+    };
+
+    useEffect(() => () => closeStreamSocket(), []);
 
     // Whether this workspace has saved manual edits that regeneration would destroy.
     const [hasUserEdits, setHasUserEdits] = useState(() => getStoryUserEdited(targetUser));
@@ -71,6 +172,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
         setAlertModal(`Story generation failed during: ${stageName}\n\n${error}`);
         setStoryLoading(false);
         setTaskId(null);
+        closeStreamSocket();
     }
 
     // Handle craft — run the normal checks. The user-edits overwrite warning is disabled
@@ -165,6 +267,13 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
         const startEvent = new CustomEvent('storyGenerationStarted');
         window.dispatchEvent(startEvent);
 
+        // Subscribe to the compose-step stream. Must be open before the celery task
+        // starts producing, otherwise early chunks are dropped (group_send only
+        // reaches currently-connected channels).
+        generationCtxRef.current = ctx;
+        earlyCompleteRef.current = false;
+        openStreamSocket();
+
         try {
             // Verify backend state before story generation
             console.log('Verifying backend state...');
@@ -218,6 +327,9 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                     let attempts = 0;
 
                     while (attempts < maxAttempts) {
+                        // WebSocket's 'complete' handler already fired storyGenerated
+                        // and cleaned up — nothing left for us to do.
+                        if (earlyCompleteRef.current) return;
                         attempts++;
 
                         try {
@@ -225,6 +337,10 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                             const cacheData = cacheResponse.data.data;
 
                             if (cacheData.narrative && cacheData.narrative !== initialNarrative) {
+                                // Beat the WebSocket 'complete' handler to the punch —
+                                // either path is a valid completion signal, but only one
+                                // should fire storyGenerated per generation.
+                                earlyCompleteRef.current = true;
                                 if (onStoryGenerated) {
                                     try {
                                         await onStoryGenerated();
@@ -252,6 +368,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                                 setStoryUserEdited(false, targetUser);
                                 setStoryLoading(false);
                                 setTaskId(null);
+                                closeStreamSocket();
                                 logAction(ctx, { "story_data": cacheData })
                                 return;
                             }
@@ -267,6 +384,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                     setAlertModal('Story generation is taking longer than expected. Please check back in a few minutes.');
                     setStoryLoading(false);
                     setTaskId(null);
+                    closeStreamSocket();
                 };
 
                 pollForCompletion();
@@ -275,11 +393,13 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
                 console.error('Error starting story generation:', taskResponse.message);
                 setAlertModal(`Error starting story generation: ${taskResponse.message}`);
                 setStoryLoading(false);
+                closeStreamSocket();
             }
         } catch (error) {
             console.error('Error generating story:', error);
             setAlertModal('An error occurred while generating the story. Please try again.');
             setStoryLoading(false);
+            closeStreamSocket();
         }
 
     }

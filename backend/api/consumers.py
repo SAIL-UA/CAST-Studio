@@ -7,6 +7,53 @@ from django.contrib.auth import get_user_model
 logger = logging.getLogger(__name__)
 
 
+def story_stream_group_name(user_id) -> str:
+    """Canonical channel-group name for a user's story-stream. Both the consumer
+    and the celery task producer must agree on this — export a helper so no one
+    has to remember the format string."""
+    return f'story_stream_{user_id}'
+
+
+class StoryStreamConsumer(AsyncJsonWebsocketConsumer):
+    """
+    WebSocket consumer that streams generated-story chunks to the requesting user.
+
+    The celery `generate_narrative_task` produces the story via OpenAI streaming
+    and pushes each chunk to the user's channel group. The consumer relays those
+    chunks to any tab that has this socket open.
+
+    Group naming is per-user (see `story_stream_group_name`), so multiple tabs of
+    the same user all receive the stream. Not intended for collaborator viewing —
+    session-mode observers use the separate `/ws/session/…` socket.
+    """
+
+    async def connect(self):
+        self.user = self.scope.get('user')
+        if not self.user or self.user.is_anonymous:
+            await self.close()
+            return
+
+        self.group_name = story_stream_group_name(self.user.id)
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+        logger.info(f"[WS] {self.user.username} connected to story-stream group {self.group_name}")
+
+    async def disconnect(self, close_code):
+        group_name = getattr(self, 'group_name', None)
+        if group_name:
+            await self.channel_layer.group_discard(group_name, self.channel_name)
+
+    async def story_event(self, event):
+        """Relay a producer-side event to the client. Event shape:
+            {'type': 'story.event', 'event': 'start'|'chunk'|'end'|'error',
+             ...payload}
+        The wrapper `type` is Channels routing plumbing; the client sees the
+        inner `event` string plus the payload keys."""
+        payload = {k: v for k, v in event.items() if k not in ('type', 'event')}
+        payload['type'] = event.get('event', 'chunk')
+        await self.send_json(payload)
+
+
 class SessionConsumer(AsyncJsonWebsocketConsumer):
     """
     WebSocket consumer for collaboration sessions.
