@@ -27,6 +27,7 @@ build/
 *.db
 *.sqlite
 *.log
+*.md
 
 # OS cruft
 .DS_Store

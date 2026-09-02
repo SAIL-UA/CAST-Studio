@@ -2,6 +2,10 @@
 
 CAST Story Studio is a full-stack application for story generation and management. The project uses a modern Django REST API backend with a React TypeScript frontend.
 
+## Sprint board
+
+Day-to-day sprint work lives in Jira. See [jira.md](jira.md) for how epics, stories, subtasks, and one-off tasks are organized, and who to contact for board access.
+
 ## Architecture
 
 - **Backend**: Django REST Framework with PostgreSQL database
