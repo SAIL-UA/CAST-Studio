@@ -26,6 +26,7 @@ import GroupDiv from "./GroupDiv";
 import Bin from "./Bin";
 import DeleteAllButton from "./DeleteAllButton";
 import ClearAllButton from "./ClearAllButton";
+import FullscreenButton from "./FullscreenButton";
 // import MobileMenuButton from './MobileMenuButton';
 import RecycleBoard from "./Recycle";
 
@@ -1505,65 +1506,68 @@ const StoryBoard = ({
 						{Math.round(zoomLevel * 100)}%
 					</span>
 				</div>
-				{/* Recycle Bin, DeleteAll and ClearAll buttons - positioned in bottom left, hidden in readOnly */}
-				{!readOnly && (
-					<div className="absolute bottom-6 left-4 flex gap-2 z-[350]">
-						<button
-							log-id="view-recycle-bin-button"
-							className="w-auto h-auto rounded-full px-3 py-1 flex items-center justify-center gap-1 text-white font-bold text-sm transition-all duration-200"
-							style={{
-								cursor: "pointer",
-								backgroundColor: "rgba(0, 92, 132, 0.5)",
-							}}
-							onMouseEnter={(e) => {
-								e.currentTarget.style.backgroundColor = "rgba(0, 92, 132, 0.7)";
-							}}
-							onMouseLeave={(e) => {
-								e.currentTarget.style.backgroundColor = "rgba(0, 92, 132, 0.5)";
-							}}
-							onClick={() => setRecycleBinOpen(true)}
-							title="View Recycle Bin"
-						>
-							<svg
-								className="w-4 h-4"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
+				{/* Fullscreen, Recycle Bin, ClearAll and DeleteAll - bottom left */}
+				<div className="absolute bottom-6 left-4 flex gap-2 z-[350]">
+					<FullscreenButton />
+					{!readOnly && (
+						<>
+							<button
+								log-id="view-recycle-bin-button"
+								className="w-auto h-auto rounded-full px-3 py-1 flex items-center justify-center gap-1 text-white font-bold text-sm transition-all duration-200"
+								style={{
+									cursor: "pointer",
+									backgroundColor: "rgba(0, 92, 132, 0.5)",
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.backgroundColor = "rgba(0, 92, 132, 0.7)";
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.backgroundColor = "rgba(0, 92, 132, 0.5)";
+								}}
+								onClick={() => setRecycleBinOpen(true)}
+								title="View Recycle Bin"
 							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-								/>
-							</svg>
-						</button>
-						<ClearAllButton
-							images={images}
-							setImages={setImages}
-							setGroupDivs={setGroupDivs}
-							setScaffolds={setScaffolds}
-							setSelectedPattern={setSelectedPattern}
-							onClearComplete={async () => {
-								await fetchUserData();
-								const groups = await fetchGroups();
-								await fetchScaffolds(groups);
-							}}
-						/>
-						<DeleteAllButton
-							images={images}
-							setImages={setImages}
-							setGroupDivs={setGroupDivs}
-							setScaffolds={setScaffolds}
-							setSelectedPattern={setSelectedPattern}
-							onDeleteComplete={async () => {
-								await fetchUserData();
-								const groups = await fetchGroups();
-								await fetchScaffolds(groups);
-							}}
-						/>
-					</div>
-				)}
+								<svg
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+									/>
+								</svg>
+							</button>
+							<ClearAllButton
+								images={images}
+								setImages={setImages}
+								setGroupDivs={setGroupDivs}
+								setScaffolds={setScaffolds}
+								setSelectedPattern={setSelectedPattern}
+								onClearComplete={async () => {
+									await fetchUserData();
+									const groups = await fetchGroups();
+									await fetchScaffolds(groups);
+								}}
+							/>
+							<DeleteAllButton
+								images={images}
+								setImages={setImages}
+								setGroupDivs={setGroupDivs}
+								setScaffolds={setScaffolds}
+								setSelectedPattern={setSelectedPattern}
+								onDeleteComplete={async () => {
+									await fetchUserData();
+									const groups = await fetchGroups();
+									await fetchScaffolds(groups);
+								}}
+							/>
+						</>
+					)}
+				</div>
 			</div>
 
 			{/* Recycle Bin Modal */}
