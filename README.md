@@ -90,13 +90,9 @@ Day-to-day sprint work lives in Jira. See [jira.md](jira.md) for how epics, stor
 
 ## Deployment
 
-For production deployment, ensure:
+Production runs the same Docker layout as development: nginx is the only public HTTP(S) entry (ports 80/443), and it serves the frontend build and proxies `/api`, `/users`, `/admin`, and `/ws`. Redis and JupyterHub stay on the compose network; they are not published to the host.
 
-1. Set `DJANGO_DEBUG=False` in environment
-2. Configure proper PostgreSQL database
-3. Set up Redis for Celery tasks
-4. Use a process manager like tmux or systemd
-5. Configure reverse proxy (nginx) for static files
+Use `docker-compose.prod.yml` (see `docker-up.sh`). Keep `DJANGO_DEBUG=False` in `.env`. The named `cast-network` is created by `docker-up.sh` and is `external` so JupyterHub can share it.
 
 ## Troubleshooting
 
