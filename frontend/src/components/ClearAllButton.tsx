@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { updateImageData, deleteGroup, getGroups, getScaffolds, deleteScaffold } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
-import { ImageData, GroupData, ScaffoldData } from '../types/types';
-import clearIcon from '../assets/images/clear.svg';
+import type { ImageData, GroupData, ScaffoldData } from '../types/types';
 
 type ClearAllButtonProps = {
     images: ImageData[];

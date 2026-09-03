@@ -93,15 +93,15 @@ services:
             dockerfile: Dockerfile.dev # Same across Windows and Mac
         container_name: cast-frontend-dev
         restart: unless-stopped
-        environment:
-            - NODE_ENV=development
+        args: # Build time
+            - VITE_API_URL=http://localhost
+        environment: # Run time
             - CHOKIDAR_USEPOLLING=true
             - WATCHPACK_POLLING=true
             - WDS_SOCKET_HOST=localhost
             - WDS_SOCKET_PATH=/wds
             - WDS_SOCKET_PORT=80
             - DANGEROUSLY_DISABLE_HOST_CHECK=true
-            - REACT_APP_API_URL=http://localhost
             - HOST=0.0.0.0
             - PORT=8050
         volumes:

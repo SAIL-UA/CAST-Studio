@@ -1,5 +1,5 @@
 // Import dependencies
-import { NavigateFunction } from "react-router-dom";
+import type { NavigateFunction } from "react-router-dom";
 
 
 // Check auth and redirect to login if not authenticated

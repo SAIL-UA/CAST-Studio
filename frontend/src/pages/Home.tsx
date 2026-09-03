@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/Auth';
 // Import components
 import Header from '../components/Header';
 import DataStories from '../components/DataStories';
-import FeedbackPanel, { FeedbackCardData, InstructorNote } from '../components/FeedbackPanel';
+import FeedbackPanel, { type FeedbackCardData, type InstructorNote } from '../components/FeedbackPanel';
 import NarrativePatterns from '../components/NarrativePatterns'
 import Workspace from '../components/Workspace'
 import NarrativeExamples from '../components/NarrativeExamples'
@@ -19,7 +19,7 @@ import GuestWelcomeTutorial from '../components/GuestWelcomeTutorial'
 // Import utils
 import { handleAuthRequired } from '../utils/utils';
 import { getImageDataAll, getSessionStatus, getGroups } from '../services/api';
-import ResearchQuestionsPanel, { LinkableCard } from '../components/ResearchQuestionsPanel';
+import ResearchQuestionsPanel, { type LinkableCard } from '../components/ResearchQuestionsPanel';
 import { useResearchQuestions } from '../contexts/ResearchQuestions';
 import { getAvatarColor } from '../utils/avatarUtils';
 import ControlWorkspaceButton from '../components/ControlWorkspaceButton';

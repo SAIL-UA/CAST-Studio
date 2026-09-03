@@ -1,7 +1,3 @@
-// Import dependencies
-import { logAction } from '../utils/userActionLogger';
-
-// Import images
 import home from '../assets/images/home.svg';
 
 // Footer component

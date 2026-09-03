@@ -1,8 +1,8 @@
 // Import dependencies
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDrop } from 'react-dnd';
-import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
-import { SCAFFOLD_VALID_GROUP_NUMBERS, SCAFFOLD_GROUP_LABELS } from '../../types/scaffoldMappings';
+import type { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
+import { SCAFFOLD_GROUP_LABELS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 import GroupDiv from '../GroupDiv';
 import { logAction } from '../../utils/userActionLogger';
@@ -50,7 +50,6 @@ function getMaxSlotInData(scaffold: ScaffoldData | null, images: ImageData[]): n
 const WorkflowProcess = ({
     images,
     storyBinRef,
-    setSelectedPattern,
     scaffold,
     updateImageData,
     onPositionUpdate,
@@ -80,7 +79,6 @@ const WorkflowProcess = ({
     const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    const validGroupNumbers = SCAFFOLD_VALID_GROUP_NUMBERS[SCAFFOLD_NUMBER] || [1, 2, 3, 4, 5];
     const groupLabels =
         SCAFFOLD_GROUP_LABELS[SCAFFOLD_NUMBER] || { 1: 'Stage 1', 2: 'Stage 2', 3: 'Stage 3', 4: 'Stage 4', 5: 'Stage 5' };
 
@@ -143,7 +141,7 @@ const WorkflowProcess = ({
         logAction({ actionType: 'click', elementId: 'scaffold-card-add' }, { scaffoldType: 'workflow_process', groupNumber: stage });
     };
 
-    const handleCardRemove = async (cardId: string, groupId: string) => {
+    const handleCardRemove = async (cardId: string) => {
         if (!scaffold) return;
         await updateImageData(cardId, { scaffoldId: null, scaffold_group_number: null } as any);
         setStageCardIds((prev) => {

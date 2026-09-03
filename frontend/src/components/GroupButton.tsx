@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { logAction } from '../utils/userActionLogger';
-import { GroupData } from '../types/types';
+import type { GroupData } from '../types/types';
 import { formatGroupMetadata } from '../utils/groupUtils';
 import { aiGroupImages } from '../services/api';
 import { useTaskProgress } from '../hooks/useTaskProgress';

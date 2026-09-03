@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { logAction } from '../utils/userActionLogger';
-import { ImageData } from '../types/types';
+import type { ImageData } from '../types/types';
 
 type RestoreAllButtonProps = {
     images: ImageData[];

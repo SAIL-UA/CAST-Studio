@@ -6,7 +6,6 @@ import { logAction } from '../utils/userActionLogger';
 // Import images
 import home from '../assets/images/home.svg';
 import categories from '../assets/images/categories.svg';
-import browse from '../assets/images/browse.svg';
 
 // Define props interface
 type NavDropdownProps = {

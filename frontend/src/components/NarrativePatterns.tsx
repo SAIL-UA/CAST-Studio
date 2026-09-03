@@ -8,15 +8,6 @@ import NarrativeExamplesButton from './NarrativeExamplesButton';
 import { logAction } from '../utils/userActionLogger';
 import { useGuestTourOpen } from '../utils/useGuestTourOpen';
 
-// Import images
-import questionanswer from '../assets/images/questionanswer.png'
-import timeline from '../assets/images/timeline.png'
-import causeeffect from '../assets/images/causeeffect.png'
-import factoranalysis from '../assets/images/factoranalysis.png'
-import overviewdetail from '../assets/images/overviewdetail.png'
-import problemsolution from '../assets/images/problemsolution.png'
-import workflowprocess from '../assets/images/workflow.png'
-
 // Content SVG icons
 const C = '#005c84';
 const svgBase = { width: 48, height: 48, viewBox: '0 0 48 48', fill: 'none', xmlns: 'http://www.w3.org/2000/svg' };
@@ -156,7 +147,7 @@ type NarrativePatternsProps = {
 }
 
 // Narrative patterns component
-const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, center, setStoryLoading, setRightNarrativeExamplesOpen, setExamplesPattern, onCreateScaffold }: NarrativePatternsProps) => {
+const NarrativePatterns = ({ setSelectedPattern, center, setStoryLoading, setRightNarrativeExamplesOpen, setExamplesPattern, onCreateScaffold }: NarrativePatternsProps) => {
 
     // Reusable hover handler that captures pattern from data attribute
     const handleHover = (e: React.MouseEvent<HTMLDivElement>) => {

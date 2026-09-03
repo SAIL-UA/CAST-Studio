@@ -5,7 +5,7 @@ import { exportStory } from '../services/api';
 import { logAction, captureActionContext } from '../utils/userActionLogger';
 
 // Import types
-import { StoryDataRaw } from '../types/types';
+import type { StoryDataRaw } from '../types/types';
 
 // Props interface
 type ExportButtonProps = {
@@ -25,7 +25,7 @@ const ExportButton = ({ storyData }: ExportButtonProps) => {
             const fallbackMime = format === 'docx'
                 ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 : 'application/pdf';
-            const blob = new Blob([resp.data], { type: resp.headers['content-type'] || fallbackMime });
+            const blob = new Blob([resp.data], { type: String(resp.headers['content-type'] || fallbackMime) });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             const cd = resp.headers['content-disposition'] as string | undefined;
