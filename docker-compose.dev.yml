@@ -8,8 +8,6 @@ services:
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
         volumes:
             - db_data:/var/lib/postgresql/data
-        networks:
-            - cast-network
         restart: always
         healthcheck:
             test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -21,11 +19,7 @@ services:
     redis:
         image: redis:7-alpine
         container_name: cast-redis-dev
-        ports:
-            - "6379:6379" # Expose for local development
         restart: unless-stopped
-        networks:
-            - cast-network
 
     backend:
         build:
@@ -42,10 +36,8 @@ services:
             - .env
         volumes:
             - ./backend:/app
-            - ./data:/data # Use local data directory
+            - ./data:/data
             - static:/app/staticfiles
-        networks:
-            - cast-network
         command: >
             sh -c "python manage.py migrate &&
                    python manage.py collectstatic --noinput &&
@@ -54,7 +46,7 @@ services:
     daphne:
         build:
             context: ./backend
-            dockerfile: Dockerfile.dev # Change to Dockerfile.dev for non ARM devices
+            dockerfile: Dockerfile.dev
         container_name: cast-daphne-dev
         restart: unless-stopped
         depends_on:
@@ -66,22 +58,18 @@ services:
             - .env
         volumes:
             - ./data:/data
-        networks:
-            - cast-network
         command: daphne -b 0.0.0.0 -p 8052 config.asgi:application
 
     celery:
         build:
             context: ./backend
-            dockerfile: Dockerfile.dev # Change to Dockerfile.dev for non ARM devices
+            dockerfile: Dockerfile.dev
         container_name: cast-celery-dev
         restart: unless-stopped
         volumes:
-            - ./data:/data # Use local data directory
+            - ./data:/data
         env_file:
             - .env
-        networks:
-            - cast-network
         depends_on:
             - db
             - redis
@@ -90,29 +78,24 @@ services:
     frontend:
         build:
             context: ./frontend
-            dockerfile: Dockerfile.dev # Same across Windows and Mac
+            dockerfile: Dockerfile.dev
         container_name: cast-frontend-dev
         restart: unless-stopped
-        args: # Build time
-            - VITE_API_URL=http://localhost
-        environment: # Run time
-            - CHOKIDAR_USEPOLLING=true
-            - WATCHPACK_POLLING=true
-            - WDS_SOCKET_HOST=localhost
-            - WDS_SOCKET_PATH=/wds
-            - WDS_SOCKET_PORT=80
-            - DANGEROUSLY_DISABLE_HOST_CHECK=true
-            - HOST=0.0.0.0
-            - PORT=8050
         volumes:
             - ./frontend:/app
             - frontend_node_modules:/app/node_modules
-        stdin_open: true
-        tty: true
-        depends_on:
-            - backend
-        networks:
-            - cast-network
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "node",
+                    "-e",
+                    "fetch('http://127.0.0.1:8050/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 24
+            start_period: 40s
 
     nginx:
         image: nginx:alpine
@@ -124,16 +107,13 @@ services:
             - static:/staticfiles:ro
             - ./data/user_images:/data/user_images:ro
         depends_on:
-            - backend
-            - daphne
-            - frontend
-        networks:
-            - cast-network
+            backend:
+                condition: service_started
+            daphne:
+                condition: service_started
+            frontend:
+                condition: service_healthy
         restart: unless-stopped
-
-networks:
-    cast-network:
-        driver: bridge
 
 volumes:
     db_data:

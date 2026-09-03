@@ -1,22 +1,11 @@
-# Stage 1: Build the React app
-FROM node:20-alpine AS build
+FROM node:20-alpine
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-RUN sh -c '\
-  echo "Attempting npm ci..." && \
-  npm ci || ( \
-    echo "npm ci failed — falling back to npm install" && \
-    npm install \
-  )'
-
-ENV CHOKIDAR_USEPOLLING=true
-ENV WATCHPACK_POLLING=true
-ENV HOST=0.0.0.0
-ENV PORT=8050
+RUN npm ci
 
 EXPOSE 8050
 
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]

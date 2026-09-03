@@ -3,8 +3,6 @@ import path from "node:path";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-const proxyTarget = "http://localhost:8051";
-
 export default defineConfig({
 	plugins: [react(), tailwindcss()],
 	resolve: {
@@ -13,12 +11,18 @@ export default defineConfig({
 		},
 	},
 	server: {
+		host: "0.0.0.0",
 		port: 8050,
-		proxy: {
-			"/api": { target: proxyTarget, changeOrigin: true },
-			"/users": { target: proxyTarget, changeOrigin: true },
-			"/images": { target: proxyTarget, changeOrigin: true },
-			"/ws": { target: proxyTarget, changeOrigin: true, ws: true },
+		strictPort: true,
+		// Bind mounts on Windows/macOS do not reliably emit inotify events.
+		watch: {
+			usePolling: true,
+			interval: 300,
+		},
+		// Browser talks to nginx on :80; Vite itself is not published.
+		hmr: {
+			protocol: "ws",
+			clientPort: 80,
 		},
 	},
 	build: {

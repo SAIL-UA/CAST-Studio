@@ -33,7 +33,7 @@ Day-to-day sprint work lives in Jira. See [jira.md](jira.md) for how epics, stor
 
 2. **First-time setup** (run migrations before starting services):
 
-    First, examine the services in the `docker-compose.dev.yml` file. Some services like `backend` and `celery` have `dockerfile: Dockerfile.arm`. If you don't have an ARM-based processor, you can change this to `dockerfile: Dockerfile`.
+    Backend, Daphne, and Celery default to `backend/Dockerfile.dev`. On an ARM machine (for example Apple Silicon), change those `dockerfile:` entries in `docker-compose.dev.yml` to `Dockerfile.arm`.
 
     Next, we'll want to generate the migrations locally, so that they can be copied to the backend container at runtime:
 
@@ -111,6 +111,6 @@ For production deployment, ensure:
 
 - Check that PostgreSQL and Redis services are running (handled by Docker Compose)
 - Verify environment variables are set correctly in `.env` file
-- Ensure ports 8051 (backend) and 8050 (frontend) are available
+- Ensure port 80 is available (nginx is the only published port; the app is at http://localhost)
 - Check Celery worker is running for AI generation tasks
 - For email functionality, ensure EMAIL_HOST_USER and EMAIL_HOST_PASSWORD are configured
