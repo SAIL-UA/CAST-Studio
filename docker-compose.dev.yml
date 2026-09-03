@@ -91,7 +91,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
       args:
-        - REACT_APP_API_URL=http://localhost
+        - VITE_API_URL=http://localhost
     container_name: cast-frontend-dev
     restart: unless-stopped
     environment:

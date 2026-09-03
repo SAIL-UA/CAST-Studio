@@ -262,7 +262,7 @@ export function DataStoryLexicalField({
             namespace: `DataStory-${composerKey}`,
             theme: editorTheme,
             onError: (e: Error) => {
-                if (process.env.NODE_ENV === 'development') {
+                if (import.meta.env.DEV) {
                     console.error(e);
                 }
             },

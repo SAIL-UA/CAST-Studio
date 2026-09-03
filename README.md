@@ -43,7 +43,7 @@ Day-to-day sprint work lives in Jira. See [jira.md](jira.md) for how epics, stor
    DATA_PATH=/data/user_images
    USER_DIR_BASE=/data/CAST_ext
    STORYSTUDIO_API_URL=http://backend:8051/
-   REACT_APP_IMAGE_BASE_URL=/images
+   VITE_IMAGE_BASE_URL=/images
    CELERY_BROKER_URL=redis://redis:6379/0
    OPENAI_API_KEY=your-openai-api-key
    FRONTEND_URL=http://localhost
