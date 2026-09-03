@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { logAction } from "../utils/userActionLogger";
-
-type DocumentWithFullscreen = Document & {
-	webkitFullscreenElement?: Element | null;
-	webkitExitFullscreen?: () => Promise<void>;
-};
-
-type ElementWithFullscreen = HTMLElement & {
-	webkitRequestFullscreen?: () => Promise<void>;
-};
+import type { ElementWithFullscreen, DocumentWithFullscreen } from "../types/Environment";
 
 const getFullscreenElement = (): Element | null => {
 	const doc = document as DocumentWithFullscreen;
@@ -52,7 +44,7 @@ const FullscreenButton = () => {
 				await requestAppFullscreen();
 			}
 		} catch (error) {
-			console.error("Error toggling fullscreen:", error);
+			console.error("Error toggling fullscreen");
 		}
 	}, []);
 
