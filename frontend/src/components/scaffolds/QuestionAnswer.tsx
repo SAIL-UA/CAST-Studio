@@ -1,7 +1,7 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrop } from 'react-dnd';
-import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
+import type { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
 import { SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 import GroupDiv from '../GroupDiv';
@@ -429,7 +429,7 @@ const QuestionAnswerGroup = ({
     // React DnD hook for drop functionality - accepts both images and groups
     const [{ isOver, canDrop }, drop] = useDrop(() => ({
         accept: ['image', 'group'],
-        drop: (item: DragItem, monitor) => {
+        drop: (item: DragItem) => {
             // Don't process drops from the scaffold itself
             if (item.id === 'question-answer-scaffold') {
                 return { droppedInGroup: false };

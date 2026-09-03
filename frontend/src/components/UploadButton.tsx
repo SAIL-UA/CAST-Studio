@@ -4,8 +4,6 @@ import { uploadFigure, uploadSlides, createNote } from '../services/api';
 import { logAction, captureActionContext } from '../utils/userActionLogger';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
-const menuItemClass = "block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm !font-light rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 cursor-pointer outline-none text-left";
-
 type UploadButtonProps = {
     onUploaded?: () => void | Promise<void>;
     targetUser?: string;

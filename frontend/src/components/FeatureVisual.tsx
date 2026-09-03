@@ -11,7 +11,6 @@ const fillSoft = 'rgba(10,10,10,0.05)';
 
 // Inverted palette (used for elements inside a dark screen)
 const screen = '#111111';
-const accent = '#00849E';
 const invStroke = '#ffffff';
 const invStrokeSoft = 'rgba(255,255,255,0.55)';
 const invFillSoft = 'rgba(255,255,255,0.10)';

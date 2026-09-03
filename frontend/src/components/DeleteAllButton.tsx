@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { deleteFigure, deleteGroup, getGroups, getScaffolds, deleteScaffold } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
-import { ImageData, GroupData, ScaffoldData } from '../types/types';
+import type { ImageData, GroupData, ScaffoldData } from '../types/types';
 import trashIcon from '../assets/images/trash.svg';
 
 type DeleteAllButtonProps = {

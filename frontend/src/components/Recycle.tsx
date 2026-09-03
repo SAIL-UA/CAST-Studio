@@ -1,14 +1,10 @@
 // Import dependencies
-import { useState, useEffect } from 'react';
-import { getImageDataAll, updateImageData as updateImageDataAPI } from '../services/api';
-
-// Import components
 import Bin from './Bin';
 import DeleteAllButton from './DeleteAllButton';
 import RestoreAllButton from './RestoreAllButton';
 
 // Import types
-import { ImageData } from '../types/types';
+import type { ImageData } from '../types/types';
 
 // Define props interface
 type RecycleBoardProps = {

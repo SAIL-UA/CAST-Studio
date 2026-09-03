@@ -18,7 +18,7 @@ type HeaderProps = {
 };
 
 // Header component
-const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRecycleBinOpen, extraContent, pillLink }: HeaderProps) => {
+const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, extraContent, pillLink }: HeaderProps) => {
 
     // Helpers
     const navigate = useNavigate();
@@ -28,12 +28,6 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, onRe
 
     // Profile dropdown state
     const [profileOpen, setProfileOpen] = useState(false);
-
-    // Search functionality
-    const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        navigate('/construction');
-    }
 
     // Logout functionality
     const handleLogout = () => {

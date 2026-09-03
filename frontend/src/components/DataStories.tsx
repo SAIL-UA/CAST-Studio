@@ -11,18 +11,16 @@ import { setStoryUserEdited } from "../utils/storyEditState";
 import {
 	STORY_STREAM_START,
 	STORY_STREAM_CHUNK,
-	STORY_STREAM_END,
 	STORY_REASONING_READY,
 	STORY_GENERATION_STAGE,
-	StoryStreamChunkDetail,
-	StoryReasoningDetail,
-	StoryGenerationStageDetail,
+	type StoryStreamChunkDetail,
+	type StoryReasoningDetail,
+	type StoryGenerationStageDetail,
 } from "../utils/storyStreamEvents";
 import { useResearchQuestions } from "../contexts/ResearchQuestions";
 
 // Import components
 import ExportButton from "./ExportButton";
-import FeedbackButton from "./FeedbackButton";
 import { DataStoryLexicalField } from "./dataStory/DataStoryLexicalField";
 
 // Story data interface
@@ -116,9 +114,9 @@ const DataStories = ({
 	const [generationStage, setGenerationStage] = useState<string>("");
 	const [processedNarrative, setProcessedNarrative] = useState<string>("");
 	const [processedTheme, setProcessedTheme] = useState<string>("");
-	const [processedSequence, setProcessedSequence] = useState<string>("");
+	const [, setProcessedSequence] = useState<string>("");
 	const [isProcessingImages, setIsProcessingImages] = useState(false);
-	const [processedRecommended, setProcessedRecommended] = useState<string[]>([]);
+	const [, setProcessedRecommended] = useState<string[]>([]);
 	const [imageDescriptions, setImageDescriptions] = useState<Record<string, string>>({});
 
 	// Story editing state
@@ -509,24 +507,6 @@ const DataStories = ({
 					>
 						{props.alt || "Figure"}
 					</p>
-				</div>
-			);
-		},
-	};
-
-	// Smaller image components for recommended figure order
-	const smallImageComponents = {
-		p: markdownComponents.p,
-		img: ({ node, ...props }: any) => {
-			return (
-				<div
-					className="flex flex-col items-center justify-center w-full"
-					style={{ zoom: 0.5 }}
-				>
-					<img
-						{...props}
-						className="w-auto h-auto max-h-[35dvh] object-contain rounded-md shadow-sm m-0 p-0"
-					/>
 				</div>
 			);
 		},

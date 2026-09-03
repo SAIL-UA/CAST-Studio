@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { useDrag, useDrop } from 'react-dnd';
-import { GroupDivProps, DragItem } from '../types/types';
+import type { GroupDivProps, DragItem } from '../types/types';
 import DraggableCard from './DraggableCard';
 import { formatImageMetadata } from '../utils/imageUtils';
 import { formatGroupMetadata } from '../utils/groupUtils';
@@ -82,7 +82,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
   // React DnD hook for drop functionality (accept cards)
   const [{ isOver: isOverCard, canDrop: canDropCard }, dropCard] = useDrop(() => ({
     accept: 'image',
-    drop: (item: DragItem, monitor) => {
+    drop: (item: DragItem) => {
       // Only handle if not already in this group and group isn't full
       if (item.groupId !== id && cards.length < 6) {
         console.log(`Card ${item.id} dropped into group ${id}`);
@@ -133,7 +133,6 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       
       if (groupRef.current && storyBinRef.current) {
         const groupRect = groupRef.current.getBoundingClientRect();
-        const binRect = storyBinRef.current.getBoundingClientRect();
         
         const event = window.event as MouseEvent;
         const offsetX = event.clientX - groupRect.left;
@@ -191,9 +190,6 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         if (!binElement) return;
         
         const binRect = binElement.getBoundingClientRect();
-        // Account for scroll position within the bin
-        const scrollLeft = binElement.scrollLeft;
-        const scrollTop = binElement.scrollTop;
 
         // Calculate new position relative to scrollable content container (zoom + pan compensated)
         let newX = (clientOffset.x - binRect.left - panOffset.x) / zoomLevel - item.offsetX;
@@ -239,7 +235,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     dragStartPosition.current = { x: position.x, y: position.y };
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
+  const handleDragEnd = () => {
     // Cleanup - logging is handled in React DnD end callback
     dragEventContext.current = null;
     dragStartPosition.current = null;
@@ -263,9 +259,6 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     if (!binElement) return;
 
     const binRect = binElement.getBoundingClientRect();
-    // Account for scroll position within the bin
-    const scrollLeft = binElement.scrollLeft;
-    const scrollTop = binElement.scrollTop;
 
     setIsDragging(true);
     dragStartPosition.current = { x: position.x, y: position.y }; // Store initial position
@@ -291,9 +284,6 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       }
 
       const binRect = binElement.getBoundingClientRect();
-      // Account for scroll position within the bin
-      const scrollLeft = binElement.scrollLeft;
-      const scrollTop = binElement.scrollTop;
 
       // Calculate new position relative to scrollable content container (zoom + pan compensated)
       let newX = (e.clientX - binRect.left - panOffset.x) / zoomLevel - dragOffset.x;

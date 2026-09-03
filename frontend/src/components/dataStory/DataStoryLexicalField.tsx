@@ -21,7 +21,7 @@ import {
     COMMAND_PRIORITY_LOW,
     FORMAT_TEXT_COMMAND,
     REDO_COMMAND,
-    TextFormatType,
+    type TextFormatType,
     UNDO_COMMAND,
 } from 'lexical';
 import { useEffect, useMemo, useRef, useState } from 'react';

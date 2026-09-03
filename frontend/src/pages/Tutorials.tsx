@@ -11,7 +11,6 @@ import gs23 from '../assets/images/gs2_3.png';
 import gs24 from '../assets/images/gs2_4.png';
 import gs25 from '../assets/images/gs2_5.png';
 import gs26 from '../assets/images/gs2_6.png';
-import gs27 from '../assets/images/gs2_7.png';
 import gs28 from '../assets/images/gs2_8.png';
 import gs29 from '../assets/images/gs2_9.png';
 import gs210 from '../assets/images/gs2_10.png';
@@ -28,7 +27,7 @@ import { useLocation } from 'react-router-dom'
 
 // Import compopnents
 import LandingHeader, { SANS } from '../components/LandingHeader';
-import DocsSidebar, { DocsMenuStructure } from '../components/DocsSidebar';
+import DocsSidebar, { type DocsMenuStructure } from '../components/DocsSidebar';
 
 
 // Visible component

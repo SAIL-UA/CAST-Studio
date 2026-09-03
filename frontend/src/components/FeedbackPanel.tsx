@@ -30,7 +30,7 @@ interface FeedbackPanelProps {
   onClose?: () => void;
 }
 
-const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ items, instructorNotes = [], onClose }) => {
+const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ items, instructorNotes = [] }) => {
   const hasContent = items.length > 0 || instructorNotes.length > 0;
 
   return (

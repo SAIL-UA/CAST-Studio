@@ -1,8 +1,8 @@
 // Import dependencies
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDrop } from 'react-dnd';
-import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
-import { SCAFFOLD_VALID_GROUP_NUMBERS, SCAFFOLD_GROUP_LABELS } from '../../types/scaffoldMappings';
+import type { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
+import { SCAFFOLD_GROUP_LABELS } from '../../types/scaffoldMappings';
 import DraggableCard from '../DraggableCard';
 import GroupDiv from '../GroupDiv';
 import { logAction } from '../../utils/userActionLogger';
@@ -52,7 +52,6 @@ function getMaxSlotInData(scaffold: ScaffoldData | null, images: ImageData[]): n
 const FactorAnalysis = ({
     images,
     storyBinRef,
-    setSelectedPattern,
     scaffold,
     updateImageData,
     onPositionUpdate,
@@ -82,7 +81,6 @@ const FactorAnalysis = ({
     const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    const validGroupNumbers = SCAFFOLD_VALID_GROUP_NUMBERS[SCAFFOLD_NUMBER] || [1, 2, 3, 4, 5];
     const groupLabels = SCAFFOLD_GROUP_LABELS[SCAFFOLD_NUMBER] || { 1: 'Factor 1', 2: 'Factor 2', 3: 'Factor 3', 4: 'Factor 4', 5: 'Factor 5' };
 
     // Display slot count: derive from data (max scaffold_group_number in groups + images), default 2 when no data
@@ -145,7 +143,7 @@ const FactorAnalysis = ({
         logAction({ actionType: 'click', elementId: 'scaffold-card-add' }, { scaffoldType: 'factor_analysis', groupNumber: factor });
     };
 
-    const handleCardRemove = async (cardId: string, groupId: string) => {
+    const handleCardRemove = async (cardId: string) => {
         if (!scaffold) return;
 
         await updateImageData(cardId, {
@@ -425,7 +423,7 @@ const FactorAnalysisFactor = ({
     const [{ isOver, canDrop }, drop] = useDrop(
         () => ({
             accept: ['image', 'group'],
-            drop: (item: DragItem, monitor) => {
+            drop: (item: DragItem) => {
                 if (item.id === 'factor-analysis-scaffold') return { droppedInGroup: false };
                 if (item.type !== 'group' && item.groupId !== id && cards.length < 6) {
                     onCardAdd(item.id, id);
