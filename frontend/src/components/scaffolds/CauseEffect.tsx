@@ -294,7 +294,7 @@ const CauseEffect = ({
                 <div className="flex items-center gap-1">
                 <button
                     onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('createScaffold', { detail: { pattern: 'cause_and_effect' } })); }}
-                    className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                    className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                     style={{ cursor: 'pointer' }}
                     title="Duplicate scaffold"
                 >
@@ -305,7 +305,7 @@ const CauseEffect = ({
                 </button>
                 <button
                     onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('generateScaffoldStory', { detail: { scaffoldId: scaffold?.id || '' } })); }}
-                    className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                    className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                     style={{ cursor: 'pointer' }}
                     title="Generate story for this scaffold"
                 >
@@ -319,7 +319,7 @@ const CauseEffect = ({
                         logAction(e);
                         onClose();
                     }}
-                    className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
+                    className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                     style={{ cursor: 'pointer' }}
                     title="Close Cause and Effects scaffold"
                     log-id="scaffold-close"

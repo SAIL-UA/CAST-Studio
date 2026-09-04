@@ -471,7 +471,7 @@ const Home = () => {
                 {leftMenuOpen && (
                     <>
                         <div
-                            className="fixed inset-0 bg-black bg-opacity-30 z-[400]"
+                            className="fixed inset-0 bg-black/30 z-[400]"
                             onClick={() => setLeftMenuOpen(false)}
                         />
                         <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto pt-8">
@@ -491,7 +491,7 @@ const Home = () => {
                     <>
                         {/* Backdrop */}
                         <div
-                            className="fixed inset-0 bg-black bg-opacity-30 z-[500]"
+                            className="fixed inset-0 bg-black/30 z-[500]"
                             onClick={() => {
                                 setRightNarrativePatternsOpen(false);
                                 setRightNarrativeExamplesOpen(false);

@@ -207,7 +207,7 @@ function Bin({
 		<div id={id} ref={dropRef} className={getBinClasses()} onContextMenu={handleContextMenu}>
 			{/* Drop zone indicator */}
 			{isOver && canDrop && (
-				<div className="absolute flex items-center justify-center bg-blue-100 bg-opacity-75 rounded-lg border-2 border-dashed border-blue-400 z-[50] w-full h-full pointer-events-none">
+				<div className="absolute flex items-center justify-center bg-blue-100/75 rounded-lg border-2 border-dashed border-blue-400 z-[50] w-full h-full pointer-events-none">
 					<div className="text-blue-600 text-lg font-semibold">Drop image here</div>
 				</div>
 			)}

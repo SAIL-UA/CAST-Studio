@@ -250,7 +250,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 
         {/* Alert Modal */}
         {alertModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
                 <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
                     <div className="text-sm text-grey-darkest whitespace-pre-wrap">
                         {alertModal}

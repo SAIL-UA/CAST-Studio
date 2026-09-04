@@ -533,7 +533,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
                 handleNameSave(e);
               }
             }}
-            className="text-xs font-bold bg-transparent border-b border-white text-white placeholder-white placeholder-opacity-70 outline-none"
+            className="text-xs font-bold bg-transparent border-b border-white text-white placeholder-white/70 outline-none"
             placeholder="Group name"
             autoFocus
             onClick={(e) => e.stopPropagation()}
@@ -563,13 +563,13 @@ const GroupDiv: React.FC<GroupDivProps> = ({
               <RqLinkPicker
                 cardId={id}
                 isGroup
-                buttonClassName="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200 z-[210] flex-shrink-0"
+                buttonClassName="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200 z-[210] flex-shrink-0"
                 iconSize={11}
               />
               {/* Edit button */}
               <button
                 log-id="group-edit-button"
-                className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200 z-[210]"
+                className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200 z-[210]"
                 onClick={handleShowEditModal}
                 style={{ cursor: 'pointer' }}
                 title="Edit group"
@@ -580,7 +580,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
               {/* Close button */}
               <button
                 log-id="group-close-button"
-                className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
+                className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                 onClick={handleClose}
                 style={{ cursor: 'pointer' }}
                 title="Close group"
@@ -668,7 +668,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
       {/* Edit Modal — portaled to body to escape parent stacking context */}
       {showEditModal && ReactDOM.createPortal(
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]"
           onClick={handleCloseEditModal}
         >
           <div

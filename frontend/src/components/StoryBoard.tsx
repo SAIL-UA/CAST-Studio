@@ -1563,7 +1563,7 @@ const StoryBoard = ({
 
 			{/* Recycle Bin Modal */}
 			{scaffoldLimitAlert && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
 					<div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4">
 						<div className="text-sm text-grey-darkest">{scaffoldLimitAlert}</div>
 						<div className="mt-6 text-right">
@@ -1580,7 +1580,7 @@ const StoryBoard = ({
 
 			{recycleBinOpen &&
 				ReactDOM.createPortal(
-					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+					<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
 						<div className="bg-white rounded-lg shadow-xl w-[80vw] h-[70vh] flex flex-col overflow-hidden">
 							{/* Modal Header */}
 							<div className="flex justify-between items-center px-4 py-3 border-b border-grey-lightest flex-shrink-0">

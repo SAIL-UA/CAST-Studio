@@ -19,7 +19,7 @@ const RqBadges: React.FC<RqBadgesProps> = ({ labels, max = 1 }) => {
   const visible = labels.slice(0, max);
   const hidden = labels.slice(max);
 
-  const pill = 'inline-block flex-shrink-0 bg-white bg-opacity-25 text-white rounded-full px-1.5 leading-tight';
+  const pill = 'inline-block flex-shrink-0 bg-white/25 text-white rounded-full px-1.5 leading-tight';
 
   return (
     <>

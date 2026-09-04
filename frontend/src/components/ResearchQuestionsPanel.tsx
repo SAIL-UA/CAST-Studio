@@ -285,7 +285,7 @@ const ResearchQuestionsPanel: React.FC<ResearchQuestionsPanelProps> = ({
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => { setEditingId(rq.id); setEditingText(rq.text); }}
-                      className="w-4 h-4 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                      className="w-4 h-4 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                       title="Edit question"
                       log-id="research-question-edit-button"
                     >
@@ -296,7 +296,7 @@ const ResearchQuestionsPanel: React.FC<ResearchQuestionsPanelProps> = ({
                     </button>
                     <button
                       onClick={() => handleDelete(rq.id)}
-                      className="w-4 h-4 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                      className="w-4 h-4 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                       title="Delete question"
                       log-id="research-question-delete-button"
                     >

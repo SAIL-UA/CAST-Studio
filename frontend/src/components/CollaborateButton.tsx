@@ -196,7 +196,7 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
 
             {/* Confirm Close Modal */}
             {showConfirmClose && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
                     <div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4">
                         <div className="text-sm text-grey-darkest mb-4">
                             This will close the session. Continue?
@@ -221,7 +221,7 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
 
             {/* Alert Modal */}
             {alertModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
                     <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
                         <div className="text-sm text-grey-darkest">{alertModal}</div>
                         <div className="mt-6 text-right">

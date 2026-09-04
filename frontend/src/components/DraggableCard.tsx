@@ -496,13 +496,13 @@ function DraggableCard({
 								<>
 									<RqLinkPicker
 										cardId={image.id}
-										buttonClassName="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200 flex-shrink-0"
+										buttonClassName="w-3.5 h-3.5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200 flex-shrink-0"
 										iconSize={8}
 									/>
 									<button
 										log-id="edit-figure-button"
 										onClick={handleShow}
-										className="w-3.5 h-3.5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+										className="w-3.5 h-3.5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
 										style={{ fontSize: "0.5rem" }}
 										title="Edit figure"
 									>
@@ -587,7 +587,7 @@ function DraggableCard({
 			{/* Modal for editing - rendered as portal to escape container constraints */}
 			{showModal &&
 				ReactDOM.createPortal(
-					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+					<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
 						<div
 							className="rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
 							style={{ backgroundColor: "#eaf1f7" }}

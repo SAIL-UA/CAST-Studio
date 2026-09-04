@@ -276,7 +276,7 @@ const WorkflowProcess = ({
                                 logAction(e);
                                 handleAddStage();
                             }}
-                            className="px-2 py-0.5 text-xs bg-white bg-opacity-20 hover:bg-opacity-40 rounded transition-all duration-200"
+                            className="px-2 py-0.5 text-xs bg-white/20 hover:bg-white/40 rounded transition-all duration-200"
                             title="Add stage"
                             log-id="scaffold-slot-add"
                         >
@@ -290,7 +290,7 @@ const WorkflowProcess = ({
                                 logAction(e);
                                 handleRemoveStage();
                             }}
-                            className="px-2 py-0.5 text-xs bg-white bg-opacity-20 hover:bg-opacity-40 rounded transition-all duration-200"
+                            className="px-2 py-0.5 text-xs bg-white/20 hover:bg-white/40 rounded transition-all duration-200"
                             title="Remove last stage"
                             log-id="scaffold-slot-remove"
                         >
@@ -300,7 +300,7 @@ const WorkflowProcess = ({
                     {!readOnly && (
                     <button
                         onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('createScaffold', { detail: { pattern: 'workflow_process' } })); }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Duplicate scaffold"
                     >
@@ -313,7 +313,7 @@ const WorkflowProcess = ({
                     {!readOnly && (
                     <button
                         onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('generateScaffoldStory', { detail: { scaffoldId: scaffold?.id || '' } })); }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Generate story for this scaffold"
                     >
@@ -329,7 +329,7 @@ const WorkflowProcess = ({
                             logAction(e);
                             onClose();
                         }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Close Workflow / Process scaffold"
                         log-id="scaffold-close"
