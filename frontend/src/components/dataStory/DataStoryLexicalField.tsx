@@ -21,14 +21,14 @@ import {
     COMMAND_PRIORITY_LOW,
     FORMAT_TEXT_COMMAND,
     REDO_COMMAND,
-    TextFormatType,
+    type TextFormatType,
     UNDO_COMMAND,
 } from 'lexical';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { DataStoryLexicalEnvProvider } from './DataStoryLexicalEnv';
-import { DATA_STORY_TRANSFORMERS } from './dataStoryTransformers';
-import { FigureNode } from './FigureNode';
+import { DataStoryLexicalEnvProvider } from '@/components/dataStory/DataStoryLexicalEnv';
+import { DATA_STORY_TRANSFORMERS } from '@/components/dataStory/dataStoryTransformers';
+import { FigureNode } from '@/components/dataStory/FigureNode';
 
 function InitialMarkdownPlugin({ markdown }: { markdown: string }) {
     const [editor] = useLexicalComposerContext();
@@ -262,7 +262,7 @@ export function DataStoryLexicalField({
             namespace: `DataStory-${composerKey}`,
             theme: editorTheme,
             onError: (e: Error) => {
-                if (process.env.NODE_ENV === 'development') {
+                if (import.meta.env.DEV) {
                     console.error(e);
                 }
             },

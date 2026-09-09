@@ -1,11 +1,11 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrop } from 'react-dnd';
-import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
-import { SCAFFOLD_GROUP_LABELS, SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
-import DraggableCard from '../DraggableCard';
-import GroupDiv from '../GroupDiv';
-import { logAction } from '../../utils/userActionLogger';
+import type { ImageData, DragItem, ScaffoldData, GroupData } from '@/types/types';
+import { SCAFFOLD_GROUP_LABELS, SCAFFOLD_VALID_GROUP_NUMBERS } from '@/types/scaffoldMappings';
+import DraggableCard from '@/components/DraggableCard';
+import GroupDiv from '@/components/GroupDiv';
+import { logAction } from '@/utils/userActionLogger';
 
 type ShockLeadProps = {
     images: ImageData[];
@@ -28,7 +28,6 @@ type ShockLeadProps = {
 const ShockLead = ({
     images,
     storyBinRef,
-    setSelectedPattern,
     scaffold,
     updateImageData,
     onPositionUpdate,
@@ -235,7 +234,7 @@ const ShockLead = ({
                 <div className="flex items-center gap-1">
                 <button
                     onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('createScaffold', { detail: { pattern: 'shock_lead' } })); }}
-                    className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                    className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                     style={{ cursor: 'pointer' }}
                     title="Duplicate scaffold"
                 >
@@ -246,7 +245,7 @@ const ShockLead = ({
                 </button>
                 <button
                     onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('generateScaffoldStory', { detail: { scaffoldId: scaffold?.id || '' } })); }}
-                    className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                    className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                     style={{ cursor: 'pointer' }}
                     title="Generate story for this scaffold"
                 >
@@ -260,7 +259,7 @@ const ShockLead = ({
                         logAction(e);
                         onClose();
                     }}
-                    className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
+                    className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                     style={{ cursor: 'pointer' }}
                     title="Close Shock and Lead scaffold"
                     log-id="scaffold-close"

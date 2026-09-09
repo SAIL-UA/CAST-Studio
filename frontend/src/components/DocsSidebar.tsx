@@ -4,7 +4,7 @@
 // so future modules (e.g. "Deep Dive") drop in without touching this component.
 
 import { useState } from 'react';
-import { ACCENT } from './LandingHeader';
+import { ACCENT } from '@/components/LandingHeader';
 
 export type DocsMenuItem = {
     label: string;

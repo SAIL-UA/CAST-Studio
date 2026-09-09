@@ -1,10 +1,8 @@
 // Import dependencies
 import React, { useRef, useState } from 'react';
-import { uploadFigure, uploadSlides, createNote } from '../services/api';
-import { logAction, captureActionContext } from '../utils/userActionLogger';
+import { uploadFigure, uploadSlides, createNote } from '@/services/api';
+import { logAction, captureActionContext } from '@/utils/userActionLogger';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-
-const menuItemClass = "block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm !font-light rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 cursor-pointer outline-none text-left";
 
 type UploadButtonProps = {
     onUploaded?: () => void | Promise<void>;
@@ -252,7 +250,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 
         {/* Alert Modal */}
         {alertModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
                 <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
                     <div className="text-sm text-grey-darkest whitespace-pre-wrap">
                         {alertModal}

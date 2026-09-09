@@ -3,23 +3,23 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useEffect } from 'react';
 
 // Import providers
-import { useAuth } from './contexts/Auth';
+import { useAuth } from '@/contexts/Auth';
 
 // Import services
-import { mouseTracker } from './utils/mouseTracker';
+import { mouseTracker } from '@/utils/mouseTracker';
 
 // Import pages
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Construction from './pages/construction';
-import Tutorials from './pages/Tutorials'
-import ForgotPassword from './pages/ForgotPassword';
-import VerifyResetCode from './pages/VerifyResetCode';
-import ResetPassword from './pages/ResetPassword';
-import Instructor from './pages/Instructor';
-import ViewWorkspace from './pages/ViewWorkspace';
-import SessionWorkspace from './pages/SessionWorkspace';
-import TestLogin from './pages/TestLogin';
+import Home from '@/pages/Home';
+import Login from '@/pages/Login';
+import Construction from '@/pages/construction';
+import Tutorials from '@/pages/Tutorials'
+import ForgotPassword from '@/pages/ForgotPassword';
+import VerifyResetCode from '@/pages/VerifyResetCode';
+import ResetPassword from '@/pages/ResetPassword';
+import Instructor from '@/pages/Instructor';
+import ViewWorkspace from '@/pages/ViewWorkspace';
+import SessionWorkspace from '@/pages/SessionWorkspace';
+import TestLogin from '@/pages/TestLogin';
 
 // Main App component
 function App() {

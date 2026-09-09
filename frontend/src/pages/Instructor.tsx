@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/Auth';
-import { getFeatureFlags, updateFeatureFlags, getInstructorUsers, exportWorkspaceReport, getEngagementReport } from '../services/api';
-import Header from '../components/Header';
-import CompactSidebar from '../components/CompactSidebar';
-import Footer from '../components/Footer';
+import { useAuth } from '@/contexts/Auth';
+import { getFeatureFlags, updateFeatureFlags, getInstructorUsers, exportWorkspaceReport, getEngagementReport } from '@/services/api';
+import Header from '@/components/Header';
+import CompactSidebar from '@/components/CompactSidebar';
+import Footer from '@/components/Footer';
 
 type UserRow = {
     id: string;
@@ -158,7 +158,7 @@ const Instructor = () => {
             {/* Left Panel */}
             {leftMenuOpen && (
                 <>
-                    <div className="fixed inset-0 bg-black bg-opacity-30 z-[400]" onClick={() => setLeftMenuOpen(false)} />
+                    <div className="fixed inset-0 bg-black/30 z-[400]" onClick={() => setLeftMenuOpen(false)} />
                     <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto pt-8">
                         <CompactSidebar setCenterNarrativePatternsOpen={() => setLeftMenuOpen(false)} />
                         <div id="footer" className="flex flex-col justify-start items-start mb-6">
@@ -408,7 +408,7 @@ const Instructor = () => {
 
             {/* Alert Modal */}
             {alertModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
                     <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
                         <div className="text-sm text-grey-darkest">{alertModal}</div>
                         <div className="mt-6 text-right">

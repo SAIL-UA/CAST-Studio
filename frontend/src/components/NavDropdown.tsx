@@ -1,12 +1,11 @@
 // Import dependencies
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { logAction } from '../utils/userActionLogger';
+import { logAction } from '@/utils/userActionLogger';
 
 // Import images
-import home from '../assets/images/home.svg';
-import categories from '../assets/images/categories.svg';
-import browse from '../assets/images/browse.svg';
+import home from '@/assets/images/home.svg';
+import categories from '@/assets/images/categories.svg';
 
 // Define props interface
 type NavDropdownProps = {

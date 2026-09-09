@@ -1,9 +1,9 @@
 // Import dependencies
 import { useState } from 'react';
-import { requestFeedback, requestFeedbackStatus } from '../services/api';
-import { logAction, captureActionContext } from '../utils/userActionLogger';
-import { useTaskProgress } from '../hooks/useTaskProgress';
-import ProgressButton from './ProgressButton';
+import { requestFeedback, requestFeedbackStatus } from '@/services/api';
+import { logAction, captureActionContext } from '@/utils/userActionLogger';
+import { useTaskProgress } from '@/hooks/useTaskProgress';
+import ProgressButton from '@/components/ProgressButton';
 
 type FeedbackItem = { title: string; text: string; section?: string };
 

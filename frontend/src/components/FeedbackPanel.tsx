@@ -1,5 +1,5 @@
 import React from 'react';
-import squares from '../assets/images/squares.svg';
+import squares from '@/assets/images/squares.svg';
 
 export type FeedbackCardData = {
   title: string;
@@ -30,7 +30,7 @@ interface FeedbackPanelProps {
   onClose?: () => void;
 }
 
-const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ items, instructorNotes = [], onClose }) => {
+const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ items, instructorNotes = [] }) => {
   const hasContent = items.length > 0 || instructorNotes.length > 0;
 
   return (

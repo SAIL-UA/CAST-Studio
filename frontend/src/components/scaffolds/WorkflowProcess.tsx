@@ -1,11 +1,11 @@
 // Import dependencies
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDrop } from 'react-dnd';
-import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
-import { SCAFFOLD_VALID_GROUP_NUMBERS, SCAFFOLD_GROUP_LABELS } from '../../types/scaffoldMappings';
-import DraggableCard from '../DraggableCard';
-import GroupDiv from '../GroupDiv';
-import { logAction } from '../../utils/userActionLogger';
+import type { ImageData, DragItem, ScaffoldData, GroupData } from '@/types/types';
+import { SCAFFOLD_GROUP_LABELS } from '@/types/scaffoldMappings';
+import DraggableCard from '@/components/DraggableCard';
+import GroupDiv from '@/components/GroupDiv';
+import { logAction } from '@/utils/userActionLogger';
 
 const SCAFFOLD_NUMBER = 8;
 const MIN_SLOTS = 2;
@@ -50,7 +50,6 @@ function getMaxSlotInData(scaffold: ScaffoldData | null, images: ImageData[]): n
 const WorkflowProcess = ({
     images,
     storyBinRef,
-    setSelectedPattern,
     scaffold,
     updateImageData,
     onPositionUpdate,
@@ -80,7 +79,6 @@ const WorkflowProcess = ({
     const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    const validGroupNumbers = SCAFFOLD_VALID_GROUP_NUMBERS[SCAFFOLD_NUMBER] || [1, 2, 3, 4, 5];
     const groupLabels =
         SCAFFOLD_GROUP_LABELS[SCAFFOLD_NUMBER] || { 1: 'Stage 1', 2: 'Stage 2', 3: 'Stage 3', 4: 'Stage 4', 5: 'Stage 5' };
 
@@ -143,7 +141,7 @@ const WorkflowProcess = ({
         logAction({ actionType: 'click', elementId: 'scaffold-card-add' }, { scaffoldType: 'workflow_process', groupNumber: stage });
     };
 
-    const handleCardRemove = async (cardId: string, groupId: string) => {
+    const handleCardRemove = async (cardId: string) => {
         if (!scaffold) return;
         await updateImageData(cardId, { scaffoldId: null, scaffold_group_number: null } as any);
         setStageCardIds((prev) => {
@@ -278,7 +276,7 @@ const WorkflowProcess = ({
                                 logAction(e);
                                 handleAddStage();
                             }}
-                            className="px-2 py-0.5 text-xs bg-white bg-opacity-20 hover:bg-opacity-40 rounded transition-all duration-200"
+                            className="px-2 py-0.5 text-xs bg-white/20 hover:bg-white/40 rounded transition-all duration-200"
                             title="Add stage"
                             log-id="scaffold-slot-add"
                         >
@@ -292,7 +290,7 @@ const WorkflowProcess = ({
                                 logAction(e);
                                 handleRemoveStage();
                             }}
-                            className="px-2 py-0.5 text-xs bg-white bg-opacity-20 hover:bg-opacity-40 rounded transition-all duration-200"
+                            className="px-2 py-0.5 text-xs bg-white/20 hover:bg-white/40 rounded transition-all duration-200"
                             title="Remove last stage"
                             log-id="scaffold-slot-remove"
                         >
@@ -302,7 +300,7 @@ const WorkflowProcess = ({
                     {!readOnly && (
                     <button
                         onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('createScaffold', { detail: { pattern: 'workflow_process' } })); }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Duplicate scaffold"
                     >
@@ -315,7 +313,7 @@ const WorkflowProcess = ({
                     {!readOnly && (
                     <button
                         onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('generateScaffoldStory', { detail: { scaffoldId: scaffold?.id || '' } })); }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Generate story for this scaffold"
                     >
@@ -331,7 +329,7 @@ const WorkflowProcess = ({
                             logAction(e);
                             onClose();
                         }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Close Workflow / Process scaffold"
                         log-id="scaffold-close"

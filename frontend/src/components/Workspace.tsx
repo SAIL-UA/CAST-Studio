@@ -1,11 +1,11 @@
 // Import dependencies
 import { useEffect, useState } from 'react';
-import { getImageDataAll, updateImageData as updateImageDataAPI } from '../services/api';
-import { ImageData } from '../types/types';
-import { getImageUrl } from '../utils/imageUtils';
+import { getImageDataAll, updateImageData as updateImageDataAPI } from '@/services/api';
+import type { ImageData } from '@/types/types';
+import { getImageUrl } from '@/utils/imageUtils';
 
 // Import components
-import StoryBoard from './StoryBoard';
+import StoryBoard from '@/components/StoryBoard';
 
 // Define props interface
 type WorkspaceProps = {

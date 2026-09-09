@@ -3,27 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 
 // Import context
-import { useAuth } from '../contexts/Auth';
+import { useAuth } from '@/contexts/Auth';
 
 // Import components
-import Header from '../components/Header';
-import DataStories from '../components/DataStories';
-import FeedbackPanel, { FeedbackCardData, InstructorNote } from '../components/FeedbackPanel';
-import NarrativePatterns from '../components/NarrativePatterns'
-import Workspace from '../components/Workspace'
-import NarrativeExamples from '../components/NarrativeExamples'
-import CompactSidebar from '../components/CompactSidebar'
-import Footer from '../components/Footer'
-import GuestWelcomeTutorial from '../components/GuestWelcomeTutorial'
+import Header from '@/components/Header';
+import DataStories from '@/components/DataStories';
+import FeedbackPanel, { type FeedbackCardData, type InstructorNote } from '@/components/FeedbackPanel';
+import NarrativePatterns from '@/components/NarrativePatterns'
+import Workspace from '@/components/Workspace'
+import NarrativeExamples from '@/components/NarrativeExamples'
+import CompactSidebar from '@/components/CompactSidebar'
+import Footer from '@/components/Footer'
+import GuestWelcomeTutorial from '@/components/GuestWelcomeTutorial'
 
 // Import utils
-import { handleAuthRequired } from '../utils/utils';
-import { getImageDataAll, getSessionStatus, getGroups } from '../services/api';
-import ResearchQuestionsPanel, { LinkableCard } from '../components/ResearchQuestionsPanel';
-import { useResearchQuestions } from '../contexts/ResearchQuestions';
-import { getAvatarColor } from '../utils/avatarUtils';
-import ControlWorkspaceButton from '../components/ControlWorkspaceButton';
-import { useGuestTourOpen } from '../utils/useGuestTourOpen';
+import { handleAuthRequired } from '@/utils/utils';
+import { getImageDataAll, getSessionStatus, getGroups } from '@/services/api';
+import ResearchQuestionsPanel, { type LinkableCard } from '@/components/ResearchQuestionsPanel';
+import { useResearchQuestions } from '@/contexts/ResearchQuestions';
+import { getAvatarColor } from '@/utils/avatarUtils';
+import ControlWorkspaceButton from '@/components/ControlWorkspaceButton';
+import { useGuestTourOpen } from '@/utils/useGuestTourOpen';
 
 // Login page component
 const Home = () => {
@@ -471,7 +471,7 @@ const Home = () => {
                 {leftMenuOpen && (
                     <>
                         <div
-                            className="fixed inset-0 bg-black bg-opacity-30 z-[400]"
+                            className="fixed inset-0 bg-black/30 z-[400]"
                             onClick={() => setLeftMenuOpen(false)}
                         />
                         <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto pt-8">
@@ -491,7 +491,7 @@ const Home = () => {
                     <>
                         {/* Backdrop */}
                         <div
-                            className="fixed inset-0 bg-black bg-opacity-30 z-[500]"
+                            className="fixed inset-0 bg-black/30 z-[500]"
                             onClick={() => {
                                 setRightNarrativePatternsOpen(false);
                                 setRightNarrativeExamplesOpen(false);
