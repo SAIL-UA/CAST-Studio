@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/Auth';
-import { login, register, guestLogin } from '../services/api';
-import HighlightWord from '../components/HighlightWord';
-import FeatureVisual from '../components/FeatureVisual';
-import { LandingHeader, ACCENT as SHARED_ACCENT, SANS as SHARED_SANS } from '../components/LandingHeader';
+import { useAuth } from '@/contexts/Auth';
+import { login, register, guestLogin } from '@/services/api';
+import HighlightWord from '@/components/HighlightWord';
+import FeatureVisual from '@/components/FeatureVisual';
+import { LandingHeader, ACCENT as SHARED_ACCENT, SANS as SHARED_SANS } from '@/components/LandingHeader';
 
 // Re-alias shared constants so existing usages in this file don't need renaming.
 const ACCENT = SHARED_ACCENT;

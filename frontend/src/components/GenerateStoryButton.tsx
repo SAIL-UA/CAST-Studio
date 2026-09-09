@@ -1,9 +1,9 @@
 // Import dependencies
 import { useEffect, useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { logAction } from '../utils/userActionLogger';
-import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { useGuestTourOpen } from '../utils/useGuestTourOpen';
+import { logAction } from '@/utils/userActionLogger';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { useGuestTourOpen } from '@/utils/useGuestTourOpen';
 
 type GenerateStoryButtonProps = {
     setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;

@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { getResearchQuestions, updateResearchQuestionLinks } from '../services/api';
+import { getResearchQuestions, updateResearchQuestionLinks } from '@/services/api';
 
 type RqLinkMap = Record<string, string[]>;
 

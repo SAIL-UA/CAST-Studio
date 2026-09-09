@@ -1,15 +1,15 @@
 // Import dependencies
 import { useState, useEffect, useRef } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { captureActionContext, logAction } from '../utils/userActionLogger';
-import { generateNarrativeAsync, getImageDataAll, getNarrativeCache } from '../services/api';
-import { useTaskProgress } from '../hooks/useTaskProgress';
-import { SCAFFOLD_NUMBER_TO_PATTERN } from '../types/scaffoldMappings';
-import { getStoryUserEdited, setStoryUserEdited, STORY_EDIT_STATE_EVENT } from '../utils/storyEditState';
-import { STORY_STREAM_START, STORY_STREAM_CHUNK, STORY_STREAM_END, STORY_REASONING_READY, STORY_GENERATION_STAGE } from '../utils/storyStreamEvents';
+import { captureActionContext, logAction } from '@/utils/userActionLogger';
+import { generateNarrativeAsync, getImageDataAll, getNarrativeCache } from '@/services/api';
+import { useTaskProgress } from '@/hooks/useTaskProgress';
+import { SCAFFOLD_NUMBER_TO_PATTERN } from '@/types/scaffoldMappings';
+import { getStoryUserEdited, setStoryUserEdited, STORY_EDIT_STATE_EVENT } from '@/utils/storyEditState';
+import { STORY_STREAM_START, STORY_STREAM_CHUNK, STORY_STREAM_END, STORY_REASONING_READY, STORY_GENERATION_STAGE } from '@/utils/storyStreamEvents';
 
 // Import types
-import type { ImageData, ScaffoldData } from '../types/types';
+import type { ImageData, ScaffoldData } from '@/types/types';
 const DESCRIPTION_PLACEHOLDER = 'Ask AI to create a description for this visual.';
 
 // Props interface

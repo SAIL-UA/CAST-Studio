@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { hostSession, closeSession, getSessionStatus } from '../services/api';
-import { logAction } from '../utils/userActionLogger';
+import { hostSession, closeSession, getSessionStatus } from '@/services/api';
+import { logAction } from '@/utils/userActionLogger';
 import { useNavigate } from 'react-router-dom';
 
 type CollaborateButtonProps = {

@@ -1,11 +1,11 @@
 // Import dependencies
 import { useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { exportStory } from '../services/api';
-import { logAction, captureActionContext } from '../utils/userActionLogger';
+import { exportStory } from '@/services/api';
+import { logAction, captureActionContext } from '@/utils/userActionLogger';
 
 // Import types
-import type { StoryDataRaw } from '../types/types';
+import type { StoryDataRaw } from '@/types/types';
 
 // Props interface
 type ExportButtonProps = {

@@ -1,11 +1,11 @@
 // Import dependencies
 import { useState, useRef, useEffect, useCallback } from "react";
-import { generateDescription, getImageDataAll } from "../services/api";
-import { logAction } from "../utils/userActionLogger";
+import { generateDescription, getImageDataAll } from "@/services/api";
+import { logAction } from "@/utils/userActionLogger";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { useFeatureFlags } from "../hooks/useFeatureFlags";
-import { useGuestTourOpen } from "../utils/useGuestTourOpen";
-import type { ImageData } from "../types/types";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useGuestTourOpen } from "@/utils/useGuestTourOpen";
+import type { ImageData } from "@/types/types";
 
 // Legacy placeholder text — kept for backward compatibility with existing images
 const DESCRIPTION_PLACEHOLDER = "Ask AI to create a description for this visual.";

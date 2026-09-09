@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 
 // Import API functions
-import { confirmPasswordReset } from '../services/api';
+import { confirmPasswordReset } from '@/services/api';
 
 // Reset Password component
 const ResetPassword = () => {

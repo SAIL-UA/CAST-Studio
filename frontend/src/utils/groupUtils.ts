@@ -1,4 +1,4 @@
-import type { GroupData, GroupDivProps } from "../types/types";
+import type { GroupData, GroupDivProps } from "@/types/types";
 
 
 export const formatGroupMetadata = async (group: GroupDivProps | GroupData) => {

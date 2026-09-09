@@ -1,7 +1,7 @@
 // Import dependencies
 import React, { useRef, useState } from 'react';
-import { uploadFigure, uploadSlides, createNote } from '../services/api';
-import { logAction, captureActionContext } from '../utils/userActionLogger';
+import { uploadFigure, uploadSlides, createNote } from '@/services/api';
+import { logAction, captureActionContext } from '@/utils/userActionLogger';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 type UploadButtonProps = {

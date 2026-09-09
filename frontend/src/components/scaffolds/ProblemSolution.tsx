@@ -1,11 +1,11 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrop } from 'react-dnd';
-import type { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
-import { SCAFFOLD_VALID_GROUP_NUMBERS } from '../../types/scaffoldMappings';
-import DraggableCard from '../DraggableCard';
-import GroupDiv from '../GroupDiv';
-import { logAction } from '../../utils/userActionLogger';
+import type { ImageData, DragItem, ScaffoldData, GroupData } from '@/types/types';
+import { SCAFFOLD_VALID_GROUP_NUMBERS } from '@/types/scaffoldMappings';
+import DraggableCard from '@/components/DraggableCard';
+import GroupDiv from '@/components/GroupDiv';
+import { logAction } from '@/utils/userActionLogger';
 
 // Define props interface
 type ProblemSolutionProps = {

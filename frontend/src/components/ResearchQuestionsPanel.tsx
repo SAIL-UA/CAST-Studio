@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useResearchQuestions } from '../contexts/ResearchQuestions';
+import { useResearchQuestions } from '@/contexts/ResearchQuestions';
 import {
   getResearchQuestions,
   createResearchQuestion,
   updateResearchQuestion,
   deleteResearchQuestion,
   updateResearchQuestionLinks,
-} from '../services/api';
+} from '@/services/api';
 
 export type ResearchQuestion = {
   id: string;

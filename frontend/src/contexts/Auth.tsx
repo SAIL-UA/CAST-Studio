@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { checkAuth, guestCleanup } from "../services/api";
+import { checkAuth, guestCleanup } from "@/services/api";
 
 // Create context instance
 type AuthContextType = {

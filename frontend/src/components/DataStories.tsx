@@ -1,13 +1,13 @@
 // Import dependencies
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { getNarrativeCache, getImageDataAll, updateNarrativeCache } from "../services/api";
-import { storyDataToNarrativeCachePayload } from "../utils/narrativeCacheMapping";
-import { GeneratingPlaceholder } from "./GeneratingPlaceholder";
-import { logAction } from "../utils/userActionLogger";
-import { getImageUrl } from "../utils/imageUtils";
-import { scrollTracker } from "../utils/scrollTracker";
-import { setStoryUserEdited } from "../utils/storyEditState";
+import { getNarrativeCache, getImageDataAll, updateNarrativeCache } from "@/services/api";
+import { storyDataToNarrativeCachePayload } from "@/utils/narrativeCacheMapping";
+import { GeneratingPlaceholder } from "@/components/GeneratingPlaceholder";
+import { logAction } from "@/utils/userActionLogger";
+import { getImageUrl } from "@/utils/imageUtils";
+import { scrollTracker } from "@/utils/scrollTracker";
+import { setStoryUserEdited } from "@/utils/storyEditState";
 import {
 	STORY_STREAM_START,
 	STORY_STREAM_CHUNK,
@@ -16,12 +16,12 @@ import {
 	type StoryStreamChunkDetail,
 	type StoryReasoningDetail,
 	type StoryGenerationStageDetail,
-} from "../utils/storyStreamEvents";
-import { useResearchQuestions } from "../contexts/ResearchQuestions";
+} from "@/utils/storyStreamEvents";
+import { useResearchQuestions } from "@/contexts/ResearchQuestions";
 
 // Import components
-import ExportButton from "./ExportButton";
-import { DataStoryLexicalField } from "./dataStory/DataStoryLexicalField";
+import ExportButton from "@/components/ExportButton";
+import { DataStoryLexicalField } from "@/components/dataStory/DataStoryLexicalField";
 
 // Story data interface
 interface StoryData {

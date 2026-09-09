@@ -1,11 +1,11 @@
 // Import dependencies
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDrop } from 'react-dnd';
-import type { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
-import { SCAFFOLD_GROUP_LABELS } from '../../types/scaffoldMappings';
-import DraggableCard from '../DraggableCard';
-import GroupDiv from '../GroupDiv';
-import { logAction } from '../../utils/userActionLogger';
+import type { ImageData, DragItem, ScaffoldData, GroupData } from '@/types/types';
+import { SCAFFOLD_GROUP_LABELS } from '@/types/scaffoldMappings';
+import DraggableCard from '@/components/DraggableCard';
+import GroupDiv from '@/components/GroupDiv';
+import { logAction } from '@/utils/userActionLogger';
 
 const SCAFFOLD_NUMBER = 4;
 const MIN_SLOTS = 2;
