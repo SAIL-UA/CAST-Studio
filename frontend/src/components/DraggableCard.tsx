@@ -3,16 +3,16 @@
 import React, { useState, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { useDrag } from "react-dnd";
-import type { DraggableCardProps, DragItem, ImageData, ImageMetadata } from "../types/types";
-import { updateImageData, generateDescription, deleteFigure, getImageData } from "../services/api";
-import { GeneratingPlaceholder } from "./GeneratingPlaceholder";
-import { logAction, captureActionContext } from "../utils/userActionLogger";
-import { formatImageMetadata, getImageUrl } from "../utils/imageUtils";
-import { useAuth } from "../contexts/Auth";
-import { useFeatureFlags } from "../hooks/useFeatureFlags";
-import { useResearchQuestions } from "../contexts/ResearchQuestions";
-import RqLinkPicker from "./RqLinkPicker";
-import RqBadges from "./RqBadges";
+import type { DraggableCardProps, DragItem, ImageData, ImageMetadata } from "@/types/types";
+import { updateImageData, generateDescription, deleteFigure, getImageData } from "@/services/api";
+import { GeneratingPlaceholder } from "@/components/GeneratingPlaceholder";
+import { logAction, captureActionContext } from "@/utils/userActionLogger";
+import { formatImageMetadata, getImageUrl } from "@/utils/imageUtils";
+import { useAuth } from "@/contexts/Auth";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useResearchQuestions } from "@/contexts/ResearchQuestions";
+import RqLinkPicker from "@/components/RqLinkPicker";
+import RqBadges from "@/components/RqBadges";
 
 const OLD_SHORT_DESC_PLACEHOLDER = "Add a description for this visual.";
 const OLD_LONG_DESC_PLACEHOLDER = "Ask AI to create a description for this visual.";

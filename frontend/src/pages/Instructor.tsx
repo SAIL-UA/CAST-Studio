@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/Auth';
-import { getFeatureFlags, updateFeatureFlags, getInstructorUsers, exportWorkspaceReport, getEngagementReport } from '../services/api';
-import Header from '../components/Header';
-import CompactSidebar from '../components/CompactSidebar';
-import Footer from '../components/Footer';
+import { useAuth } from '@/contexts/Auth';
+import { getFeatureFlags, updateFeatureFlags, getInstructorUsers, exportWorkspaceReport, getEngagementReport } from '@/services/api';
+import Header from '@/components/Header';
+import CompactSidebar from '@/components/CompactSidebar';
+import Footer from '@/components/Footer';
 
 type UserRow = {
     id: string;

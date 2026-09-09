@@ -1,4 +1,4 @@
-import { logUserAction } from "../services/api";
+import { logUserAction } from "@/services/api";
 
 type UserActionType = "click" | "hover" | "drag" | "drop";
 

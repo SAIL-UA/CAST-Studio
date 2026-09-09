@@ -1,5 +1,5 @@
 // Import dependencies
-import { logAction } from '../utils/userActionLogger';
+import { logAction } from '@/utils/userActionLogger';
 
 // Define props interface
 type SelectNarrativeButtonProps = {

@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Import contexts
-import { useAuth } from '../contexts/Auth';
-import { logout } from '../services/api';
+import { useAuth } from '@/contexts/Auth';
+import { logout } from '@/services/api';
 
 // Define props interface
 type HeaderProps = {

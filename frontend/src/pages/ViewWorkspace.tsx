@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '../contexts/Auth';
-import { getInstructorWorkspace, getInstructorUsers, createInstructorNote } from '../services/api';
+import { useAuth } from '@/contexts/Auth';
+import { getInstructorWorkspace, getInstructorUsers, createInstructorNote } from '@/services/api';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import Header from '../components/Header';
-import Workspace from '../components/Workspace';
-import DataStories from '../components/DataStories';
-import CompactSidebar from '../components/CompactSidebar';
-import Footer from '../components/Footer';
+import Header from '@/components/Header';
+import Workspace from '@/components/Workspace';
+import DataStories from '@/components/DataStories';
+import CompactSidebar from '@/components/CompactSidebar';
+import Footer from '@/components/Footer';
 
 type StudentInfo = {
     id: string;

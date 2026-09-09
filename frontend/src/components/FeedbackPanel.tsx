@@ -1,5 +1,5 @@
 import React from 'react';
-import squares from '../assets/images/squares.svg';
+import squares from '@/assets/images/squares.svg';
 
 export type FeedbackCardData = {
   title: string;

@@ -11,39 +11,39 @@ import {
 	getScaffolds,
 	updateScaffold,
 	deleteScaffold,
-} from "../services/api";
+} from "@/services/api";
 
 // Import components
-import UploadButton from "./UploadButton";
-import GenerateStoryButton from "./GenerateStoryButton";
-import CraftStoryButton from "./CraftStoryButton";
-import GroupButton from "./GroupButton";
-import FeedbackButton from "./FeedbackButton";
-import CollaborateButton from "./CollaborateButton";
-import AnnotateVisualsButton from "./AnnotateVisualsButton";
-import GroupDiv from "./GroupDiv";
-import Bin from "./Bin";
-import DeleteAllButton from "./DeleteAllButton";
-import ClearAllButton from "./ClearAllButton";
-// import MobileMenuButton from './MobileMenuButton';
-import RecycleBoard from "./Recycle";
+import UploadButton from "@/components/UploadButton";
+import GenerateStoryButton from "@/components/GenerateStoryButton";
+import CraftStoryButton from "@/components/CraftStoryButton";
+import GroupButton from "@/components/GroupButton";
+import FeedbackButton from "@/components/FeedbackButton";
+import CollaborateButton from "@/components/CollaborateButton";
+import AnnotateVisualsButton from "@/components/AnnotateVisualsButton";
+import GroupDiv from "@/components/GroupDiv";
+import Bin from "@/components/Bin";
+import DeleteAllButton from "@/components/DeleteAllButton";
+import ClearAllButton from "@/components/ClearAllButton";
+// import MobileMenuButton from '@/components/MobileMenuButton';
+import RecycleBoard from "@/components/Recycle";
 
 // Import scaffolds
-import CauseEffect from "./scaffolds/CauseEffect";
-import QuestionAnswer from "./scaffolds/QuestionAnswer";
-import ProblemSolution from "./scaffolds/ProblemSolution";
-import TimeBased from "./scaffolds/TimeBased";
-import FactorAnalysis from "./scaffolds/FactorAnalysis";
-import OverviewToDetail from "./scaffolds/OverviewToDetail";
-import Comparative from "./scaffolds/Comparative";
-import ShockLead from "./scaffolds/ShockLead";
-import WorkflowProcess from "./scaffolds/WorkflowProcess";
-import Linear from "./scaffolds/Linear";
-import InvertedPyramid from "./scaffolds/InvertedPyramid";
+import CauseEffect from "@/components/scaffolds/CauseEffect";
+import QuestionAnswer from "@/components/scaffolds/QuestionAnswer";
+import ProblemSolution from "@/components/scaffolds/ProblemSolution";
+import TimeBased from "@/components/scaffolds/TimeBased";
+import FactorAnalysis from "@/components/scaffolds/FactorAnalysis";
+import OverviewToDetail from "@/components/scaffolds/OverviewToDetail";
+import Comparative from "@/components/scaffolds/Comparative";
+import ShockLead from "@/components/scaffolds/ShockLead";
+import WorkflowProcess from "@/components/scaffolds/WorkflowProcess";
+import Linear from "@/components/scaffolds/Linear";
+import InvertedPyramid from "@/components/scaffolds/InvertedPyramid";
 
 // Import types
-import type { ImageData, GroupData, ScaffoldData } from "../types/types";
-import { SCAFFOLD_NUMBER_TO_PATTERN } from "../types/scaffoldMappings";
+import type { ImageData, GroupData, ScaffoldData } from "@/types/types";
+import { SCAFFOLD_NUMBER_TO_PATTERN } from "@/types/scaffoldMappings";
 
 // Define props interface
 type StoryBoardProps = {

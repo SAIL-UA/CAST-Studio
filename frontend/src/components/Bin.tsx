@@ -2,8 +2,8 @@
 
 import React, { useRef, useEffect, useCallback } from "react";
 import { useDrop } from "react-dnd";
-import type { BinProps, DragItem } from "../types/types";
-import DraggableCard from "./DraggableCard";
+import type { BinProps, DragItem } from "@/types/types";
+import DraggableCard from "@/components/DraggableCard";
 
 function Bin({
 	id,

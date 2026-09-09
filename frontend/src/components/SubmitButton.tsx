@@ -1,6 +1,6 @@
 // Import dependencies
 import { useNavigate } from 'react-router-dom';
-import { logAction } from '../utils/userActionLogger';
+import { logAction } from '@/utils/userActionLogger';
 
 
 const SubmitButton = () => {

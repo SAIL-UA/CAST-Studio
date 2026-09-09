@@ -9,10 +9,10 @@ import {
 	arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { ImageData, DragItem, ScaffoldData, GroupData } from "../../types/types";
-import DraggableCard from "../DraggableCard";
-import GroupDiv from "../GroupDiv";
-import { logAction } from "../../utils/userActionLogger";
+import type { ImageData, DragItem, ScaffoldData, GroupData } from "@/types/types";
+import DraggableCard from "@/components/DraggableCard";
+import GroupDiv from "@/components/GroupDiv";
+import { logAction } from "@/utils/userActionLogger";
 
 const MIN_SLOTS = 2;
 const MAX_SLOTS = 15;

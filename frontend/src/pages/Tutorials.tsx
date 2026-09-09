@@ -1,33 +1,33 @@
 // Import dependencies
-import gs11 from '../assets/images/gs1_1.png';
-import gs12 from '../assets/images/gs1_2.png';
-import gs13 from '../assets/images/gs1_3.png';
-import gs14 from '../assets/images/gs1_4.png';
-import gs15 from '../assets/images/gs1_5.png';
-import gs16 from '../assets/images/gs1_6.png';
-import gs21 from '../assets/images/gs2_1.png';
-import gs22 from '../assets/images/gs2_2.png';
-import gs23 from '../assets/images/gs2_3.png';
-import gs24 from '../assets/images/gs2_4.png';
-import gs25 from '../assets/images/gs2_5.png';
-import gs26 from '../assets/images/gs2_6.png';
-import gs28 from '../assets/images/gs2_8.png';
-import gs29 from '../assets/images/gs2_9.png';
-import gs210 from '../assets/images/gs2_10.png';
-import gs31 from '../assets/images/gs3_1.png';
-import gs32 from '../assets/images/gs3_2.png';
-import gs33 from '../assets/images/gs3_3.png';
-import gs34 from '../assets/images/gs3_4.png';
-import gs41 from '../assets/images/gs4_1.png';
-import gs42 from '../assets/images/gs4_2.png';
-import gs43 from '../assets/images/gs4_3.png';
+import gs11 from '@/assets/images/gs1_1.png';
+import gs12 from '@/assets/images/gs1_2.png';
+import gs13 from '@/assets/images/gs1_3.png';
+import gs14 from '@/assets/images/gs1_4.png';
+import gs15 from '@/assets/images/gs1_5.png';
+import gs16 from '@/assets/images/gs1_6.png';
+import gs21 from '@/assets/images/gs2_1.png';
+import gs22 from '@/assets/images/gs2_2.png';
+import gs23 from '@/assets/images/gs2_3.png';
+import gs24 from '@/assets/images/gs2_4.png';
+import gs25 from '@/assets/images/gs2_5.png';
+import gs26 from '@/assets/images/gs2_6.png';
+import gs28 from '@/assets/images/gs2_8.png';
+import gs29 from '@/assets/images/gs2_9.png';
+import gs210 from '@/assets/images/gs2_10.png';
+import gs31 from '@/assets/images/gs3_1.png';
+import gs32 from '@/assets/images/gs3_2.png';
+import gs33 from '@/assets/images/gs3_3.png';
+import gs34 from '@/assets/images/gs3_4.png';
+import gs41 from '@/assets/images/gs4_1.png';
+import gs42 from '@/assets/images/gs4_2.png';
+import gs43 from '@/assets/images/gs4_3.png';
 
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom'
 
 // Import compopnents
-import LandingHeader, { SANS } from '../components/LandingHeader';
-import DocsSidebar, { type DocsMenuStructure } from '../components/DocsSidebar';
+import LandingHeader, { SANS } from '@/components/LandingHeader';
+import DocsSidebar, { type DocsMenuStructure } from '@/components/DocsSidebar';
 
 
 // Visible component

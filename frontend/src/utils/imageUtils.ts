@@ -1,5 +1,5 @@
-import type { ImageData, ImageMetadata } from "../types/types";
-import { getImageData } from "../services/api";
+import type { ImageData, ImageMetadata } from "@/types/types";
+import { getImageData } from "@/services/api";
 const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || "/images";
 
 export const getImageUrl = (filename: string): string => {

@@ -1,6 +1,6 @@
 // Import dependencies
 import React, { useEffect, useState } from 'react';
-import { logAction } from '../utils/userActionLogger';
+import { logAction } from '@/utils/userActionLogger';
 
 // Define props interface
 type NarrativeExamplesProps = {

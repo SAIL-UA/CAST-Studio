@@ -3,10 +3,10 @@ import { useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 
 // Import components
-import SelectNarrativeButton from './SelectNarrativeButton';
-import NarrativeExamplesButton from './NarrativeExamplesButton';
-import { logAction } from '../utils/userActionLogger';
-import { useGuestTourOpen } from '../utils/useGuestTourOpen';
+import SelectNarrativeButton from '@/components/SelectNarrativeButton';
+import NarrativeExamplesButton from '@/components/NarrativeExamplesButton';
+import { logAction } from '@/utils/userActionLogger';
+import { useGuestTourOpen } from '@/utils/useGuestTourOpen';
 
 // Content SVG icons
 const C = '#005c84';

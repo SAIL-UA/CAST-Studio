@@ -1,17 +1,17 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '../contexts/Auth';
-import { joinSession, getImageDataAll, setActiveTargetUser, getGroups } from '../services/api';
-import ResearchQuestionsPanel, { type LinkableCard } from '../components/ResearchQuestionsPanel';
-import { useResearchQuestions } from '../contexts/ResearchQuestions';
-import { getAvatarColor } from '../utils/avatarUtils';
-import Header from '../components/Header';
-import Workspace from '../components/Workspace';
-import DataStories from '../components/DataStories';
-import FeedbackPanel, { type FeedbackCardData, type InstructorNote } from '../components/FeedbackPanel';
-import CompactSidebar from '../components/CompactSidebar';
-import ControlWorkspaceButton from '../components/ControlWorkspaceButton';
-import Footer from '../components/Footer';
+import { useAuth } from '@/contexts/Auth';
+import { joinSession, getImageDataAll, setActiveTargetUser, getGroups } from '@/services/api';
+import ResearchQuestionsPanel, { type LinkableCard } from '@/components/ResearchQuestionsPanel';
+import { useResearchQuestions } from '@/contexts/ResearchQuestions';
+import { getAvatarColor } from '@/utils/avatarUtils';
+import Header from '@/components/Header';
+import Workspace from '@/components/Workspace';
+import DataStories from '@/components/DataStories';
+import FeedbackPanel, { type FeedbackCardData, type InstructorNote } from '@/components/FeedbackPanel';
+import CompactSidebar from '@/components/CompactSidebar';
+import ControlWorkspaceButton from '@/components/ControlWorkspaceButton';
+import Footer from '@/components/Footer';
 
 type ParticipantInfo = {
     username: string;

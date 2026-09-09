@@ -2,15 +2,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { useDrag, useDrop } from 'react-dnd';
-import type { GroupDivProps, DragItem } from '../types/types';
-import DraggableCard from './DraggableCard';
-import { formatImageMetadata } from '../utils/imageUtils';
-import { formatGroupMetadata } from '../utils/groupUtils';
-import { logAction } from '../utils/userActionLogger';
-import { captureActionContext } from '../utils/userActionLogger';
-import { useResearchQuestions } from '../contexts/ResearchQuestions';
-import RqLinkPicker from './RqLinkPicker';
-import RqBadges from './RqBadges';
+import type { GroupDivProps, DragItem } from '@/types/types';
+import DraggableCard from '@/components/DraggableCard';
+import { formatImageMetadata } from '@/utils/imageUtils';
+import { formatGroupMetadata } from '@/utils/groupUtils';
+import { logAction } from '@/utils/userActionLogger';
+import { captureActionContext } from '@/utils/userActionLogger';
+import { useResearchQuestions } from '@/contexts/ResearchQuestions';
+import RqLinkPicker from '@/components/RqLinkPicker';
+import RqBadges from '@/components/RqBadges';
 
 const GroupDiv: React.FC<GroupDivProps> = ({
   id,

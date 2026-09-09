@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ImageData, StoryDataRaw } from '../types/types';
+import type { ImageData, StoryDataRaw } from '@/types/types';
 
 // === Create Axios instances ===
 const API = axios.create({

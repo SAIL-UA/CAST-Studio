@@ -1,10 +1,10 @@
 // Import dependencies
-import Bin from './Bin';
-import DeleteAllButton from './DeleteAllButton';
-import RestoreAllButton from './RestoreAllButton';
+import Bin from '@/components/Bin';
+import DeleteAllButton from '@/components/DeleteAllButton';
+import RestoreAllButton from '@/components/RestoreAllButton';
 
 // Import types
-import type { ImageData } from '../types/types';
+import type { ImageData } from '@/types/types';
 
 // Define props interface
 type RecycleBoardProps = {
