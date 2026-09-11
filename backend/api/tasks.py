@@ -2218,10 +2218,6 @@ def _fetch_all_storyboard_data(
     GroupData = _get_model("api", "GroupData")
     ScaffoldData = _get_model("api", "ScaffoldData")
 
-    logger.info(
-        f"[FETCH_DATA] Fetching storyboard data for user {user.id}, story_structure_id={story_structure_id}"
-    )
-
     # Fetch all groups and images
     all_groups = GroupData.objects.filter(
         user=user, workspace=_active_ws(user)
@@ -2255,9 +2251,6 @@ def _fetch_all_storyboard_data(
         # Specific scaffold requested
         try:
             scaffold = ScaffoldData.objects.get(id=scaffold_id, user=user)
-            logger.info(
-                f"[FETCH_DATA] Using specific scaffold: {scaffold.name} ({scaffold_id})"
-            )
             if not story_structure_id:
                 from .pydandtic import STORY_SCAFFOLDS as _SS
 
@@ -2283,7 +2276,6 @@ def _fetch_all_storyboard_data(
             user=user, workspace=_active_ws(user)
         )
         scaffold_count = all_scaffolds.count()
-        logger.info(f"[FETCH_DATA] All workspace mode: {scaffold_count} scaffold(s)")
 
         if scaffold_count == 1:
             # Single scaffold — use it directly
@@ -2404,15 +2396,6 @@ def _fetch_all_storyboard_data(
     total_figure_data = len(output_json["figure_data"])
     total_expected = all_images.exclude(long_desc__exact="").count()
 
-    logger.info(f"[FETCH_DATA] SUMMARY:")
-    logger.info(f"  Scaffold figures: {total_scaffold_figures}")
-    logger.info(f"  Group figures (non-scaffold): {total_group_figures}")
-    logger.info(f"  Ungrouped figures (non-scaffold): {total_figure_data}")
-    logger.info(
-        "  Total figures counted: %s (expected with descriptions: %s)",
-        total_scaffold_figures + total_group_figures + total_figure_data,
-        total_expected,
-    )
     if (
         total_scaffold_figures + total_group_figures + total_figure_data
         != total_expected
@@ -3223,7 +3206,6 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
 
         _progress(1, "Analyzing...")
         proposed_groups = _ai_group_images(eligible, max_groups)
-        logger.info(f"[AI_GROUP] GPT proposed {len(proposed_groups)} groups")
 
         _progress(2, "Grouping...")
 
