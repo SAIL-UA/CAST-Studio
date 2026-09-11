@@ -3,7 +3,6 @@ import type { SavedWorkspace } from "@/services/api";
 type WorkspaceItemProps = {
 	workspace: SavedWorkspace;
 	disabled?: boolean;
-	canDelete?: boolean;
 	onSelect: (workspace: SavedWorkspace) => void;
 	onRename: (workspace: SavedWorkspace) => void;
 	onDelete: (workspace: SavedWorkspace) => void;
@@ -15,7 +14,6 @@ const iconBtn =
 const WorkspaceItem = ({
 	workspace,
 	disabled = false,
-	canDelete = true,
 	onSelect,
 	onRename,
 	onDelete,
@@ -25,20 +23,15 @@ const WorkspaceItem = ({
 			<button
 				type="button"
 				disabled={disabled}
-				title={workspace.is_active ? "Current workspace" : `Load ${workspace.name}`}
+				title={`Load ${workspace.name} into the editor`}
 				onClick={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
 					onSelect(workspace);
 				}}
-				className={`flex-1 min-w-0 text-left text-sm truncate outline-none disabled:opacity-50 ${
-					workspace.is_active ? "font-medium text-grey-darkest" : "text-grey-darkest"
-				}`}
+				className="flex-1 min-w-0 text-left text-sm truncate outline-none disabled:opacity-50 text-grey-darkest"
 			>
 				{workspace.name}
-				{workspace.is_active && (
-					<span className="ml-1 text-xs font-normal text-gray-400">(current)</span>
-				)}
 			</button>
 			<button
 				type="button"
@@ -63,8 +56,8 @@ const WorkspaceItem = ({
 			</button>
 			<button
 				type="button"
-				disabled={disabled || !canDelete}
-				title={canDelete ? "Delete" : "You cannot delete your only workspace"}
+				disabled={disabled}
+				title="Delete"
 				className={`${iconBtn} hover:text-red-600`}
 				onPointerDown={(e) => e.stopPropagation()}
 				onClick={(e) => {

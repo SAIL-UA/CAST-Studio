@@ -52,7 +52,7 @@ from .serializers import (
 
 from .workspace_ops import (
   get_or_create_active_workspace, get_or_create_media,
-  purge_media_if_unreferenced, create_workspace, activate_workspace,
+  purge_media_if_unreferenced, save_snapshot, restore_snapshot,
   delete_workspace, MAX_WORKSPACES_PER_USER,
 )
 
@@ -2234,16 +2234,18 @@ class WorkspaceListCreateView(APIView):
     name = request.data.get('name') or ''
     replace_id = request.data.get('replace_id')
     try:
-      dest = create_workspace(user, name, replace_id=replace_id)
+      dest = save_snapshot(user, name, replace_id=replace_id)
     except ValueError as e:
       code = str(e)
       if code == 'workspace_limit':
         return Response(
-          {"error": "Workspace limit reached. Replace one of the current workspaces.", "code": "workspace_limit", "limit": MAX_WORKSPACES_PER_USER},
+          {"error": "Snapshot limit reached. Replace one of the saved snapshots.", "code": "workspace_limit", "limit": MAX_WORKSPACES_PER_USER},
           status=status.HTTP_409_CONFLICT,
         )
       if code == 'invalid_replace':
-        return Response({"error": "Choose a workspace to replace", "code": "invalid_replace"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Choose a snapshot to replace", "code": "invalid_replace"}, status=status.HTTP_400_BAD_REQUEST)
+      if code == 'name_required':
+        return Response({"error": "Name is required", "code": "name_required"}, status=status.HTTP_400_BAD_REQUEST)
       return Response({"error": code}, status=status.HTTP_400_BAD_REQUEST)
     from .signals import broadcast_workspace_update
     broadcast_workspace_update(user.id)
@@ -2258,6 +2260,8 @@ class WorkspaceDetailView(APIView):
     ws = Workspace.objects.filter(id=workspace_id, user=user).first()
     if not ws:
       return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+    if ws.is_active:
+      return Response({"error": "The editor cannot be renamed", "code": "editor_workspace"}, status=status.HTTP_400_BAD_REQUEST)
     name = (request.data.get('name') or '').strip()
     if not name:
       return Response({"error": "Name is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -2270,8 +2274,8 @@ class WorkspaceDetailView(APIView):
     try:
       result = delete_workspace(user, workspace_id)
     except ValueError as e:
-      if str(e) == 'last_workspace':
-        return Response({"error": "Cannot delete the last workspace", "code": "last_workspace"}, status=status.HTTP_400_BAD_REQUEST)
+      if str(e) in ('editor_workspace', 'last_workspace'):
+        return Response({"error": "The editor cannot be deleted", "code": "editor_workspace"}, status=status.HTTP_400_BAD_REQUEST)
       return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     if not result:
       return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -2283,7 +2287,7 @@ class WorkspaceActivateView(APIView):
 
   def post(self, request, workspace_id):
     user = get_workspace_write_user(request)
-    ws = activate_workspace(user, workspace_id)
+    ws = restore_snapshot(user, workspace_id)
     if not ws:
       return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
     from .signals import broadcast_workspace_update

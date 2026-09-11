@@ -22,8 +22,8 @@ class RegisterView(APIView):
     if serializer.is_valid():
       user = serializer.save()
       from api.models import Workspace
-      from api.workspace_ops import DEFAULT_WORKSPACE_NAME
-      Workspace.objects.get_or_create(user=user, is_active=True, defaults={'name': DEFAULT_WORKSPACE_NAME})
+      from api.workspace_ops import EDITOR_WORKSPACE_NAME
+      Workspace.objects.get_or_create(user=user, is_active=True, defaults={'name': EDITOR_WORKSPACE_NAME})
       return Response({'detail': 'User created'}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -69,7 +69,7 @@ class GuestLoginView(APIView):
     import uuid
     from django.db import transaction
     from api.models import ImageData, ScaffoldData, Workspace
-    from api.workspace_ops import DEFAULT_WORKSPACE_NAME, get_or_create_media
+    from api.workspace_ops import EDITOR_WORKSPACE_NAME, get_or_create_media
 
     # Generate a unique guest username (retry a few times in case of collision)
     for _ in range(5):
@@ -94,7 +94,7 @@ class GuestLoginView(APIView):
           is_guest=True,
         )
 
-        ws = Workspace.objects.create(user=user, name=DEFAULT_WORKSPACE_NAME, is_active=True)
+        ws = Workspace.objects.create(user=user, name=EDITOR_WORKSPACE_NAME, is_active=True)
 
         # Seed two sticky notes (ImageData rows with empty media).
         # The user's provided strings go in long_desc (note body/content);

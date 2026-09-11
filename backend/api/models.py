@@ -5,11 +5,12 @@ import uuid
 
 class Workspace(models.Model):
   """
-  Named canvas snapshot. Each user has one active workspace; others are saved copies.
+  Each user has one active editor canvas (is_active=True, named Editor).
+  Other rows are named snapshots copied from the editor.
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
   user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='workspaces')
-  name = models.CharField(max_length=100, default="Default")
+  name = models.CharField(max_length=100, default="Editor")
   is_active = models.BooleanField(default=True)
   created_at = models.DateTimeField(auto_now_add=True)
   last_modified = models.DateTimeField(auto_now=True)

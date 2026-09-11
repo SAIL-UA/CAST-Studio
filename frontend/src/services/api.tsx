@@ -545,7 +545,7 @@ export const getWorkspaces = async () => {
   return response.data as { workspaces: SavedWorkspace[]; limit: number };
 };
 
-export const createWorkspace = async (name: string, replaceId?: string) => {
+export const saveWorkspace = async (name: string, replaceId?: string) => {
   const body: { name: string; replace_id?: string } = { name };
   if (replaceId) body.replace_id = replaceId;
   const response = await API.post('/workspaces/', body);
@@ -557,7 +557,7 @@ export const renameWorkspace = async (workspaceId: string, name: string) => {
   return response.data;
 };
 
-export const activateWorkspace = async (workspaceId: string) => {
+export const restoreWorkspace = async (workspaceId: string) => {
   const response = await API.post(`/workspaces/${workspaceId}/activate/`, {});
   return response.data;
 };

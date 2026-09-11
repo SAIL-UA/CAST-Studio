@@ -15,20 +15,20 @@ from .models import (
 )
 
 MAX_WORKSPACES_PER_USER = 3
-DEFAULT_WORKSPACE_NAME = "Default"
+EDITOR_WORKSPACE_NAME = "Editor"
+DEFAULT_WORKSPACE_NAME = EDITOR_WORKSPACE_NAME
 
 
 def get_or_create_active_workspace(user):
+    """Return the user's editor canvas, creating it if needed. Never promote a snapshot."""
     ws = Workspace.objects.filter(user=user, is_active=True).first()
     if ws:
+        if ws.name != EDITOR_WORKSPACE_NAME:
+            ws.name = EDITOR_WORKSPACE_NAME
+            ws.save(update_fields=["name"])
         return ws
-    existing = Workspace.objects.filter(user=user).order_by("-last_modified").first()
-    if existing:
-        existing.is_active = True
-        existing.save(update_fields=["is_active"])
-        return existing
     return Workspace.objects.create(
-        user=user, name=DEFAULT_WORKSPACE_NAME, is_active=True
+        user=user, name=EDITOR_WORKSPACE_NAME, is_active=True
     )
 
 
@@ -166,72 +166,84 @@ def clone_workspace_contents(source, dest):
     return dest
 
 
-def _activate(workspaces, dest):
-    for w in workspaces:
-        if w.is_active and w.id != dest.id:
-            w.is_active = False
-            w.save(update_fields=["is_active"])
-    if not dest.is_active:
-        dest.is_active = True
-        dest.save(update_fields=["is_active", "last_modified"])
-    return dest
-
-
-def create_workspace(user, name, replace_id=None):
+def save_snapshot(user, name, replace_id=None):
     """
-    Create an empty workspace and make it the current one.
+    Copy the editor canvas into a named snapshot. The editor stays active
+    and keeps its contents.
 
-    Users may keep up to MAX_WORKSPACES_PER_USER workspaces. At the cap,
-    replace_id must point at an existing workspace to clear and reuse.
-    Raises ValueError with code workspace_limit / invalid_replace.
+    Users may keep up to MAX_WORKSPACES_PER_USER snapshots (the editor does
+    not count). At the cap, replace_id must be an existing snapshot.
+    Raises ValueError with code name_required / workspace_limit / invalid_replace.
     """
-    name = (name or "").strip() or DEFAULT_WORKSPACE_NAME
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("name_required")
     with transaction.atomic():
         workspaces = list(Workspace.objects.select_for_update().filter(user=user))
+        editor = next((w for w in workspaces if w.is_active), None)
+        if not editor:
+            editor = Workspace.objects.create(
+                user=user, name=EDITOR_WORKSPACE_NAME, is_active=True
+            )
+            workspaces.append(editor)
 
-        if len(workspaces) >= MAX_WORKSPACES_PER_USER:
+        snapshots = [w for w in workspaces if not w.is_active]
+        if len(snapshots) >= MAX_WORKSPACES_PER_USER:
             if not replace_id:
                 raise ValueError("workspace_limit")
-            dest = next((w for w in workspaces if str(w.id) == str(replace_id)), None)
+            dest = next((w for w in snapshots if str(w.id) == str(replace_id)), None)
             if not dest:
                 raise ValueError("invalid_replace")
             old_media = clear_workspace_canvas(dest)
             dest.name = name[:100]
             dest.save(update_fields=["name", "last_modified"])
-            _activate(workspaces, dest)
+            clone_workspace_contents(editor, dest)
             purge_media_ids(old_media)
             return dest
 
-        for w in workspaces:
-            if w.is_active:
-                w.is_active = False
-                w.save(update_fields=["is_active"])
-        return Workspace.objects.create(user=user, name=name[:100], is_active=True)
+        dest = Workspace.objects.create(user=user, name=name[:100], is_active=False)
+        clone_workspace_contents(editor, dest)
+        return dest
+
+
+def create_workspace(user, name, replace_id=None):
+    """Backward-compatible alias: save a snapshot of the editor."""
+    return save_snapshot(user, name, replace_id=replace_id)
+
+
+def restore_snapshot(user, workspace_id):
+    """Replace the editor canvas with a copy of a snapshot. Stay on the editor."""
+    with transaction.atomic():
+        workspaces = list(Workspace.objects.select_for_update().filter(user=user))
+        editor = next((w for w in workspaces if w.is_active), None)
+        source = next((w for w in workspaces if str(w.id) == str(workspace_id)), None)
+        if not source:
+            return None
+        if not editor:
+            editor = Workspace.objects.create(
+                user=user, name=EDITOR_WORKSPACE_NAME, is_active=True
+            )
+        if source.id == editor.id or source.is_active:
+            return editor
+        old_media = clear_workspace_canvas(editor)
+        clone_workspace_contents(source, editor)
+        purge_media_ids(old_media)
+        return editor
 
 
 def activate_workspace(user, workspace_id):
-    with transaction.atomic():
-        workspaces = list(Workspace.objects.select_for_update().filter(user=user))
-        target = next((w for w in workspaces if str(w.id) == str(workspace_id)), None)
-        if not target:
-            return None
-        return _activate(workspaces, target)
+    """Backward-compatible alias: load a snapshot into the editor."""
+    return restore_snapshot(user, workspace_id)
 
 
 def delete_workspace(user, workspace_id):
     with transaction.atomic():
         workspaces = list(Workspace.objects.select_for_update().filter(user=user))
-        if len(workspaces) <= 1:
-            raise ValueError("last_workspace")
         target = next((w for w in workspaces if str(w.id) == str(workspace_id)), None)
         if not target:
             return None
-        others = [w for w in workspaces if w.id != target.id]
         if target.is_active:
-            fallback = max(others, key=lambda w: w.last_modified)
-            # Deactivate the current row first — one_active_workspace_per_user
-            # forbids two True rows for the same user, even inside this transaction.
-            _activate(workspaces, fallback)
+            raise ValueError("editor_workspace")
         media_ids = collect_workspace_media_ids(target)
         target.delete()
         purge_media_ids(media_ids)
