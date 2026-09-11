@@ -2225,9 +2225,6 @@ def _fetch_all_storyboard_data(
     all_images = ImageData.objects.filter(
         user=user, workspace=_active_ws(user), in_storyboard=True
     ).select_related("media")
-    logger.info(
-        f"[FETCH_DATA] Total: {all_groups.count()} groups, {all_images.count()} storyboard images"
-    )
 
     # Load RQ context once and thread it through every builder below so figures and
     # groups carry their rq_labels. Storyboard image ids are passed so the loader can
@@ -2432,8 +2429,6 @@ def generate_narrative_task(
             user_id, "narrative", task_id, stage, TOTAL_STAGES, name, substage
         )
 
-    logger.info(f"Generating story with structure: {story_structure_id}")
-
     try:
         _progress(0, "Checking...")
 
@@ -2455,14 +2450,8 @@ def generate_narrative_task(
 
         for image in images_needing_desc:
             if image.long_desc_generating:
-                logger.info(
-                    f"[NARRATIVE] Skipping {image.filepath} - description already generating"
-                )
                 continue
 
-            logger.info(
-                f"[NARRATIVE] Generating missing description for {image.filepath}"
-            )
             image.long_desc_generating = True
             image.save(update_fields=["long_desc_generating"])
 
@@ -2586,12 +2575,6 @@ def generate_narrative_task(
             theme = _theme_future.result()
             if _struct_future is not None:
                 story_structure_id = _struct_future.result()
-        logger.info(
-            f"[TIMING] structuring (parallel wall): {time.perf_counter() - _t_pre:.2f}s"
-        )
-        logger.info(
-            f"Using story structure: {story_structure_id} (all_workspace={is_all_workspace})"
-        )
 
         _progress(4, "Fetching...")
         # Fetch all storyboard data (scaffolds, groups, figures)
@@ -2611,9 +2594,6 @@ def generate_narrative_task(
                 story_structure_id = _resolve_story_structure_id(
                     None, all_descriptions_text
                 )
-        logger.info(
-            f"[NARRATIVE] Storyboard data: {json.dumps(storyboard_data, indent=4)}"
-        )
 
         scaffold_data = storyboard_data.get("scaffold_data")
         non_scaffold_groups = storyboard_data.get("group_data") or []
@@ -2962,9 +2942,6 @@ def generate_narrative_task(
             )
             sequence_summary = _bullets_future.result()
             rq_reasoning = _rq_future.result()
-        logger.info(
-            f"[TIMING] post_hoc (parallel wall): {time.perf_counter() - _t_post:.2f}s"
-        )
 
         NarrativeCache.objects.filter(user=user).update(
             sequence_summary=sequence_summary,
@@ -2981,9 +2958,6 @@ def generate_narrative_task(
         # Mark progress complete AFTER reasoning is written
         _progress(TOTAL_STAGES, "Complete")
 
-        logger.info(
-            f"Successfully generated {generation_mode} narrative for user {user.username} using structure: {story_structure_name}"
-        )
         return f"Successfully generated {generation_mode} narrative for user {user.username} using structure: {story_structure_name}"
     except User.DoesNotExist:
         logger.error(f"User with id {user_id} not found")
@@ -3111,12 +3085,8 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
             non_scaffold_groups = GroupData.objects.filter(
                 user=user, workspace=_active_ws(user), scaffold_id__isnull=True
             )
-            count = non_scaffold_groups.count()
             # Clearing group_id on images happens via SET_NULL on delete
             non_scaffold_groups.delete()
-            logger.info(
-                f"[AI_GROUP] Deleted {count} non-scaffold groups for user {user.username}"
-            )
 
         # Fetch eligible images
         base_qs = ImageData.objects.filter(
@@ -3200,9 +3170,6 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
             return "Too many unannotated visuals."
 
         max_groups = math.ceil(len(eligible) / 2)
-        logger.info(
-            f"[AI_GROUP] {len(eligible)} eligible visuals, max {max_groups} groups"
-        )
 
         _progress(1, "Analyzing...")
         proposed_groups = _ai_group_images(eligible, max_groups)
@@ -3241,9 +3208,7 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
                 )
 
         _progress(TOTAL_STAGES, "Complete")
-        logger.info(
-            f"[AI_GROUP] Created {len(created_groups)} groups for user {user.username}"
-        )
+
         return {
             "status": "success",
             "groups_created": len(created_groups),
