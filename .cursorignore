@@ -10,6 +10,8 @@ backend/jupyterhub.sqlite
 # Markdown files
 *.md
 !README.md
+!jira.md
+!ERD.md
 
 # Django migrations
 **/migrations/*.py
