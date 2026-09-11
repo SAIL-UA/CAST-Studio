@@ -531,3 +531,39 @@ export const deleteScaffold = async(scaffoldId?: string) => {
   const response = await API.post(`/scaffolds/delete/`, scaffoldId ? { scaffold_id: scaffoldId } : {});
   return response;
 };
+
+export type SavedWorkspace = {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  last_modified: string;
+};
+
+export const getWorkspaces = async () => {
+  const response = await API.get('/workspaces/');
+  return response.data as { workspaces: SavedWorkspace[]; limit: number };
+};
+
+export const saveWorkspaceAs = async (name: string, replaceId?: string) => {
+  const body: { name: string; replace_id?: string } = { name };
+  if (replaceId) body.replace_id = replaceId;
+  const response = await API.post('/workspaces/', body);
+  return response.data;
+};
+
+export const renameWorkspace = async (workspaceId: string, name: string) => {
+  const response = await API.patch(`/workspaces/${workspaceId}/`, { name });
+  return response.data;
+};
+
+export const activateWorkspace = async (workspaceId: string) => {
+  const response = await API.post(`/workspaces/${workspaceId}/activate/`, {});
+  return response.data;
+};
+
+export const deleteSavedWorkspace = async (workspaceId: string) => {
+  const response = await API.delete(`/workspaces/${workspaceId}/`);
+  return response.data;
+};
+

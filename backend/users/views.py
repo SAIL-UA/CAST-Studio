@@ -21,6 +21,8 @@ class RegisterView(APIView):
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
       user = serializer.save()
+      from api.models import Workspace
+      Workspace.objects.get_or_create(user=user, is_active=True, defaults={'name': 'Untitled'})
       return Response({'detail': 'User created'}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -62,7 +64,8 @@ class GuestLoginView(APIView):
   def post(self, request):
     import uuid
     from django.db import transaction
-    from api.models import ImageData, ScaffoldData
+    from api.models import ImageData, ScaffoldData, Workspace
+    from api.workspace_ops import get_or_create_media
 
     # Generate a unique guest username (retry a few times in case of collision)
     for _ in range(5):
@@ -87,16 +90,18 @@ class GuestLoginView(APIView):
           is_guest=True,
         )
 
-        # Seed two sticky notes (ImageData rows with empty filepath).
+        ws = Workspace.objects.create(user=user, name="Untitled", is_active=True)
+
+        # Seed two sticky notes (ImageData rows with empty media).
         # The user's provided strings go in long_desc (note body/content);
         # short_desc holds the title.
         ImageData.objects.create(
-          user=user, filepath="", index=0, x=400.0, y=200.0,
+          user=user, workspace=ws, media=None, index=0, x=400.0, y=200.0,
           short_desc="Note 1",
           long_desc="American public's opinions on opportunity to enroll in higher education, by political party",
         )
         ImageData.objects.create(
-          user=user, filepath="", index=1, x=600.0, y=200.0,
+          user=user, workspace=ws, media=None, index=1, x=600.0, y=200.0,
           short_desc="Note 2",
           long_desc="Support services needed by college and university students",
         )
@@ -126,10 +131,12 @@ class GuestLoginView(APIView):
             shutil.copy(src_path, os.path.join(data_path, dest_name))
             # long_desc: filename without extension, underscores→spaces, capitalize
             readable = os.path.splitext(src_name)[0].replace('_', ' ').capitalize()
+            media = get_or_create_media(user, dest_name)
             ImageData.objects.create(
               id=new_uuid,
               user=user,
-              filepath=dest_name,
+              workspace=ws,
+              media=media,
               index=2 + i,
               x=x, y=y,
               source="upload",
@@ -142,6 +149,7 @@ class GuestLoginView(APIView):
         # it. Fields mirror what the frontend Linear component expects.
         ScaffoldData.objects.create(
           user=user,
+          workspace=ws,
           name="Linear",
           number=10,
           valid_group_numbers=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
@@ -193,6 +201,8 @@ class GuestCleanupView(APIView):
     if not user.is_guest:
       return Response({"detail": "Not a guest user"}, status=status.HTTP_403_FORBIDDEN)
 
+    from api.workspace_ops import purge_user_media_files
+    purge_user_media_files(user)
     user.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 

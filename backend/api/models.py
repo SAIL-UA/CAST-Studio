@@ -2,6 +2,53 @@ from django.db import models
 from users.models import User
 import uuid
 
+
+class Workspace(models.Model):
+  """
+  Named canvas snapshot. Each user has one active workspace; others are saved copies.
+  """
+  id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='workspaces')
+  name = models.CharField(max_length=100, default="Untitled")
+  is_active = models.BooleanField(default=True)
+  created_at = models.DateTimeField(auto_now_add=True)
+  last_modified = models.DateTimeField(auto_now=True)
+
+  def __str__(self):
+    return f"{self.user.username} - {self.name}{' *' if self.is_active else ''}"
+
+  class Meta:
+    db_table = 'workspaces'
+    managed = True
+    indexes = [
+      models.Index(fields=['user', 'last_modified']),
+    ]
+    constraints = [
+      models.UniqueConstraint(
+        fields=['user'],
+        condition=models.Q(is_active=True),
+        name='one_active_workspace_per_user',
+      ),
+    ]
+
+
+class MediaAsset(models.Model):
+  """Shared on-disk image identity. Canvas placements reference this; files are not copied per workspace."""
+  id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='media_assets')
+  filepath = models.CharField(max_length=255)
+  created_at = models.DateTimeField(auto_now_add=True)
+
+  def __str__(self):
+    return f"{self.user.username} - {self.filepath}"
+
+  class Meta:
+    db_table = 'media_assets'
+    managed = True
+    constraints = [
+      models.UniqueConstraint(fields=['user', 'filepath'], name='uniq_user_media_filepath'),
+    ]
+
 class UserAction(models.Model):
   """
   User actions.
@@ -85,6 +132,7 @@ class ScaffoldData(models.Model):
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
   user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='scaffold_data')
+  workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, db_column='workspace_id', related_name='scaffolds')
   name = models.CharField(max_length=100, default="No Scaffold")
   number = models.IntegerField(default=0)
   valid_group_numbers = models.JSONField(default=list, help_text="List of valid group numbers for this scaffold (1=causes, 2=effects, etc.)")
@@ -100,6 +148,9 @@ class ScaffoldData(models.Model):
   class Meta:
     db_table = 'scaffold_data'
     managed = True
+    indexes = [
+      models.Index(fields=['workspace']),
+    ]
 
 
 class GroupData(models.Model):
@@ -108,6 +159,7 @@ class GroupData(models.Model):
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
   user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='group_data')
+  workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, db_column='workspace_id', related_name='groups')
   name = models.CharField(max_length=100, default="Untitled Group")
   number = models.IntegerField(default=0)
   description = models.TextField(default="", null=True, blank=True)
@@ -124,15 +176,23 @@ class GroupData(models.Model):
   class Meta:
     db_table = 'group_data'
     managed = True
+    indexes = [
+      models.Index(fields=['workspace']),
+    ]
     
     
 class ImageData(models.Model):
   """
-  Image data.
+  Image / note placement in a workspace. File bytes live on MediaAsset (shared across workspaces).
+  Notes have media=None.
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
   user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='image_data')
-  filepath = models.CharField(max_length=255)
+  workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, db_column='workspace_id', related_name='images')
+  media = models.ForeignKey(
+    MediaAsset, on_delete=models.RESTRICT, db_column='media_id',
+    null=True, blank=True, related_name='placements',
+  )
   short_desc = models.TextField(default="")
   long_desc = models.TextField(default="")
   long_desc_generating = models.BooleanField(default=False)
@@ -149,12 +209,29 @@ class ImageData(models.Model):
   last_saved = models.DateTimeField(auto_now=True)
   created_at = models.DateTimeField(auto_now_add=True)
 
+  @property
+  def filepath(self):
+    if self.media_id:
+      return self.media.filepath
+    return ""
+
   def __str__(self):
-    return f"{self.user.username} - {self.filepath}"
+    return f"{self.user.username} - {self.filepath or self.id}"
 
   class Meta:
     db_table = 'image_data'
     managed = True
+    indexes = [
+      models.Index(fields=['workspace']),
+      models.Index(fields=['media']),
+    ]
+    constraints = [
+      models.UniqueConstraint(
+        fields=['workspace', 'media'],
+        condition=models.Q(media__isnull=False),
+        name='uniq_workspace_media_placement',
+      ),
+    ]
 
     
 class TaskProgress(models.Model):
@@ -281,6 +358,7 @@ class ResearchQuestion(models.Model):
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
   user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='research_questions')
+  workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, db_column='workspace_id', related_name='research_questions')
   text = models.TextField(default="")
   order = models.IntegerField(default=0)
   images = models.ManyToManyField(ImageData, blank=True, related_name='research_questions')
@@ -292,6 +370,9 @@ class ResearchQuestion(models.Model):
     db_table = 'research_questions'
     managed = True
     ordering = ['order', 'created_at']
+    indexes = [
+      models.Index(fields=['workspace']),
+    ]
 
   def __str__(self):
     return f"{self.user.username}: {self.text[:50]}"

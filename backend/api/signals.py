@@ -79,3 +79,9 @@ def scaffold_data_deleted(sender, instance, **kwargs):
 def narrative_cache_saved(sender, instance, **kwargs):
     if instance.user_id:
         broadcast_workspace_update(instance.user_id)
+
+
+@receiver(post_save, sender='api.Workspace')
+def workspace_saved(sender, instance, **kwargs):
+    if instance.user_id and instance.is_active:
+        broadcast_workspace_update(instance.user_id)

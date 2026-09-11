@@ -39,7 +39,7 @@ from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
   JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress, FeatureFlags,
-  SharedSession, SessionParticipant, ResearchQuestion
+  SharedSession, SessionParticipant, ResearchQuestion, Workspace
 )
 
 # Serializers
@@ -47,7 +47,13 @@ from .serializers import (
   ImageDataSerializer, NarrativeCacheSerializer,
   JupyterLogsSerializer, MousePositionLogSerializer,
   UserActionSerializer, ScrollLogSerializer, GroupDataSerializer, ScaffoldDataSerializer,
-  ResearchQuestionSerializer
+  ResearchQuestionSerializer, WorkspaceSerializer
+)
+
+from .workspace_ops import (
+  get_or_create_active_workspace, get_or_create_media,
+  purge_media_if_unreferenced, save_as_workspace, activate_workspace,
+  delete_workspace, MAX_WORKSPACES_PER_USER,
 )
 
 # Tasks
@@ -90,6 +96,10 @@ def resolve_target_user(request):
     from rest_framework.exceptions import PermissionDenied
     raise PermissionDenied("Access denied")
   return request.user
+
+
+def active_workspace_for(user):
+  return get_or_create_active_workspace(user)
 
 
 class LogsExportRateThrottle(UserRateThrottle):
@@ -266,11 +276,12 @@ class ImageDataView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
     user = resolve_target_user(request)
+    ws = active_workspace_for(user)
     image_id = request.query_params.get("image_id")
     if image_id: # single image
-      image_data = ImageData.objects.get(id=image_id)
+      image_data = ImageData.objects.select_related('media').get(id=image_id, workspace=ws)
     else: # all images
-      image_data = ImageData.objects.filter(user=user)
+      image_data = ImageData.objects.filter(user=user, workspace=ws).select_related('media')
     
     if not image_data:
       return Response({"message": "No image data found"}, status=status.HTTP_204_NO_CONTENT)
@@ -317,7 +328,8 @@ class UploadFigureView(APIView):
     
     # Find the first available index for workspace user's images
     workspace_user = get_workspace_user(request)
-    user_images = ImageData.objects.filter(user=workspace_user)
+    ws = active_workspace_for(workspace_user)
+    user_images = ImageData.objects.filter(workspace=ws)
     used_indices = set(user_images.values_list('index', flat=True))
 
     # Find first available index starting from 0
@@ -325,30 +337,25 @@ class UploadFigureView(APIView):
     while first_available_index in used_indices:
       first_available_index += 1
 
-    serializer = ImageDataSerializer(data={
-      "id": figure_id,
-      "user": workspace_user.id,
-      "filepath": f"{figure_id}{ext}",
-      "short_desc": request.data.get('short_desc') or f"Visual {first_available_index + 1}",
-      "long_desc": request.data.get('long_desc') or "",
-      "source": request.data.get('source') or "",
-      "in_storyboard": True,
-      "x": 0,
-      "y": 0,
-      "has_order": False,
-      "order_num": 0,
-      "index": first_available_index,
-      "created_at": now,
-      "last_saved": now
-    })
-
-    if serializer.is_valid():
-      serializer.save()
-      fig_data = serializer.validated_data
-      fig_data['user'] = workspace_user.id
-      return Response({"message": "Figure uploaded successfully", "fig_data": fig_data }, status=status.HTTP_200_OK)
-    else:
-      return Response({"message": f"Figure upload failed: {serializer.errors}"}, status=status.HTTP_400_BAD_REQUEST)
+    dest_name = f"{figure_id}{ext}"
+    media = get_or_create_media(workspace_user, dest_name)
+    image = ImageData.objects.create(
+      id=figure_id,
+      user=workspace_user,
+      workspace=ws,
+      media=media,
+      short_desc=request.data.get('short_desc') or f"Visual {first_available_index + 1}",
+      long_desc=request.data.get('long_desc') or "",
+      source=request.data.get('source') or "",
+      in_storyboard=True,
+      x=0,
+      y=0,
+      has_order=False,
+      order_num=0,
+      index=first_available_index,
+    )
+    fig_data = ImageDataSerializer(image).data
+    return Response({"message": "Figure uploaded successfully", "fig_data": fig_data }, status=status.HTTP_200_OK)
 
 
 class UploadSlidesView(APIView):
@@ -428,10 +435,8 @@ class UploadSlidesView(APIView):
         # Limit to MAX_SLIDES
         png_files = png_files[:self.MAX_SLIDES]
 
-        now_str = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-
-        # Find first available index for this user's images
-        user_images = ImageData.objects.filter(user=workspace_user)
+        ws = active_workspace_for(workspace_user)
+        user_images = ImageData.objects.filter(workspace=ws)
         used_indices = set(user_images.values_list('index', flat=True))
         next_index = 0
         while next_index in used_indices:
@@ -442,44 +447,38 @@ class UploadSlidesView(APIView):
         for slide_num, png_path in enumerate(png_files, 1):
           figure_id = str(uuid.uuid4())
           ext = '.png'
-          dest_path = os.path.join(data_path, f"{figure_id}{ext}")
+          dest_name = f"{figure_id}{ext}"
+          dest_path = os.path.join(data_path, dest_name)
 
-          # Copy PNG to data path
           import shutil
           shutil.copy2(png_path, dest_path)
 
-          # Find next available index
           while next_index in used_indices:
             next_index += 1
 
-          serializer = ImageDataSerializer(data={
+          media = get_or_create_media(workspace_user, dest_name)
+          ImageData.objects.create(
+            id=figure_id,
+            user=workspace_user,
+            workspace=ws,
+            media=media,
+            short_desc=f"{slide_num}",
+            long_desc="",
+            source="pptx",
+            in_storyboard=True,
+            x=0,
+            y=0,
+            has_order=False,
+            order_num=0,
+            index=next_index,
+          )
+          created_images.append({
             "id": figure_id,
-            "user": workspace_user.id,
-            "filepath": f"{figure_id}{ext}",
-            "short_desc": f"{slide_num}",
-            "long_desc": "",
-            "source": "pptx",
-            "in_storyboard": True,
-            "x": 0,
-            "y": 0,
-            "has_order": False,
-            "order_num": 0,
-            "index": next_index,
-            "created_at": now_str,
-            "last_saved": now_str,
+            "slide_number": slide_num,
+            "filepath": dest_name,
           })
-
-          if serializer.is_valid():
-            serializer.save()
-            created_images.append({
-              "id": figure_id,
-              "slide_number": slide_num,
-              "filepath": f"{figure_id}{ext}",
-            })
-            used_indices.add(next_index)
-            next_index += 1
-          else:
-            return Response({"message": f"Error creating slide {slide_num}: {serializer.errors}"}, status=status.HTTP_400_BAD_REQUEST)
+          used_indices.add(next_index)
+          next_index += 1
 
         return Response({
           "message": f"Successfully imported {len(created_images)} slides",
@@ -511,8 +510,13 @@ class CreateNoteView(APIView):
     else:
       owner_id = get_workspace_user(request).id
 
-    # Find the first available index for the target user's images
-    user_images = ImageData.objects.filter(user_id=owner_id)
+    from users.models import User as UserModel
+    try:
+      owner = UserModel.objects.get(id=owner_id)
+    except UserModel.DoesNotExist:
+      return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    ws = active_workspace_for(owner)
+    user_images = ImageData.objects.filter(workspace=ws)
     used_indices = set(user_images.values_list('index', flat=True))
     first_available_index = 0
     while first_available_index in used_indices:
@@ -520,28 +524,22 @@ class CreateNoteView(APIView):
 
     title = "Instructor Feedback" if source == 'instructor' else f"Note {first_available_index + 1}"
 
-    serializer = ImageDataSerializer(data={
-      "id": note_id,
-      "user": owner_id,
-      "filepath": "",
-      "short_desc": title,
-      "long_desc": "",
-      "source": source,
-      "in_storyboard": True,
-      "x": 400,
-      "y": 300,
-      "has_order": False,
-      "order_num": 0,
-      "index": first_available_index,
-      "created_at": now,
-      "last_saved": now
-    })
-
-    if serializer.is_valid():
-      serializer.save()
-      return Response({"message": "Note created successfully", "note_data": serializer.data}, status=status.HTTP_200_OK)
-    else:
-      return Response({"message": f"Note creation failed: {serializer.errors}"}, status=status.HTTP_400_BAD_REQUEST)
+    image = ImageData.objects.create(
+      id=note_id,
+      user=owner,
+      workspace=ws,
+      media=None,
+      short_desc=title,
+      long_desc="",
+      source=source,
+      in_storyboard=True,
+      x=400,
+      y=300,
+      has_order=False,
+      order_num=0,
+      index=first_available_index,
+    )
+    return Response({"message": "Note created successfully", "note_data": ImageDataSerializer(image).data}, status=status.HTTP_200_OK)
 
 
 class DeleteFigureView(APIView):
@@ -555,68 +553,53 @@ class DeleteFigureView(APIView):
     if not filename:
       return Response({"message": "No filename provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Build file path - use DATA_PATH root to match upload location and nginx serving
-    data_path = os.getenv('DATA_PATH')
-    if not data_path:
-      return Response({"message": "DATA_PATH not configured"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    try:
-      filepath = safe_join(data_path, filename)
-    except ValueError:
-      return Response({"message": "Invalid filename"}, status=status.HTTP_400_BAD_REQUEST)
-
-    base_name, _ = os.path.splitext(filename)
     workspace_user = get_workspace_user(request)
+    ws = active_workspace_for(workspace_user)
+    base_name, _ = os.path.splitext(filename)
 
-    # Try to find the image record - first by ID (as UUID), then by filepath as fallback
     image_data = None
     try:
-      # Convert base_name string to UUID object for database lookup
       image_id = uuid.UUID(base_name)
-      image_data = ImageData.objects.get(id=image_id, user=workspace_user)
-    except (ValueError, ImageData.DoesNotExist):
-      # If UUID conversion fails or not found by ID, try filepath lookup
-      try:
-        image_data = ImageData.objects.get(filepath=filename, user=workspace_user)
-      except ImageData.DoesNotExist:
-        # Admin can delete instructor feedback notes on student accounts
-        if request.user.is_instructor:
-          try:
-            image_id = uuid.UUID(base_name)
-            image_data = ImageData.objects.get(id=image_id, source='instructor')
-          except (ValueError, ImageData.DoesNotExist):
-            pass
-        if not image_data:
-          # Check if it exists for another user (security check)
-          other_user_image = ImageData.objects.filter(filepath=filename).exclude(user=workspace_user).first()
-          if other_user_image:
-            return Response({"status": "error", "message": "Image belongs to another user"}, status=status.HTTP_403_FORBIDDEN)
+      image_data = ImageData.objects.select_related('media').filter(id=image_id, workspace=ws).first()
+    except ValueError:
+      pass
 
-    # Remove image file if it exists
-    file_deleted = False
-    if os.path.exists(filepath):
-      try:
-        os.remove(filepath)
-        file_deleted = True
-      except Exception as e:
-        return Response({"status": "error", "message": f"Failed to delete file: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    else:
-      # Log warning but don't fail - file might have been manually deleted
-      print(f"Warning: File not found at {filepath}")
+    if not image_data:
+      image_data = (
+        ImageData.objects.select_related('media')
+        .filter(workspace=ws, media__filepath=filename)
+        .first()
+      )
 
-    # Remove DB record if it exists
-    if image_data:
+    if not image_data and request.user.is_instructor:
       try:
-        image_data.delete()
-        return Response({"status": "success", "message": "Figure deleted successfully", "deleted_id": str(image_data.id), "deleted_filename": filename}, status=status.HTTP_200_OK)
-      except Exception as e:
-        return Response({"status": "error", "message": f"Failed to delete database record: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        image_id = uuid.UUID(base_name)
+        image_data = ImageData.objects.select_related('media').filter(id=image_id, source='instructor').first()
+      except ValueError:
+        pass
+
+    if not image_data:
+      other_user_image = ImageData.objects.filter(media__filepath=filename).exclude(user=workspace_user).first()
+      if other_user_image:
+        return Response({"status": "error", "message": "Image belongs to another user"}, status=status.HTTP_403_FORBIDDEN)
+      return Response({"status": "error", "message": f"Image record not found for filename: {filename}"}, status=status.HTTP_404_NOT_FOUND)
+
+    media_id = image_data.media_id
+    deleted_id = str(image_data.id)
+    image_data.delete()
+    file_retained = True
+    if media_id:
+      file_retained = not purge_media_if_unreferenced(media_id)
     else:
-      # If file was deleted but DB record doesn't exist, that's okay
-      if file_deleted:
-        return Response({"status": "success", "message": "File deleted but database record not found", "deleted_filename": filename}, status=status.HTTP_200_OK)
-      else:
-        return Response({"status": "error", "message": f"Image record not found for filename: {filename} (base_name: {base_name})"}, status=status.HTTP_404_NOT_FOUND)
+      file_retained = False
+
+    return Response({
+      "status": "success",
+      "message": "Figure deleted successfully",
+      "deleted_id": deleted_id,
+      "deleted_filename": filename,
+      "file_retained": file_retained,
+    }, status=status.HTTP_200_OK)
 
 
 class UpdateImageDataView(APIView):
@@ -650,11 +633,12 @@ class GetGroupView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
     user = resolve_target_user(request)
+    ws = active_workspace_for(user)
     group_id = request.query_params.get("group_id")
     if group_id: # single group
-      group_data = GroupData.objects.get(id=group_id)
+      group_data = GroupData.objects.get(id=group_id, workspace=ws)
     else: # all groups
-      group_data = GroupData.objects.filter(user=user)
+      group_data = GroupData.objects.filter(user=user, workspace=ws)
     
     if not group_data:
       return Response({"message": "No group data found"}, status=status.HTTP_204_NO_CONTENT)
@@ -669,7 +653,9 @@ class CreateGroupView(APIView):
   def post(self, request):
     try:
       group_data = request.data.get('data')
-      group_data['user'] = get_workspace_user(request).id
+      workspace_user = get_workspace_user(request)
+      group_data['user'] = workspace_user.id
+      group_data['workspace'] = active_workspace_for(workspace_user).id
       
       serializer = GroupDataSerializer(data=group_data)
       if serializer.is_valid():
@@ -731,14 +717,15 @@ class GetResearchQuestionView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
     user = get_workspace_user(request)
+    ws = active_workspace_for(user)
     rq_id = request.query_params.get("rq_id")
 
     if rq_id:  # single question
-      questions = ResearchQuestion.objects.filter(id=rq_id, user=user).first()
+      questions = ResearchQuestion.objects.filter(id=rq_id, user=user, workspace=ws).first()
       if not questions:
         return Response({"message": "Research question not found"}, status=status.HTTP_404_NOT_FOUND)
     else:  # all questions for this workspace
-      questions = ResearchQuestion.objects.filter(user=user)
+      questions = ResearchQuestion.objects.filter(user=user, workspace=ws)
 
     serialized = ResearchQuestionSerializer(questions, many=False if rq_id else True)
     return Response({"research_questions": serialized.data}, status=status.HTTP_200_OK)
@@ -753,10 +740,12 @@ class CreateResearchQuestionView(APIView):
     try:
       rq_data = request.data.get('data') or {}
       rq_data['user'] = user.id
+      ws = active_workspace_for(user)
+      rq_data['workspace'] = ws.id
 
       # New questions land at the bottom of the list.
       if 'order' not in rq_data:
-        last = ResearchQuestion.objects.filter(user=user).order_by('-order').first()
+        last = ResearchQuestion.objects.filter(workspace=ws).order_by('-order').first()
         rq_data['order'] = (last.order + 1) if last else 0
 
       serializer = ResearchQuestionSerializer(data=rq_data)
@@ -838,11 +827,11 @@ class UpdateResearchQuestionLinksView(APIView):
 
       if 'image_ids' in request.data:
         image_ids = request.data.get('image_ids') or []
-        question.images.set(ImageData.objects.filter(id__in=image_ids, user=user))
+        question.images.set(ImageData.objects.filter(id__in=image_ids, user=user, workspace=question.workspace))
 
       if 'group_ids' in request.data:
         group_ids = request.data.get('group_ids') or []
-        question.groups.set(GroupData.objects.filter(id__in=group_ids, user=user))
+        question.groups.set(GroupData.objects.filter(id__in=group_ids, user=user, workspace=question.workspace))
 
       serializer = ResearchQuestionSerializer(question)
       return Response({"message": "Links updated successfully", "research_question": serializer.data}, status=status.HTTP_200_OK)
@@ -1607,17 +1596,19 @@ class GenerateDescriptionsView(APIView):
       )
     else:
       # Handle all images
-      images = ImageData.objects.all()
+      workspace_user = get_workspace_user(request)
+      ws = active_workspace_for(workspace_user)
+      images = ImageData.objects.filter(workspace=ws, in_storyboard=True).select_related('media')
 
+      count = 0
       for image in images:
-        if not image.in_storyboard:
-          continue
         image.long_desc_generating = True
-        image.save()
+        image.save(update_fields=['long_desc_generating'])
         generate_description_task.delay(image.id)
+        count += 1
 
       return Response(
-        {"message": f"Began generating descriptions for {len(images)} images"},
+        {"message": f"Began generating descriptions for {count} images"},
         status=status.HTTP_202_ACCEPTED,
       )
 
@@ -2120,6 +2111,7 @@ class CreateScaffoldView(APIView):
       # Create new scaffold (multiple scaffolds per user are allowed)
       scaffold_data = {
         'user': workspace_user.id,
+        'workspace': active_workspace_for(workspace_user).id,
         'name': scaffold_info['name'],
         'number': scaffold_info['number'],
         'description': scaffold_info['description'],
@@ -2150,11 +2142,12 @@ class GetScaffoldView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
     user = resolve_target_user(request)
+    ws = active_workspace_for(user)
     scaffold_id = request.query_params.get("scaffold_id")
     if scaffold_id: # single scaffold
-      scaffold_data = ScaffoldData.objects.get(id=scaffold_id, user=user)
+      scaffold_data = ScaffoldData.objects.get(id=scaffold_id, user=user, workspace=ws)
     else: # all scaffolds for user
-      scaffold_data = ScaffoldData.objects.filter(user=user)
+      scaffold_data = ScaffoldData.objects.filter(user=user, workspace=ws)
     
     if not scaffold_data:
       return Response({"message": "No scaffold data found"}, status=status.HTTP_204_NO_CONTENT)
@@ -2194,30 +2187,103 @@ class DeleteScaffoldView(APIView):
   def post(self, request):
     try:
       workspace_user = get_workspace_user(request)
+      ws = active_workspace_for(workspace_user)
       scaffold_id = request.data.get('scaffold_id')
 
       if scaffold_id:
         # Delete a specific scaffold
         try:
-          scaffold = ScaffoldData.objects.get(id=scaffold_id, user=workspace_user)
+          scaffold = ScaffoldData.objects.get(id=scaffold_id, user=workspace_user, workspace=ws)
         except ScaffoldData.DoesNotExist:
           return Response({"error": "Scaffold not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Clear associations for items in this scaffold only
-        ImageData.objects.filter(user=workspace_user, scaffold_id=scaffold).update(scaffold_id=None, scaffold_group_number=None)
-        GroupData.objects.filter(user=workspace_user, scaffold_id=scaffold).update(scaffold_id=None, scaffold_group_number=None)
+        ImageData.objects.filter(workspace=ws, scaffold_id=scaffold).update(scaffold_id=None, scaffold_group_number=None)
+        GroupData.objects.filter(workspace=ws, scaffold_id=scaffold).update(scaffold_id=None, scaffold_group_number=None)
         scaffold.delete()
 
         return Response({"message": "Scaffold deleted successfully"}, status=status.HTTP_200_OK)
       else:
         # Delete all scaffolds (backward compatible)
-        scaffolds = ScaffoldData.objects.filter(user=workspace_user)
+        scaffolds = ScaffoldData.objects.filter(user=workspace_user, workspace=ws)
         for scaffold in scaffolds:
           scaffold.delete()
 
-        ImageData.objects.filter(user=workspace_user, scaffold_id__isnull=False).update(scaffold_id=None, scaffold_group_number=None)
-        GroupData.objects.filter(user=workspace_user, scaffold_id__isnull=False).update(scaffold_id=None, scaffold_group_number=None)
+        ImageData.objects.filter(workspace=ws, scaffold_id__isnull=False).update(scaffold_id=None, scaffold_group_number=None)
+        GroupData.objects.filter(workspace=ws, scaffold_id__isnull=False).update(scaffold_id=None, scaffold_group_number=None)
 
         return Response({"message": "All scaffolds deleted successfully"}, status=status.HTTP_200_OK)
     except Exception as e:
       return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class WorkspaceListCreateView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    user = resolve_target_user(request)
+    get_or_create_active_workspace(user)
+    qs = Workspace.objects.filter(user=user).order_by('-last_modified')
+    return Response({
+      "workspaces": WorkspaceSerializer(qs, many=True).data,
+      "limit": MAX_WORKSPACES_PER_USER,
+    })
+
+  def post(self, request):
+    user = get_workspace_write_user(request)
+    name = request.data.get('name') or ''
+    replace_id = request.data.get('replace_id')
+    try:
+      dest = save_as_workspace(user, name, replace_id=replace_id)
+    except ValueError as e:
+      code = str(e)
+      if code == 'workspace_limit':
+        return Response(
+          {"error": "Workspace limit reached", "code": "workspace_limit", "limit": MAX_WORKSPACES_PER_USER},
+          status=status.HTTP_409_CONFLICT,
+        )
+      if code == 'invalid_replace':
+        return Response({"error": "Invalid workspace to replace", "code": "invalid_replace"}, status=status.HTTP_400_BAD_REQUEST)
+      return Response({"error": code}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"workspace": WorkspaceSerializer(dest).data}, status=status.HTTP_201_CREATED)
+
+
+class WorkspaceDetailView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def patch(self, request, workspace_id):
+    user = get_workspace_write_user(request)
+    ws = Workspace.objects.filter(id=workspace_id, user=user).first()
+    if not ws:
+      return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+    name = (request.data.get('name') or '').strip()
+    if not name:
+      return Response({"error": "Name is required"}, status=status.HTTP_400_BAD_REQUEST)
+    ws.name = name[:100]
+    ws.save(update_fields=['name', 'last_modified'])
+    return Response({"workspace": WorkspaceSerializer(ws).data})
+
+  def delete(self, request, workspace_id):
+    user = get_workspace_write_user(request)
+    try:
+      result = delete_workspace(user, workspace_id)
+    except ValueError as e:
+      if str(e) == 'last_workspace':
+        return Response({"error": "Cannot delete the last workspace", "code": "last_workspace"}, status=status.HTTP_400_BAD_REQUEST)
+      return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    if not result:
+      return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+    return Response({"status": "success"})
+
+
+class WorkspaceActivateView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request, workspace_id):
+    user = get_workspace_write_user(request)
+    ws = activate_workspace(user, workspace_id)
+    if not ws:
+      return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+    from .signals import broadcast_workspace_update
+    broadcast_workspace_update(user.id)
+    return Response({"workspace": WorkspaceSerializer(ws).data})

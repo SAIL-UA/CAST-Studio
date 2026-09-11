@@ -13,9 +13,24 @@ from .pydandtic import STORY_SCAFFOLDS
 logger = logging.getLogger(__name__)
 
 
-def update_progress(user_id, task_type, task_id, current_stage, total_stages, stage_name, substage=None, error=None):
+def _active_ws(user):
+    from api.workspace_ops import get_or_create_active_workspace
+
+    return get_or_create_active_workspace(user)
+
+
+def update_progress(
+    user_id,
+    task_type,
+    task_id,
+    current_stage,
+    total_stages,
+    stage_name,
+    substage=None,
+    error=None,
+):
     """Update task progress in the database for frontend polling."""
-    TaskProgress = _get_model('api', 'TaskProgress')
+    TaskProgress = _get_model("api", "TaskProgress")
     TaskProgress.objects.update_or_create(
         task_id=task_id,
         defaults={
@@ -26,8 +41,9 @@ def update_progress(user_id, task_type, task_id, current_stage, total_stages, st
             "stage_name": stage_name,
             "substage": substage,
             "error": error,
-        }
+        },
     )
+
 
 # Guardrail against oversized payloads when attaching image data.
 MAX_FEEDBACK_IMAGES = 12
@@ -79,9 +95,10 @@ SCAFFOLD_ELEMENT_LABELS: dict[str, dict[int, dict[str, str]]] = {
     },
 }
 
+
 def _openai_client():
     # create lazily to avoid creating clients during import/migrations
-    return OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def _publish_story_stream_event(user_id, event: str, **payload) -> None:
@@ -102,7 +119,7 @@ def _publish_story_stream_event(user_id, event: str, **payload) -> None:
             return
         async_to_sync(channel_layer.group_send)(
             story_stream_group_name(user_id),
-            {'type': 'story.event', 'event': event, **payload},
+            {"type": "story.event", "event": event, **payload},
         )
     except Exception:
         logger.exception("failed to publish story-stream event %s", event)
@@ -120,7 +137,7 @@ def _run_completion(client, params: dict, on_chunk=None) -> str:
         return (resp.choices[0].message.content or "").strip()
 
     streaming_params = dict(params)
-    streaming_params['stream'] = True
+    streaming_params["stream"] = True
     stream = client.chat.completions.create(**streaming_params)
     accumulator: list[str] = []
     for chunk in stream:
@@ -135,39 +152,46 @@ def _run_completion(client, params: dict, on_chunk=None) -> str:
             on_chunk(delta)
         except Exception:
             logger.exception("story stream on_chunk failed")
-    return ''.join(accumulator).strip()
+    return "".join(accumulator).strip()
+
 
 def _get_model(app_label, model_name):
     # late-binding model lookup; safe before app registry 'ready'
     return apps.get_model(app_label, model_name)
+
 
 @lru_cache(maxsize=None)
 def _load_prompt(filename: str) -> str:
     """Lazy, cached prompt loader."""
     try:
         # Try project-relative prompts directory (backend/prompts/)
-        prompts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'prompts')
+        prompts_dir = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "prompts"
+        )
         prompt_path = os.path.join(prompts_dir, filename)
         if os.path.exists(prompt_path):
-            with open(prompt_path, 'r') as f:
+            with open(prompt_path, "r") as f:
                 return f.read().strip()
 
         # Fallback to BASE_DIR/backend/prompts (if BASE_DIR is set)
-        base_dir = getattr(settings, 'BASE_DIR', '')
-        fallback_dir = os.path.join(base_dir, 'backend', 'prompts')
+        base_dir = getattr(settings, "BASE_DIR", "")
+        fallback_dir = os.path.join(base_dir, "backend", "prompts")
         prompt_path = os.path.join(fallback_dir, filename)
-        with open(prompt_path, 'r') as f:
+        with open(prompt_path, "r") as f:
             return f.read().strip()
     except Exception as e:
         logger.error(f"Error loading prompt {filename}: {e}")
         return f"Error loading prompt: {filename}"
 
+
 @lru_cache(maxsize=256)
 def _image_to_data_url(relative_path: str) -> str | None:
     """Convert an image on disk to a base64 data URL for OpenAI image inputs."""
-    data_root = os.getenv('DATA_PATH')
+    data_root = os.getenv("DATA_PATH")
     if not data_root:
-        logger.warning("DATA_PATH is not configured; skipping image embedding for feedback.")
+        logger.warning(
+            "DATA_PATH is not configured; skipping image embedding for feedback."
+        )
         return None
 
     try:
@@ -227,7 +251,9 @@ def _categorize_figure(description: str) -> str:
     #     return f"Error categorizing figure: {e}"
 
 
-def _understand_theme_objective(fig_descriptions: str, rqs_data: list | None = None) -> str:
+def _understand_theme_objective(
+    fig_descriptions: str, rqs_data: list | None = None
+) -> str:
     """
     Identify theme and objective based on all figure descriptions.
 
@@ -270,7 +296,9 @@ Descriptions of figures:
         return f"Error understanding theme and objective: {e}"
 
 
-def _choose_story_structure_id(all_descriptions_text: str, rqs_data: list | None = None) -> str:
+def _choose_story_structure_id(
+    all_descriptions_text: str, rqs_data: list | None = None
+) -> str:
     """
     Ask the LLM to choose the best story structure id for the given figures.
 
@@ -369,7 +397,11 @@ Respond ONLY with a JSON object of the form:
         return list(STORY_SCAFFOLDS.keys())[0]
 
 
-def _resolve_story_structure_id(story_structure_id: str | None, all_descriptions_text: str, rqs_data: list | None = None) -> str:
+def _resolve_story_structure_id(
+    story_structure_id: str | None,
+    all_descriptions_text: str,
+    rqs_data: list | None = None,
+) -> str:
     """
     Resolve the final story structure id used for generation.
 
@@ -400,7 +432,12 @@ def _resolve_story_structure_id(story_structure_id: str | None, all_descriptions
     return fallback_id
 
 
-def _sequence_figures(fig_descriptions_category: dict, theme: str, story_structure_id: str, rqs_data: list | None = None) -> str:
+def _sequence_figures(
+    fig_descriptions_category: dict,
+    theme: str,
+    story_structure_id: str,
+    rqs_data: list | None = None,
+) -> str:
     """Generate a recommended figure sequence given per-figure categories, theme, and the provided story structure."""
     rqs_block = ""
     if getattr(settings, "AI_RQS_IN_SEQUENCE", True) and rqs_data:
@@ -463,7 +500,12 @@ Use the following story structure. Its description is given below.
         return f"Error sequencing figures: {e}"
 
 
-def _build_story(fig_descriptions_category: dict, sequence: str, rqs_data: list | None = None, on_chunk=None) -> str:
+def _build_story(
+    fig_descriptions_category: dict,
+    sequence: str,
+    rqs_data: list | None = None,
+    on_chunk=None,
+) -> str:
     """Build a narrative using per-figure categories and the recommended sequence.
 
     When AI_RQS_IN_STORY is on and rqs_data is provided, the research questions
@@ -497,13 +539,13 @@ Sequence:
         return _run_completion(
             client,
             {
-                'model': "gpt-4o",
-                'messages': [
+                "model": "gpt-4o",
+                "messages": [
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": prompt},
                 ],
-                'temperature': 0.1,
-                'timeout': 60,
+                "temperature": 0.1,
+                "timeout": 60,
             },
             on_chunk=on_chunk,
         )
@@ -512,7 +554,13 @@ Sequence:
         return f"Error building story: {e}"
 
 
-def _sequence_figures_with_groups(groups_data: list, ungrouped_data: dict, theme: str, story_structure_id: str, rqs_data: list | None = None) -> str:
+def _sequence_figures_with_groups(
+    groups_data: list,
+    ungrouped_data: dict,
+    theme: str,
+    story_structure_id: str,
+    rqs_data: list | None = None,
+) -> str:
     """
     Sequence figures considering both groups and ungrouped figures.
 
@@ -529,18 +577,22 @@ def _sequence_figures_with_groups(groups_data: list, ungrouped_data: dict, theme
     # Format groups for the prompt
     groups_text = ""
     for group in groups_data:
-        rq_suffix = _format_rq_labels(group.get('rq_labels') or []) if rq_aware else ""
+        rq_suffix = _format_rq_labels(group.get("rq_labels") or []) if rq_aware else ""
         groups_text += f"\n### Group: {group['name']}{rq_suffix}\n"
         groups_text += f"Description: {group['description']}\n"
         groups_text += "Figures in this group:\n"
-        for fig_file, fig_info in group['figures'].items():
-            fig_rq_suffix = _format_rq_labels(fig_info.get('rq_labels') or []) if rq_aware else ""
+        for fig_file, fig_info in group["figures"].items():
+            fig_rq_suffix = (
+                _format_rq_labels(fig_info.get("rq_labels") or []) if rq_aware else ""
+            )
             groups_text += f"  - {fig_file}{fig_rq_suffix}: {fig_info['description']} (Category: {fig_info['category']})\n"
 
     # Format ungrouped figures
     ungrouped_text = "\n### Ungrouped Figures:\n"
     for fig_file, fig_info in ungrouped_data.items():
-        fig_rq_suffix = _format_rq_labels(fig_info.get('rq_labels') or []) if rq_aware else ""
+        fig_rq_suffix = (
+            _format_rq_labels(fig_info.get("rq_labels") or []) if rq_aware else ""
+        )
         ungrouped_text += f"  - {fig_file}{fig_rq_suffix}: {fig_info['description']} (Category: {fig_info['category']})\n"
 
     rqs_block = ""
@@ -603,7 +655,13 @@ Use the following story structure. Its description is given below.
         return f"Error sequencing figures with groups: {e}"
 
 
-def _build_story_with_groups(groups_data: list, ungrouped_data: dict, sequence: str, rqs_data: list | None = None, on_chunk=None) -> str:
+def _build_story_with_groups(
+    groups_data: list,
+    ungrouped_data: dict,
+    sequence: str,
+    rqs_data: list | None = None,
+    on_chunk=None,
+) -> str:
     """
     Build a narrative that respects group structure and integrates ungrouped figures.
 
@@ -615,8 +673,9 @@ def _build_story_with_groups(groups_data: list, ungrouped_data: dict, sequence: 
             implicit-in-prose policy.
     """
     rq_aware = getattr(settings, "AI_RQS_IN_STORY", True) and bool(rqs_data)
+
     def _rq(entry):
-        return _format_rq_labels(entry.get('rq_labels') or []) if rq_aware else ""
+        return _format_rq_labels(entry.get("rq_labels") or []) if rq_aware else ""
 
     # Format groups for the prompt
     groups_text = ""
@@ -624,7 +683,7 @@ def _build_story_with_groups(groups_data: list, ungrouped_data: dict, sequence: 
         groups_text += f"\n### Group: {group['name']}{_rq(group)}\n"
         groups_text += f"Description: {group['description']}\n"
         groups_text += "Figures in this group:\n"
-        for fig_file, fig_info in group['figures'].items():
+        for fig_file, fig_info in group["figures"].items():
             groups_text += f"  - {fig_file}{_rq(fig_info)}: {fig_info['description']} (Category: {fig_info['category']})\n"
 
     # Format ungrouped figures
@@ -657,13 +716,13 @@ Sequence:
         return _run_completion(
             client,
             {
-                'model': "gpt-4o",
-                'messages': [
+                "model": "gpt-4o",
+                "messages": [
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": prompt},
                 ],
-                'temperature': 0.1,
-                'timeout': 60,
+                "temperature": 0.1,
+                "timeout": 60,
             },
             on_chunk=on_chunk,
         )
@@ -672,7 +731,14 @@ Sequence:
         return f"Error building story with groups: {e}"
 
 
-def _sequence_figures_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, theme: str, story_structure_id: str, rqs_data: list | None = None) -> str:
+def _sequence_figures_with_scaffolds(
+    scaffold_data: dict,
+    extra_groups: list,
+    extra_figures: dict,
+    theme: str,
+    story_structure_id: str,
+    rqs_data: list | None = None,
+) -> str:
     """
     Sequence figures considering scaffold elements, their groups, and any extra non-scaffold groups/figures.
 
@@ -687,8 +753,9 @@ def _sequence_figures_with_scaffolds(scaffold_data: dict, extra_groups: list, ex
             [answers: Q1, Q3] suffix and the Research Questions block is prepended.
     """
     rq_aware = getattr(settings, "AI_RQS_IN_SEQUENCE", True) and bool(rqs_data)
+
     def _rq(entry):
-        return _format_rq_labels(entry.get('rq_labels') or []) if rq_aware else ""
+        return _format_rq_labels(entry.get("rq_labels") or []) if rq_aware else ""
 
     is_multi = scaffold_data.get("multi", False)
     elements_text = ""
@@ -696,6 +763,7 @@ def _sequence_figures_with_scaffolds(scaffold_data: dict, extra_groups: list, ex
     if is_multi:
         # Group elements by scaffold name for clarity
         from collections import defaultdict
+
         scaffold_groups = defaultdict(list)
         for element in scaffold_data.get("elements", []):
             scaffold_name = element.get("_scaffold_name", "Unknown")
@@ -824,9 +892,18 @@ Use the following story structure. Its description is given below.
         return f"Error sequencing figures with scaffolds: {e}"
 
 
-FLOW_SCAFFOLDS = {'linear', 'inverted_pyramid'}
+FLOW_SCAFFOLDS = {"linear", "inverted_pyramid"}
 
-def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_figures: dict, sequence: str, story_structure_id: str | None = None, rqs_data: list | None = None, on_chunk=None) -> str:
+
+def _build_story_with_scaffolds(
+    scaffold_data: dict,
+    extra_groups: list,
+    extra_figures: dict,
+    sequence: str,
+    story_structure_id: str | None = None,
+    rqs_data: list | None = None,
+    on_chunk=None,
+) -> str:
     """
     Build a narrative that explicitly reflects scaffold elements, their groups, and any extra groups/figures.
 
@@ -839,8 +916,9 @@ def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_f
         rqs_data: Optional research questions; see _build_story docstring for policy.
     """
     rq_aware = getattr(settings, "AI_RQS_IN_STORY", True) and bool(rqs_data)
+
     def _rq(entry):
-        return _format_rq_labels(entry.get('rq_labels') or []) if rq_aware else ""
+        return _format_rq_labels(entry.get("rq_labels") or []) if rq_aware else ""
 
     is_multi = scaffold_data.get("multi", False)
     is_flow = story_structure_id in FLOW_SCAFFOLDS if story_structure_id else False
@@ -849,6 +927,7 @@ def _build_story_with_scaffolds(scaffold_data: dict, extra_groups: list, extra_f
     if is_multi:
         # Group elements by scaffold name for the multi-scaffold prompt
         from collections import defaultdict
+
         scaffold_groups = defaultdict(list)
         for element in scaffold_data.get("elements", []):
             scaffold_name = element.get("_scaffold_name", "Unknown")
@@ -934,13 +1013,13 @@ Sequence:
         return _run_completion(
             client,
             {
-                'model': "gpt-4o",
-                'messages': [
+                "model": "gpt-4o",
+                "messages": [
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": prompt},
                 ],
-                'temperature': 0.1,
-                'timeout': 60,
+                "temperature": 0.1,
+                "timeout": 60,
             },
             on_chunk=on_chunk,
         )
@@ -960,7 +1039,7 @@ def _collect_in_story_items(recommended_order: list[str], user) -> list[str]:
     - Groups aren't listed here on purpose; the sequence is figure-level, so
       one bullet per figure/note reads naturally.
     """
-    ImageData = _get_model('api', 'ImageData')
+    ImageData = _get_model("api", "ImageData")
     titles: list[str] = []
     seen: set[str] = set()
     for token in recommended_order:
@@ -971,7 +1050,9 @@ def _collect_in_story_items(recommended_order: list[str], user) -> list[str]:
         clean = _normalize_figure_token(token).strip()
         if not clean:
             continue
-        img = ImageData.objects.filter(user=user, filepath=clean).first()
+        img = ImageData.objects.filter(
+            user=user, workspace=_active_ws(user), media__filepath=clean
+        ).first()
         if img and img.short_desc:
             label = img.short_desc
         elif img:
@@ -984,7 +1065,12 @@ def _collect_in_story_items(recommended_order: list[str], user) -> list[str]:
     return titles
 
 
-def _generate_sequence_bullets(sequence: str, story_text: str, in_story_items: list[str], story_structure_id: str | None = None) -> list[dict]:
+def _generate_sequence_bullets(
+    sequence: str,
+    story_text: str,
+    in_story_items: list[str],
+    story_structure_id: str | None = None,
+) -> list[dict]:
     """
     Dedicated LLM call producing the display-ready "Sequence Justification"
     bullet list for the Reasoning tab. One bullet per workspace item that
@@ -1001,7 +1087,11 @@ def _generate_sequence_bullets(sequence: str, story_text: str, in_story_items: l
     if not in_story_items:
         return []
 
-    structure_hint = f"Narrative structure used: {story_structure_id}\n" if story_structure_id else ""
+    structure_hint = (
+        f"Narrative structure used: {story_structure_id}\n"
+        if story_structure_id
+        else ""
+    )
     items_text = "\n".join(f"- {t}" for t in in_story_items)
     prompt = f"""
 ### Input
@@ -1105,7 +1195,12 @@ Respond ONLY with a JSON object:
         return []
 
 
-def _generate_rq_reasoning(rqs_data: list, story_text: str, sequence: str, story_structure_id: str | None = None) -> list[dict]:
+def _generate_rq_reasoning(
+    rqs_data: list,
+    story_text: str,
+    sequence: str,
+    story_structure_id: str | None = None,
+) -> list[dict]:
     """
     After the story is built, ask the LLM to explain how each research question
     shaped it. Populates NarrativeCache.rq_reasoning and drives the frontend's
@@ -1120,7 +1215,11 @@ def _generate_rq_reasoning(rqs_data: list, story_text: str, sequence: str, story
 
     rqs_section = _format_rqs_prompt_section(rqs_data)
     labels = [rq.get("label", "") for rq in rqs_data if rq.get("label")]
-    structure_hint = f"Narrative structure used: {story_structure_id}\n" if story_structure_id else ""
+    structure_hint = (
+        f"Narrative structure used: {story_structure_id}\n"
+        if story_structure_id
+        else ""
+    )
 
     prompt = f"""
 ### Input
@@ -1197,7 +1296,10 @@ Return one item per research question, in order.
             # Only keep items whose labels correspond to real RQs to guard against drift.
             valid_labels = set(labels)
             return [
-                {"label": item.get("label", ""), "how_informed": item.get("how_informed", "")}
+                {
+                    "label": item.get("label", ""),
+                    "how_informed": item.get("how_informed", ""),
+                }
                 for item in parsed["items"]
                 if item.get("label") in valid_labels
             ]
@@ -1233,11 +1335,15 @@ def extract_figure_filenames(sequence_response: str) -> list[str]:
     # Patterns (ordered from most- to least-structured)
     patterns = [
         # "- Step 1: **file.png**" | "Step 1: `file.jpg`" | "Step 1 file.png"
-        re.compile(rf"(?:^|\n)\s*(?:-|\*|\u2022)?\s*Step\s*\d+\s*[:\-]?\s*(?:\*\*|`|\"|')?\s*{filename}\s*(?:\*\*|`|\"|')?", re.IGNORECASE),
-
+        re.compile(
+            rf"(?:^|\n)\s*(?:-|\*|\u2022)?\s*Step\s*\d+\s*[:\-]?\s*(?:\*\*|`|\"|')?\s*{filename}\s*(?:\*\*|`|\"|')?",
+            re.IGNORECASE,
+        ),
         # "1) file.png" | "1. file.png" | "- file.png" | "* file.png" | "• file.png"
-        re.compile(rf"(?:^|\n)\s*(?:-|\*|\u2022|\d+[.)])\s*(?:\*\*|`|\"|')?\s*{filename}\s*(?:\*\*|`|\"|')?", re.IGNORECASE),
-
+        re.compile(
+            rf"(?:^|\n)\s*(?:-|\*|\u2022|\d+[.)])\s*(?:\*\*|`|\"|')?\s*{filename}\s*(?:\*\*|`|\"|')?",
+            re.IGNORECASE,
+        ),
         # Fallback: any filename-looking token anywhere
         re.compile(rf"{filename}", re.IGNORECASE),
     ]
@@ -1268,7 +1374,7 @@ def _normalize_figure_token(token: str) -> str:
         return ""
     token = token.strip()
     if token.startswith("[FIGURE:") and token.endswith("]"):
-        return token[len("[FIGURE:"):-1]
+        return token[len("[FIGURE:") : -1]
     return token
 
 
@@ -1324,10 +1430,10 @@ def _extract_json_object(text: str) -> dict | None:
         pass
     # Fallback: slice between first '{' and last '}'
     try:
-        start = s.find('{')
-        end = s.rfind('}')
+        start = s.find("{")
+        end = s.rfind("}")
         if start != -1 and end != -1 and end > start:
-            candidate = s[start:end+1]
+            candidate = s[start : end + 1]
             return json.loads(candidate)
     except Exception:
         return None
@@ -1368,8 +1474,10 @@ def _load_rqs_for_prompts(user, storyboard_image_ids: set | None = None) -> dict
                         "unlinked_research_questions": int },
         }
     """
-    ResearchQuestion = _get_model('api', 'ResearchQuestion')
-    rqs_qs = ResearchQuestion.objects.filter(user=user).prefetch_related('images', 'groups')
+    ResearchQuestion = _get_model("api", "ResearchQuestion")
+    rqs_qs = ResearchQuestion.objects.filter(
+        user=user, workspace=_active_ws(user)
+    ).prefetch_related("images", "groups")
     rq_labels_by_image: dict = {}
     rq_labels_by_group: dict = {}
     rqs_data: list[dict] = []
@@ -1388,12 +1496,14 @@ def _load_rqs_for_prompts(user, storyboard_image_ids: set | None = None) -> dict
         for grp in rq.groups.all():
             rq_labels_by_group.setdefault(grp.id, []).append(label)
             linked_groups.append(grp.name or "Untitled group")
-        rqs_data.append({
-            "label": label,
-            "text": rq.text or "",
-            "linked_figures": linked_figures,
-            "linked_groups": linked_groups,
-        })
+        rqs_data.append(
+            {
+                "label": label,
+                "text": rq.text or "",
+                "linked_figures": linked_figures,
+                "linked_groups": linked_groups,
+            }
+        )
 
     unlinked_rq_count = sum(
         1 for rq in rqs_data if not rq["linked_figures"] and not rq["linked_groups"]
@@ -1422,15 +1532,21 @@ def _format_rqs_prompt_section(rqs_data: list) -> str:
         return ""
     lines = ["\n### Research Questions:"]
     for rq in rqs_data:
-        linked_groups = rq.get('linked_groups') or []
-        linked_figures = rq.get('linked_figures') or []
+        linked_groups = rq.get("linked_groups") or []
+        linked_figures = rq.get("linked_figures") or []
         lines.append(f"\n{rq.get('label', 'Q')}: {rq.get('text', '')}")
-        lines.append(f"  Linked groups: {', '.join(linked_groups) if linked_groups else 'none'}")
-        lines.append(f"  Linked figures: {', '.join(linked_figures) if linked_figures else 'none'}")
+        lines.append(
+            f"  Linked groups: {', '.join(linked_groups) if linked_groups else 'none'}"
+        )
+        lines.append(
+            f"  Linked figures: {', '.join(linked_figures) if linked_figures else 'none'}"
+        )
     return "\n".join(lines) + "\n"
 
 
-def _generate_feedback(groups_data: list, ungrouped_data: dict, counts: dict, rqs_data: list | None = None) -> list[dict]:
+def _generate_feedback(
+    groups_data: list, ungrouped_data: dict, counts: dict, rqs_data: list | None = None
+) -> list[dict]:
     """
     Use OpenAI to generate structured feedback items for the storyboard context.
 
@@ -1448,15 +1564,15 @@ def _generate_feedback(groups_data: list, ungrouped_data: dict, counts: dict, rq
     groups_text = ""
     grouped_image_entries: list[tuple[str, str, str, str | None]] = []
     for group in groups_data:
-        group_name = group.get('name', '')
-        group_desc = group.get('description', '')
+        group_name = group.get("name", "")
+        group_desc = group.get("description", "")
         groups_text += f"\n### Group: {group_name}{_format_rq_labels(group.get('rq_labels') or [])}\n"
         groups_text += f"Description: {group_desc}\n"
         groups_text += "Figures in this group:\n"
-        for fig_file, fig_info in group.get('figures', {}).items():
-            desc = fig_info.get('description', '')
-            title = fig_info.get('title', fig_file)
-            data_url = fig_info.get('data_url')
+        for fig_file, fig_info in group.get("figures", {}).items():
+            desc = fig_info.get("description", "")
+            title = fig_info.get("title", fig_file)
+            data_url = fig_info.get("data_url")
             groups_text += f"  - {title}{_format_rq_labels(fig_info.get('rq_labels') or [])}: {desc}\n"
             caption_desc = desc if len(desc) <= 280 else f"{desc[:277]}..."
             grouped_image_entries.append((group_name, title, caption_desc, data_url))
@@ -1464,10 +1580,12 @@ def _generate_feedback(groups_data: list, ungrouped_data: dict, counts: dict, rq
     ungrouped_text = "\n### Ungrouped Figures:\n"
     ungrouped_image_entries: list[tuple[str, str, str, str | None]] = []
     for fig_file, fig_info in ungrouped_data.items():
-        desc = fig_info.get('description', '')
-        title = fig_info.get('title', fig_file)
-        data_url = fig_info.get('data_url')
-        ungrouped_text += f"  - {title}{_format_rq_labels(fig_info.get('rq_labels') or [])}: {desc}\n"
+        desc = fig_info.get("description", "")
+        title = fig_info.get("title", fig_file)
+        data_url = fig_info.get("data_url")
+        ungrouped_text += (
+            f"  - {title}{_format_rq_labels(fig_info.get('rq_labels') or [])}: {desc}\n"
+        )
         caption_desc = desc if len(desc) <= 280 else f"{desc[:277]}..."
         ungrouped_image_entries.append(("Ungrouped", title, caption_desc, data_url))
 
@@ -1520,18 +1638,23 @@ Attached images correspond to the figures listed above.
                             "properties": {
                                 "section": {
                                     "type": "string",
-                                    "enum": ["missing_items", "item_quality", "grouping_quality", "rq_alignment"]
+                                    "enum": [
+                                        "missing_items",
+                                        "item_quality",
+                                        "grouping_quality",
+                                        "rq_alignment",
+                                    ],
                                 },
                                 "title": {"type": "string"},
-                                "text": {"type": "string"}
+                                "text": {"type": "string"},
                             },
-                            "required": ["section", "title", "text"]
-                        }
+                            "required": ["section", "title", "text"],
+                        },
                     }
                 },
-                "required": ["items"]
+                "required": ["items"],
             },
-            "strict": True
+            "strict": True,
         }
 
         message_content: list[dict[str, object]] = [{"type": "text", "text": prompt}]
@@ -1541,11 +1664,15 @@ Attached images correspond to the figures listed above.
             if not data_url:
                 continue
             if images_attached >= MAX_FEEDBACK_IMAGES:
-                logger.info("Reached feedback image embedding limit; remaining group images skipped.")
+                logger.info(
+                    "Reached feedback image embedding limit; remaining group images skipped."
+                )
                 break
             caption = f"Group '{group_name}' figure '{fig_file}'. Description: {desc}"
             message_content.append({"type": "text", "text": caption})
-            message_content.append({"type": "image_url", "image_url": {"url": data_url}})
+            message_content.append(
+                {"type": "image_url", "image_url": {"url": data_url}}
+            )
             images_attached += 1
 
         if images_attached < MAX_FEEDBACK_IMAGES:
@@ -1553,11 +1680,15 @@ Attached images correspond to the figures listed above.
                 if not data_url:
                     continue
                 if images_attached >= MAX_FEEDBACK_IMAGES:
-                    logger.info("Reached feedback image embedding limit; remaining ungrouped images skipped.")
+                    logger.info(
+                        "Reached feedback image embedding limit; remaining ungrouped images skipped."
+                    )
                     break
                 caption = f"{group_name} figure '{fig_file}'. Description: {desc}"
                 message_content.append({"type": "text", "text": caption})
-                message_content.append({"type": "image_url", "image_url": {"url": data_url}})
+                message_content.append(
+                    {"type": "image_url", "image_url": {"url": data_url}}
+                )
                 images_attached += 1
 
         resp = client.chat.completions.create(
@@ -1607,7 +1738,9 @@ Attached images correspond to the figures listed above.
 
 
 @shared_task(bind=True)
-def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None) -> list[dict]:
+def generate_feedback_task(
+    self, user_id: str, storyboard_id: str | None = None
+) -> list[dict]:
     """
     Generate lightweight feedback by inspecting the user's storyboard data.
 
@@ -1628,14 +1761,16 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
     TOTAL_STAGES = 2
 
     def _progress(stage, name, substage=None):
-        update_progress(user_id, "feedback", task_id, stage, TOTAL_STAGES, name, substage)
+        update_progress(
+            user_id, "feedback", task_id, stage, TOTAL_STAGES, name, substage
+        )
 
     try:
         _progress(0, "Collating...")
 
         User = get_user_model()
-        ImageData = _get_model('api', 'ImageData')
-        GroupData = _get_model('api', 'GroupData')
+        ImageData = _get_model("api", "ImageData")
+        GroupData = _get_model("api", "GroupData")
 
         try:
             user = User.objects.get(id=user_id)
@@ -1648,17 +1783,21 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
             }
 
         # Fetch storyboard images
-        storyboard_images_qs = ImageData.objects.filter(user=user, in_storyboard=True)
+        storyboard_images_qs = ImageData.objects.filter(
+            user=user, workspace=_active_ws(user), in_storyboard=True
+        ).select_related("media")
         storyboard_images_count = storyboard_images_qs.count()
 
         # Counts
-        groups_qs = GroupData.objects.filter(user=user).prefetch_related('images')
+        groups_qs = GroupData.objects.filter(
+            user=user, workspace=_active_ws(user)
+        ).prefetch_related("images")
         groups_count = groups_qs.count()
         nongrouped_count = storyboard_images_qs.filter(group_id__isnull=True).count()
 
         # Research questions in Q1..Qn order. Shared with the story pipeline via
         # _load_rqs_for_prompts so both surfaces see the same shape.
-        storyboard_image_ids = set(storyboard_images_qs.values_list('id', flat=True))
+        storyboard_image_ids = set(storyboard_images_qs.values_list("id", flat=True))
         rq_ctx = _load_rqs_for_prompts(user, storyboard_image_ids=storyboard_image_ids)
         rqs_data = rq_ctx["rqs_data"]
         rq_labels_by_image = rq_ctx["rq_labels_by_image"]
@@ -1666,7 +1805,8 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
 
         # A figure counts as covered if it is linked itself or sits in a linked group.
         unlinked_image_count = sum(
-            1 for img in storyboard_images_qs
+            1
+            for img in storyboard_images_qs
             if not rq_labels_by_image.get(img.id)
             and not (img.group_id_id and rq_labels_by_group.get(img.group_id_id))
         )
@@ -1676,7 +1816,9 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
             "storyboard_images": storyboard_images_count,
             "nongrouped_images": nongrouped_count,
             "research_questions": rq_ctx["counts"]["research_questions"],
-            "unlinked_research_questions": rq_ctx["counts"]["unlinked_research_questions"],
+            "unlinked_research_questions": rq_ctx["counts"][
+                "unlinked_research_questions"
+            ],
             "unlinked_images": unlinked_image_count,
         }
 
@@ -1686,12 +1828,14 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
             group_images = storyboard_images_qs.filter(group_id=group)
             if not group_images.exists():
                 # still include empty groups for context
-                groups_data.append({
-                    "name": group.name,
-                    "description": group.description or "",
-                    "rq_labels": rq_labels_by_group.get(group.id, []),
-                    "figures": {}
-                })
+                groups_data.append(
+                    {
+                        "name": group.name,
+                        "description": group.description or "",
+                        "rq_labels": rq_labels_by_group.get(group.id, []),
+                        "figures": {},
+                    }
+                )
                 continue
 
             figures = {}
@@ -1708,12 +1852,14 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
                     figure_payload["data_url"] = data_url
                 figures[img.filepath] = figure_payload
 
-            groups_data.append({
-                "name": group.name,
-                "description": group.description or "",
-                "rq_labels": rq_labels_by_group.get(group.id, []),
-                "figures": figures,
-            })
+            groups_data.append(
+                {
+                    "name": group.name,
+                    "description": group.description or "",
+                    "rq_labels": rq_labels_by_group.get(group.id, []),
+                    "figures": figures,
+                }
+            )
 
         # Build ungrouped data
         ungrouped_images = storyboard_images_qs.filter(group_id__isnull=True)
@@ -1733,11 +1879,13 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
 
         # If nothing to analyze, short-circuit
         if storyboard_images_count == 0:
-            return [{
-                "section": "missing_items",
-                "title": "No storyboard images",
-                "text": "Add images to the storyboard to request AI feedback."
-            }]
+            return [
+                {
+                    "section": "missing_items",
+                    "title": "No storyboard images",
+                    "text": "Add images to the storyboard to request AI feedback.",
+                }
+            ]
 
         _progress(1, "Analyzing...")
         # Call OpenAI to generate feedback
@@ -1755,40 +1903,50 @@ def generate_feedback_task(self, user_id: str, storyboard_id: str | None = None)
                     safe_items.append(safe)
         if not safe_items:
             # Last resort: provide counts as a single item
-            safe_items = [{
-                "title": "Storyboard summary",
-                "text": f"You have {groups_count} groups and {nongrouped_count} ungrouped images."
-            }]
+            safe_items = [
+                {
+                    "title": "Storyboard summary",
+                    "text": f"You have {groups_count} groups and {nongrouped_count} ungrouped images.",
+                }
+            ]
         _progress(TOTAL_STAGES, "Complete")
         return safe_items
     except Exception as e:
         logger.error(f"Error generating feedback for user {user_id}: {e}")
         if task_id:
-            update_progress(user_id, "feedback", task_id, -1, TOTAL_STAGES, "Error", error=str(e))
+            update_progress(
+                user_id, "feedback", task_id, -1, TOTAL_STAGES, "Error", error=str(e)
+            )
         return [{"title": "Error", "text": str(e)}]
+
 
 @shared_task
 def generate_description_task(image_id):
-    ImageData = _get_model('api', 'ImageData')            # <— late import
+    ImageData = _get_model("api", "ImageData")  # <— late import
     try:
-        image = ImageData.objects.get(id=image_id)
-        image_path = os.path.join(os.getenv('DATA_PATH'), image.filepath)
+        image = ImageData.objects.select_related("media").get(id=image_id)
+        image_path = os.path.join(os.getenv("DATA_PATH"), image.filepath)
         with open(image_path, "rb") as f:
             b64 = base64.b64encode(f.read()).decode("utf-8")
 
-        prompt = _load_prompt('generate_description.txt')
+        prompt = _load_prompt("generate_description.txt")
         client = _openai_client()
         resp = client.chat.completions.create(
             model="gpt-4o",
             temperature=0.1,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-                ],
-            }],
-            timeout=30
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+                        },
+                    ],
+                }
+            ],
+            timeout=30,
         )
         result = resp.choices[0].message.content
 
@@ -1808,7 +1966,9 @@ def generate_description_task(image_id):
         return f"Error generating description for image {image_id}: {e}"
 
 
-def _build_figure_dict(images_queryset, skip_missing_desc=True, rq_labels_by_image: dict | None = None):
+def _build_figure_dict(
+    images_queryset, skip_missing_desc=True, rq_labels_by_image: dict | None = None
+):
     """
     Build a dictionary of figures from an images queryset.
 
@@ -1824,13 +1984,19 @@ def _build_figure_dict(images_queryset, skip_missing_desc=True, rq_labels_by_ima
     """
     figures = {}
     for image in images_queryset:
-        if image.source == 'instructor':
+        if image.source == "instructor":
             continue  # Skip instructor feedback notes from story generation
         if skip_missing_desc and not image.long_desc:
-            logger.warning(f"[BUILD_FIGURES] Image {image.filepath or image.short_desc} has no long_desc, skipping")
+            logger.warning(
+                f"[BUILD_FIGURES] Image {image.filepath or image.short_desc} has no long_desc, skipping"
+            )
             continue
         # Notes use their title as key; images use filepath
-        key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
+        key = (
+            image.filepath
+            if image.filepath
+            else (image.short_desc or f"Note {image.index + 1}")
+        )
         category = _categorize_figure(image.long_desc)
         entry = {
             "description": image.long_desc,
@@ -1842,7 +2008,12 @@ def _build_figure_dict(images_queryset, skip_missing_desc=True, rq_labels_by_ima
     return figures
 
 
-def _build_group_structure(group, images_queryset, rq_labels_by_image: dict | None = None, rq_labels_by_group: dict | None = None):
+def _build_group_structure(
+    group,
+    images_queryset,
+    rq_labels_by_image: dict | None = None,
+    rq_labels_by_group: dict | None = None,
+):
     """
     Build a group structure with its figures.
 
@@ -1869,15 +2040,23 @@ def _build_group_structure(group, images_queryset, rq_labels_by_image: dict | No
     return result
 
 
-def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: str | None = None, slot_order: list | None = None, rq_labels_by_image: dict | None = None, rq_labels_by_group: dict | None = None):
+def _build_scaffold_data(
+    scaffold,
+    all_groups,
+    all_images,
+    story_structure_id: str | None = None,
+    slot_order: list | None = None,
+    rq_labels_by_image: dict | None = None,
+    rq_labels_by_group: dict | None = None,
+):
     """
     Build the scaffold_data structure with elements, groups, and figures.
-    
+
     Args:
         scaffold: ScaffoldData instance
         all_groups: QuerySet of all GroupData for user
         all_images: QuerySet of all ImageData for user
-    
+
     Returns:
         Dict with scaffold structure or None if scaffold is None
     """
@@ -1917,22 +2096,31 @@ def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: s
     for element_num in element_order:
         # Groups in this element
         element_groups = scaffold_groups.filter(scaffold_group_number=element_num)
-        
+
         # Build groups list for this element
         element_groups_list = []
         for group in element_groups:
             # FIX: Images in groups are found by group_id only (like frontend does)
             # The group's scaffold_id determines scaffold membership, not the image's scaffold_id
             group_images = all_images.filter(group_id=group)
-            element_groups_list.append(_build_group_structure(group, group_images, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group))
-        
+            element_groups_list.append(
+                _build_group_structure(
+                    group,
+                    group_images,
+                    rq_labels_by_image=rq_labels_by_image,
+                    rq_labels_by_group=rq_labels_by_group,
+                )
+            )
+
         # Ungrouped images in this element (not in any group)
         # Image must be in scaffold, not in any group, AND have scaffold_group_number matching element_num
         element_ungrouped_images = scaffold_images.filter(
             group_id__isnull=True,
             scaffold_group_number=element_num,
         )
-        element_figures = _build_figure_dict(element_ungrouped_images, rq_labels_by_image=rq_labels_by_image)
+        element_figures = _build_figure_dict(
+            element_ungrouped_images, rq_labels_by_image=rq_labels_by_image
+        )
 
         # Resolve element metadata (stable id + human label)
         element_id = f"element_{element_num}"
@@ -1964,7 +2152,12 @@ def _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id: s
     }
 
 
-def _build_group_data(non_scaffold_groups, all_images, rq_labels_by_image: dict | None = None, rq_labels_by_group: dict | None = None):
+def _build_group_data(
+    non_scaffold_groups,
+    all_images,
+    rq_labels_by_image: dict | None = None,
+    rq_labels_by_group: dict | None = None,
+):
     """
     Build the group_data structure for groups not in scaffolds.
 
@@ -1981,7 +2174,14 @@ def _build_group_data(non_scaffold_groups, all_images, rq_labels_by_image: dict 
     for group in non_scaffold_groups:
         # Only get images that are also not in scaffolds
         group_images = all_images.filter(group_id=group, scaffold_id__isnull=True)
-        groups_list.append(_build_group_structure(group, group_images, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group))
+        groups_list.append(
+            _build_group_structure(
+                group,
+                group_images,
+                rq_labels_by_image=rq_labels_by_image,
+                rq_labels_by_group=rq_labels_by_group,
+            )
+        )
 
     return groups_list
 
@@ -1989,17 +2189,19 @@ def _build_group_data(non_scaffold_groups, all_images, rq_labels_by_image: dict 
 def _build_figure_data(ungrouped_images, rq_labels_by_image: dict | None = None):
     """
     Build the figure_data structure for images not in scaffolds or groups.
-    
+
     Args:
         ungrouped_images: QuerySet of ImageData not in groups or scaffolds
-    
+
     Returns:
         Dict mapping filepath to figure info
     """
     return _build_figure_dict(ungrouped_images, rq_labels_by_image=rq_labels_by_image)
 
 
-def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, scaffold_id=None):
+def _fetch_all_storyboard_data(
+    user, story_structure_id=None, slot_order=None, scaffold_id=None
+):
     """
     Fetch and organize all storyboard data (scaffolds, groups, images).
 
@@ -2012,21 +2214,29 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
         Every figure/group inside those structures also carries an rq_labels list
         so downstream prompts can annotate them with [answers: Q1, Q3].
     """
-    ImageData = _get_model('api', 'ImageData')
-    GroupData = _get_model('api', 'GroupData')
-    ScaffoldData = _get_model('api', 'ScaffoldData')
+    ImageData = _get_model("api", "ImageData")
+    GroupData = _get_model("api", "GroupData")
+    ScaffoldData = _get_model("api", "ScaffoldData")
 
-    logger.info(f"[FETCH_DATA] Fetching storyboard data for user {user.id}, story_structure_id={story_structure_id}")
+    logger.info(
+        f"[FETCH_DATA] Fetching storyboard data for user {user.id}, story_structure_id={story_structure_id}"
+    )
 
     # Fetch all groups and images
-    all_groups = GroupData.objects.filter(user=user).prefetch_related('images')
-    all_images = ImageData.objects.filter(user=user, in_storyboard=True)
-    logger.info(f"[FETCH_DATA] Total: {all_groups.count()} groups, {all_images.count()} storyboard images")
+    all_groups = GroupData.objects.filter(
+        user=user, workspace=_active_ws(user)
+    ).prefetch_related("images")
+    all_images = ImageData.objects.filter(
+        user=user, workspace=_active_ws(user), in_storyboard=True
+    ).select_related("media")
+    logger.info(
+        f"[FETCH_DATA] Total: {all_groups.count()} groups, {all_images.count()} storyboard images"
+    )
 
     # Load RQ context once and thread it through every builder below so figures and
     # groups carry their rq_labels. Storyboard image ids are passed so the loader can
     # flag links that point at cards the user left off the board.
-    storyboard_image_ids = set(all_images.values_list('id', flat=True))
+    storyboard_image_ids = set(all_images.values_list("id", flat=True))
     rq_ctx = _load_rqs_for_prompts(user, storyboard_image_ids=storyboard_image_ids)
     rq_labels_by_image = rq_ctx["rq_labels_by_image"]
     rq_labels_by_group = rq_ctx["rq_labels_by_group"]
@@ -2045,20 +2255,33 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
         # Specific scaffold requested
         try:
             scaffold = ScaffoldData.objects.get(id=scaffold_id, user=user)
-            logger.info(f"[FETCH_DATA] Using specific scaffold: {scaffold.name} ({scaffold_id})")
+            logger.info(
+                f"[FETCH_DATA] Using specific scaffold: {scaffold.name} ({scaffold_id})"
+            )
             if not story_structure_id:
                 from .pydandtic import STORY_SCAFFOLDS as _SS
+
                 for sid, info in _SS.items():
-                    if info.get('number') == scaffold.number:
+                    if info.get("number") == scaffold.number:
                         story_structure_id = sid
                         break
-            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
+            output_json["scaffold_data"] = _build_scaffold_data(
+                scaffold,
+                all_groups,
+                all_images,
+                story_structure_id,
+                slot_order,
+                rq_labels_by_image=rq_labels_by_image,
+                rq_labels_by_group=rq_labels_by_group,
+            )
         except ScaffoldData.DoesNotExist:
             logger.warning(f"[FETCH_DATA] Scaffold {scaffold_id} not found")
 
     elif not story_structure_id:
         # All workspace — no specific structure type, fetch all scaffolds
-        all_scaffolds = ScaffoldData.objects.filter(user=user)
+        all_scaffolds = ScaffoldData.objects.filter(
+            user=user, workspace=_active_ws(user)
+        )
         scaffold_count = all_scaffolds.count()
         logger.info(f"[FETCH_DATA] All workspace mode: {scaffold_count} scaffold(s)")
 
@@ -2067,10 +2290,18 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
             scaffold = all_scaffolds.first()
             # Infer structure id
             for sid, info in STORY_SCAFFOLDS.items():
-                if info.get('number') == scaffold.number:
+                if info.get("number") == scaffold.number:
                     story_structure_id = sid
                     break
-            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
+            output_json["scaffold_data"] = _build_scaffold_data(
+                scaffold,
+                all_groups,
+                all_images,
+                story_structure_id,
+                slot_order,
+                rq_labels_by_image=rq_labels_by_image,
+                rq_labels_by_group=rq_labels_by_group,
+            )
 
         elif scaffold_count > 1:
             # Multi-scaffold — build combined structure
@@ -2082,11 +2313,18 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
                 # Infer structure id for this scaffold
                 s_structure_id = None
                 for sid, info in STORY_SCAFFOLDS.items():
-                    if info.get('number') == s.number:
+                    if info.get("number") == s.number:
                         s_structure_id = sid
                         break
 
-                scaffold_data = _build_scaffold_data(s, all_groups, all_images, s_structure_id, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
+                scaffold_data = _build_scaffold_data(
+                    s,
+                    all_groups,
+                    all_images,
+                    s_structure_id,
+                    rq_labels_by_image=rq_labels_by_image,
+                    rq_labels_by_group=rq_labels_by_group,
+                )
                 if scaffold_data:
                     scaffold_names.append(scaffold_data.get("name", "Unknown"))
                     if s_structure_id:
@@ -2113,12 +2351,26 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
         scaffold_number = None
         scaffold_info = STORY_SCAFFOLDS.get(story_structure_id)
         if scaffold_info:
-            scaffold_number = scaffold_info['number']
+            scaffold_number = scaffold_info["number"]
 
-        scaffolds_qs = ScaffoldData.objects.filter(user=user, number=scaffold_number) if scaffold_number else ScaffoldData.objects.filter(user=user)
+        scaffolds_qs = (
+            ScaffoldData.objects.filter(
+                user=user, workspace=_active_ws(user), number=scaffold_number
+            )
+            if scaffold_number
+            else ScaffoldData.objects.filter(user=user, workspace=_active_ws(user))
+        )
         scaffold = scaffolds_qs.first()
         if scaffold:
-            output_json["scaffold_data"] = _build_scaffold_data(scaffold, all_groups, all_images, story_structure_id, slot_order, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
+            output_json["scaffold_data"] = _build_scaffold_data(
+                scaffold,
+                all_groups,
+                all_images,
+                story_structure_id,
+                slot_order,
+                rq_labels_by_image=rq_labels_by_image,
+                rq_labels_by_group=rq_labels_by_group,
+            )
 
     # Non-scaffold groups + ungrouped figures are only relevant to All-Workspace mode.
     # When the caller pinned a specific scaffold (via scaffold_id), including these would
@@ -2126,11 +2378,20 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
     # "generate from this scaffold" produced a story spanning the whole workspace.
     if not scaffold_id:
         non_scaffold_groups = all_groups.filter(scaffold_id__isnull=True)
-        output_json["group_data"] = _build_group_data(non_scaffold_groups, all_images, rq_labels_by_image=rq_labels_by_image, rq_labels_by_group=rq_labels_by_group)
+        output_json["group_data"] = _build_group_data(
+            non_scaffold_groups,
+            all_images,
+            rq_labels_by_image=rq_labels_by_image,
+            rq_labels_by_group=rq_labels_by_group,
+        )
 
-        ungrouped_non_scaffold = all_images.filter(scaffold_id__isnull=True, group_id__isnull=True)
-        output_json["figure_data"] = _build_figure_data(ungrouped_non_scaffold, rq_labels_by_image=rq_labels_by_image)
-    
+        ungrouped_non_scaffold = all_images.filter(
+            scaffold_id__isnull=True, group_id__isnull=True
+        )
+        output_json["figure_data"] = _build_figure_data(
+            ungrouped_non_scaffold, rq_labels_by_image=rq_labels_by_image
+        )
+
     # Validation summary
     total_scaffold_figures = 0
     if output_json["scaffold_data"]:
@@ -2138,11 +2399,11 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
             for group in element["groups"]:
                 total_scaffold_figures += len(group["figures"])
             total_scaffold_figures += len(element["figures"])
-    
+
     total_group_figures = sum(len(g["figures"]) for g in output_json["group_data"])
     total_figure_data = len(output_json["figure_data"])
-    total_expected = all_images.exclude(long_desc__exact='').count()
-    
+    total_expected = all_images.exclude(long_desc__exact="").count()
+
     logger.info(f"[FETCH_DATA] SUMMARY:")
     logger.info(f"  Scaffold figures: {total_scaffold_figures}")
     logger.info(f"  Group figures (non-scaffold): {total_group_figures}")
@@ -2152,29 +2413,41 @@ def _fetch_all_storyboard_data(user, story_structure_id=None, slot_order=None, s
         total_scaffold_figures + total_group_figures + total_figure_data,
         total_expected,
     )
-    if total_scaffold_figures + total_group_figures + total_figure_data != total_expected:
+    if (
+        total_scaffold_figures + total_group_figures + total_figure_data
+        != total_expected
+    ):
         logger.warning(
             "[FETCH_DATA] MISMATCH between counted figures (%s) and expected with descriptions (%s)",
             total_scaffold_figures + total_group_figures + total_figure_data,
             total_expected,
         )
-    
+
     return output_json
 
 
 @shared_task(bind=True)
-def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=False, slot_order=None, scaffold_id=None):
+def generate_narrative_task(
+    self,
+    user_id,
+    story_structure_id=None,
+    use_groups=False,
+    slot_order=None,
+    scaffold_id=None,
+):
     User = get_user_model()
-    ImageData = _get_model('api', 'ImageData')
-    GroupData = _get_model('api', 'GroupData')
-    ScaffoldData = _get_model('api', 'ScaffoldData')
-    NarrativeCache = _get_model('api', 'NarrativeCache')
+    ImageData = _get_model("api", "ImageData")
+    GroupData = _get_model("api", "GroupData")
+    ScaffoldData = _get_model("api", "ScaffoldData")
+    NarrativeCache = _get_model("api", "NarrativeCache")
 
     task_id = self.request.id
     TOTAL_STAGES = 8
 
     def _progress(stage, name, substage=None):
-        update_progress(user_id, "narrative", task_id, stage, TOTAL_STAGES, name, substage)
+        update_progress(
+            user_id, "narrative", task_id, stage, TOTAL_STAGES, name, substage
+        )
 
     logger.info(f"Generating story with structure: {story_structure_id}")
 
@@ -2187,11 +2460,11 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         # Ensure all storyboard images have non-placeholder descriptions before generating.
         PLACEHOLDER = "Ask AI to create a description for this visual."
 
-        storyboard_qs = ImageData.objects.filter(user=user, in_storyboard=True)
+        storyboard_qs = ImageData.objects.filter(
+            user=user, workspace=_active_ws(user), in_storyboard=True
+        ).select_related("media")
 
-        images_needing_desc = storyboard_qs.exclude(
-            filepath__exact=""
-        ).filter(
+        images_needing_desc = storyboard_qs.filter(media__isnull=False).filter(
             Q(long_desc__isnull=True)
             | Q(long_desc__exact="")
             | Q(long_desc__exact=PLACEHOLDER)
@@ -2220,9 +2493,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         wait_deadline = time.time() + wait_timeout_seconds
 
         while True:
-            pending_desc_qs = storyboard_qs.filter(
-                long_desc_generating=True
-            ).filter(
+            pending_desc_qs = storyboard_qs.filter(long_desc_generating=True).filter(
                 Q(long_desc__isnull=True)
                 | Q(long_desc__exact="")
                 | Q(long_desc__exact=PLACEHOLDER)
@@ -2238,7 +2509,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
             if time.time() >= wait_deadline:
                 pending_files = list(
-                    pending_desc_qs.values_list("filepath", flat=True)[:5]
+                    pending_desc_qs.values_list("media__filepath", flat=True)[:5]
                 )
                 logger.warning(
                     "[NARRATIVE] Timeout waiting for %s description task(s) "
@@ -2266,11 +2537,15 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         flat_figures: dict[str, dict[str, str]] = {}
         all_descriptions: list[str] = []
         for image in storyboard_images:
-            if image.source == 'instructor':
+            if image.source == "instructor":
                 continue  # Skip instructor feedback notes
             if not image.long_desc:
                 continue
-            key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
+            key = (
+                image.filepath
+                if image.filepath
+                else (image.short_desc or f"Note {image.index + 1}")
+            )
             category = _categorize_figure(image.long_desc)
             flat_figures[key] = {
                 "description": image.long_desc,
@@ -2284,8 +2559,10 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         # sequencing, story building, and post-hoc rq_reasoning all see the same context.
         # `_fetch_all_storyboard_data` also runs its own loader to attach rq_labels onto
         # every figure/group — an extra query, but the two use sites want different shapes.
-        storyboard_image_ids = set(storyboard_images.values_list('id', flat=True))
-        rqs_data = _load_rqs_for_prompts(user, storyboard_image_ids=storyboard_image_ids)["rqs_data"]
+        storyboard_image_ids = set(storyboard_images.values_list("id", flat=True))
+        rqs_data = _load_rqs_for_prompts(
+            user, storyboard_image_ids=storyboard_image_ids
+        )["rqs_data"]
 
         _progress(3, "Structuring...")
         # Structure resolution and Theme both only read the flat description text +
@@ -2305,23 +2582,39 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         _t_pre = time.perf_counter()
         with ThreadPoolExecutor(max_workers=2) as _pre_pool:
             _theme_future = _pre_pool.submit(
-                _timed, "theme", _understand_theme_objective, all_descriptions_text, rqs_data,
+                _timed,
+                "theme",
+                _understand_theme_objective,
+                all_descriptions_text,
+                rqs_data,
             )
             _struct_future = (
-                None if is_all_workspace
+                None
+                if is_all_workspace
                 else _pre_pool.submit(
-                    _timed, "structure", _resolve_story_structure_id, story_structure_id, all_descriptions_text, rqs_data,
+                    _timed,
+                    "structure",
+                    _resolve_story_structure_id,
+                    story_structure_id,
+                    all_descriptions_text,
+                    rqs_data,
                 )
             )
             theme = _theme_future.result()
             if _struct_future is not None:
                 story_structure_id = _struct_future.result()
-        logger.info(f"[TIMING] structuring (parallel wall): {time.perf_counter() - _t_pre:.2f}s")
-        logger.info(f"Using story structure: {story_structure_id} (all_workspace={is_all_workspace})")
+        logger.info(
+            f"[TIMING] structuring (parallel wall): {time.perf_counter() - _t_pre:.2f}s"
+        )
+        logger.info(
+            f"Using story structure: {story_structure_id} (all_workspace={is_all_workspace})"
+        )
 
         _progress(4, "Fetching...")
         # Fetch all storyboard data (scaffolds, groups, figures)
-        storyboard_data = _fetch_all_storyboard_data(user, story_structure_id, slot_order, scaffold_id)
+        storyboard_data = _fetch_all_storyboard_data(
+            user, story_structure_id, slot_order, scaffold_id
+        )
 
         # For All workspace with multi-scaffold, use the composite structure ID
         # For All workspace with single scaffold, resolve from what _fetch returned
@@ -2332,8 +2625,12 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
             elif scaffold_data_tmp and scaffold_data_tmp.get("story_structure_id"):
                 story_structure_id = scaffold_data_tmp["story_structure_id"]
             else:
-                story_structure_id = _resolve_story_structure_id(None, all_descriptions_text)
-        logger.info(f"[NARRATIVE] Storyboard data: {json.dumps(storyboard_data, indent=4)}")
+                story_structure_id = _resolve_story_structure_id(
+                    None, all_descriptions_text
+                )
+        logger.info(
+            f"[NARRATIVE] Storyboard data: {json.dumps(storyboard_data, indent=4)}"
+        )
 
         scaffold_data = storyboard_data.get("scaffold_data")
         non_scaffold_groups = storyboard_data.get("group_data") or []
@@ -2343,7 +2640,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         # story-stream channel group. Any open WebSocket subscribers see the story
         # as it's written. All three branches share the same callback.
         def _publish_chunk(delta: str) -> None:
-            _publish_story_stream_event(user_id, 'chunk', delta=delta)
+            _publish_story_stream_event(user_id, "chunk", delta=delta)
 
         # Branch based on presence of scaffold data first, then use_groups flag, to keep backwards compatibility.
         # Theme was computed in parallel with Structure resolution above, so we skip
@@ -2351,7 +2648,8 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         if scaffold_data:
             _progress(6, "Sequencing...")
             sequence = _timed(
-                "sequence (scaffold)", _sequence_figures_with_scaffolds,
+                "sequence (scaffold)",
+                _sequence_figures_with_scaffolds,
                 scaffold_data,
                 non_scaffold_groups,
                 non_scaffold_figures,
@@ -2362,24 +2660,39 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
             _progress(7, "Composing...")
             # Filter notes out of figures for story builder (no [FIGURE:] placeholders for notes)
             story_non_scaffold_groups = [
-                {**g, "figures": {k: v for k, v in g.get("figures", {}).items() if '.' in k}}
+                {
+                    **g,
+                    "figures": {
+                        k: v for k, v in g.get("figures", {}).items() if "." in k
+                    },
+                }
                 for g in non_scaffold_groups
             ]
-            story_non_scaffold_figures = {k: v for k, v in non_scaffold_figures.items() if '.' in k}
+            story_non_scaffold_figures = {
+                k: v for k, v in non_scaffold_figures.items() if "." in k
+            }
             # Also filter notes from scaffold_data elements
             story_scaffold_data = dict(scaffold_data)
             story_scaffold_data["elements"] = []
             for element in scaffold_data.get("elements", []):
                 new_element = dict(element)
-                new_element["figures"] = {k: v for k, v in element.get("figures", {}).items() if '.' in k}
+                new_element["figures"] = {
+                    k: v for k, v in element.get("figures", {}).items() if "." in k
+                }
                 new_element["groups"] = [
-                    {**g, "figures": {k: v for k, v in g.get("figures", {}).items() if '.' in k}}
+                    {
+                        **g,
+                        "figures": {
+                            k: v for k, v in g.get("figures", {}).items() if "." in k
+                        },
+                    }
                     for g in element.get("groups", [])
                 ]
                 story_scaffold_data["elements"].append(new_element)
-            _publish_story_stream_event(user_id, 'start')
+            _publish_story_stream_event(user_id, "start")
             story = _timed(
-                "compose (scaffold)", _build_story_with_scaffolds,
+                "compose (scaffold)",
+                _build_story_with_scaffolds,
                 story_scaffold_data,
                 story_non_scaffold_groups,
                 story_non_scaffold_figures,
@@ -2388,7 +2701,7 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 rqs_data=rqs_data,
                 on_chunk=_publish_chunk,
             )
-            _publish_story_stream_event(user_id, 'end')
+            _publish_story_stream_event(user_id, "end")
             recommended_order = extract_figure_filenames(sequence)
 
             # Build categories from scaffold elements + any non-scaffold groups/figures
@@ -2397,7 +2710,10 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 for group in element.get("groups", []):
                     for fig_file, fig_info in group.get("figures", {}).items():
                         categories.append(
-                            {"filename": fig_file, "category": fig_info.get("category", "")}
+                            {
+                                "filename": fig_file,
+                                "category": fig_info.get("category", ""),
+                            }
                         )
                 for fig_file, fig_info in element.get("figures", {}).items():
                     categories.append(
@@ -2414,13 +2730,17 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 )
 
             # Ensure every figure in the scaffold + extra groups/figures is represented in order.
-            recommended_order = _ensure_all_figures_in_order(recommended_order, categories)
+            recommended_order = _ensure_all_figures_in_order(
+                recommended_order, categories
+            )
 
             generation_mode = "scaffold"
 
         elif use_groups:
             # Group-aware narrative generation without scaffolds (existing behavior)
-            groups = GroupData.objects.filter(user=user).prefetch_related("images")
+            groups = GroupData.objects.filter(
+                user=user, workspace=_active_ws(user)
+            ).prefetch_related("images")
 
             grouped_images = storyboard_images.filter(group_id__isnull=False)
             ungrouped_images = storyboard_images.filter(group_id__isnull=True)
@@ -2433,9 +2753,13 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
                 group_figures = {}
                 for image in group_images:
-                    if image.source == 'instructor':
+                    if image.source == "instructor":
                         continue
-                    key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
+                    key = (
+                        image.filepath
+                        if image.filepath
+                        else (image.short_desc or f"Note {image.index + 1}")
+                    )
                     category = _categorize_figure(image.long_desc)
                     group_figures[key] = {
                         "description": image.long_desc,
@@ -2452,9 +2776,13 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
             ungrouped_data = {}
             for image in ungrouped_images:
-                if image.source == 'instructor':
+                if image.source == "instructor":
                     continue
-                key = image.filepath if image.filepath else (image.short_desc or f"Note {image.index + 1}")
+                key = (
+                    image.filepath
+                    if image.filepath
+                    else (image.short_desc or f"Note {image.index + 1}")
+                )
                 category = _categorize_figure(image.long_desc)
                 ungrouped_data[key] = {
                     "description": image.long_desc,
@@ -2463,22 +2791,37 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
 
             _progress(6, "Sequencing...")
             sequence = _timed(
-                "sequence (groups)", _sequence_figures_with_groups,
-                groups_data, ungrouped_data, theme, story_structure_id, rqs_data=rqs_data,
+                "sequence (groups)",
+                _sequence_figures_with_groups,
+                groups_data,
+                ungrouped_data,
+                theme,
+                story_structure_id,
+                rqs_data=rqs_data,
             )
             _progress(7, "Composing...")
             # Filter notes out of figures for story builder
             story_groups_data = [
-                {**g, "figures": {k: v for k, v in g.get("figures", {}).items() if '.' in k}}
+                {
+                    **g,
+                    "figures": {
+                        k: v for k, v in g.get("figures", {}).items() if "." in k
+                    },
+                }
                 for g in groups_data
             ]
-            story_ungrouped_data = {k: v for k, v in ungrouped_data.items() if '.' in k}
-            _publish_story_stream_event(user_id, 'start')
+            story_ungrouped_data = {k: v for k, v in ungrouped_data.items() if "." in k}
+            _publish_story_stream_event(user_id, "start")
             story = _timed(
-                "compose (groups)", _build_story_with_groups,
-                story_groups_data, story_ungrouped_data, sequence, rqs_data=rqs_data, on_chunk=_publish_chunk,
+                "compose (groups)",
+                _build_story_with_groups,
+                story_groups_data,
+                story_ungrouped_data,
+                sequence,
+                rqs_data=rqs_data,
+                on_chunk=_publish_chunk,
             )
-            _publish_story_stream_event(user_id, 'end')
+            _publish_story_stream_event(user_id, "end")
             recommended_order = extract_figure_filenames(sequence)
 
             categories = []
@@ -2493,7 +2836,9 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 )
 
             # Ensure every grouped/ungrouped figure is represented in order.
-            recommended_order = _ensure_all_figures_in_order(recommended_order, categories)
+            recommended_order = _ensure_all_figures_in_order(
+                recommended_order, categories
+            )
 
             generation_mode = "grouped"
 
@@ -2501,7 +2846,8 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
             # Flat narrative generation (backward compatible)
             _progress(6, "Sequencing...")
             sequence = _timed(
-                "sequence (flat)", _sequence_figures,
+                "sequence (flat)",
+                _sequence_figures,
                 flat_figures,
                 theme,
                 story_structure_id,
@@ -2509,13 +2855,17 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
             )
             _progress(7, "Composing...")
             # Exclude notes (no file extension) from the story builder so AI doesn't generate [FIGURE:] for them
-            story_figures = {k: v for k, v in flat_figures.items() if '.' in k}
-            _publish_story_stream_event(user_id, 'start')
+            story_figures = {k: v for k, v in flat_figures.items() if "." in k}
+            _publish_story_stream_event(user_id, "start")
             story = _timed(
-                "compose (flat)", _build_story,
-                story_figures, sequence, rqs_data=rqs_data, on_chunk=_publish_chunk,
+                "compose (flat)",
+                _build_story,
+                story_figures,
+                sequence,
+                rqs_data=rqs_data,
+                on_chunk=_publish_chunk,
             )
-            _publish_story_stream_event(user_id, 'end')
+            _publish_story_stream_event(user_id, "end")
             recommended_order = extract_figure_filenames(sequence)
 
             categories = [
@@ -2524,15 +2874,25 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
             ]
 
             # Ensure every flat figure is represented in order.
-            recommended_order = _ensure_all_figures_in_order(recommended_order, categories)
+            recommended_order = _ensure_all_figures_in_order(
+                recommended_order, categories
+            )
 
             generation_mode = "flat"
 
         # Get display name from mapping for logging/caching
         if story_structure_id and story_structure_id.startswith("multi:"):
             scaffold_data_for_name = storyboard_data.get("scaffold_data")
-            scaffold_names = scaffold_data_for_name.get("scaffold_names", []) if scaffold_data_for_name else []
-            story_structure_name = f"Multiple ({', '.join(scaffold_names)})" if scaffold_names else "Multiple Scaffolds"
+            scaffold_names = (
+                scaffold_data_for_name.get("scaffold_names", [])
+                if scaffold_data_for_name
+                else []
+            )
+            story_structure_name = (
+                f"Multiple ({', '.join(scaffold_names)})"
+                if scaffold_names
+                else "Multiple Scaffolds"
+            )
         else:
             structure_info = STORY_SCAFFOLDS.get(story_structure_id or "")
             story_structure_name = (
@@ -2554,15 +2914,15 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
             cache, created = NarrativeCache.objects.get_or_create(
                 user=user,
                 defaults={
-                    'story_structure_id': story_structure_id or "",
-                    'narrative': story,
-                    'order': recommended_order,
-                    'theme': theme,
-                    'categories': categories,
-                    'sequence_justification': sequence,
-                    'sequence_summary': [],
-                    'rq_reasoning': "",
-                }
+                    "story_structure_id": story_structure_id or "",
+                    "narrative": story,
+                    "order": recommended_order,
+                    "theme": theme,
+                    "categories": categories,
+                    "sequence_justification": sequence,
+                    "sequence_summary": [],
+                    "rq_reasoning": "",
+                },
             )
             if not created:
                 cache.story_structure_id = story_structure_id or ""
@@ -2576,7 +2936,8 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
                 cache.save()
 
         _publish_story_stream_event(
-            user_id, 'complete',
+            user_id,
+            "complete",
             story_structure_id=story_structure_id or "",
             narrative=story,
             recommended_order=recommended_order,
@@ -2595,17 +2956,32 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         # already try/except's internally, so a failure in one doesn't affect the other.
         in_story_items = _collect_in_story_items(recommended_order, user)
         from concurrent.futures import ThreadPoolExecutor
+
         _t_post = time.perf_counter()
         with ThreadPoolExecutor(max_workers=2) as _post_pool:
             _bullets_future = _post_pool.submit(
-                _timed, "post_hoc.bullets", _generate_sequence_bullets, sequence, story, in_story_items, story_structure_id,
+                _timed,
+                "post_hoc.bullets",
+                _generate_sequence_bullets,
+                sequence,
+                story,
+                in_story_items,
+                story_structure_id,
             )
             _rq_future = _post_pool.submit(
-                _timed, "post_hoc.rq_reasoning", _generate_rq_reasoning, rqs_data, story, sequence, story_structure_id,
+                _timed,
+                "post_hoc.rq_reasoning",
+                _generate_rq_reasoning,
+                rqs_data,
+                story,
+                sequence,
+                story_structure_id,
             )
             sequence_summary = _bullets_future.result()
             rq_reasoning = _rq_future.result()
-        logger.info(f"[TIMING] post_hoc (parallel wall): {time.perf_counter() - _t_post:.2f}s")
+        logger.info(
+            f"[TIMING] post_hoc (parallel wall): {time.perf_counter() - _t_post:.2f}s"
+        )
 
         NarrativeCache.objects.filter(user=user).update(
             sequence_summary=sequence_summary,
@@ -2613,7 +2989,8 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         )
 
         _publish_story_stream_event(
-            user_id, 'reasoning',
+            user_id,
+            "reasoning",
             sequence_summary=sequence_summary,
             rq_reasoning=rq_reasoning,
         )
@@ -2621,17 +2998,29 @@ def generate_narrative_task(self, user_id, story_structure_id=None, use_groups=F
         # Mark progress complete AFTER reasoning is written
         _progress(TOTAL_STAGES, "Complete")
 
-        logger.info(f"Successfully generated {generation_mode} narrative for user {user.username} using structure: {story_structure_name}")
+        logger.info(
+            f"Successfully generated {generation_mode} narrative for user {user.username} using structure: {story_structure_name}"
+        )
         return f"Successfully generated {generation_mode} narrative for user {user.username} using structure: {story_structure_name}"
     except User.DoesNotExist:
         logger.error(f"User with id {user_id} not found")
         if task_id:
-            update_progress(user_id, "narrative", task_id, -1, TOTAL_STAGES, "Error", error=f"User with id {user_id} not found")
+            update_progress(
+                user_id,
+                "narrative",
+                task_id,
+                -1,
+                TOTAL_STAGES,
+                "Error",
+                error=f"User with id {user_id} not found",
+            )
         return f"User with id {user_id} not found"
     except Exception as e:
         logger.exception("Error generating narrative")
         if task_id:
-            update_progress(user_id, "narrative", task_id, -1, TOTAL_STAGES, "Error", error=str(e))
+            update_progress(
+                user_id, "narrative", task_id, -1, TOTAL_STAGES, "Error", error=str(e)
+            )
         raise
 
 
@@ -2653,9 +3042,7 @@ def _ai_group_images(visuals: list[dict], max_groups: int) -> list[dict]:
     Returns:
         List of {"title": str, "description": str, "members": [key, ...]}
     """
-    visuals_text = "\n".join(
-        f"- {v['key']}: {v['description']}" for v in visuals
-    )
+    visuals_text = "\n".join(f"- {v['key']}: {v['description']}" for v in visuals)
     prompt_template = _load_prompt("group_with_ai.txt")
     prompt = prompt_template.replace("{max_groups}", str(max_groups)).replace(
         "{visuals_text}", visuals_text
@@ -2665,7 +3052,10 @@ def _ai_group_images(visuals: list[dict], max_groups: int) -> list[dict]:
     resp = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant that returns only valid JSON."},
+            {
+                "role": "system",
+                "content": "You are a helpful assistant that returns only valid JSON.",
+            },
             {"role": "user", "content": prompt},
         ],
         temperature=0.1,
@@ -2694,11 +3084,13 @@ def _ai_group_images(visuals: list[dict], max_groups: int) -> list[dict]:
         if misc:
             misc["members"].extend(missing)
         else:
-            groups.append({
-                "title": "Miscellaneous",
-                "description": "Items that do not fit a single theme.",
-                "members": list(missing),
-            })
+            groups.append(
+                {
+                    "title": "Miscellaneous",
+                    "description": "Items that do not fit a single theme.",
+                    "members": list(missing),
+                }
+            )
 
     # Remove empty groups
     groups = [g for g in groups if g["members"]]
@@ -2733,14 +3125,23 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
 
         # If "all" mode, delete existing non-scaffold groups first
         if mode == "all":
-            non_scaffold_groups = GroupData.objects.filter(user=user, scaffold_id__isnull=True)
+            non_scaffold_groups = GroupData.objects.filter(
+                user=user, workspace=_active_ws(user), scaffold_id__isnull=True
+            )
             count = non_scaffold_groups.count()
             # Clearing group_id on images happens via SET_NULL on delete
             non_scaffold_groups.delete()
-            logger.info(f"[AI_GROUP] Deleted {count} non-scaffold groups for user {user.username}")
+            logger.info(
+                f"[AI_GROUP] Deleted {count} non-scaffold groups for user {user.username}"
+            )
 
         # Fetch eligible images
-        base_qs = ImageData.objects.filter(user=user, in_storyboard=True, scaffold_id__isnull=True)
+        base_qs = ImageData.objects.filter(
+            user=user,
+            workspace=_active_ws(user),
+            in_storyboard=True,
+            scaffold_id__isnull=True,
+        ).select_related("media")
 
         if mode == "ungrouped":
             base_qs = base_qs.filter(group_id__isnull=True)
@@ -2772,28 +3173,53 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
                 skipped_unannotated += 1
                 continue
 
-            eligible.append({"key": key, "image_id": str(img.id), "description": description})
+            eligible.append(
+                {"key": key, "image_id": str(img.id), "description": description}
+            )
 
         if len(eligible) == 0:
             _progress(-1, "Error")
-            update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error",
-                            error="No annotated visuals found. Add images and annotate them first.")
+            update_progress(
+                user_id,
+                "grouping",
+                task_id,
+                -1,
+                TOTAL_STAGES,
+                "Error",
+                error="No annotated visuals found. Add images and annotate them first.",
+            )
             return "No annotated visuals found."
 
         if len(eligible) == 1:
             _progress(-1, "Error")
-            update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error",
-                            error="Too few visuals. Add more in order to group.")
+            update_progress(
+                user_id,
+                "grouping",
+                task_id,
+                -1,
+                TOTAL_STAGES,
+                "Error",
+                error="Too few visuals. Add more in order to group.",
+            )
             return "Too few visuals."
 
         if skipped_unannotated > len(eligible):
             _progress(-1, "Error")
-            update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error",
-                            error=f"{skipped_unannotated} of your {total_considered} visuals are not yet annotated. Annotate them first for better grouping results.")
+            update_progress(
+                user_id,
+                "grouping",
+                task_id,
+                -1,
+                TOTAL_STAGES,
+                "Error",
+                error=f"{skipped_unannotated} of your {total_considered} visuals are not yet annotated. Annotate them first for better grouping results.",
+            )
             return "Too many unannotated visuals."
 
         max_groups = math.ceil(len(eligible) / 2)
-        logger.info(f"[AI_GROUP] {len(eligible)} eligible visuals, max {max_groups} groups")
+        logger.info(
+            f"[AI_GROUP] {len(eligible)} eligible visuals, max {max_groups} groups"
+        )
 
         _progress(1, "Analyzing...")
         proposed_groups = _ai_group_images(eligible, max_groups)
@@ -2812,8 +3238,11 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
                 offset_y = (i // 4) * 300
                 group = GroupData.objects.create(
                     user=user,
+                    workspace=_active_ws(user),
                     name=pg["title"][:100],
-                    description=pg["description"][:500] if pg.get("description") else "",
+                    description=(
+                        pg["description"][:500] if pg.get("description") else ""
+                    ),
                     x=150.0 + offset_x + (i * 17 % 60),
                     y=150.0 + offset_y + (i * 31 % 50),
                 )
@@ -2821,14 +3250,18 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
                 member_ids = [key_to_id[m] for m in pg["members"] if m in key_to_id]
                 ImageData.objects.filter(id__in=member_ids).update(group_id=group)
 
-                created_groups.append({
-                    "id": str(group.id),
-                    "name": group.name,
-                    "member_count": len(member_ids),
-                })
+                created_groups.append(
+                    {
+                        "id": str(group.id),
+                        "name": group.name,
+                        "member_count": len(member_ids),
+                    }
+                )
 
         _progress(TOTAL_STAGES, "Complete")
-        logger.info(f"[AI_GROUP] Created {len(created_groups)} groups for user {user.username}")
+        logger.info(
+            f"[AI_GROUP] Created {len(created_groups)} groups for user {user.username}"
+        )
         return {
             "status": "success",
             "groups_created": len(created_groups),
@@ -2837,15 +3270,31 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
 
     except User.DoesNotExist:
         logger.error(f"User with id {user_id} not found")
-        update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error",
-                        error=f"User with id {user_id} not found")
+        update_progress(
+            user_id,
+            "grouping",
+            task_id,
+            -1,
+            TOTAL_STAGES,
+            "Error",
+            error=f"User with id {user_id} not found",
+        )
         return f"User with id {user_id} not found"
     except json.JSONDecodeError as e:
         logger.error(f"[AI_GROUP] Failed to parse GPT response: {e}")
-        update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error",
-                        error="AI returned an invalid response. Please try again.")
+        update_progress(
+            user_id,
+            "grouping",
+            task_id,
+            -1,
+            TOTAL_STAGES,
+            "Error",
+            error="AI returned an invalid response. Please try again.",
+        )
         return "Invalid AI response"
     except Exception as e:
         logger.exception("[AI_GROUP] Error grouping with AI")
-        update_progress(user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error", error=str(e))
+        update_progress(
+            user_id, "grouping", task_id, -1, TOTAL_STAGES, "Error", error=str(e)
+        )
         raise
