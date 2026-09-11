@@ -15,6 +15,7 @@ from .models import (
 )
 
 MAX_WORKSPACES_PER_USER = 3
+DEFAULT_WORKSPACE_NAME = "Default"
 
 
 def get_or_create_active_workspace(user):
@@ -26,7 +27,9 @@ def get_or_create_active_workspace(user):
         existing.is_active = True
         existing.save(update_fields=["is_active"])
         return existing
-    return Workspace.objects.create(user=user, name="Untitled", is_active=True)
+    return Workspace.objects.create(
+        user=user, name=DEFAULT_WORKSPACE_NAME, is_active=True
+    )
 
 
 def get_or_create_media(user, filename):
@@ -163,37 +166,47 @@ def clone_workspace_contents(source, dest):
     return dest
 
 
-def save_as_workspace(user, name, replace_id=None):
+def _activate(workspaces, dest):
+    for w in workspaces:
+        if w.is_active and w.id != dest.id:
+            w.is_active = False
+            w.save(update_fields=["is_active"])
+    if not dest.is_active:
+        dest.is_active = True
+        dest.save(update_fields=["is_active", "last_modified"])
+    return dest
+
+
+def create_workspace(user, name, replace_id=None):
     """
-    Clone the active workspace into a new inactive one, or overwrite replace_id.
-    Raises ValueError with code workspace_limit / invalid_replace / no_active.
+    Create an empty workspace and make it the current one.
+
+    Users may keep up to MAX_WORKSPACES_PER_USER workspaces. At the cap,
+    replace_id must point at an existing workspace to clear and reuse.
+    Raises ValueError with code workspace_limit / invalid_replace.
     """
-    name = (name or "").strip() or "Untitled"
+    name = (name or "").strip() or DEFAULT_WORKSPACE_NAME
     with transaction.atomic():
         workspaces = list(Workspace.objects.select_for_update().filter(user=user))
-        source = next((w for w in workspaces if w.is_active), None)
-        if not source:
-            source = get_or_create_active_workspace(user)
-            workspaces = list(Workspace.objects.select_for_update().filter(user=user))
 
-        if replace_id:
+        if len(workspaces) >= MAX_WORKSPACES_PER_USER:
+            if not replace_id:
+                raise ValueError("workspace_limit")
             dest = next((w for w in workspaces if str(w.id) == str(replace_id)), None)
-            if not dest or dest.id == source.id:
+            if not dest:
                 raise ValueError("invalid_replace")
             old_media = clear_workspace_canvas(dest)
-            dest.name = name
-            dest.is_active = False
-            dest.save(update_fields=["name", "is_active", "last_modified"])
-            clone_workspace_contents(source, dest)
+            dest.name = name[:100]
+            dest.save(update_fields=["name", "last_modified"])
+            _activate(workspaces, dest)
             purge_media_ids(old_media)
             return dest
 
-        if len(workspaces) >= MAX_WORKSPACES_PER_USER:
-            raise ValueError("workspace_limit")
-
-        dest = Workspace.objects.create(user=user, name=name, is_active=False)
-        clone_workspace_contents(source, dest)
-        return dest
+        for w in workspaces:
+            if w.is_active:
+                w.is_active = False
+                w.save(update_fields=["is_active"])
+        return Workspace.objects.create(user=user, name=name[:100], is_active=True)
 
 
 def activate_workspace(user, workspace_id):
@@ -202,14 +215,7 @@ def activate_workspace(user, workspace_id):
         target = next((w for w in workspaces if str(w.id) == str(workspace_id)), None)
         if not target:
             return None
-        for w in workspaces:
-            if w.is_active and w.id != target.id:
-                w.is_active = False
-                w.save(update_fields=["is_active"])
-        if not target.is_active:
-            target.is_active = True
-            target.save(update_fields=["is_active", "last_modified"])
-        return target
+        return _activate(workspaces, target)
 
 
 def delete_workspace(user, workspace_id):
@@ -223,8 +229,9 @@ def delete_workspace(user, workspace_id):
         others = [w for w in workspaces if w.id != target.id]
         if target.is_active:
             fallback = max(others, key=lambda w: w.last_modified)
-            fallback.is_active = True
-            fallback.save(update_fields=["is_active"])
+            # Deactivate the current row first — one_active_workspace_per_user
+            # forbids two True rows for the same user, even inside this transaction.
+            _activate(workspaces, fallback)
         media_ids = collect_workspace_media_ids(target)
         target.delete()
         purge_media_ids(media_ids)

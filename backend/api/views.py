@@ -52,7 +52,7 @@ from .serializers import (
 
 from .workspace_ops import (
   get_or_create_active_workspace, get_or_create_media,
-  purge_media_if_unreferenced, save_as_workspace, activate_workspace,
+  purge_media_if_unreferenced, create_workspace, activate_workspace,
   delete_workspace, MAX_WORKSPACES_PER_USER,
 )
 
@@ -2223,7 +2223,7 @@ class WorkspaceListCreateView(APIView):
   def get(self, request):
     user = resolve_target_user(request)
     get_or_create_active_workspace(user)
-    qs = Workspace.objects.filter(user=user).order_by('-last_modified')
+    qs = Workspace.objects.filter(user=user).order_by('created_at')
     return Response({
       "workspaces": WorkspaceSerializer(qs, many=True).data,
       "limit": MAX_WORKSPACES_PER_USER,
@@ -2234,17 +2234,19 @@ class WorkspaceListCreateView(APIView):
     name = request.data.get('name') or ''
     replace_id = request.data.get('replace_id')
     try:
-      dest = save_as_workspace(user, name, replace_id=replace_id)
+      dest = create_workspace(user, name, replace_id=replace_id)
     except ValueError as e:
       code = str(e)
       if code == 'workspace_limit':
         return Response(
-          {"error": "Workspace limit reached", "code": "workspace_limit", "limit": MAX_WORKSPACES_PER_USER},
+          {"error": "Workspace limit reached. Replace one of the current workspaces.", "code": "workspace_limit", "limit": MAX_WORKSPACES_PER_USER},
           status=status.HTTP_409_CONFLICT,
         )
       if code == 'invalid_replace':
-        return Response({"error": "Invalid workspace to replace", "code": "invalid_replace"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Choose a workspace to replace", "code": "invalid_replace"}, status=status.HTTP_400_BAD_REQUEST)
       return Response({"error": code}, status=status.HTTP_400_BAD_REQUEST)
+    from .signals import broadcast_workspace_update
+    broadcast_workspace_update(user.id)
     return Response({"workspace": WorkspaceSerializer(dest).data}, status=status.HTTP_201_CREATED)
 
 

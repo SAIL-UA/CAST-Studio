@@ -9,7 +9,7 @@ class Workspace(models.Model):
   """
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
   user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='workspaces')
-  name = models.CharField(max_length=100, default="Untitled")
+  name = models.CharField(max_length=100, default="Default")
   is_active = models.BooleanField(default=True)
   created_at = models.DateTimeField(auto_now_add=True)
   last_modified = models.DateTimeField(auto_now=True)
