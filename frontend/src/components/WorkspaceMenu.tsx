@@ -120,9 +120,13 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 	useEffect(() => {
 		if (disabled) return;
 		const onKeyDown = (e: KeyboardEvent) => {
-			if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "s") return;
+			const isSaveKey =
+				(e.ctrlKey || e.metaKey) &&
+				!e.altKey &&
+				(e.key === "s" || e.key === "S" || e.code === "KeyS");
+			if (!isSaveKey) return;
 			e.preventDefault();
-			if (busy) return;
+			if (e.repeat || busy) return;
 			if (saveOpen && replaceConfirm) {
 				void submitSave();
 				return;
@@ -133,8 +137,8 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 			}
 			openSave();
 		};
-		window.addEventListener("keydown", onKeyDown);
-		return () => window.removeEventListener("keydown", onKeyDown);
+		window.addEventListener("keydown", onKeyDown, true);
+		return () => window.removeEventListener("keydown", onKeyDown, true);
 	});
 
 	const requestSave = () => {
@@ -237,18 +241,14 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 										key={w.id}
 										workspace={w}
 										disabled={busy}
-										onSelect={(ws) =>
-											closeMenuThen(() => setLoadTarget(ws))
-										}
+										onSelect={(ws) => closeMenuThen(() => setLoadTarget(ws))}
 										onRename={(ws) =>
 											closeMenuThen(() => {
 												setRenameTarget(ws);
 												setRenameValue(ws.name);
 											})
 										}
-										onDelete={(ws) =>
-											closeMenuThen(() => setDeleteTarget(ws))
-										}
+										onDelete={(ws) => closeMenuThen(() => setDeleteTarget(ws))}
 									/>
 								))
 							)}
@@ -261,8 +261,8 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 				<Modal onClose={() => !busy && setLoadTarget(null)}>
 					<div className="text-sm font-semibold mb-2">Load snapshot</div>
 					<div className="text-sm text-gray-600 mb-3">
-						Replace everything in the editor with “{loadTarget.name}”? Unsaved
-						editor changes will be lost.
+						Replace everything in the editor with “{loadTarget.name}”? Unsaved editor
+						changes will be lost.
 					</div>
 					<div className="flex justify-end gap-2">
 						<button
@@ -401,8 +401,8 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 					<div className="text-sm font-semibold mb-2">Replace snapshot</div>
 					<div className="text-sm text-gray-600 mb-3">
 						This will replace everything in “
-						{replaceTarget?.name || "the selected snapshot"}” with the current
-						editor, named “{saveName.trim()}”. This cannot be undone.
+						{replaceTarget?.name || "the selected snapshot"}” with the current editor,
+						named “{saveName.trim()}”. This cannot be undone.
 					</div>
 					<div className="flex justify-end gap-2">
 						<button
