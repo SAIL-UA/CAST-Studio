@@ -1,6 +1,7 @@
 // Import dependencies
 import React, { useRef, useState } from "react";
 import { uploadFigure, uploadSlides, createNote } from "@/services/api";
+import { useAlert } from "@/contexts/Alert";
 import { logAction, captureActionContext } from "@/utils/userActionLogger";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
@@ -11,13 +12,13 @@ type UploadButtonProps = {
 
 // Upload button component
 const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
+	const { showAlert } = useAlert();
 	// Hidden file input ref
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	// Selected files state
 	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 	const [showModal, setShowModal] = useState<boolean>(false);
-	const [alertModal, setAlertModal] = useState<string | null>(null);
 
 	// Handle file selection (does not upload yet)
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,7 +37,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 	// Handle actual upload on submit
 	const handleSubmit = async (e: React.MouseEvent) => {
 		if (selectedFiles.length === 0) {
-			setAlertModal("Please select at least one file first.");
+			showAlert({ level: "warning", message: "Please select at least one file first." });
 			return;
 		}
 		const ctx = captureActionContext(e);
@@ -65,7 +66,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 					err?.response?.data || err,
 				);
 				const msg = err?.response?.data?.message || "Slide upload failed";
-				setAlertModal(msg);
+				showAlert({ level: "error", message: msg });
 				failCount++;
 			}
 		}
@@ -94,9 +95,15 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 
 		if (failCount === 0) {
 			const slideCount = pptxFiles.length > 0 ? " (including slides)" : "";
-			setAlertModal(`${successCount} item(s) uploaded successfully${slideCount}.`);
+			showAlert({
+				level: "success",
+				message: `${successCount} item(s) uploaded successfully${slideCount}.`,
+			});
 		} else {
-			setAlertModal(`Upload complete: ${successCount} succeeded, ${failCount} failed.`);
+			showAlert({
+				level: "warning",
+				message: `Upload complete: ${successCount} succeeded, ${failCount} failed.`,
+			});
 		}
 
 		setShowModal(false);
@@ -140,7 +147,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 			}
 		} catch (err) {
 			console.error("Error creating note:", err);
-			setAlertModal("An error occurred while creating the note.");
+			showAlert({ level: "error", message: "An error occurred while creating the note." });
 		}
 	};
 
@@ -284,26 +291,6 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 				onChange={handleFileChange}
 				style={{ display: "none" }}
 			/>
-
-			{/* Alert Modal */}
-			{alertModal && (
-				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-500">
-					<div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
-						<div className="text-sm text-grey-darkest whitespace-pre-wrap">
-							{alertModal}
-						</div>
-						<div className="mt-6 text-right">
-							<button
-								log-id="upload-alert-ok-button"
-								onClick={() => setAlertModal(null)}
-								className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-150"
-							>
-								OK
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
 		</>
 	);
 };

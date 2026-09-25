@@ -9,6 +9,7 @@ import {
 	type SavedWorkspace,
 } from "@/services/api";
 import WorkspaceItem from "@/components/WorkspaceItem";
+import { useAlert } from "@/contexts/Alert";
 
 type WorkspaceMenuProps = {
 	onWorkspaceChanged?: () => void | Promise<void>;
@@ -16,6 +17,7 @@ type WorkspaceMenuProps = {
 };
 
 const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuProps) => {
+	const { showAlert } = useAlert();
 	const [workspaces, setWorkspaces] = useState<SavedWorkspace[]>([]);
 	const [limit, setLimit] = useState(3);
 	const [menuOpen, setMenuOpen] = useState(false);
@@ -31,8 +33,6 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 	const [saveName, setSaveName] = useState("");
 	const [replaceId, setReplaceId] = useState("");
 	const [replaceConfirm, setReplaceConfirm] = useState(false);
-
-	const [alertModal, setAlertModal] = useState<string | null>(null);
 
 	const snapshots = workspaces.filter((w) => !w.is_active);
 
@@ -68,7 +68,7 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 			await onWorkspaceChanged?.();
 		} catch (err) {
 			console.error(err);
-			setAlertModal("Could not load snapshot into the editor.");
+			showAlert({ level: "error", message: "Could not load snapshot into the editor." });
 		} finally {
 			setBusy(false);
 		}
@@ -85,7 +85,7 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 			await loadList();
 		} catch (err) {
 			console.error(err);
-			setAlertModal("Could not rename snapshot.");
+			showAlert({ level: "error", message: "Could not rename snapshot." });
 		} finally {
 			setBusy(false);
 		}
@@ -100,9 +100,9 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 			await loadList();
 		} catch (err: any) {
 			if (err?.response?.data?.code === "editor_workspace") {
-				setAlertModal("The editor cannot be deleted.");
+				showAlert({ level: "warning", message: "The editor cannot be deleted." });
 			} else {
-				setAlertModal("Could not delete snapshot.");
+				showAlert({ level: "error", message: "Could not delete snapshot." });
 			}
 		} finally {
 			setBusy(false);
@@ -144,12 +144,15 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 	const requestSave = () => {
 		const name = saveName.trim();
 		if (!name) {
-			setAlertModal("Enter a name for the snapshot.");
+			showAlert({ level: "warning", message: "Enter a name for the snapshot." });
 			return;
 		}
 		if (atCap) {
 			if (!replaceId) {
-				setAlertModal("Replace one of the saved snapshots to save this editor.");
+				showAlert({
+					level: "warning",
+					message: "Replace one of the saved snapshots to save this editor.",
+				});
 				return;
 			}
 			setReplaceConfirm(true);
@@ -172,11 +175,14 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 		} catch (err: any) {
 			const code = err?.response?.data?.code;
 			if (code === "workspace_limit") {
-				setAlertModal("Replace one of the saved snapshots to save this editor.");
+				showAlert({
+					level: "warning",
+					message: "Replace one of the saved snapshots to save this editor.",
+				});
 			} else if (code === "invalid_replace") {
-				setAlertModal("Choose a snapshot to replace.");
+				showAlert({ level: "warning", message: "Choose a snapshot to replace." });
 			} else {
-				setAlertModal("Could not save snapshot.");
+				showAlert({ level: "error", message: "Could not save snapshot." });
 			}
 		} finally {
 			setBusy(false);
@@ -226,7 +232,7 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Portal>
 						<DropdownMenu.Content
-							className="mt-1 shadow-lg z-[400] bg-white rounded-lg py-1 min-w-[240px]"
+							className="mt-1 shadow-lg z-400 bg-white rounded-lg py-1 min-w-60"
 							sideOffset={4}
 							align="end"
 							onCloseAutoFocus={(e) => e.preventDefault()}
@@ -422,20 +428,6 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 					</div>
 				</Modal>
 			)}
-
-			{alertModal && (
-				<Modal onClose={() => setAlertModal(null)}>
-					<p className="text-sm text-grey-darkest mb-3">{alertModal}</p>
-					<div className="flex justify-end">
-						<button
-							className="text-sm bg-bama-crimson text-white rounded px-3 py-1"
-							onClick={() => setAlertModal(null)}
-						>
-							OK
-						</button>
-					</div>
-				</Modal>
-			)}
 		</>
 	);
 };
@@ -459,9 +451,9 @@ const FileIcon = () => (
 );
 
 const Modal = ({ children, onClose }: { children: ReactNode; onClose?: () => void }) => (
-	<div className="fixed inset-0 z-[500] flex items-center justify-center">
+	<div className="fixed inset-0 z-500 flex items-center justify-center">
 		<div className="absolute inset-0 bg-black/50" onClick={onClose} />
-		<div className="relative bg-white rounded-lg shadow-xl p-4 w-[360px] max-w-[90vw]">
+		<div className="relative bg-white rounded-lg shadow-xl p-4 w-90 max-w-[90vw]">
 			{children}
 		</div>
 	</div>
