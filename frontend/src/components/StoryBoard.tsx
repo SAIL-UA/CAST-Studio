@@ -11,39 +11,41 @@ import {
 	getScaffolds,
 	updateScaffold,
 	deleteScaffold,
-} from "@/services/api";
+} from "../services/api";
 
 // Import components
-import UploadButton from "@/components/UploadButton";
-import GenerateStoryButton from "@/components/GenerateStoryButton";
-import CraftStoryButton from "@/components/CraftStoryButton";
-import GroupButton from "@/components/GroupButton";
-import FeedbackButton from "@/components/FeedbackButton";
-import CollaborateButton from "@/components/CollaborateButton";
-import WorkspaceMenu from "@/components/WorkspaceMenu";
-import AnnotateVisualsButton from "@/components/AnnotateVisualsButton";
-import GroupDiv from "@/components/GroupDiv";
-import Bin from "@/components/Bin";
-import DeleteAllButton from "@/components/DeleteAllButton";
-import ClearAllButton from "@/components/ClearAllButton";
-import RecycleBoard from "@/components/Recycle";
+import UploadButton from "./UploadButton";
+import GenerateStoryButton from "./GenerateStoryButton";
+import CraftStoryButton from "./CraftStoryButton";
+import GroupButton from "./GroupButton";
+import FeedbackButton from "./FeedbackButton";
+import CollaborateButton from "./CollaborateButton";
+import AnnotateVisualsButton from "./AnnotateVisualsButton";
+import GroupDiv from "./GroupDiv";
+import Bin from "./Bin";
+import DeleteAllButton from "./DeleteAllButton";
+import ClearAllButton from "./ClearAllButton";
+import FullscreenButton from "./FullscreenButton";
+// import MobileMenuButton from './MobileMenuButton';
+import RecycleBoard from "./Recycle";
 
 // Import scaffolds
-import CauseEffect from "@/components/scaffolds/CauseEffect";
-import QuestionAnswer from "@/components/scaffolds/QuestionAnswer";
-import ProblemSolution from "@/components/scaffolds/ProblemSolution";
-import TimeBased from "@/components/scaffolds/TimeBased";
-import FactorAnalysis from "@/components/scaffolds/FactorAnalysis";
-import OverviewToDetail from "@/components/scaffolds/OverviewToDetail";
-import Comparative from "@/components/scaffolds/Comparative";
-import ShockLead from "@/components/scaffolds/ShockLead";
-import WorkflowProcess from "@/components/scaffolds/WorkflowProcess";
-import Linear from "@/components/scaffolds/Linear";
-import InvertedPyramid from "@/components/scaffolds/InvertedPyramid";
+import CauseEffect from "./scaffolds/CauseEffect";
+import QuestionAnswer from "./scaffolds/QuestionAnswer";
+import ProblemSolution from "./scaffolds/ProblemSolution";
+import TimeBased from "./scaffolds/TimeBased";
+import FactorAnalysis from "./scaffolds/FactorAnalysis";
+import OverviewToDetail from "./scaffolds/OverviewToDetail";
+import Comparative from "./scaffolds/Comparative";
+import ShockLead from "./scaffolds/ShockLead";
+import WorkflowProcess from "./scaffolds/WorkflowProcess";
+import Linear from "./scaffolds/Linear";
+import InvertedPyramid from "./scaffolds/InvertedPyramid";
 
 // Import types
 import type { ImageData, GroupData, ScaffoldData } from "@/types/types";
-import { SCAFFOLD_NUMBER_TO_PATTERN } from "@/types/scaffoldMappings";
+import { SCAFFOLD_NUMBER_TO_PATTERN } from "../types/scaffoldMappings";
+import WorkspaceMenu from "./WorkspaceMenu";
 
 // Define props interface
 type StoryBoardProps = {
@@ -738,7 +740,7 @@ const StoryBoard = ({
 		<div id="story-board-container" className="flex flex-col h-full w-full bg-white">
 			<div
 				id="story-bin-header"
-				className={`flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[305px] flex-shrink-0 grid-background ${hideToolbar ? "min-h-[58px]" : ""}`}
+				className={`flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-76.25 shrink-0 grid-background ${hideToolbar ? "min-h-14.5" : ""}`}
 			>
 				{!hideToolbar && (
 					<div
@@ -1474,7 +1476,7 @@ const StoryBoard = ({
 					))}
 				</Bin>
 				{/* Zoom controls - positioned in bottom right */}
-				<div className="absolute bottom-6 right-4 flex items-center gap-2 z-[350] bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-sm border border-grey-light">
+				<div className="absolute bottom-6 right-4 flex items-center gap-2 z-350 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-sm border border-grey-light">
 					<button
 						className="text-sm font-medium px-1 hover:text-blue-600 disabled:opacity-30"
 						onClick={() =>
@@ -1506,70 +1508,73 @@ const StoryBoard = ({
 						{Math.round(zoomLevel * 100)}%
 					</span>
 				</div>
-				{/* Recycle Bin, DeleteAll and ClearAll buttons - positioned in bottom left, hidden in readOnly */}
-				{!readOnly && (
-					<div className="absolute bottom-6 left-4 flex gap-2 z-[350]">
-						<button
-							log-id="view-recycle-bin-button"
-							className="w-auto h-auto rounded-full px-3 py-1 flex items-center justify-center gap-1 text-white font-bold text-sm transition-all duration-200"
-							style={{
-								cursor: "pointer",
-								backgroundColor: "rgba(0, 92, 132, 0.5)",
-							}}
-							onMouseEnter={(e) => {
-								e.currentTarget.style.backgroundColor = "rgba(0, 92, 132, 0.7)";
-							}}
-							onMouseLeave={(e) => {
-								e.currentTarget.style.backgroundColor = "rgba(0, 92, 132, 0.5)";
-							}}
-							onClick={() => setRecycleBinOpen(true)}
-							title="View Recycle Bin"
-						>
-							<svg
-								className="w-4 h-4"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
+				{/* Fullscreen, Recycle Bin, ClearAll and DeleteAll - bottom left */}
+				<div className="absolute bottom-6 left-4 flex gap-2 z-350">
+					<FullscreenButton />
+					{!readOnly && (
+						<>
+							<button
+								log-id="view-recycle-bin-button"
+								className="w-auto h-auto rounded-full px-3 py-1 flex items-center justify-center gap-1 text-white font-bold text-sm transition-all duration-200"
+								style={{
+									cursor: "pointer",
+									backgroundColor: "rgba(0, 92, 132, 0.5)",
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.backgroundColor = "rgba(0, 92, 132, 0.7)";
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.backgroundColor = "rgba(0, 92, 132, 0.5)";
+								}}
+								onClick={() => setRecycleBinOpen(true)}
+								title="View Recycle Bin"
 							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-								/>
-							</svg>
-						</button>
-						<ClearAllButton
-							images={images}
-							setImages={setImages}
-							setGroupDivs={setGroupDivs}
-							setScaffolds={setScaffolds}
-							setSelectedPattern={setSelectedPattern}
-							onClearComplete={async () => {
-								await fetchUserData();
-								const groups = await fetchGroups();
-								await fetchScaffolds(groups);
-							}}
-						/>
-						<DeleteAllButton
-							images={images}
-							setImages={setImages}
-							setGroupDivs={setGroupDivs}
-							setScaffolds={setScaffolds}
-							setSelectedPattern={setSelectedPattern}
-							onDeleteComplete={async () => {
-								await fetchUserData();
-								const groups = await fetchGroups();
-								await fetchScaffolds(groups);
-							}}
-						/>
-					</div>
-				)}
+								<svg
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+									/>
+								</svg>
+							</button>
+							<ClearAllButton
+								images={images}
+								setImages={setImages}
+								setGroupDivs={setGroupDivs}
+								setScaffolds={setScaffolds}
+								setSelectedPattern={setSelectedPattern}
+								onClearComplete={async () => {
+									await fetchUserData();
+									const groups = await fetchGroups();
+									await fetchScaffolds(groups);
+								}}
+							/>
+							<DeleteAllButton
+								images={images}
+								setImages={setImages}
+								setGroupDivs={setGroupDivs}
+								setScaffolds={setScaffolds}
+								setSelectedPattern={setSelectedPattern}
+								onDeleteComplete={async () => {
+									await fetchUserData();
+									const groups = await fetchGroups();
+									await fetchScaffolds(groups);
+								}}
+							/>
+						</>
+					)}
+				</div>
 			</div>
 
 			{/* Recycle Bin Modal */}
 			{scaffoldLimitAlert && (
-				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-500">
 					<div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4">
 						<div className="text-sm text-grey-darkest">{scaffoldLimitAlert}</div>
 						<div className="mt-6 text-right">
@@ -1586,10 +1591,10 @@ const StoryBoard = ({
 
 			{recycleBinOpen &&
 				ReactDOM.createPortal(
-					<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
+					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-500">
 						<div className="bg-white rounded-lg shadow-xl w-[80vw] h-[70vh] flex flex-col overflow-hidden">
 							{/* Modal Header */}
-							<div className="flex justify-between items-center px-4 py-3 border-b border-grey-lightest flex-shrink-0">
+							<div className="flex justify-between items-center px-4 py-3 border-b border-grey-lightest shrink-0">
 								<h3 className="text-lg font-semibold text-grey-darkest">
 									Recycle Bin
 								</h3>
