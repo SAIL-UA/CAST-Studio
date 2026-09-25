@@ -283,11 +283,22 @@ class ImageDataView(APIView):
 class UploadFigureView(APIView):
   permission_classes = [IsAuthenticated]
   parser_classes = [MultiPartParser, FormParser]
+
+  MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB per image; enforced client-side too
+
   def post(self, request):
-    
+
     figure = request.FILES.get('figure')
     if not figure:
       return Response({"message": "No file part in the request"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate file size (defense in depth — the client also rejects oversized files
+    # in the upload modal, but a bad/scripted request could bypass that).
+    if figure.size > self.MAX_FILE_SIZE:
+      return Response(
+        {"message": f"'{figure.name}' is {figure.size // (1024*1024)} MB. Max per image is {self.MAX_FILE_SIZE // (1024*1024)} MB."},
+        status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+      )
 
     # Validate file type
     ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
@@ -355,7 +366,7 @@ class UploadSlidesView(APIView):
   permission_classes = [IsAuthenticated]
   parser_classes = [MultiPartParser, FormParser]
 
-  MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+  MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB per PPTX; PPTX files with embedded media are commonly larger than the 10 MB image cap
   MAX_SLIDES = 15
 
   def post(self, request):
@@ -373,7 +384,10 @@ class UploadSlidesView(APIView):
 
     # Validate file size
     if slides_file.size > self.MAX_FILE_SIZE:
-      return Response({"message": f"File exceeds {self.MAX_FILE_SIZE // (1024*1024)}MB limit"}, status=status.HTTP_400_BAD_REQUEST)
+      return Response(
+        {"message": f"'{slides_file.name}' is {slides_file.size // (1024*1024)} MB. Max per PPTX is {self.MAX_FILE_SIZE // (1024*1024)} MB."},
+        status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+      )
 
     data_path = os.getenv('DATA_PATH')
     if not data_path:
@@ -520,16 +534,27 @@ class CreateNoteView(APIView):
 
     title = "Instructor Feedback" if source == 'instructor' else f"Note {first_available_index + 1}"
 
+    # Optional client-supplied fields (used by the paste-to-create-note shortcut).
+    # long_desc is capped server-side so a pathological paste can't blow up storage
+    # even if the client-side truncation is bypassed.
+    LONG_DESC_MAX = 10_000
+    long_desc = str(request.data.get('long_desc', ''))[:LONG_DESC_MAX]
+    try:
+      x = int(request.data.get('x', 400))
+      y = int(request.data.get('y', 300))
+    except (TypeError, ValueError):
+      x, y = 400, 300
+
     serializer = ImageDataSerializer(data={
       "id": note_id,
       "user": owner_id,
       "filepath": "",
       "short_desc": title,
-      "long_desc": "",
+      "long_desc": long_desc,
       "source": source,
       "in_storyboard": True,
-      "x": 400,
-      "y": 300,
+      "x": x,
+      "y": y,
       "has_order": False,
       "order_num": 0,
       "index": first_available_index,
@@ -1551,10 +1576,24 @@ class UpdateNarrativeCacheView(APIView):
     # currently holds control of the owner's session. Raises PermissionDenied (403).
     workspace_user = get_workspace_write_user(request)
 
-    try:
-      cache = NarrativeCache.objects.get(user=workspace_user)
-    except NarrativeCache.DoesNotExist:
-      return Response({"status": "error", "message": "Cache not found"}, status=status.HTTP_404_NOT_FOUND)
+    # get_or_create rather than get() so a user can save a hand-typed story
+    # draft from the DataStories editor before ever hitting Generate Story —
+    # the fields Generate would populate (story_structure_id, theme, categories,
+    # sequence_justification, sequence_summary, rq_reasoning) start blank/empty
+    # and get filled in later when the user actually generates.
+    cache, _ = NarrativeCache.objects.get_or_create(
+      user=workspace_user,
+      defaults={
+        'story_structure_id': '',
+        'narrative': '',
+        'order': [],
+        'theme': '',
+        'categories': [],
+        'sequence_justification': '',
+        'sequence_summary': [],
+        'rq_reasoning': [],
+      },
+    )
 
     filtered = {k: v for k, v in cache_data.items() if k in self.ALLOWED_FIELDS}
     if not filtered:

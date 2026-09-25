@@ -106,10 +106,14 @@ html, body {
   animation-play-state: running;
 }
 
-/* Landing/docs nav-link hover: soft teal wash. !important because the nav link's
-   `background: transparent` inline style would otherwise outrank the CSS rule. */
+/* Landing/docs nav-link hover: soft teal wash. Uses the background-color
+   longhand so the inline `transition: background-color …` on the link actually
+   interpolates — some browsers skip the fade when both source and target
+   assignments are the `background` shorthand. !important is still needed
+   because the inline `background: transparent` on the link would otherwise
+   outrank this rule (inline > selector specificity for the same property). */
 .landing-nav-link:hover {
-  background: rgba(0, 132, 158, 0.06) !important;
+  background-color: rgba(0, 132, 158, 0.06) !important;
 }
 
 /* Desktop-only vs mobile-only nav visibility. Below 768px, the four nav buttons

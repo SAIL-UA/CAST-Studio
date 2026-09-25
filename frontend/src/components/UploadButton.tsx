@@ -11,6 +11,17 @@ type UploadButtonProps = {
     targetUser?: string;
 }
 
+// Per-file size caps. Enforced client-side here (to give immediate feedback
+// and skip wasted upload attempts) AND server-side in UploadFigureView /
+// UploadSlidesView (defense-in-depth against scripted / bypassed requests).
+// Keep these in sync with the backend MAX_FILE_SIZE constants if you change them.
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB per image
+const MAX_PPTX_BYTES = 20 * 1024 * 1024;  // 20 MB per PPTX
+
+const isPptx = (f: File) => f.name.toLowerCase().endsWith('.pptx');
+const sizeLimitFor = (f: File) => (isPptx(f) ? MAX_PPTX_BYTES : MAX_IMAGE_BYTES);
+const fmtMB = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
+
 // Upload button component
 const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
     // Hidden file input ref
@@ -20,13 +31,34 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [showModal, setShowModal] = useState<boolean>(false);
     const [alertModal, setAlertModal] = useState<string | null>(null);
+    // True while a submit is in flight — used to disable the Upload button and
+    // prevent double-submits from a second click before the first finishes.
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-    // Handle file selection (does not upload yet)
+    // Handle file selection (does not upload yet). Filters out oversized files
+    // right at selection so users see the rejection immediately instead of after
+    // clicking Upload.
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
-            const newFiles = Array.from(files);
-            setSelectedFiles(prev => [...prev, ...newFiles]);
+            const incoming = Array.from(files);
+            const ok: File[] = [];
+            const rejected: string[] = [];
+            for (const f of incoming) {
+                if (f.size > sizeLimitFor(f)) {
+                    const limitMB = sizeLimitFor(f) / (1024 * 1024);
+                    rejected.push(`${f.name} (${fmtMB(f.size)} MB — max ${limitMB} MB${isPptx(f) ? ' for PPTX' : ''})`);
+                } else {
+                    ok.push(f);
+                }
+            }
+            if (ok.length) setSelectedFiles(prev => [...prev, ...ok]);
+            if (rejected.length) {
+                setAlertModal(
+                    `The following file${rejected.length === 1 ? ' was' : 's were'} too large and skipped:\n\n` +
+                    rejected.map(r => `• ${r}`).join('\n'),
+                );
+            }
         }
     }
 
@@ -37,6 +69,10 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 
     // Handle actual upload on submit
     const handleSubmit = async (e: React.MouseEvent) => {
+        // Guard against a second click while the first submit is still in flight.
+        // Even with the button disabled, a fast double-click can slip through
+        // during the render tick between click and disabled-attr application.
+        if (isSubmitting) return;
         if (selectedFiles.length === 0) {
             setAlertModal('Please select at least one file first.');
             return;
@@ -51,54 +87,62 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
         let failCount = 0;
         let figDataArr = [];
 
-        // Handle PPTX files
-        for (const file of pptxFiles) {
-            try {
-                const result = await uploadSlides(file);
-                successCount += result.slides?.length || 0;
-                logAction({ actionType: 'click', elementId: 'upload-slides' }, { filename: file.name, slides_imported: result.slides?.length });
-            } catch (err: any) {
-                console.error('slide upload error', err?.response?.status, err?.response?.data || err);
-                const msg = err?.response?.data?.message || 'Slide upload failed';
-                setAlertModal(msg);
-                failCount++;
+        setIsSubmitting(true);
+        try {
+            // Handle PPTX files
+            for (const file of pptxFiles) {
+                try {
+                    const result = await uploadSlides(file);
+                    successCount += result.slides?.length || 0;
+                    logAction({ actionType: 'click', elementId: 'upload-slides' }, { filename: file.name, slides_imported: result.slides?.length });
+                } catch (err: any) {
+                    console.error('slide upload error', err?.response?.status, err?.response?.data || err);
+                    const msg = err?.response?.data?.message || 'Slide upload failed';
+                    setAlertModal(msg);
+                    failCount++;
+                }
             }
-        }
 
-        // Handle image files
-        for (const file of imageFiles) {
-            const formData = new FormData();
-            formData.append('figure', file, file.name);
-            formData.append('short_desc', '');
-            formData.append('long_desc', '');
-            formData.append('source', '');
+            // Handle image files
+            for (const file of imageFiles) {
+                const formData = new FormData();
+                formData.append('figure', file, file.name);
+                formData.append('short_desc', '');
+                formData.append('long_desc', '');
+                formData.append('source', '');
 
-            try {
-                const figResponse = await uploadFigure(formData);
-                figDataArr.push(figResponse?.fig_data || null);
-                successCount++;
-            } catch (err: any) {
-                console.error('upload error', err?.response?.status, err?.response?.data || err);
-                failCount++;
+                try {
+                    const figResponse = await uploadFigure(formData);
+                    figDataArr.push(figResponse?.fig_data || null);
+                    successCount++;
+                } catch (err: any) {
+                    console.error('upload error', err?.response?.status, err?.response?.data || err);
+                    failCount++;
+                }
             }
-        }
 
-        if (imageFiles.length > 0) {
-            logAction(ctx, { "images": figDataArr });
-        }
+            if (imageFiles.length > 0) {
+                logAction(ctx, { "images": figDataArr });
+            }
 
-        if (failCount === 0) {
-            const slideCount = pptxFiles.length > 0 ? ' (including slides)' : '';
-            setAlertModal(`${successCount} item(s) uploaded successfully${slideCount}.`);
-        } else {
-            setAlertModal(`Upload complete: ${successCount} succeeded, ${failCount} failed.`);
-        }
+            if (failCount === 0) {
+                const slideCount = pptxFiles.length > 0 ? ' (including slides)' : '';
+                setAlertModal(`${successCount} item(s) uploaded successfully${slideCount}.`);
+            } else {
+                setAlertModal(`Upload complete: ${successCount} succeeded, ${failCount} failed.`);
+            }
 
-        setShowModal(false);
-        setSelectedFiles([]);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        if (onUploaded) {
-            try { await onUploaded(); } catch {}
+            setShowModal(false);
+            setSelectedFiles([]);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            if (onUploaded) {
+                try { await onUploaded(); } catch {}
+            }
+        } finally {
+            // Runs whether the try above completed normally or threw. Ensures the
+            // button always becomes clickable again — otherwise a crash in the
+            // upload loop would leave the modal permanently in "Uploading…" state.
+            setIsSubmitting(false);
         }
     }
 
@@ -208,8 +252,9 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
                                     <div key={index} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
                                         <span className="font-medium truncate flex-1 mr-2">{file.name}</span>
                                         <button
-                                            className="text-red-500 hover:text-red-700 font-bold text-lg leading-none"
+                                            className="text-red-500 hover:text-red-700 font-bold text-lg leading-none disabled:opacity-30 disabled:cursor-not-allowed"
                                             onClick={() => handleRemoveFile(index)}
+                                            disabled={isSubmitting}
                                             title="Remove file"
                                         >×</button>
                                     </div>
@@ -222,19 +267,22 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
                 </div>
                 <div className="flex justify-end gap-2">
                     <button
-                        className="text-sm px-3 py-1 rounded border"
+                        className="text-sm px-3 py-1 rounded border disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleCancel}
+                        disabled={isSubmitting}
                     >Cancel</button>
                     <button
-                        className="bg-gray-500 text-sm text-white rounded px-3 py-1"
+                        className="bg-gray-500 text-sm text-white rounded px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={() => fileInputRef.current?.click()}
+                        disabled={isSubmitting}
                     >{selectedFiles.length > 0 ? 'Add More Files' : 'Select Files'}</button>
                     {selectedFiles.length > 0 && (
                         <button
                             log-id="upload-submit-button"
-                            className="bg-bama-crimson text-sm text-white rounded px-3 py-1"
+                            className="bg-bama-crimson text-sm text-white rounded px-3 py-1 disabled:opacity-60 disabled:cursor-not-allowed"
                             onClick={handleSubmit}
-                        >Upload</button>
+                            disabled={isSubmitting}
+                        >{isSubmitting ? 'Uploading…' : 'Upload'}</button>
                     )}
                 </div>
             </div>

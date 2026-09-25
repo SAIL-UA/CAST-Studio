@@ -228,6 +228,15 @@ export const createInstructorNote = async(targetUser: string) => {
   return response.data;
 };
 
+// Create a sticky note pre-populated with pasted text at a specific workspace
+// position. Used by the Cmd+V / Ctrl+V paste-to-create-note shortcut.
+export const createNoteWithContent = async(content: string, x: number, y: number, targetUser?: string) => {
+  const body: any = { long_desc: content, x, y };
+  if (targetUser) body.target_user = targetUser;
+  const response = await API.post('/notes/create/', body);
+  return response.data;
+};
+
 export const updateImageData = async(imageId: string, data: any) => {
   const response = await API.post(`/images/${imageId}/update/`, { data })
   return response;

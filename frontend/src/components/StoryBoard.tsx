@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { updateImageData as updateImageDataAPI, createGroup, getGroups, updateGroup, deleteGroup, createScaffold, getScaffolds, updateScaffold, deleteScaffold } from '../services/api';
 import { logAction } from '../utils/userActionLogger';
+import { usePasteToCreateNote } from '../hooks/usePasteToCreateNote';
 
 // Import components
 import UploadButton from './UploadButton';
@@ -74,6 +75,19 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
 
     // References
     const storyBinRef = useRef<HTMLDivElement>(null);
+
+    // Cmd+V / Ctrl+V anywhere on the page (outside editable targets) creates a
+    // sticky note pre-populated with the clipboard text at the mouse cursor.
+    // See hook source for the full contract (image paste ignored, 10K cap,
+    // readOnly disables it, session collaboration works via workspace_update).
+    usePasteToCreateNote({
+        readOnly,
+        targetUser,
+        workspaceRef: storyBinRef,
+        zoomLevel,
+        panOffset,
+        onCreated: fetchUserData,
+    });
 
     // Compute the center of the visible viewport in content coordinates
     const getVisibleCenter = () => {
@@ -1076,7 +1090,7 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     <input
                         type="range"
                         min={0.1}
-                        max={1.2}
+                        max={1.5}
                         step={0.01}
                         value={zoomLevel}
                         onChange={e => setZoomLevel(parseFloat(e.target.value))}
@@ -1084,8 +1098,8 @@ const StoryBoard = ({ setRightNarrativePatternsOpen, setSelectedPattern, selecte
                     />
                     <button
                         className="text-sm font-medium px-1 hover:text-blue-600 disabled:opacity-30"
-                        onClick={() => setZoomLevel(z => Math.min(1.2, Math.round((z + 0.1) * 100) / 100))}
-                        disabled={zoomLevel >= 1.2}
+                        onClick={() => setZoomLevel(z => Math.min(1.5, Math.round((z + 0.1) * 100) / 100))}
+                        disabled={zoomLevel >= 1.5}
                     >+</button>
                     <span className="text-xs text-grey-dark w-8 text-right">{Math.round(zoomLevel * 100)}%</span>
                 </div>

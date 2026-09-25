@@ -26,6 +26,16 @@ class ImageDataSerializer(serializers.ModelSerializer):
     fields = '__all__'
 
 class NarrativeCacheSerializer(serializers.ModelSerializer):
+  # Model fields default to "" but DRF's auto-generated CharField/TextField
+  # rejects blank strings by default — breaking hand-typed drafts that never
+  # went through Generate Story (all the generation-only fields stay blank).
+  # Override with allow_blank=True + required=False so the same partial payload
+  # works whether generation has populated these fields or not.
+  story_structure_id = serializers.CharField(allow_blank=True, required=False)
+  narrative = serializers.CharField(allow_blank=True, required=False)
+  theme = serializers.CharField(allow_blank=True, required=False)
+  sequence_justification = serializers.CharField(allow_blank=True, required=False)
+
   class Meta:
     model = NarrativeCache
     fields = '__all__'

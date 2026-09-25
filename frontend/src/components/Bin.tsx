@@ -108,7 +108,7 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
       const currentZoom = zoomLevelRef.current;
       const currentPan = panOffsetRef.current;
       const delta = -e.deltaY * 0.001;
-      const newZoom = Math.min(1.2, Math.max(0.1, currentZoom + delta));
+      const newZoom = Math.min(1.5, Math.max(0.1, currentZoom + delta));
 
       // Zoom toward the cursor position
       const rect = el.getBoundingClientRect();
@@ -160,18 +160,15 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
     }
   };
 
-  // Dynamic styling based on drop state
+  // Static bin styling — no drag-state visual feedback. Card drags previously
+  // grayed the whole workspace and showed a "Drop image here" overlay while the
+  // mouse was over the bin. Kept it consistent with the scaffold drag flow
+  // (which shows nothing) by removing both. Cards still snap to their drop
+  // position on release; the HTML5 drag ghost + 50% opacity source card remain
+  // as the visual affordance during the drag itself.
   const getBinClasses = () => {
     const overflowClass = scrollable ? "overflow-auto" : "overflow-hidden";
-    const baseClasses = `absolute inset-0 w-full h-full ${overflowClass} rounded-sm transition-colors duration-200 grid-background border border-dashed`;
-
-    if (isOver && canDrop) {
-      return `${baseClasses} bg-blue-50 border-blue-400`;
-    } else if (canDrop) {
-      return `${baseClasses} bg-grey-lightest border-grey-lightest`;
-    } else {
-      return `${baseClasses} bg-white border-grey-lightest`;
-    }
+    return `absolute inset-0 w-full h-full ${overflowClass} rounded-sm transition-colors duration-200 grid-background border border-dashed bg-white border-grey-lightest`;
   };
 
   return (
@@ -181,14 +178,7 @@ function Bin({ id, images, updateImageData, onDescriptionsUpdate, onDelete, onTr
       className={getBinClasses()}
       onContextMenu={handleContextMenu}
     >
-      {/* Drop zone indicator */}
-      {isOver && canDrop && (
-        <div className="absolute flex items-center justify-center bg-blue-100 bg-opacity-75 rounded-lg border-2 border-dashed border-blue-400 z-[50] w-full h-full pointer-events-none">
-          <div className="text-blue-600 text-lg font-semibold">
-            Drop image here
-          </div>
-        </div>
-      )}
+      {/* Drop zone indicator removed — see getBinClasses comment. */}
 
       {/* Bin content - pannable and zoomable (no background — grid stays on outer div) */}
       <div

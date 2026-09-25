@@ -71,13 +71,19 @@ type DataStoriesProps = {
 // Shared geometry for the header's story-editing buttons so they line up as one row: identical
 // padding, a border on every variant (a border on only some made them differ in height), and no
 // horizontal margin — the header's `gap-3` is the single source of spacing.
+// Save/Edit/Cancel buttons in the DataStories header. Deliberately shaped to
+// match ExportButton's proportions so the header reads as a single row of
+// same-size actions:
+//   - no `border` on the base (was pushing Save visually larger than Export)
+//   - Cancel opts back into a visible border via the secondary variant so it
+//     stays distinguishable as a secondary action.
 const storyActionButton =
-    'flex items-center justify-center whitespace-nowrap shrink-0 text-sm border ' +
+    'flex items-center whitespace-nowrap shrink-0 text-sm ' +
     'rounded-t-2xl rounded-b-2xl px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg ' +
     'hover:brightness-95 transition duration-200 disabled:opacity-50 ' +
     'disabled:cursor-not-allowed disabled:hover:translate-y-0';
-const storyActionPrimary = `${storyActionButton} bg-bama-crimson text-white border-transparent`;
-const storyActionSecondary = `${storyActionButton} bg-grey-lightest text-grey-darkest border-grey-light`;
+const storyActionPrimary = `${storyActionButton} bg-bama-crimson text-white`;
+const storyActionSecondary = `${storyActionButton} bg-grey-lightest text-grey-darkest border border-grey-light`;
 
 const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: DataStoriesProps) => {
 
@@ -88,8 +94,8 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
     const { questions: ctxRqQuestions } = useResearchQuestions();
 
     // State
-    const [narrativeSelected, setNarrativeSelected] = useState(true);
-    const [storySelected, setStorySelected] = useState(false);
+    const [narrativeSelected, setNarrativeSelected] = useState(false);
+    const [storySelected, setStorySelected] = useState(true);
     const [storyData, setStoryData] = useState<StoryData | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     // Live text accumulated from the compose-step WebSocket while a generation is in
@@ -169,8 +175,11 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
 
     // Effect
     useEffect(() => {
-        setNarrativeSelected(true)
-        setStorySelected(false)
+        // Land on the Story tab on mount. Even before a story is generated the
+        // Story tab hosts the always-open draft editor, which is where users
+        // actually do work; Reasoning is meaningful only after Generate Story.
+        setStorySelected(true)
+        setNarrativeSelected(false)
 
         // Check for cached narrative and load it (if it exists) on mount
         loadCachedNarrative();
@@ -525,11 +534,17 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
     };
 
     const handleSaveEdit = async (e: React.MouseEvent) => {
-        if (!storyData || saveLoading) return;
+        if (saveLoading) return;
         logAction(e);
 
-        const previousNarrative = storyData.narrative || '';
-        const updated: StoryData = { ...storyData, narrative: editNarrative };
+        // A user with no prior generated story can now save typed content from
+        // the always-open draft editor. In that case storyData starts null and
+        // we construct a minimal one; the backend UpdateNarrativeCacheView uses
+        // get_or_create so the cache row is created on this first save.
+        const previousNarrative = storyData?.narrative || '';
+        const updated: StoryData = storyData
+            ? { ...storyData, narrative: editNarrative }
+            : { narrative: editNarrative };
 
         setSaveLoading(true);
         setSaveError(null);
@@ -609,37 +624,55 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
 
                     {!readOnly && <ExportButton storyData={exportStoryData} />}
 
-                    {/* Editing controls — Story tab only, and only when editing is permitted */}
-                    {editingAllowed && storySelected && storyData?.narrative && (
-                        isEditing ? (
-                            <>
+                    {/* Editing controls — Story tab only, and only when editing is permitted.
+                        Three states:
+                          - storyData + editing → Save + Cancel
+                          - storyData + not editing → Edit
+                          - no storyData (always-open draft mode) → Save only (no Cancel because
+                            there's no saved state to revert to, and no Edit because the editor
+                            is already open) */}
+                    {editingAllowed && storySelected && (
+                        storyData?.narrative ? (
+                            isEditing ? (
+                                <>
+                                    <button
+                                        id="save-story-button"
+                                        log-id="data-stories-save-story-button"
+                                        onClick={handleSaveEdit}
+                                        disabled={saveLoading || !isDirty}
+                                        className={storyActionPrimary}
+                                    >
+                                        {saveLoading ? 'Saving...' : 'Save'}
+                                    </button>
+                                    <button
+                                        id="cancel-edit-story-button"
+                                        log-id="data-stories-cancel-edit-story-button"
+                                        onClick={handleCancelEdit}
+                                        disabled={saveLoading}
+                                        className={storyActionSecondary}
+                                    >
+                                        Cancel
+                                    </button>
+                                </>
+                            ) : (
                                 <button
-                                    id="save-story-button"
-                                    log-id="data-stories-save-story-button"
-                                    onClick={handleSaveEdit}
-                                    disabled={saveLoading || !isDirty}
-                                    className={`${storyActionPrimary} min-w-[5.25rem]`}
+                                    id="edit-story-button"
+                                    log-id="data-stories-edit-story-button"
+                                    onClick={handleBeginEdit}
+                                    className={storyActionPrimary}
                                 >
-                                    {saveLoading ? 'Saving...' : 'Save'}
+                                    Edit
                                 </button>
-                                <button
-                                    id="cancel-edit-story-button"
-                                    log-id="data-stories-cancel-edit-story-button"
-                                    onClick={handleCancelEdit}
-                                    disabled={saveLoading}
-                                    className={`${storyActionSecondary} min-w-[5.25rem]`}
-                                >
-                                    Cancel
-                                </button>
-                            </>
+                            )
                         ) : (
                             <button
-                                id="edit-story-button"
-                                log-id="data-stories-edit-story-button"
-                                onClick={handleBeginEdit}
+                                id="save-story-draft-button"
+                                log-id="data-stories-save-story-draft-button"
+                                onClick={handleSaveEdit}
+                                disabled={saveLoading || !editNarrative.trim()}
                                 className={storyActionPrimary}
                             >
-                                Edit
+                                {saveLoading ? 'Saving...' : 'Save'}
                             </button>
                         )
                     )}
@@ -669,7 +702,12 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
             <div
                 id="data-stories-content"
                 log-id="data-stories-content"
-                className="flex flex-col w-full rounded-sm p-4 bg-grey-lighter-2"
+                // min-h-[15rem] keeps the panel from shrinking when switching from the
+                // Story tab (which has the always-open editor with min-h-[8rem]) to
+                // the Reasoning tab (which is just a short message when no story
+                // has been generated yet). Both tabs now settle to at least the
+                // Story tab's initial height, so switching feels stable.
+                className="flex flex-col w-full rounded-sm p-4 bg-grey-lighter-2 min-h-[15rem]"
                 onScroll={handleScroll}
             >
                 {narrativeSelected ? (
@@ -681,7 +719,7 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                             <GeneratingPlaceholder contentName="narrative analysis" lines={6} stageName={generationStage} />
                         ) : isProcessingImages ? (
                             <GeneratingPlaceholder contentName="processing images" lines={4} />
-                        ) : storyData ? (
+                        ) : storyData && (storyData.theme_response || (storyData.sequence_summary && storyData.sequence_summary.length > 0) || (storyData.rq_reasoning && storyData.rq_reasoning.length > 0)) ? (
                             <>
                                 {/* All three sections render plain text — one focused LLM call
                                     per section produces display-ready content. Each shows a
@@ -752,17 +790,22 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                                 </div>
                             </>
                         ) : (
-                            <div className="text-center text-grey-darkest mt-8">
-                                <p>No narrative structure data available.</p>
-                                <p className="text-sm mt-2">Click "Generate Story" to create narrative insights.</p>
+                            <div className="text-grey-darkest">
+                                <p>Reasoning appears after you generate a story.</p>
                             </div>
                         )}
                     </div>
                 ) : (
                     // Generated Story Content (when storySelected is true)
                     <div className="w-full">
-                        <h3 className="text-xl font-semibold text-grey-darkest mb-4">Generated Story{headerPattern ? `: ${headerPattern}` : ''}</h3>
-                        
+                        {/* Narrative structure heading — same style as the Reasoning tab
+                            heading so both tabs read consistently. Only shows once a story
+                            has actually been generated (headerPattern is null before Generate
+                            Story or after Clear); hidden for the always-open hand-typed draft. */}
+                        {headerPattern && (
+                            <h3 className="text-xl font-semibold text-grey-darkest mb-0">Narrative Structure: {headerPattern}</h3>
+                        )}
+
                         {isGenerating ? (
                             streamingNarrative ? (
                                 // Live preview from the compose-step WebSocket. [FIGURE:] tokens
@@ -783,7 +826,7 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                         ) : isProcessingImages ? (
                             <GeneratingPlaceholder contentName="processing images" lines={4} />
                         ) : storyData?.narrative ? (
-                            <div className={`rounded-lg overflow-hidden ${isEditing ? 'border border-[#d9dde1] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.6)]' : 'p-4'}`}>
+                            <div className={`rounded-lg overflow-hidden ${isEditing ? 'border border-[#d9dde1] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.6)]' : 'pt-3 px-4 pb-4'}`}>
                                 {isEditing ? (
                                     /* Seeded from the raw narrative, never from processedNarrative —
                                        that one has [FIGURE: …] tokens rewritten into image URLs, and
@@ -816,10 +859,31 @@ const DataStories = ({ targetUser, readOnly = false, canEdit, refreshTrigger }: 
                                     <p className={`text-sm text-bama-crimson ${isEditing ? 'mx-4 mb-3' : 'mt-3'}`}>{saveError}</p>
                                 )}
                             </div>
+                        ) : editingAllowed ? (
+                            /* Always-open draft editor: user has no generated story yet but can
+                               still type their own content. On save, the backend get_or_create's
+                               a NarrativeCache row, storyData populates, and the normal read/edit
+                               toggle takes over from there. */
+                            <div className="rounded-lg overflow-hidden border border-[#d9dde1] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.6)]">
+                                <DataStoryLexicalField
+                                    composerKey={`story-draft-${editSessionId}`}
+                                    initialMarkdown={editNarrative}
+                                    editable={true}
+                                    getCaption={getCaption}
+                                    onMarkdownChange={setEditNarrative}
+                                    trackChanges={true}
+                                    placeholder="Start writing your story here, or click Generate Story to create one from your workspace visuals."
+                                    aria-label="Draft data story"
+                                />
+                                {saveError && (
+                                    <p className="text-sm text-bama-crimson mx-4 mb-3">{saveError}</p>
+                                )}
+                            </div>
                         ) : (
+                            /* Read-only surface — an instructor viewing a student who hasn't
+                               generated or drafted anything yet. */
                             <div className="text-center text-grey-darkest mt-8">
-                                <p>No story generated yet.</p>
-                                <p className="text-sm mt-2">Click "Generate Story" to create your data story.</p>
+                                <p>No story yet.</p>
                             </div>
                         )}
                     </div>

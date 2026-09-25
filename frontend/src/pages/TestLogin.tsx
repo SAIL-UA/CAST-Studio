@@ -238,6 +238,7 @@ const TestLogin = () => {
         <div style={{ background: '#fff', color: '#0a0a0a', fontFamily: SANS, display: 'flex', flexDirection: 'column', minHeight: '100vh', WebkitFontSmoothing: 'antialiased' as any }}>
             {/* ── Shared frosted-glass sticky navbar ─────────────── */}
             <LandingHeader
+                active="home"
                 onSignUp={toggleMode}
                 signUpLabel={isRegisterMode ? 'Sign in' : 'Sign up'}
             />

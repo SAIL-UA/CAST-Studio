@@ -4,7 +4,7 @@
 // page pass no `active` and the plain teal Sign-up button carries the CTA.
 
 import type { CSSProperties } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 export const ACCENT = '#00849E';
@@ -72,31 +72,45 @@ export const LandingHeader = ({ active, subtitle, onSignUp, signUpLabel = 'Sign 
             WebkitFontSmoothing: 'antialiased', MozOsxFontSmoothing: 'grayscale',
         } as CSSProperties}>
             <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <a href="/login" style={{ display: 'flex', alignItems: 'center', gap: 11, textDecoration: 'none' }}>
+                <Link to="/login" style={{ display: 'flex', alignItems: 'center', gap: 11, textDecoration: 'none' }}>
                     <LogoMark />
                     <Wordmark subtitle={subtitle} />
-                </a>
+                </Link>
                 {/* Desktop nav — hidden on narrow viewports via .landing-nav-desktop CSS */}
                 <div className="landing-nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {NAV_LINKS.map(l => {
                         const isActive = active === l.key;
-                        return (
+                        const isExternal = l.href.startsWith('http');
+                        const linkStyle: CSSProperties = {
+                            fontSize: 13.5, fontWeight: isActive ? 600 : 500, letterSpacing: '-0.005em',
+                            color: isActive ? ACCENT : '#1a1a1a',
+                            backgroundColor: isActive ? `${ACCENT}14` : 'transparent',
+                            padding: '8px 14px', borderRadius: 999, textDecoration: 'none',
+                            transition: 'background-color 600ms ease',
+                        };
+                        // Internal routes use React Router's Link so navigation is
+                        // client-side — no full page reload, no title-bar flash on
+                        // click. External URLs stay as plain anchors with target=_blank.
+                        return isExternal ? (
                             <a
                                 key={l.label}
                                 href={l.href}
-                                target={l.href.startsWith('http') ? '_blank' : undefined}
-                                rel={l.href.startsWith('http') ? 'noreferrer' : undefined}
+                                target="_blank"
+                                rel="noreferrer"
                                 className="landing-nav-link"
-                                style={{
-                                    fontSize: 13.5, fontWeight: isActive ? 600 : 500, letterSpacing: '-0.005em',
-                                    color: isActive ? ACCENT : '#1a1a1a',
-                                    background: isActive ? `${ACCENT}14` : 'transparent',
-                                    padding: '8px 14px', borderRadius: 999, textDecoration: 'none',
-                                    transition: 'background 150ms',
-                                }}
+                                style={linkStyle}
                             >
                                 {l.label}
                             </a>
+                        ) : (
+                            <Link
+                                key={l.label}
+                                to={l.href}
+                                className="landing-nav-link"
+                                style={linkStyle}
+                            >
+                                {l.label}
+                            </Link>
                         );
                     })}
                     <button onClick={handleSignUp} style={{
@@ -134,27 +148,39 @@ export const LandingHeader = ({ active, subtitle, onSignUp, signUpLabel = 'Sign 
                             >
                                 {NAV_LINKS.map(l => {
                                     const isActive = active === l.key;
+                                    const isExternal = l.href.startsWith('http');
+                                    const linkStyle: CSSProperties = {
+                                        display: 'block',
+                                        padding: '8px 14px',
+                                        fontSize: 14, fontWeight: isActive ? 600 : 500, letterSpacing: '-0.005em',
+                                        color: isActive ? ACCENT : '#1a1a1a',
+                                        background: isActive ? `${ACCENT}14` : 'transparent',
+                                        textDecoration: 'none', outline: 'none', cursor: 'pointer',
+                                    };
                                     return (
                                         <DropdownMenu.Item
                                             key={l.label}
                                             asChild
                                         >
-                                            <a
-                                                href={l.href}
-                                                target={l.href.startsWith('http') ? '_blank' : undefined}
-                                                rel={l.href.startsWith('http') ? 'noreferrer' : undefined}
-                                                className="landing-nav-link"
-                                                style={{
-                                                    display: 'block',
-                                                    padding: '8px 14px',
-                                                    fontSize: 14, fontWeight: isActive ? 600 : 500, letterSpacing: '-0.005em',
-                                                    color: isActive ? ACCENT : '#1a1a1a',
-                                                    background: isActive ? `${ACCENT}14` : 'transparent',
-                                                    textDecoration: 'none', outline: 'none', cursor: 'pointer',
-                                                }}
-                                            >
-                                                {l.label}
-                                            </a>
+                                            {isExternal ? (
+                                                <a
+                                                    href={l.href}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="landing-nav-link"
+                                                    style={linkStyle}
+                                                >
+                                                    {l.label}
+                                                </a>
+                                            ) : (
+                                                <Link
+                                                    to={l.href}
+                                                    className="landing-nav-link"
+                                                    style={linkStyle}
+                                                >
+                                                    {l.label}
+                                                </Link>
+                                            )}
                                         </DropdownMenu.Item>
                                     );
                                 })}
