@@ -84,7 +84,15 @@ export const AlertModal = ({ level, message, onClose }: AlertModalProps) => {
 	const styles = levelStyles[level];
 
 	return (
-		<div className="fixed inset-0 z-500 flex items-center justify-center bg-black/50">
+		<div
+			className="fixed inset-0 z-500 flex items-center justify-center bg-black/50"
+			// Close modal on click outside modal
+			onClick={(e) => {
+				if (e.target === e.currentTarget) {
+					onClose();
+				}
+			}}
+		>
 			<div
 				className="relative mx-4 w-full max-w-lg rounded-lg bg-white p-4 shadow-xl"
 				role="alertdialog"
