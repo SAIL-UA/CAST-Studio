@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '../contexts/Auth';
-import { getInstructorWorkspace, getInstructorUsers, createInstructorNote } from '../services/api';
+import { useAuth } from '@/contexts/Auth';
+import { getInstructorWorkspace, getInstructorUsers, createInstructorNote } from '@/services/api';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import Header from '../components/Header';
-import Workspace from '../components/Workspace';
-import DataStories from '../components/DataStories';
-import CompactSidebar from '../components/CompactSidebar';
-import Footer from '../components/Footer';
+import Header from '@/components/Header';
+import Workspace from '@/components/Workspace';
+import DataStories from '@/components/DataStories';
+import CompactSidebar from '@/components/CompactSidebar';
+import Footer from '@/components/Footer';
 
 type StudentInfo = {
     id: string;
@@ -198,7 +198,7 @@ const ViewWorkspace = () => {
             {/* Left Panel */}
             {leftMenuOpen && (
                 <>
-                    <div className="fixed inset-0 bg-black bg-opacity-30 z-[400]" onClick={() => setLeftMenuOpen(false)} />
+                    <div className="fixed inset-0 bg-black/30 z-[400]" onClick={() => setLeftMenuOpen(false)} />
                     <div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto pt-8">
                         <CompactSidebar setCenterNarrativePatternsOpen={() => setLeftMenuOpen(false)} />
                         <div id="footer" className="flex flex-col justify-start items-start mb-6">

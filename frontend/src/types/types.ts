@@ -1,5 +1,5 @@
 // TypeScript interfaces for drag and drop functionality
-import React from 'react';
+import type { ReactNode, RefObject } from 'react';
 
 export interface ImageData {
   id: string;
@@ -77,7 +77,7 @@ export interface BinProps {
   onPanOffsetChange?: (offset: { x: number; y: number }) => void;
   onZoomLevelChange?: (zoom: number) => void;
   scrollable?: boolean;
-  children?: React.ReactNode;
+  children?: ReactNode;
   readOnly?: boolean;
 }
 
@@ -124,7 +124,7 @@ export interface GroupDivProps {
   onNameChange: (groupId: string, newName: string) => void;
   onDescriptionChange: (groupId: string, newDescription: string) => void;
   onGroupUpdate: (groupId: string, updates: { name?: string; description?: string }) => void;
-  storyBinRef: React.RefObject<HTMLDivElement | null>;
+  storyBinRef: RefObject<HTMLDivElement | null>;
   scaffoldId?: string;  // Optional scaffoldId to include in drag item
   disableDrag?: boolean;  // Disable dragging for groups inside scaffolds
   zoomLevel?: number;  // Zoom level for coordinate compensation

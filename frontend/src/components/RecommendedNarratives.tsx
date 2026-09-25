@@ -5,10 +5,6 @@
 
 
 // Import images
-import recommendedNarrative from '../assets/images/workflow.png';
-
-
-// Recommended narratives component
 const RecommendedNarratives = () => {
 
     // Visible component

@@ -1,0 +1,33 @@
+__pycache__/
+.env
+.DS_Store
+node_modules
+.vscode
+data/*
+backend/jupyterhub_cookie_secret
+backend/jupyterhub.sqlite
+
+# Markdown files
+*.md
+!README.md
+
+# Django migrations
+**/migrations/*.py
+!**/migrations/__init__.py
+
+*.sh
+!docker-down.sh
+!docker-up.sh
+
+# Allow .txt files in prompts
+*.txt
+!**/prompts/*.txt
+!**/prompts/unique_stories/*.txt
+
+# .sql files
+*.sql
+package-lock.json
+
+nginx/ssl/
+
+docker_cmds.md

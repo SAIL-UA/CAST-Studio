@@ -8,9 +8,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - db_data:/var/lib/postgresql/data
-      # - ./backend/${BACKUP_FILE}:/docker-entrypoint-initdb.d/${BACKUP_FILE}
-    networks:
-      - cast-network
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -18,6 +15,16 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - cast-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: cast-redis
+    restart: unless-stopped
+    networks:
+      - cast-network
+
   backend:
     build:
       context: ./backend
@@ -31,17 +38,15 @@ services:
         condition: service_started
     env_file:
       - .env
-    expose:
-      - "8051"
     volumes:
       - /data/CAST_ext/user_images:/data/CAST_ext/user_images
       - static:/app/staticfiles
-    networks:
-      - cast-network
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8051 --workers 3"
+    networks:
+      - cast-network
 
   daphne:
     build:
@@ -56,14 +61,29 @@ services:
         condition: service_started
     env_file:
       - .env
-    expose:
-      - "8052"
     volumes:
       - /data/CAST_ext/user_images:/data/CAST_ext/user_images
       - static:/app/staticfiles
+    command: daphne -b 0.0.0.0 -p 8052 config.asgi:application
     networks:
       - cast-network
-    command: daphne -b 0.0.0.0 -p 8052 config.asgi:application
+
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cast-celery
+    restart: unless-stopped
+    volumes:
+      - /data/CAST_ext/user_images:/data/CAST_ext/user_images:ro
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    command: celery -A config worker --loglevel=info
+    networks:
+      - cast-network
 
   frontend:
     build:
@@ -71,12 +91,8 @@ services:
       dockerfile: Dockerfile
     container_name: cast-frontend
     restart: unless-stopped
-    environment:
-      - NODE_ENV=production
     volumes:
-      - frontend_build:/shared-build  # Volume to share build with nginx
-    depends_on:
-      - backend
+      - frontend_build:/shared-build
     networks:
       - cast-network
 
@@ -92,15 +108,15 @@ services:
       - static:/staticfiles:ro
       - nginx-logs:/var/log/nginx
       - /data/CAST_ext/user_images:/data/CAST_ext/user_images:ro
-      - ./nginx/ssl:/etc/letsencrypt  # certs live here
-      - ./nginx/www:/var/www/certbot  # webroot for ACME challenge
+      - ./nginx/ssl:/etc/letsencrypt
+      - ./nginx/www:/var/www/certbot
     depends_on:
       - backend
       - daphne
       - frontend
+    restart: always
     networks:
       - cast-network
-    restart: always
 
   certbot:
     image: certbot/certbot:latest
@@ -108,15 +124,13 @@ services:
       - ./nginx/ssl:/etc/letsencrypt
       - ./nginx/www:/var/www/certbot
     networks:
-      - "cast-network"
+      - cast-network
 
   jupyterhub:
     build:
       context: /home/aii03admin/CAST_ext
       dockerfile: Dockerfile
     container_name: cast-jupyterhub
-    ports:
-      - "8000:8000"
     env_file:
       - .env
     volumes:
@@ -124,47 +138,6 @@ services:
       - /data/user_images:/data/user_images
       - /data/CAST_ext/users:/data/CAST_ext/users
       - /var/run/docker.sock:/var/run/docker.sock
-    restart: unless-stopped
-    networks:
-      - cast-network
-
-  daphne:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: cast-daphne
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    env_file:
-      - .env
-    volumes:
-      - ./data:/data
-    networks:
-      - cast-network
-    command: daphne -b 0.0.0.0 -p 8052 config.asgi:application
-
-  celery:
-    build:
-      context: ./backend
-    container_name: cast-celery
-    restart: unless-stopped
-    volumes:
-      - /data/CAST_ext/user_images:/data/CAST_ext/user_images:ro
-    env_file:
-      - .env
-    networks:
-      - cast-network
-    command: celery -A config worker --loglevel=info
-  
-  redis:
-    image: redis:7-alpine
-    container_name: cast-redis
-    ports:
-      - "6379:6379"
     restart: unless-stopped
     networks:
       - cast-network

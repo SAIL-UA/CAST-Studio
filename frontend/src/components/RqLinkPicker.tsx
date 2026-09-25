@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { useResearchQuestions } from '../contexts/ResearchQuestions';
+import { useResearchQuestions } from '@/contexts/ResearchQuestions';
 
 interface RqLinkPickerProps {
   /** ImageData id for visuals/notes, GroupData id for groups. */

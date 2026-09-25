@@ -1,13 +1,10 @@
 // Import dependencies
 import { useEffect, useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { logAction } from '../utils/userActionLogger';
-import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { useGuestTourOpen } from '../utils/useGuestTourOpen';
+import { logAction } from '@/utils/userActionLogger';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { useGuestTourOpen } from '@/utils/useGuestTourOpen';
 
-const menuItemClass = "block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm !font-light rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 cursor-pointer outline-none text-left";
-
-// Props interface
 type GenerateStoryButtonProps = {
     setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setSelectedPattern: React.Dispatch<React.SetStateAction<string>>;

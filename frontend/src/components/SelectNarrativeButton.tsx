@@ -1,5 +1,5 @@
 // Import dependencies
-import { logAction } from '../utils/userActionLogger';
+import { logAction } from '@/utils/userActionLogger';
 
 // Define props interface
 type SelectNarrativeButtonProps = {
@@ -10,8 +10,8 @@ type SelectNarrativeButtonProps = {
 }
 
 // Select narrative button component
-const SelectNarrativeButton = ({ setSelectedPattern, value, setStoryLoading, onCreateScaffold }: SelectNarrativeButtonProps) => {
-    const handleSelectNarrative = async (e: React.MouseEvent, value: string) => {
+const SelectNarrativeButton = ({ setSelectedPattern, value, onCreateScaffold }: SelectNarrativeButtonProps) => {
+    const handleSelectNarrative = async (_e: React.MouseEvent, value: string) => {
         setSelectedPattern(value);
         logAction({ actionType: 'click', elementId: 'select-narrative-button' }, { "narrative_pattern": value });
         if (onCreateScaffold) {

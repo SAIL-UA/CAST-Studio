@@ -38,7 +38,6 @@ class LoginView(APIView):
         update_last_login(None, user)
         refresh = RefreshToken.for_user(user)
         request.session['DATA_PATH'] = settings.DATA_PATH
-        os.makedirs(os.path.join(settings.USER_DIR, user.username, "workspace"), exist_ok=True)
 
         return Response({
           "access": str(refresh.access_token),
@@ -153,7 +152,6 @@ class GuestLoginView(APIView):
       update_last_login(None, user)
       refresh = RefreshToken.for_user(user)
       request.session['DATA_PATH'] = settings.DATA_PATH
-      os.makedirs(os.path.join(settings.USER_DIR, user.username, "workspace"), exist_ok=True)
 
       return Response({
         "access": str(refresh.access_token),

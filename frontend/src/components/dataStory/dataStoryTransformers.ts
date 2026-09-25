@@ -9,7 +9,7 @@ import {
 } from '@lexical/markdown';
 import type { LexicalNode, TextNode } from 'lexical';
 
-import { $createFigureNode, $isFigureNode, FigureNode } from './FigureNode';
+import { $createFigureNode, $isFigureNode, FigureNode } from '@/components/dataStory/FigureNode';
 
 /** Clean nested or messy `[FIGURE: ...]` capture groups (matches legacy processing). */
 function cleanFigureFilename(raw: string): string {
