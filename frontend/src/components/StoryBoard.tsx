@@ -46,7 +46,6 @@ import InvertedPyramid from "./scaffolds/InvertedPyramid";
 // Import types
 import type { ImageData, GroupData, ScaffoldData } from "@/types/types";
 import { SCAFFOLD_NUMBER_TO_PATTERN } from "../types/scaffoldMappings";
-import WorkspaceMenu from "./WorkspaceMenu";
 
 // Define props interface
 type StoryBoardProps = {
@@ -65,6 +64,7 @@ type StoryBoardProps = {
 	handleImageRestore: (imageId: string) => void;
 	readOnly?: boolean;
 	targetUser?: string;
+	submissionId?: string;
 	readOnlyToolbar?: React.ReactNode;
 	refreshTrigger?: number;
 	onSessionChange?: (shareToken: string | null) => void;
@@ -88,6 +88,7 @@ const StoryBoard = ({
 	handleImageRestore,
 	readOnly = false,
 	targetUser,
+	submissionId,
 	refreshTrigger,
 	onSessionChange,
 	hideToolbar = false,
@@ -119,7 +120,7 @@ const StoryBoard = ({
 	// Fetch groups from backend
 	const fetchGroups = async (): Promise<GroupData[]> => {
 		try {
-			const fetchedGroups = await getGroups(undefined, targetUser);
+			const fetchedGroups = await getGroups(undefined, targetUser, submissionId);
 			if (!fetchedGroups || fetchedGroups.length === 0) {
 				setGroupDivs([]);
 				return [];
@@ -162,7 +163,7 @@ const StoryBoard = ({
 	// Fetch scaffolds from backend
 	const fetchScaffolds = async (groupsToUse?: GroupData[]) => {
 		try {
-			const fetchedScaffolds = await getScaffolds(undefined, targetUser);
+			const fetchedScaffolds = await getScaffolds(undefined, targetUser, submissionId);
 			if (!fetchedScaffolds || fetchedScaffolds.length === 0) {
 				setScaffolds([]);
 				return;
@@ -217,7 +218,7 @@ const StoryBoard = ({
 			}
 		};
 		loadData();
-	}, [loading, images]);
+	}, [loading, images, submissionId, targetUser]);
 
 	// Refetch groups and scaffolds when refreshTrigger changes (WebSocket workspace_update)
 	useEffect(() => {
@@ -827,13 +828,6 @@ const StoryBoard = ({
 							})()}
 						/>
 						<FeedbackButton />
-						<WorkspaceMenu
-							disabled={readOnly}
-							targetUser={targetUser}
-							onWorkspaceChanged={async () => {
-								await fetchUserData();
-							}}
-						/>
 						<CollaborateButton onSessionChange={onSessionChange} />
 					</div>
 				)}

@@ -11,6 +11,7 @@ from .models import (
     JupyterLog,
     User,
     FeatureFlags,
+    Submission,
 )
 
 
@@ -31,7 +32,7 @@ class ImageDataAdmin(admin.ModelAdmin):
     search_fields = ("id", "short_desc", "long_desc", "source", "user__username")
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
-    list_select_related = ("user", "media", "workspace")
+    list_select_related = ("user", "media", "workspace", "submission")
 
     def export_image_data_ndjson(modeladmin, request, queryset):
         """Export the selected image data as NDJSON."""
@@ -292,3 +293,12 @@ class UsersAdmin(admin.ModelAdmin):
 @admin.register(FeatureFlags)
 class FeatureFlagsAdmin(admin.ModelAdmin):
     list_display = ("id", "annotate_with_ai", "select_with_ai")
+
+
+@admin.register(Submission)
+class SubmissionAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "name", "points", "assignment_id", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("name", "user__username")
+    ordering = ("-created_at",)
+    list_select_related = ("user",)

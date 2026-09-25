@@ -21,6 +21,8 @@ type UserRow = {
 	last_name: string;
 	is_instructor: boolean;
 	last_modified: string | null;
+	submission_count?: number;
+	submission_limit?: number;
 };
 
 type SortColumn = string;
@@ -361,6 +363,9 @@ const Instructor = () => {
 											<SortArrow column="last_modified" />
 										</th>
 										<th className="text-left p-3 font-medium text-grey-darkest">
+											Submissions
+										</th>
+										<th className="text-left p-3 font-medium text-grey-darkest">
 											Actions
 										</th>
 									</tr>
@@ -388,6 +393,11 @@ const Instructor = () => {
 											<td className="p-3 text-grey-darkest whitespace-nowrap">
 												{formatDate(user.last_modified)}
 											</td>
+											<td className="p-3 text-grey-darkest whitespace-nowrap">
+												{!user.is_instructor
+													? `${user.submission_count ?? 0}/${user.submission_limit ?? 3}`
+													: "—"}
+											</td>
 											<td className="p-3">
 												{!user.is_instructor && (
 													<button
@@ -408,7 +418,7 @@ const Instructor = () => {
 									{users.length === 0 && (
 										<tr>
 											<td
-												colSpan={6}
+												colSpan={7}
 												className="p-3 text-center text-grey-dark"
 											>
 												No users found.

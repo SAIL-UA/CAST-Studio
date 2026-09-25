@@ -1,4 +1,4 @@
-"""Helpers for named workspaces, shared media, and file GC."""
+"""Helpers for the live editor workspace, immutable submissions, shared media, and file GC."""
 
 import os
 import uuid
@@ -7,6 +7,7 @@ from django.utils._os import safe_join
 
 from .models import (
     Workspace,
+    Submission,
     MediaAsset,
     ImageData,
     GroupData,
@@ -15,22 +16,27 @@ from .models import (
     NarrativeCache,
 )
 
-MAX_WORKSPACES_PER_USER = 3
+MAX_SUBMISSIONS_PER_USER = 3
+# Backward-compatible alias used by older call sites / responses.
+MAX_WORKSPACES_PER_USER = MAX_SUBMISSIONS_PER_USER
 EDITOR_WORKSPACE_NAME = "Editor"
 DEFAULT_WORKSPACE_NAME = EDITOR_WORKSPACE_NAME
 
 
-def get_or_create_active_workspace(user):
-    """Return the user's editor canvas, creating it if needed. Never promote a snapshot."""
-    ws = Workspace.objects.filter(user=user, is_active=True).first()
+def get_or_create_workspace(user):
+    """Return the user's sole live editor canvas, creating it if needed."""
+    ws = Workspace.objects.filter(user=user).first()
     if ws:
         if ws.name != EDITOR_WORKSPACE_NAME:
             ws.name = EDITOR_WORKSPACE_NAME
             ws.save(update_fields=["name"])
         return ws
-    return Workspace.objects.create(
-        user=user, name=EDITOR_WORKSPACE_NAME, is_active=True
-    )
+    return Workspace.objects.create(user=user, name=EDITOR_WORKSPACE_NAME)
+
+
+def get_or_create_active_workspace(user):
+    """Backward-compatible alias for get_or_create_workspace."""
+    return get_or_create_workspace(user)
 
 
 def get_or_create_media(user, filename):
@@ -74,6 +80,14 @@ def collect_workspace_media_ids(workspace):
     )
 
 
+def collect_submission_media_ids(submission):
+    return list(
+        ImageData.objects.filter(
+            submission=submission, media_id__isnull=False
+        ).values_list("media_id", flat=True)
+    )
+
+
 def clear_workspace_canvas(workspace):
     """Drop canvas + RQ rows for a workspace; return media ids that were referenced."""
     media_ids = collect_workspace_media_ids(workspace)
@@ -84,15 +98,42 @@ def clear_workspace_canvas(workspace):
     return media_ids
 
 
-def clone_workspace_contents(source, dest):
-    """Copy scaffolds, groups, image placements, RQs from source into dest. Share media_id."""
+def narrative_snapshot_from_cache(user):
+    """Build the frozen story payload from the user's live NarrativeCache."""
+    cache = NarrativeCache.objects.filter(user=user).first()
+    if not cache:
+        return {
+            "story_structure_id": "",
+            "narrative": "",
+            "order": [],
+            "theme": "",
+            "categories": [],
+            "sequence_justification": "",
+            "sequence_summary": [],
+            "rq_reasoning": [],
+        }
+    return {
+        "story_structure_id": cache.story_structure_id or "",
+        "narrative": cache.narrative or "",
+        "order": cache.order or [],
+        "theme": cache.theme or "",
+        "categories": cache.categories or [],
+        "sequence_justification": cache.sequence_justification or "",
+        "sequence_summary": cache.sequence_summary or [],
+        "rq_reasoning": cache.rq_reasoning or [],
+    }
+
+
+def clone_workspace_to_submission(source_workspace, submission):
+    """Copy scaffolds, groups, image placements, RQs from editor workspace into a submission."""
     scaffold_map = {}
-    for sc in ScaffoldData.objects.filter(workspace=source):
+    for sc in ScaffoldData.objects.filter(workspace=source_workspace):
         new_id = uuid.uuid4()
         ScaffoldData.objects.create(
             id=new_id,
-            user=dest.user,
-            workspace=dest,
+            user=submission.user,
+            workspace=None,
+            submission=submission,
             name=sc.name,
             number=sc.number,
             valid_group_numbers=sc.valid_group_numbers,
@@ -103,12 +144,13 @@ def clone_workspace_contents(source, dest):
         scaffold_map[sc.id] = new_id
 
     group_map = {}
-    for g in GroupData.objects.filter(workspace=source):
+    for g in GroupData.objects.filter(workspace=source_workspace):
         new_id = uuid.uuid4()
         GroupData.objects.create(
             id=new_id,
-            user=dest.user,
-            workspace=dest,
+            user=submission.user,
+            workspace=None,
+            submission=submission,
             name=g.name,
             number=g.number,
             description=g.description,
@@ -122,12 +164,15 @@ def clone_workspace_contents(source, dest):
         group_map[g.id] = new_id
 
     image_map = {}
-    for img in ImageData.objects.filter(workspace=source).select_related("media"):
+    for img in ImageData.objects.filter(workspace=source_workspace).select_related(
+        "media"
+    ):
         new_id = uuid.uuid4()
         ImageData.objects.create(
             id=new_id,
-            user=dest.user,
-            workspace=dest,
+            user=submission.user,
+            workspace=None,
+            submission=submission,
             media=img.media,
             short_desc=img.short_desc,
             long_desc=img.long_desc,
@@ -147,12 +192,13 @@ def clone_workspace_contents(source, dest):
         )
         image_map[img.id] = new_id
 
-    for rq in ResearchQuestion.objects.filter(workspace=source).prefetch_related(
-        "images", "groups"
-    ):
+    for rq in ResearchQuestion.objects.filter(
+        workspace=source_workspace
+    ).prefetch_related("images", "groups"):
         new_rq = ResearchQuestion.objects.create(
-            user=dest.user,
-            workspace=dest,
+            user=submission.user,
+            workspace=None,
+            submission=submission,
             text=rq.text,
             order=rq.order,
         )
@@ -163,124 +209,43 @@ def clone_workspace_contents(source, dest):
             [group_map[g.id] for g in rq.groups.all() if g.id in group_map]
         )
 
-    dest.save(update_fields=["last_modified"])
-    return dest
+    return submission
 
 
-def resolve_snapshot_story_output(user, story_output=None):
-    """Raw narrative markdown to store on a snapshot (editor rows stay empty)."""
-    cache = NarrativeCache.objects.filter(user=user).first()
-    cached_narrative = cache.narrative if cache else ""
-    if story_output is not None:
-        if (story_output or "").strip():
-            return story_output
-        if (cached_narrative or "").strip():
-            return cached_narrative
-        return story_output or ""
-    return cached_narrative or ""
-
-
-def apply_snapshot_story_to_narrative_cache(user, story_output):
-    """Restore the snapshot's raw story into the live editor's NarrativeCache."""
-    text = story_output or ""
-    cache = NarrativeCache.objects.filter(user=user).first()
-    if cache:
-        cache.narrative = text
-        cache.save(update_fields=["narrative"])
-    elif text.strip():
-        NarrativeCache.objects.create(user=user, narrative=text)
-
-
-def save_snapshot(user, name, replace_id=None, story_output=None):
+def create_submission(user):
     """
-    Copy the editor canvas into a named snapshot. The editor stays active
-    and keeps its contents.
-
-    Users may keep up to MAX_WORKSPACES_PER_USER snapshots (the editor does
-    not count). At the cap, replace_id must be an existing snapshot.
-    Raises ValueError with code name_required / workspace_limit / invalid_replace.
+    Freeze the editor canvas + narrative into an immutable submission.
+    Raises ValueError('submission_limit') when the user already has
+    MAX_SUBMISSIONS_PER_USER submissions.
     """
-    name = (name or "").strip()
-    if not name:
-        raise ValueError("name_required")
-    captured_story = resolve_snapshot_story_output(user, story_output)
     with transaction.atomic():
-        workspaces = list(Workspace.objects.select_for_update().filter(user=user))
-        editor = next((w for w in workspaces if w.is_active), None)
-        if not editor:
-            editor = Workspace.objects.create(
-                user=user, name=EDITOR_WORKSPACE_NAME, is_active=True
-            )
-            workspaces.append(editor)
+        used = Submission.objects.select_for_update().filter(user=user).count()
+        if used >= MAX_SUBMISSIONS_PER_USER:
+            raise ValueError("submission_limit")
 
-        snapshots = [w for w in workspaces if not w.is_active]
-        if len(snapshots) >= MAX_WORKSPACES_PER_USER:
-            if not replace_id:
-                raise ValueError("workspace_limit")
-            dest = next((w for w in snapshots if str(w.id) == str(replace_id)), None)
-            if not dest:
-                raise ValueError("invalid_replace")
-            old_media = clear_workspace_canvas(dest)
-            dest.name = name[:100]
-            dest.story_output = captured_story
-            dest.save(update_fields=["name", "last_modified", "story_output"])
-            clone_workspace_contents(editor, dest)
-            purge_media_ids(old_media)
-            return dest
+        editor = get_or_create_workspace(user)
+        # Lock editor row while cloning
+        Workspace.objects.select_for_update().filter(id=editor.id).first()
 
-        dest = Workspace.objects.create(
+        n = used + 1
+        submission = Submission.objects.create(
             user=user,
-            name=name[:100],
-            is_active=False,
-            story_output=captured_story,
+            name=f"Submission {n}"[:100],
+            points=0,
+            assignment_id=None,
+            narrative_snapshot=narrative_snapshot_from_cache(user),
         )
-        clone_workspace_contents(editor, dest)
-        return dest
+        clone_workspace_to_submission(editor, submission)
+        return submission
 
 
-def create_workspace(user, name, replace_id=None):
-    """Backward-compatible alias: save a snapshot of the editor."""
-    return save_snapshot(user, name, replace_id=replace_id)
-
-
-def restore_snapshot(user, workspace_id):
-    """Replace the editor canvas with a copy of a snapshot. Stay on the editor."""
-    with transaction.atomic():
-        workspaces = list(Workspace.objects.select_for_update().filter(user=user))
-        editor = next((w for w in workspaces if w.is_active), None)
-        source = next((w for w in workspaces if str(w.id) == str(workspace_id)), None)
-        if not source:
-            return None
-        if not editor:
-            editor = Workspace.objects.create(
-                user=user, name=EDITOR_WORKSPACE_NAME, is_active=True
-            )
-        if source.id == editor.id or source.is_active:
-            return editor
-        old_media = clear_workspace_canvas(editor)
-        clone_workspace_contents(source, editor)
-        apply_snapshot_story_to_narrative_cache(user, source.story_output)
-        purge_media_ids(old_media)
-        return editor
-
-
-def activate_workspace(user, workspace_id):
-    """Backward-compatible alias: load a snapshot into the editor."""
-    return restore_snapshot(user, workspace_id)
-
-
-def delete_workspace(user, workspace_id):
-    with transaction.atomic():
-        workspaces = list(Workspace.objects.select_for_update().filter(user=user))
-        target = next((w for w in workspaces if str(w.id) == str(workspace_id)), None)
-        if not target:
-            return None
-        if target.is_active:
-            raise ValueError("editor_workspace")
-        media_ids = collect_workspace_media_ids(target)
-        target.delete()
-        purge_media_ids(media_ids)
-        return True
+def submission_attempt_meta(user):
+    used = Submission.objects.filter(user=user).count()
+    return {
+        "used": used,
+        "limit": MAX_SUBMISSIONS_PER_USER,
+        "remaining": max(0, MAX_SUBMISSIONS_PER_USER - used),
+    }
 
 
 def purge_user_media_files(user):
