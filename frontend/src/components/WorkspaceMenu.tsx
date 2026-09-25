@@ -9,10 +9,7 @@ import {
 	type SavedWorkspace,
 } from "@/services/api";
 import WorkspaceItem from "@/components/WorkspaceItem";
-import {
-	getStorySnapshotText,
-	notifyWorkspaceSnapshotLoaded,
-} from "@/utils/storySnapshotText";
+import { getStorySnapshotText, notifyWorkspaceSnapshotLoaded } from "@/utils/storySnapshotText";
 import { useAlert } from "@/contexts/Alert";
 
 type WorkspaceMenuProps = {

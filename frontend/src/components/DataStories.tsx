@@ -151,14 +151,14 @@ const DataStories = ({
 			}
 			const cacheData = response.data.data;
 			setStoryData({
-					story_structure_id: cacheData.story_structure_id,
-					narrative: cacheData.narrative,
-					recommended_order: cacheData.order,
-					categorize_figures_response: cacheData.categories,
-					theme_response: cacheData.theme,
-					sequence_response: cacheData.sequence_justification,
-					sequence_summary: cacheData.sequence_summary,
-					rq_reasoning: cacheData.rq_reasoning,
+				story_structure_id: cacheData.story_structure_id,
+				narrative: cacheData.narrative,
+				recommended_order: cacheData.order,
+				categorize_figures_response: cacheData.categories,
+				theme_response: cacheData.theme,
+				sequence_response: cacheData.sequence_justification,
+				sequence_summary: cacheData.sequence_summary,
+				rq_reasoning: cacheData.rq_reasoning,
 			});
 			console.log("Loaded cached narrative data:", cacheData);
 		} catch (error) {
@@ -335,8 +335,7 @@ const DataStories = ({
 			void loadImageDescriptions();
 		};
 		window.addEventListener(WORKSPACE_SNAPSHOT_LOADED_EVENT, onSnapshotLoaded);
-		return () =>
-			window.removeEventListener(WORKSPACE_SNAPSHOT_LOADED_EVENT, onSnapshotLoaded);
+		return () => window.removeEventListener(WORKSPACE_SNAPSHOT_LOADED_EVENT, onSnapshotLoaded);
 	}, [targetUser]);
 
 	// Catch up on any update that arrived while the editor was open.
