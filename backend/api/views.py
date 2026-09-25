@@ -2233,8 +2233,15 @@ class WorkspaceListCreateView(APIView):
     user = get_workspace_write_user(request)
     name = request.data.get('name') or ''
     replace_id = request.data.get('replace_id')
+    story_output = (
+      request.data['story_output']
+      if 'story_output' in request.data
+      else None
+    )
     try:
-      dest = save_snapshot(user, name, replace_id=replace_id)
+      dest = save_snapshot(
+        user, name, replace_id=replace_id, story_output=story_output
+      )
     except ValueError as e:
       code = str(e)
       if code == 'workspace_limit':

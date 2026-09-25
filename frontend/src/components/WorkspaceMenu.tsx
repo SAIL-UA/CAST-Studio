@@ -9,13 +9,20 @@ import {
 	type SavedWorkspace,
 } from "@/services/api";
 import WorkspaceItem from "@/components/WorkspaceItem";
+import { getStorySnapshotText } from "@/utils/storySnapshotText";
 
 type WorkspaceMenuProps = {
 	onWorkspaceChanged?: () => void | Promise<void>;
 	disabled?: boolean;
+	/** Host workspace owner when saving in a collaboration session. */
+	targetUser?: string;
 };
 
-const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuProps) => {
+const WorkspaceMenu = ({
+	onWorkspaceChanged,
+	disabled = false,
+	targetUser,
+}: WorkspaceMenuProps) => {
 	const [workspaces, setWorkspaces] = useState<SavedWorkspace[]>([]);
 	const [limit, setLimit] = useState(3);
 	const [menuOpen, setMenuOpen] = useState(false);
@@ -163,7 +170,11 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 		if (!name) return;
 		setBusy(true);
 		try {
-			await saveWorkspace(name, atCap ? replaceId : undefined);
+			await saveWorkspace(
+				name,
+				atCap ? replaceId : undefined,
+				getStorySnapshotText(targetUser),
+			);
 			setSaveOpen(false);
 			setReplaceConfirm(false);
 			setSaveName("");

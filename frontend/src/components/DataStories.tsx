@@ -9,6 +9,10 @@ import { getImageUrl } from "@/utils/imageUtils";
 import { scrollTracker } from "@/utils/scrollTracker";
 import { setStoryUserEdited } from "@/utils/storyEditState";
 import {
+	clearStorySnapshotText,
+	setStorySnapshotText,
+} from "@/utils/storySnapshotText";
+import {
 	STORY_STREAM_START,
 	STORY_STREAM_CHUNK,
 	STORY_REASONING_READY,
@@ -543,6 +547,20 @@ const DataStories = ({
 		if (!storyData) return storyData;
 		return isEditing ? { ...storyData, narrative: editNarrative } : storyData;
 	}, [storyData, isEditing, editNarrative]);
+
+	// Raw markdown for workspace snapshot saves (not image-inlined processedNarrative).
+	useEffect(() => {
+		if (!storyData?.narrative) {
+			clearStorySnapshotText(targetUser);
+			return;
+		}
+		const raw = isEditing ? editNarrative : storyData.narrative || "";
+		setStorySnapshotText(raw, targetUser);
+	}, [storyData?.narrative, isEditing, editNarrative, targetUser]);
+
+	useEffect(() => {
+		return () => clearStorySnapshotText(targetUser);
+	}, [targetUser]);
 
 	// Enter edit mode. The bumped session id remounts the composer with fresh content.
 	const handleBeginEdit = (e: React.MouseEvent) => {
