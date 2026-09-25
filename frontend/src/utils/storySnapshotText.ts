@@ -23,3 +23,10 @@ export const getStorySnapshotText = (workspaceOwner?: string): string => {
 export const clearStorySnapshotText = (workspaceOwner?: string): void => {
     memory.delete(scopeKey(workspaceOwner));
 };
+
+/** Fired after a named snapshot is loaded into the editor (local client). */
+export const WORKSPACE_SNAPSHOT_LOADED_EVENT = 'workspaceSnapshotLoaded';
+
+export const notifyWorkspaceSnapshotLoaded = (): void => {
+    window.dispatchEvent(new CustomEvent(WORKSPACE_SNAPSHOT_LOADED_EVENT));
+};

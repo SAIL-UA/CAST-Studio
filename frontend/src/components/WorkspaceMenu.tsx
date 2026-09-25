@@ -9,7 +9,10 @@ import {
 	type SavedWorkspace,
 } from "@/services/api";
 import WorkspaceItem from "@/components/WorkspaceItem";
-import { getStorySnapshotText } from "@/utils/storySnapshotText";
+import {
+	getStorySnapshotText,
+	notifyWorkspaceSnapshotLoaded,
+} from "@/utils/storySnapshotText";
 import { useAlert } from "@/contexts/Alert";
 
 type WorkspaceMenuProps = {
@@ -73,6 +76,7 @@ const WorkspaceMenu = ({
 			setLoadTarget(null);
 			await loadList();
 			await onWorkspaceChanged?.();
+			notifyWorkspaceSnapshotLoaded();
 		} catch (err) {
 			console.error(err);
 			showAlert({ level: "error", message: "Could not load snapshot into the editor." });

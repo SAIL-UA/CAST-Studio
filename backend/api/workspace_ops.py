@@ -180,6 +180,17 @@ def resolve_snapshot_story_output(user, story_output=None):
     return cached_narrative or ""
 
 
+def apply_snapshot_story_to_narrative_cache(user, story_output):
+    """Restore the snapshot's raw story into the live editor's NarrativeCache."""
+    text = story_output or ""
+    cache = NarrativeCache.objects.filter(user=user).first()
+    if cache:
+        cache.narrative = text
+        cache.save(update_fields=["narrative"])
+    elif text.strip():
+        NarrativeCache.objects.create(user=user, narrative=text)
+
+
 def save_snapshot(user, name, replace_id=None, story_output=None):
     """
     Copy the editor canvas into a named snapshot. The editor stays active
@@ -248,6 +259,7 @@ def restore_snapshot(user, workspace_id):
             return editor
         old_media = clear_workspace_canvas(editor)
         clone_workspace_contents(source, editor)
+        apply_snapshot_story_to_narrative_cache(user, source.story_output)
         purge_media_ids(old_media)
         return editor
 
