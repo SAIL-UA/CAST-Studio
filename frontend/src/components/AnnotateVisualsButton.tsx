@@ -4,6 +4,7 @@ import { generateDescription, getImageDataAll } from "@/services/api";
 import { logAction } from "@/utils/userActionLogger";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useAlert } from "@/contexts/Alert";
 import { useGuestTourOpen } from "@/utils/useGuestTourOpen";
 import type { ImageData } from "@/types/types";
 
@@ -23,8 +24,8 @@ const AnnotateVisualsButton = ({
 	onDescriptionsUpdated,
 }: AnnotateVisualsButtonProps) => {
 	const { annotateWithAI } = useFeatureFlags();
+	const { showAlert } = useAlert();
 	const [manualModalOpen, setManualModalOpen] = useState(false);
-	const [alertModal, setAlertModal] = useState<string | null>(null);
 	const [aiRunning, setAiRunning] = useState(false);
 	const [progress, setProgress] = useState(0);
 	const isDisabled = aiRunning || storyLoading;
@@ -137,7 +138,7 @@ const AnnotateVisualsButton = ({
 			(img: ImageData) => img.in_storyboard && img.filepath,
 		);
 		if (activeImageSet.length === 0) {
-			setAlertModal("There are no images in the Workspace.");
+			showAlert({ level: "info", message: "There are no images in the Workspace." });
 			return;
 		}
 
@@ -155,13 +156,13 @@ const AnnotateVisualsButton = ({
 			(img: ImageData) => img.in_storyboard && img.filepath,
 		);
 		if (activeImageSet.length === 0) {
-			setAlertModal("There are no images in the Workspace.");
+			showAlert({ level: "info", message: "There are no images in the Workspace." });
 			return;
 		}
 
 		const missing = activeImageSet.filter(needsDescription);
 		if (missing.length === 0) {
-			setAlertModal("All visuals already have descriptions.");
+			showAlert({ level: "info", message: "All visuals already have descriptions." });
 			return;
 		}
 
@@ -261,7 +262,7 @@ const AnnotateVisualsButton = ({
 
 				<DropdownMenu.Portal>
 					<DropdownMenu.Content
-						className="mt-1 ml-1 shadow-lg z-[400] bg-white rounded-lg py-1 min-w-[200px] overflow-visible"
+						className="mt-1 ml-1 shadow-lg z-400 bg-white rounded-lg py-1 min-w-50 overflow-visible"
 						sideOffset={4}
 						align="start"
 						onCloseAutoFocus={(e) => e.preventDefault()}
@@ -270,7 +271,7 @@ const AnnotateVisualsButton = ({
 						{annotateWithAI && (
 							<>
 								<DropdownMenu.Sub>
-									<DropdownMenu.SubTrigger className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none flex items-center justify-between gap-2">
+									<DropdownMenu.SubTrigger className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none items-center justify-between gap-2">
 										Create with AI
 										<svg
 											className="fill-current h-3 w-3"
@@ -282,7 +283,7 @@ const AnnotateVisualsButton = ({
 									</DropdownMenu.SubTrigger>
 									<DropdownMenu.Portal>
 										<DropdownMenu.SubContent
-											className="ml-1 shadow-lg z-[401] bg-white rounded-lg py-1 min-w-[180px] whitespace-nowrap"
+											className="ml-1 shadow-lg z-401 bg-white rounded-lg py-1 min-w-45 whitespace-nowrap"
 											sideOffset={4}
 										>
 											<DropdownMenu.Item
@@ -328,29 +329,9 @@ const AnnotateVisualsButton = ({
 				</DropdownMenu.Portal>
 			</DropdownMenu.Root>
 
-			{/* Alert Modal */}
-			{alertModal && (
-				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
-					<div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
-						<div className="space-y-4 text-sm text-grey-darkest">
-							<p>{alertModal}</p>
-						</div>
-						<div className="mt-6 text-right">
-							<button
-								log-id="annotate-alert-ok-button"
-								onClick={() => setAlertModal(null)}
-								className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-150"
-							>
-								OK
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
-
 			{/* Manual Modal */}
 			{manualModalOpen && (
-				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-500">
 					<div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
 						<div className="flex justify-between items-center mb-4">
 							<h2 className="text-xl font-bold">Annotate Visuals Manually</h2>

@@ -8,6 +8,7 @@ import { updateImageData, generateDescription, deleteFigure, getImageData } from
 import { GeneratingPlaceholder } from "@/components/GeneratingPlaceholder";
 import { logAction, captureActionContext } from "@/utils/userActionLogger";
 import { formatImageMetadata, getImageUrl } from "@/utils/imageUtils";
+import { useAlert } from "@/contexts/Alert";
 import { useAuth } from "@/contexts/Auth";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useResearchQuestions } from "@/contexts/ResearchQuestions";
@@ -37,6 +38,7 @@ function DraggableCard({
 	draggable = true,
 	readOnly: readOnlyProp = false,
 }: DraggableCardProps) {
+	const { showAlert } = useAlert();
 	const { isInstructor } = useAuth();
 	const { annotateWithAI } = useFeatureFlags();
 	const { rqLabelsByCard } = useResearchQuestions();
@@ -268,11 +270,11 @@ function DraggableCard({
 				setShowModal(false);
 				document.body.style.overflow = "auto";
 			} else {
-				alert(res.message || "Error deleting figure");
+				showAlert({ level: "error", message: res.message || "Error deleting figure" });
 			}
 		} catch (err) {
 			console.error("Error deleting figure:", err);
-			alert("An error occurred while deleting the figure");
+			showAlert({ level: "error", message: "An error occurred while deleting the figure" });
 		}
 	};
 
@@ -327,20 +329,28 @@ function DraggableCard({
 
 					// Timeout reached
 					console.error("Description generation timed out");
-					alert(
-						"Description generation is taking longer than expected. Please try again.",
-					);
+					showAlert({
+						level: "warning",
+						message:
+							"Description generation is taking longer than expected. Please try again.",
+					});
 				};
 
 				// Start polling (don't await to allow UI updates)
 				pollForCompletion();
 			} else {
 				console.log("Error generating single description:", res.message);
-				alert("Failed to start description generation. Please try again.");
+				showAlert({
+					level: "error",
+					message: "Failed to start description generation. Please try again.",
+				});
 			}
 		} catch (err) {
 			console.error("Error generating single description:", err);
-			alert("An error occurred while generating the description. Please try again.");
+			showAlert({
+				level: "error",
+				message: "An error occurred while generating the description. Please try again.",
+			});
 		}
 	};
 
@@ -487,7 +497,7 @@ function DraggableCard({
                 Rendered even when read-only, since the RQ badges live here and still need showing. */}
 						<div
 							id="card-header-right"
-							className="flex justify-end items-center gap-1 flex-shrink-0 ml-1"
+							className="flex justify-end items-center gap-1 shrink-0 ml-1"
 						>
 							{/* Linked research questions — right-aligned beside the link button, capped so a
                   heavily-linked card can't crowd out the title */}
@@ -547,7 +557,7 @@ function DraggableCard({
 							/>
 						) : (
 							<p
-								className={`text-somewhat-tiny text-grey-darkest overflow-hidden text-ellipsis ${isInstructorNote ? "line-clamp-[10]" : "line-clamp-6"} ${readOnly ? "" : "cursor-pointer hover:underline"}`}
+								className={`text-somewhat-tiny text-grey-darkest overflow-hidden text-ellipsis ${isInstructorNote ? "line-clamp-10" : "line-clamp-6"} ${readOnly ? "" : "cursor-pointer hover:underline"}`}
 								onClick={(e) => {
 									if (readOnly) return;
 									e.stopPropagation();
@@ -587,7 +597,7 @@ function DraggableCard({
 			{/* Modal for editing - rendered as portal to escape container constraints */}
 			{showModal &&
 				ReactDOM.createPortal(
-					<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
+					<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-500">
 						<div
 							className="rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
 							style={{ backgroundColor: "#eaf1f7" }}
@@ -601,13 +611,13 @@ function DraggableCard({
 								>
 									{tempTitle}
 								</h2>
-								<div className="flex items-center gap-1 flex-shrink-0">
+								<div className="flex items-center gap-1 shrink-0">
 									{!isInstructorNote &&
 										(image.in_storyboard ? (
 											<button
 												log-id="move-figure-to-recycle-bin-button"
 												onClick={handleTrash}
-												className="bg-yellow-600 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+												className="bg-yellow-600 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
 											>
 												Move to Recycle Bin
 											</button>
@@ -615,7 +625,7 @@ function DraggableCard({
 											<button
 												log-id="restore-figure-to-storyboard-button"
 												onClick={handleUnTrash}
-												className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+												className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
 											>
 												Restore to Storyboard
 											</button>
@@ -623,14 +633,14 @@ function DraggableCard({
 									<button
 										log-id="delete-figure-button"
 										onClick={handleDelete}
-										className="bg-red-700 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+										className="bg-red-700 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
 									>
 										Permanently Delete
 									</button>
 									<button
 										log-id="save-and-close-figure-button"
 										onClick={(e) => handleClose(e)}
-										className="text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+										className="text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
 										style={{ backgroundColor: "#348b94" }}
 									>
 										Save & Close
@@ -676,7 +686,7 @@ function DraggableCard({
 												log-id="generate-description-button"
 												onClick={handleGenerateDescription}
 												disabled={loadingGenDesc}
-												className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+												className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 											>
 												{loadingGenDesc
 													? "Generating..."
