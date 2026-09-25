@@ -9,14 +9,24 @@ import {
 	type SavedWorkspace,
 } from "@/services/api";
 import WorkspaceItem from "@/components/WorkspaceItem";
+import {
+	getStorySnapshotText,
+	notifyWorkspaceSnapshotLoaded,
+} from "@/utils/storySnapshotText";
 import { useAlert } from "@/contexts/Alert";
 
 type WorkspaceMenuProps = {
 	onWorkspaceChanged?: () => void | Promise<void>;
 	disabled?: boolean;
+	/** Host workspace owner when saving in a collaboration session. */
+	targetUser?: string;
 };
 
-const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuProps) => {
+const WorkspaceMenu = ({
+	onWorkspaceChanged,
+	disabled = false,
+	targetUser,
+}: WorkspaceMenuProps) => {
 	const { showAlert } = useAlert();
 	const [workspaces, setWorkspaces] = useState<SavedWorkspace[]>([]);
 	const [limit, setLimit] = useState(3);
@@ -66,6 +76,7 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 			setLoadTarget(null);
 			await loadList();
 			await onWorkspaceChanged?.();
+			notifyWorkspaceSnapshotLoaded();
 		} catch (err) {
 			console.error(err);
 			showAlert({ level: "error", message: "Could not load snapshot into the editor." });
@@ -166,7 +177,11 @@ const WorkspaceMenu = ({ onWorkspaceChanged, disabled = false }: WorkspaceMenuPr
 		if (!name) return;
 		setBusy(true);
 		try {
-			await saveWorkspace(name, atCap ? replaceId : undefined);
+			await saveWorkspace(
+				name,
+				atCap ? replaceId : undefined,
+				getStorySnapshotText(targetUser),
+			);
 			setSaveOpen(false);
 			setReplaceConfirm(false);
 			setSaveName("");

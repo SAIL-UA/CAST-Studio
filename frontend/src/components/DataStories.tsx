@@ -9,6 +9,11 @@ import { getImageUrl } from "@/utils/imageUtils";
 import { scrollTracker } from "@/utils/scrollTracker";
 import { setStoryUserEdited } from "@/utils/storyEditState";
 import {
+	clearStorySnapshotText,
+	setStorySnapshotText,
+	WORKSPACE_SNAPSHOT_LOADED_EVENT,
+} from "@/utils/storySnapshotText";
+import {
 	STORY_STREAM_START,
 	STORY_STREAM_CHUNK,
 	STORY_REASONING_READY,
@@ -140,9 +145,12 @@ const DataStories = ({
 	const loadCachedNarrative = async () => {
 		try {
 			const response = await getNarrativeCache(targetUser);
-			if (response.data && response.data.data) {
-				const cacheData = response.data.data;
-				setStoryData({
+			if (response.status === 204 || !response.data?.data) {
+				setStoryData(null);
+				return;
+			}
+			const cacheData = response.data.data;
+			setStoryData({
 					story_structure_id: cacheData.story_structure_id,
 					narrative: cacheData.narrative,
 					recommended_order: cacheData.order,
@@ -151,9 +159,8 @@ const DataStories = ({
 					sequence_response: cacheData.sequence_justification,
 					sequence_summary: cacheData.sequence_summary,
 					rq_reasoning: cacheData.rq_reasoning,
-				});
-				console.log("Loaded cached narrative data:", cacheData);
-			}
+			});
+			console.log("Loaded cached narrative data:", cacheData);
 		} catch (error) {
 			console.log("No cached narrative found or error loading:", error);
 		}
@@ -313,6 +320,24 @@ const DataStories = ({
 			loadImageDescriptions();
 		}
 	}, [refreshTrigger]);
+
+	// Snapshot load updates NarrativeCache on the server; refetch story text locally
+	// (workspace_update may not fire when no collaboration session is active).
+	useEffect(() => {
+		const onSnapshotLoaded = () => {
+			if (isEditingRef.current) {
+				setIsEditing(false);
+				setEditNarrative("");
+				setSaveError(null);
+			}
+			setStoryUserEdited(false, targetUser);
+			void loadCachedNarrative();
+			void loadImageDescriptions();
+		};
+		window.addEventListener(WORKSPACE_SNAPSHOT_LOADED_EVENT, onSnapshotLoaded);
+		return () =>
+			window.removeEventListener(WORKSPACE_SNAPSHOT_LOADED_EVENT, onSnapshotLoaded);
+	}, [targetUser]);
 
 	// Catch up on any update that arrived while the editor was open.
 	useEffect(() => {
@@ -543,6 +568,20 @@ const DataStories = ({
 		if (!storyData) return storyData;
 		return isEditing ? { ...storyData, narrative: editNarrative } : storyData;
 	}, [storyData, isEditing, editNarrative]);
+
+	// Raw markdown for workspace snapshot saves (not image-inlined processedNarrative).
+	useEffect(() => {
+		if (!storyData?.narrative) {
+			clearStorySnapshotText(targetUser);
+			return;
+		}
+		const raw = isEditing ? editNarrative : storyData.narrative || "";
+		setStorySnapshotText(raw, targetUser);
+	}, [storyData?.narrative, isEditing, editNarrative, targetUser]);
+
+	useEffect(() => {
+		return () => clearStorySnapshotText(targetUser);
+	}, [targetUser]);
 
 	// Enter edit mode. The bumped session id remounts the composer with fresh content.
 	const handleBeginEdit = (e: React.MouseEvent) => {

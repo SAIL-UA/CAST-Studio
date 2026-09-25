@@ -12,6 +12,8 @@ class Workspace(models.Model):
   user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id', related_name='workspaces')
   name = models.CharField(max_length=100, default="Editor")
   is_active = models.BooleanField(default=True)
+  # Raw data-story text captured with a snapshot/submission (empty on the live editor).
+  story_output = models.TextField(default="", blank=True)
   created_at = models.DateTimeField(auto_now_add=True)
   last_modified = models.DateTimeField(auto_now=True)
 

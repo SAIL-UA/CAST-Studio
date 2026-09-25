@@ -62,6 +62,7 @@ erDiagram
         uuid user_id FK
         varchar name
         bool is_active
+        text story_output
         datetime created_at
         datetime last_modified
     }

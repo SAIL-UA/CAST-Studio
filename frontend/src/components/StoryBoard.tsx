@@ -829,6 +829,7 @@ const StoryBoard = ({
 						<FeedbackButton />
 						<WorkspaceMenu
 							disabled={readOnly}
+							targetUser={targetUser}
 							onWorkspaceChanged={async () => {
 								await fetchUserData();
 							}}

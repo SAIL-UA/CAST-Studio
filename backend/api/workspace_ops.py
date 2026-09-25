@@ -12,6 +12,7 @@ from .models import (
     GroupData,
     ScaffoldData,
     ResearchQuestion,
+    NarrativeCache,
 )
 
 MAX_WORKSPACES_PER_USER = 3
@@ -166,7 +167,31 @@ def clone_workspace_contents(source, dest):
     return dest
 
 
-def save_snapshot(user, name, replace_id=None):
+def resolve_snapshot_story_output(user, story_output=None):
+    """Raw narrative markdown to store on a snapshot (editor rows stay empty)."""
+    cache = NarrativeCache.objects.filter(user=user).first()
+    cached_narrative = cache.narrative if cache else ""
+    if story_output is not None:
+        if (story_output or "").strip():
+            return story_output
+        if (cached_narrative or "").strip():
+            return cached_narrative
+        return story_output or ""
+    return cached_narrative or ""
+
+
+def apply_snapshot_story_to_narrative_cache(user, story_output):
+    """Restore the snapshot's raw story into the live editor's NarrativeCache."""
+    text = story_output or ""
+    cache = NarrativeCache.objects.filter(user=user).first()
+    if cache:
+        cache.narrative = text
+        cache.save(update_fields=["narrative"])
+    elif text.strip():
+        NarrativeCache.objects.create(user=user, narrative=text)
+
+
+def save_snapshot(user, name, replace_id=None, story_output=None):
     """
     Copy the editor canvas into a named snapshot. The editor stays active
     and keeps its contents.
@@ -178,6 +203,7 @@ def save_snapshot(user, name, replace_id=None):
     name = (name or "").strip()
     if not name:
         raise ValueError("name_required")
+    captured_story = resolve_snapshot_story_output(user, story_output)
     with transaction.atomic():
         workspaces = list(Workspace.objects.select_for_update().filter(user=user))
         editor = next((w for w in workspaces if w.is_active), None)
@@ -196,12 +222,18 @@ def save_snapshot(user, name, replace_id=None):
                 raise ValueError("invalid_replace")
             old_media = clear_workspace_canvas(dest)
             dest.name = name[:100]
-            dest.save(update_fields=["name", "last_modified"])
+            dest.story_output = captured_story
+            dest.save(update_fields=["name", "last_modified", "story_output"])
             clone_workspace_contents(editor, dest)
             purge_media_ids(old_media)
             return dest
 
-        dest = Workspace.objects.create(user=user, name=name[:100], is_active=False)
+        dest = Workspace.objects.create(
+            user=user,
+            name=name[:100],
+            is_active=False,
+            story_output=captured_story,
+        )
         clone_workspace_contents(editor, dest)
         return dest
 
@@ -227,6 +259,7 @@ def restore_snapshot(user, workspace_id):
             return editor
         old_media = clear_workspace_canvas(editor)
         clone_workspace_contents(source, editor)
+        apply_snapshot_story_to_narrative_cache(user, source.story_output)
         purge_media_ids(old_media)
         return editor
 

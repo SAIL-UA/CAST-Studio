@@ -545,8 +545,15 @@ export const getWorkspaces = async () => {
   return response.data as { workspaces: SavedWorkspace[]; limit: number };
 };
 
-export const saveWorkspace = async (name: string, replaceId?: string) => {
-  const body: { name: string; replace_id?: string } = { name };
+export const saveWorkspace = async (
+  name: string,
+  replaceId?: string,
+  storyOutput?: string,
+) => {
+  const body: { name: string; replace_id?: string; story_output: string } = {
+    name,
+    story_output: storyOutput ?? '',
+  };
   if (replaceId) body.replace_id = replaceId;
   const response = await API.post('/workspaces/', body);
   return response.data;
