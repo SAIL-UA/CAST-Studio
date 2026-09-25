@@ -28,6 +28,7 @@ import ClearAllButton from "./ClearAllButton";
 import FullscreenButton from "./FullscreenButton";
 // import MobileMenuButton from './MobileMenuButton';
 import RecycleBoard from "./Recycle";
+import { useAlert } from "@/contexts/Alert";
 
 // Import scaffolds
 import CauseEffect from "./scaffolds/CauseEffect";
@@ -91,6 +92,7 @@ const StoryBoard = ({
 	onSessionChange,
 	hideToolbar = false,
 }: StoryBoardProps) => {
+	const { showAlert } = useAlert();
 	// States
 	const [groupDivs, setGroupDivs] = useState<GroupData[]>([]);
 	const [scaffolds, setScaffolds] = useState<ScaffoldData[]>([]);
@@ -237,7 +239,6 @@ const StoryBoard = ({
 
 	// Scaffold limit
 	const MAX_SCAFFOLDS = 3;
-	const [scaffoldLimitAlert, setScaffoldLimitAlert] = useState<string | null>(null);
 
 	// Listen for scaffold creation events from SelectNarrativeButton
 	useEffect(() => {
@@ -256,9 +257,11 @@ const StoryBoard = ({
 
 		// Enforce limit
 		if (scaffolds.length >= MAX_SCAFFOLDS) {
-			setScaffoldLimitAlert(
-				"You are allowed a maximum of three narratives at one time. Remove an existing narrative to continue.",
-			);
+			showAlert({
+				level: "warning",
+				message:
+					"You are allowed a maximum of three narratives at one time. Remove an existing narrative to continue.",
+			});
 			return;
 		}
 
@@ -790,7 +793,12 @@ const StoryBoard = ({
 								await fetchUserData();
 								await fetchGroups();
 							}}
-							onError={(msg) => setScaffoldLimitAlert(msg)}
+							onError={(msg) =>
+								showAlert({
+									level: /failed|error/i.test(msg) ? "error" : "warning",
+									message: msg,
+								})
+							}
 							images={images}
 						/>
 						<GenerateStoryButton
@@ -1571,23 +1579,6 @@ const StoryBoard = ({
 					)}
 				</div>
 			</div>
-
-			{/* Recycle Bin Modal */}
-			{scaffoldLimitAlert && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-500">
-					<div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4">
-						<div className="text-sm text-grey-darkest">{scaffoldLimitAlert}</div>
-						<div className="mt-6 text-right">
-							<button
-								onClick={() => setScaffoldLimitAlert(null)}
-								className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-150"
-							>
-								OK
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
 
 			{recycleBinOpen &&
 				ReactDOM.createPortal(
