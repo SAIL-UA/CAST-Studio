@@ -3,8 +3,8 @@ import type { JSX } from 'react';
 
 import { $applyNodeReplacement, DecoratorNode } from 'lexical';
 
-import { getImageUrl } from '../../utils/imageUtils';
-import { useDataStoryLexicalEnv } from './DataStoryLexicalEnv';
+import { getImageUrl } from '@/utils/imageUtils';
+import { useDataStoryLexicalEnv } from '@/components/dataStory/DataStoryLexicalEnv';
 
 export type SerializedFigureNode = Spread<
     {

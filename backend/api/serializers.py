@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
   ImageData, NarrativeCache, JupyterLog,
   UserAction, MousePositionLog, ScrollLog,
-  GroupData, ScaffoldData, ResearchQuestion
+  GroupData, ScaffoldData, ResearchQuestion, Workspace
 )
 
 class UserActionSerializer(serializers.ModelSerializer):
@@ -10,20 +10,37 @@ class UserActionSerializer(serializers.ModelSerializer):
     model = UserAction
     fields = '__all__'
 
+class WorkspaceSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = Workspace
+    fields = ('id', 'name', 'is_active', 'created_at', 'last_modified')
+    read_only_fields = ('id', 'is_active', 'created_at', 'last_modified')
+
+
 class GroupDataSerializer(serializers.ModelSerializer):
   class Meta:
     model = GroupData
     fields = '__all__'
+    extra_kwargs = {
+      'workspace': {'required': False},
+    }
 
 class ImageDataSerializer(serializers.ModelSerializer):
   short_desc = serializers.CharField(allow_blank=True, required=False)
   long_desc = serializers.CharField(allow_blank=True, required=False)
-  filepath = serializers.CharField(allow_blank=True, required=False)
+  filepath = serializers.SerializerMethodField()
   source = serializers.CharField(allow_blank=True, required=False)
+
+  def get_filepath(self, obj):
+    return obj.filepath
 
   class Meta:
     model = ImageData
     fields = '__all__'
+    extra_kwargs = {
+      'workspace': {'required': False},
+      'media': {'required': False, 'allow_null': True},
+    }
 
 class NarrativeCacheSerializer(serializers.ModelSerializer):
   class Meta:
@@ -49,6 +66,9 @@ class ScaffoldDataSerializer(serializers.ModelSerializer):
   class Meta:
     model = ScaffoldData
     fields = '__all__'
+    extra_kwargs = {
+      'workspace': {'required': False},
+    }
 
 class ResearchQuestionSerializer(serializers.ModelSerializer):
   # M2M fields serialize to lists of ids, which is what the panel's checklist sends back.
@@ -57,3 +77,6 @@ class ResearchQuestionSerializer(serializers.ModelSerializer):
   class Meta:
     model = ResearchQuestion
     fields = '__all__'
+    extra_kwargs = {
+      'workspace': {'required': False},
+    }

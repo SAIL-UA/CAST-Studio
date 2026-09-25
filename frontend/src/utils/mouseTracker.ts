@@ -1,5 +1,5 @@
-import { getNormalizedPosition } from './utils';
-import { logMousePositionBatch } from '../services/api';
+import { getNormalizedPosition } from '@/utils/utils';
+import { logMousePositionBatch } from '@/services/api';
 
 interface MousePosition {
   x: number;

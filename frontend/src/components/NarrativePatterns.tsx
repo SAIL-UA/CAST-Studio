@@ -3,19 +3,10 @@ import { useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 
 // Import components
-import SelectNarrativeButton from './SelectNarrativeButton';
-import NarrativeExamplesButton from './NarrativeExamplesButton';
-import { logAction } from '../utils/userActionLogger';
-import { useGuestTourOpen } from '../utils/useGuestTourOpen';
-
-// Import images
-import questionanswer from '../assets/images/questionanswer.png'
-import timeline from '../assets/images/timeline.png'
-import causeeffect from '../assets/images/causeeffect.png'
-import factoranalysis from '../assets/images/factoranalysis.png'
-import overviewdetail from '../assets/images/overviewdetail.png'
-import problemsolution from '../assets/images/problemsolution.png'
-import workflowprocess from '../assets/images/workflow.png'
+import SelectNarrativeButton from '@/components/SelectNarrativeButton';
+import NarrativeExamplesButton from '@/components/NarrativeExamplesButton';
+import { logAction } from '@/utils/userActionLogger';
+import { useGuestTourOpen } from '@/utils/useGuestTourOpen';
 
 // Content SVG icons
 const C = '#005c84';
@@ -156,7 +147,7 @@ type NarrativePatternsProps = {
 }
 
 // Narrative patterns component
-const NarrativePatterns = ({ setSelectedPattern, setRightNarrativePatternsOpen, center, setStoryLoading, setRightNarrativeExamplesOpen, setExamplesPattern, onCreateScaffold }: NarrativePatternsProps) => {
+const NarrativePatterns = ({ setSelectedPattern, center, setStoryLoading, setRightNarrativeExamplesOpen, setExamplesPattern, onCreateScaffold }: NarrativePatternsProps) => {
 
     // Reusable hover handler that captures pattern from data attribute
     const handleHover = (e: React.MouseEvent<HTMLDivElement>) => {

@@ -1,11 +1,11 @@
 // Import dependencies
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDrop } from 'react-dnd';
-import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
-import { SCAFFOLD_VALID_GROUP_NUMBERS, SCAFFOLD_GROUP_LABELS } from '../../types/scaffoldMappings';
-import DraggableCard from '../DraggableCard';
-import GroupDiv from '../GroupDiv';
-import { logAction } from '../../utils/userActionLogger';
+import type { ImageData, DragItem, ScaffoldData, GroupData } from '@/types/types';
+import { SCAFFOLD_GROUP_LABELS } from '@/types/scaffoldMappings';
+import DraggableCard from '@/components/DraggableCard';
+import GroupDiv from '@/components/GroupDiv';
+import { logAction } from '@/utils/userActionLogger';
 
 const SCAFFOLD_NUMBER = 3;
 const MIN_SLOTS = 2;
@@ -52,7 +52,6 @@ function getMaxSlotInData(scaffold: ScaffoldData | null, images: ImageData[]): n
 const TimeBased = ({
     images,
     storyBinRef,
-    setSelectedPattern,
     scaffold,
     updateImageData,
     onPositionUpdate,
@@ -82,7 +81,6 @@ const TimeBased = ({
     const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    const validGroupNumbers = SCAFFOLD_VALID_GROUP_NUMBERS[SCAFFOLD_NUMBER] || [1, 2, 3, 4];
     const groupLabels = SCAFFOLD_GROUP_LABELS[SCAFFOLD_NUMBER] || { 1: 'Period 1', 2: 'Period 2', 3: 'Period 3', 4: 'Period 4' };
 
     // Display slot count: derive from data (max scaffold_group_number in groups + images), default 2 when no data
@@ -144,7 +142,7 @@ const TimeBased = ({
         logAction({ actionType: 'click', elementId: 'scaffold-card-add' }, { scaffoldType: 'time_based', groupNumber: period });
     };
 
-    const handleCardRemove = async (cardId: string, groupId: string) => {
+    const handleCardRemove = async (cardId: string) => {
         if (!scaffold) return;
 
         await updateImageData(cardId, {
@@ -287,7 +285,7 @@ const TimeBased = ({
                                 logAction(e);
                                 handleAddPeriod();
                             }}
-                            className="px-2 py-0.5 text-xs bg-white bg-opacity-20 hover:bg-opacity-40 rounded transition-all duration-200"
+                            className="px-2 py-0.5 text-xs bg-white/20 hover:bg-white/40 rounded transition-all duration-200"
                             title="Add period"
                             log-id="scaffold-slot-add"
                         >
@@ -301,7 +299,7 @@ const TimeBased = ({
                                 logAction(e);
                                 handleRemovePeriod();
                             }}
-                            className="px-2 py-0.5 text-xs bg-white bg-opacity-20 hover:bg-opacity-40 rounded transition-all duration-200"
+                            className="px-2 py-0.5 text-xs bg-white/20 hover:bg-white/40 rounded transition-all duration-200"
                             title="Remove last period"
                             log-id="scaffold-slot-remove"
                         >
@@ -311,7 +309,7 @@ const TimeBased = ({
                     {!readOnly && (
                     <button
                         onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('createScaffold', { detail: { pattern: 'time_based' } })); }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Duplicate scaffold"
                     >
@@ -324,7 +322,7 @@ const TimeBased = ({
                     {!readOnly && (
                     <button
                         onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('generateScaffoldStory', { detail: { scaffoldId: scaffold?.id || '' } })); }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Generate story for this scaffold"
                     >
@@ -340,7 +338,7 @@ const TimeBased = ({
                             logAction(e);
                             onClose();
                         }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Close Timeline scaffold"
                         log-id="scaffold-close"
@@ -424,7 +422,7 @@ const TimeBasedPeriod = ({
     const [{ isOver, canDrop }, drop] = useDrop(
         () => ({
             accept: ['image', 'group'],
-            drop: (item: DragItem, monitor) => {
+            drop: (item: DragItem) => {
                 if (item.id === 'time-based-scaffold') return { droppedInGroup: false };
                 if (item.type !== 'group' && item.groupId !== id && cards.length < 6) {
                     onCardAdd(item.id, id);

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 // Import API functions
-import { requestPasswordReset } from '../services/api';
+import { requestPasswordReset } from '@/services/api';
 
 // Forgot Password component
 const ForgotPassword = () => {

@@ -1,15 +1,15 @@
 // Import dependencies
 import { useState, useEffect, useRef } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { captureActionContext, logAction } from '../utils/userActionLogger';
-import { generateNarrativeAsync, getImageDataAll, getNarrativeCache } from '../services/api';
-import { useTaskProgress } from '../hooks/useTaskProgress';
-import { SCAFFOLD_NUMBER_TO_PATTERN } from '../types/scaffoldMappings';
-import { getStoryUserEdited, setStoryUserEdited, STORY_EDIT_STATE_EVENT } from '../utils/storyEditState';
-import { STORY_STREAM_START, STORY_STREAM_CHUNK, STORY_STREAM_END, STORY_REASONING_READY, STORY_GENERATION_STAGE } from '../utils/storyStreamEvents';
+import { captureActionContext, logAction } from '@/utils/userActionLogger';
+import { generateNarrativeAsync, getImageDataAll, getNarrativeCache } from '@/services/api';
+import { useTaskProgress } from '@/hooks/useTaskProgress';
+import { SCAFFOLD_NUMBER_TO_PATTERN } from '@/types/scaffoldMappings';
+import { getStoryUserEdited, setStoryUserEdited, STORY_EDIT_STATE_EVENT } from '@/utils/storyEditState';
+import { STORY_STREAM_START, STORY_STREAM_CHUNK, STORY_STREAM_END, STORY_REASONING_READY, STORY_GENERATION_STAGE } from '@/utils/storyStreamEvents';
 
 // Import types
-import { ImageData, ScaffoldData } from '../types/types';
+import type { ImageData, ScaffoldData } from '@/types/types';
 const DESCRIPTION_PLACEHOLDER = 'Ask AI to create a description for this visual.';
 
 // Props interface
@@ -39,7 +39,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
     // pollForCompletion checks this and bails so we don't dispatch a duplicate
     // storyGenerated event a beat later.
     const earlyCompleteRef = useRef(false);
-    const { progress, stageName, error, isComplete } = useTaskProgress(taskId);
+    const { progress, stageName, error } = useTaskProgress(taskId);
 
     // Forward the current task-progress stage to any listener (DataStories) so
     // the "AI is writing" placeholder can annotate itself with the live stage
@@ -188,21 +188,13 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
         // --- Categorize storyboard items ---
         const storyboardItems = images.filter(img => img.in_storyboard && img.source !== 'instructor');
         const actualImages = storyboardItems.filter(img => img.filepath && img.filepath !== '');
-        const stickyNotes = storyboardItems.filter(img => !img.filepath || img.filepath === '');
 
         const hasValidDescription = (img: ImageData) => {
             return img.long_desc && img.long_desc.trim() !== '' && img.long_desc !== DESCRIPTION_PLACEHOLDER;
         };
-        const hasContent = (img: ImageData) => {
-            // Sticky note has content if long_desc has text OR title was changed from default "Note N"
-            if (hasValidDescription(img)) return true;
-            const defaultTitlePattern = /^Note \d+$/;
-            return img.short_desc && !defaultTitlePattern.test(img.short_desc);
-        };
 
         const annotatedImages = actualImages.filter(img => hasValidDescription(img));
         const unannotatedImages = actualImages.filter(img => !hasValidDescription(img));
-        const contentNotes = stickyNotes.filter(img => hasContent(img));
 
         const scaffoldId = targetScaffoldIdRef.current;
 
@@ -484,7 +476,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
             )}
 
             {alertModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
                     <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
                         <div className="text-sm text-grey-darkest whitespace-pre-wrap">
                             {alertModal}
@@ -503,7 +495,7 @@ const CraftStoryButton = ({ images = [], storyLoading, setStoryLoading, hasGroup
             )}
 
             {confirmModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
                     <div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4">
                         <div className="text-sm text-grey-darkest">
                             {confirmModal}

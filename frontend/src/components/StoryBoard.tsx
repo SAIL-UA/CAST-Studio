@@ -12,7 +12,6 @@ import {
 	updateScaffold,
 	deleteScaffold,
 } from "../services/api";
-import { logAction } from "../utils/userActionLogger";
 
 // Import components
 import UploadButton from "./UploadButton";
@@ -44,11 +43,9 @@ import Linear from "./scaffolds/Linear";
 import InvertedPyramid from "./scaffolds/InvertedPyramid";
 
 // Import types
-import { ImageData, GroupData, ScaffoldData } from "../types/types";
-import {
-	SCAFFOLD_NUMBER_TO_PATTERN,
-	SCAFFOLD_VALID_GROUP_NUMBERS,
-} from "../types/scaffoldMappings";
+import type { ImageData, GroupData, ScaffoldData } from "@/types/types";
+import { SCAFFOLD_NUMBER_TO_PATTERN } from "../types/scaffoldMappings";
+import WorkspaceMenu from "./WorkspaceMenu";
 
 // Define props interface
 type StoryBoardProps = {
@@ -90,7 +87,6 @@ const StoryBoard = ({
 	handleImageRestore,
 	readOnly = false,
 	targetUser,
-	readOnlyToolbar,
 	refreshTrigger,
 	onSessionChange,
 	hideToolbar = false,
@@ -389,7 +385,7 @@ const StoryBoard = ({
 			});
 
 			// Update nextGroupNumber to be the count of remaining groups + 1
-			setNextGroupNumber((prev) => {
+			setNextGroupNumber(() => {
 				const remainingCount = groupDivs.filter((group) => group.id !== groupId).length;
 				return remainingCount + 1;
 			});
@@ -744,7 +740,7 @@ const StoryBoard = ({
 		<div id="story-board-container" className="flex flex-col h-full w-full bg-white">
 			<div
 				id="story-bin-header"
-				className={`flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-[305px] flex-shrink-0 grid-background ${hideToolbar ? "min-h-[58px]" : ""}`}
+				className={`flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-76.25 shrink-0 grid-background ${hideToolbar ? "min-h-14.5" : ""}`}
 			>
 				{!hideToolbar && (
 					<div
@@ -823,6 +819,12 @@ const StoryBoard = ({
 							})()}
 						/>
 						<FeedbackButton />
+						<WorkspaceMenu
+							disabled={readOnly}
+							onWorkspaceChanged={async () => {
+								await fetchUserData();
+							}}
+						/>
 						<CollaborateButton onSessionChange={onSessionChange} />
 					</div>
 				)}
@@ -1474,7 +1476,7 @@ const StoryBoard = ({
 					))}
 				</Bin>
 				{/* Zoom controls - positioned in bottom right */}
-				<div className="absolute bottom-6 right-4 flex items-center gap-2 z-[350] bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-sm border border-grey-light">
+				<div className="absolute bottom-6 right-4 flex items-center gap-2 z-350 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-sm border border-grey-light">
 					<button
 						className="text-sm font-medium px-1 hover:text-blue-600 disabled:opacity-30"
 						onClick={() =>
@@ -1507,7 +1509,7 @@ const StoryBoard = ({
 					</span>
 				</div>
 				{/* Fullscreen, Recycle Bin, ClearAll and DeleteAll - bottom left */}
-				<div className="absolute bottom-6 left-4 flex gap-2 z-[350]">
+				<div className="absolute bottom-6 left-4 flex gap-2 z-350">
 					<FullscreenButton />
 					{!readOnly && (
 						<>
@@ -1572,7 +1574,7 @@ const StoryBoard = ({
 
 			{/* Recycle Bin Modal */}
 			{scaffoldLimitAlert && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-500">
 					<div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4">
 						<div className="text-sm text-grey-darkest">{scaffoldLimitAlert}</div>
 						<div className="mt-6 text-right">
@@ -1589,10 +1591,10 @@ const StoryBoard = ({
 
 			{recycleBinOpen &&
 				ReactDOM.createPortal(
-					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]">
+					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-500">
 						<div className="bg-white rounded-lg shadow-xl w-[80vw] h-[70vh] flex flex-col overflow-hidden">
 							{/* Modal Header */}
-							<div className="flex justify-between items-center px-4 py-3 border-b border-grey-lightest flex-shrink-0">
+							<div className="flex justify-between items-center px-4 py-3 border-b border-grey-lightest shrink-0">
 								<h3 className="text-lg font-semibold text-grey-darkest">
 									Recycle Bin
 								</h3>
