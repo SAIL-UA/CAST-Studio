@@ -20,12 +20,12 @@ import CraftStoryButton from "@/components/CraftStoryButton";
 import GroupButton from "@/components/GroupButton";
 import FeedbackButton from "@/components/FeedbackButton";
 import CollaborateButton from "@/components/CollaborateButton";
+import WorkspaceMenu from "@/components/WorkspaceMenu";
 import AnnotateVisualsButton from "@/components/AnnotateVisualsButton";
 import GroupDiv from "@/components/GroupDiv";
 import Bin from "@/components/Bin";
 import DeleteAllButton from "@/components/DeleteAllButton";
 import ClearAllButton from "@/components/ClearAllButton";
-// import MobileMenuButton from '@/components/MobileMenuButton';
 import RecycleBoard from "@/components/Recycle";
 
 // Import scaffolds
@@ -817,6 +817,12 @@ const StoryBoard = ({
 							})()}
 						/>
 						<FeedbackButton />
+						<WorkspaceMenu
+							disabled={readOnly}
+							onWorkspaceChanged={async () => {
+								await fetchUserData();
+							}}
+						/>
 						<CollaborateButton onSessionChange={onSessionChange} />
 					</div>
 				)}

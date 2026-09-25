@@ -13,7 +13,8 @@ from .views import (
     HostSessionView, CloseSessionView, SessionStatusView, JoinSessionView,
     TakeControlView, ReturnControlView, ExportWorkspaceReportView, UploadSlidesView,
     GetResearchQuestionView, CreateResearchQuestionView, UpdateResearchQuestionView,
-    DeleteResearchQuestionView, UpdateResearchQuestionLinksView
+    DeleteResearchQuestionView, UpdateResearchQuestionLinksView,
+    WorkspaceListCreateView, WorkspaceDetailView, WorkspaceActivateView
 )
 
 urlpatterns = [
@@ -38,6 +39,10 @@ urlpatterns = [
     path("collaborate/session/<str:share_token>/", JoinSessionView.as_view(), name="collaborate-join"),
     path("collaborate/control/take/", TakeControlView.as_view(), name="collaborate-take-control"),
     path("collaborate/control/return/", ReturnControlView.as_view(), name="collaborate-return-control"),
+
+    path("workspaces/", WorkspaceListCreateView.as_view(), name="workspace-list"),
+    path("workspaces/<uuid:workspace_id>/", WorkspaceDetailView.as_view(), name="workspace-detail"),
+    path("workspaces/<uuid:workspace_id>/activate/", WorkspaceActivateView.as_view(), name="workspace-activate"),
 
     # Images
     path("images/", ImageDataView.as_view(), name="image-list"),  # GET list or single via query param

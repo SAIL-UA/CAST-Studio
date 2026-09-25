@@ -11,6 +11,7 @@ backend/jupyterhub.sqlite
 *.md
 !README.md
 !jira.md
+!ERD.md
 
 # Django migrations
 **/migrations/*.py
