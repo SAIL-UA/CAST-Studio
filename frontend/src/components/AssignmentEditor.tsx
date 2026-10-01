@@ -5,7 +5,12 @@ import type { AssignmentRecord } from "@/services/api";
 type AssignmentEditorProps = {
 	initial?: AssignmentRecord | null;
 	saving?: boolean;
-	onSave: (data: { title: string; body: string; is_active: boolean }) => void | Promise<void>;
+	onSave: (data: {
+		title: string;
+		body: string;
+		max_points: number;
+		is_active: boolean;
+	}) => void | Promise<void>;
 	onCancel: () => void;
 };
 
@@ -14,13 +19,22 @@ const noopCaption = () => "";
 const AssignmentEditor = ({ initial, saving = false, onSave, onCancel }: AssignmentEditorProps) => {
 	const [title, setTitle] = useState(initial?.title ?? "");
 	const [body, setBody] = useState(initial?.body ?? "");
+	const [maxPoints, setMaxPoints] = useState(String(initial?.max_points ?? 100));
 	const [isActive, setIsActive] = useState(initial?.is_active ?? false);
 	const [composerKey] = useState(() => `assignment-${initial?.id ?? "new"}-${Date.now()}`);
 
+	const parsedMax = Number(maxPoints);
+	const maxValid = Number.isInteger(parsedMax) && parsedMax > 0;
+
 	const handleSave = () => {
 		const trimmed = title.trim();
-		if (!trimmed) return;
-		onSave({ title: trimmed, body, is_active: isActive });
+		if (!trimmed || !maxValid) return;
+		onSave({
+			title: trimmed,
+			body,
+			max_points: parsedMax,
+			is_active: isActive,
+		});
 	};
 
 	return (
@@ -40,6 +54,27 @@ const AssignmentEditor = ({ initial, saving = false, onSave, onCancel }: Assignm
 					placeholder="Assignment title"
 					className="w-full border border-grey-light rounded-lg px-3 py-2 text-sm text-grey-darkest outline-none focus:border-bama-crimson"
 				/>
+			</div>
+
+			<div>
+				<label
+					htmlFor="assignment-max-points"
+					className="block text-sm font-medium text-grey-darkest mb-1"
+				>
+					Maximum points
+				</label>
+				<input
+					id="assignment-max-points"
+					type="number"
+					min={1}
+					step={1}
+					value={maxPoints}
+					onChange={(e) => setMaxPoints(e.target.value)}
+					className="w-32 border border-grey-light rounded-lg px-3 py-2 text-sm text-grey-darkest outline-none focus:border-bama-crimson"
+				/>
+				{!maxValid && (
+					<p className="text-xs text-bama-crimson mt-1">Enter a positive whole number.</p>
+				)}
 			</div>
 
 			<div>
@@ -69,14 +104,16 @@ const AssignmentEditor = ({ initial, saving = false, onSave, onCancel }: Assignm
 					onChange={(e) => setIsActive(e.target.checked)}
 					className="w-4 h-4 accent-bama-crimson"
 				/>
-				<span className="text-sm text-grey-darkest">Active</span>
+				<span className="text-sm text-grey-darkest">
+					Active (only one assignment can be active at a time)
+				</span>
 			</label>
 
 			<div className="flex items-center gap-3 pt-2">
 				<button
 					type="button"
 					onClick={handleSave}
-					disabled={saving || !title.trim()}
+					disabled={saving || !title.trim() || !maxValid}
 					className="bg-bama-crimson text-sm text-white rounded-full px-4 py-1.5 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					{saving ? "Saving..." : initial ? "Save Changes" : "Create Assignment"}

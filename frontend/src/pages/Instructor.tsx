@@ -11,6 +11,7 @@ import {
 	getAssignments,
 	createAssignment,
 	updateAssignment,
+	exportAssignmentGrades,
 	type AssignmentRecord,
 } from "@/services/api";
 import Header from "@/components/Header";
@@ -137,9 +138,17 @@ const Instructor = () => {
 			const result = await updateAssignment(assignment.id, {
 				is_active: !assignment.is_active,
 			});
-			setAssignments((prev) =>
-				prev.map((a) => (a.id === assignment.id ? result.assignment : a)),
-			);
+			setAssignments((prev) => {
+				const updated = prev.map((a) =>
+					a.id === assignment.id ? result.assignment : a,
+				);
+				if (result.assignment.is_active) {
+					return updated.map((a) =>
+						a.id === result.assignment.id ? a : { ...a, is_active: false },
+					);
+				}
+				return updated;
+			});
 		} catch (err) {
 			console.error("Error toggling assignment:", err);
 			showAlert({
@@ -154,19 +163,37 @@ const Instructor = () => {
 	const handleSaveAssignment = async (data: {
 		title: string;
 		body: string;
+		max_points: number;
 		is_active: boolean;
 	}) => {
 		setSavingAssignment(true);
 		try {
 			if (assignmentView === "edit" && editingAssignment) {
 				const result = await updateAssignment(editingAssignment.id, data);
-				setAssignments((prev) =>
-					prev.map((a) => (a.id === editingAssignment.id ? result.assignment : a)),
-				);
+				setAssignments((prev) => {
+					const updated = prev.map((a) =>
+						a.id === editingAssignment.id ? result.assignment : a,
+					);
+					// Server deactivates others when this one is active.
+					if (result.assignment.is_active) {
+						return updated.map((a) =>
+							a.id === result.assignment.id ? a : { ...a, is_active: false },
+						);
+					}
+					return updated;
+				});
 				showAlert({ level: "success", message: "Assignment updated." });
 			} else {
 				const result = await createAssignment(data);
-				setAssignments((prev) => [result.assignment, ...prev]);
+				setAssignments((prev) => {
+					const next = [result.assignment, ...prev];
+					if (result.assignment.is_active) {
+						return next.map((a) =>
+							a.id === result.assignment.id ? a : { ...a, is_active: false },
+						);
+					}
+					return next;
+				});
 				showAlert({ level: "success", message: "Assignment created." });
 			}
 			setAssignmentView("list");
@@ -182,6 +209,18 @@ const Instructor = () => {
 			}
 		} finally {
 			setSavingAssignment(false);
+		}
+	};
+
+	const handleDownloadGrades = async (assignment: AssignmentRecord) => {
+		try {
+			await exportAssignmentGrades(assignment.id);
+		} catch (err) {
+			console.error("Error exporting grades:", err);
+			showAlert({
+				level: "error",
+				message: "An error occurred while exporting the grade report.",
+			});
 		}
 	};
 
@@ -688,6 +727,9 @@ const Instructor = () => {
 													Title
 												</th>
 												<th className="text-left p-3 font-medium text-grey-darkest">
+													Max Points
+												</th>
+												<th className="text-left p-3 font-medium text-grey-darkest">
 													Status
 												</th>
 												<th className="text-left p-3 font-medium text-grey-darkest">
@@ -706,6 +748,9 @@ const Instructor = () => {
 												>
 													<td className="p-3 text-grey-darkest">
 														{assignment.title}
+													</td>
+													<td className="p-3 text-grey-darkest">
+														{assignment.max_points}
 													</td>
 													<td className="p-3">
 														<label className="inline-flex items-center gap-2 cursor-pointer">
@@ -737,23 +782,34 @@ const Instructor = () => {
 														{formatDate(assignment.last_modified)}
 													</td>
 													<td className="p-3">
-														<button
-															type="button"
-															onClick={() => {
-																setEditingAssignment(assignment);
-																setAssignmentView("edit");
-															}}
-															className="bg-bama-crimson text-xs text-white rounded-full px-3 py-1 hover:brightness-95 transition duration-200"
-														>
-															Edit
-														</button>
+														<div className="flex items-center gap-2">
+															<button
+																type="button"
+																onClick={() => {
+																	setEditingAssignment(assignment);
+																	setAssignmentView("edit");
+																}}
+																className="bg-bama-crimson text-xs text-white rounded-full px-3 py-1 hover:brightness-95 transition duration-200"
+															>
+																Edit
+															</button>
+															<button
+																type="button"
+																onClick={() =>
+																	handleDownloadGrades(assignment)
+																}
+																className="bg-white text-xs text-grey-darkest border border-grey-light rounded-full px-3 py-1 hover:bg-grey-lighter transition duration-200"
+															>
+																Download grades
+															</button>
+														</div>
 													</td>
 												</tr>
 											))}
 											{assignments.length === 0 && (
 												<tr>
 													<td
-														colSpan={4}
+														colSpan={5}
 														className="p-3 text-center text-grey-dark"
 													>
 														No assignments yet. Click "+ Create

@@ -39,6 +39,8 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 	const { showAlert } = useAlert();
 	const [used, setUsed] = useState(0);
 	const [limit, setLimit] = useState(3);
+	const [assignmentTitle, setAssignmentTitle] = useState<string | null>(null);
+	const [hasActiveAssignment, setHasActiveAssignment] = useState(true);
 	const [busy, setBusy] = useState(false);
 	const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -47,6 +49,8 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 			const data = await getSubmissionStatus();
 			setUsed(data.used ?? 0);
 			setLimit(data.limit ?? 3);
+			setAssignmentTitle(data.assignment_title ?? null);
+			setHasActiveAssignment(Boolean(data.assignment_id));
 		} catch (err) {
 			console.error("Error loading submission status:", err);
 		}
@@ -62,11 +66,18 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 	const openConfirm = (e: React.MouseEvent) => {
 		logAction(e);
 		if (disabled || busy) return;
+		if (!hasActiveAssignment) {
+			showAlert({
+				level: "warning",
+				message: "No active assignment is available to submit to.",
+			});
+			return;
+		}
 		if (atCap) {
 			showAlert({
 				level: "warning",
 				message:
-					"You have used all submission attempts. Please contact your instructor for more information.",
+					"You have used all submission attempts for this assignment. Please contact your instructor for more information.",
 			});
 			return;
 		}
@@ -80,10 +91,12 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 			setConfirmOpen(false);
 			setUsed(data.used ?? used + 1);
 			setLimit(data.limit ?? limit);
+			setAssignmentTitle(data.assignment_title ?? assignmentTitle);
+			setHasActiveAssignment(Boolean(data.assignment_id));
 			const left = data.remaining ?? Math.max(0, (data.limit ?? limit) - (data.used ?? 0));
 			showAlert({
 				level: "success",
-				message: `Submitted successfully. ${left} of ${data.limit ?? limit} attempt${(data.limit ?? limit) === 1 ? "" : "s"} remaining.`,
+				message: `Submitted successfully${data.assignment_title ? ` to “${data.assignment_title}”` : ""}. ${left} of ${data.limit ?? limit} attempt${(data.limit ?? limit) === 1 ? "" : "s"} remaining.`,
 			});
 		} catch (err: any) {
 			const code = err?.response?.data?.code;
@@ -94,7 +107,15 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 					level: "warning",
 					message:
 						err.response.data.error ||
-						"Submission limit reached. Please contact your instructor for more information.",
+						"Submission limit reached for this assignment. Please contact your instructor for more information.",
+				});
+			} else if (code === "no_active_assignment") {
+				setHasActiveAssignment(false);
+				showAlert({
+					level: "warning",
+					message:
+						err.response.data.error ||
+						"No active assignment is available to submit to.",
 				});
 			} else {
 				showAlert({ level: "error", message: "Could not submit. Please try again." });
@@ -105,21 +126,23 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 		}
 	};
 
+	const titleHint = !hasActiveAssignment
+		? "No active assignment"
+		: atCap
+			? "No submission attempts remaining for this assignment"
+			: `Submit to ${assignmentTitle ?? "assignment"} (${remaining} of ${limit} remaining)`;
+
 	return (
 		<>
 			<button
 				id="submit-button"
 				log-id="submit-button"
 				type="button"
-				disabled={disabled || busy}
-				title={
-					atCap
-						? "No submission attempts remaining"
-						: `Submit (${remaining} of ${limit} remaining)`
-				}
+				disabled={disabled || busy || !hasActiveAssignment || atCap}
+				title={titleHint}
 				onClick={openConfirm}
 				className={`text-sm text-white rounded-full px-3 py-1 mx-1 transition duration-200 ${
-					disabled || busy || atCap
+					disabled || busy || !hasActiveAssignment || atCap
 						? "bg-green-600/50 cursor-not-allowed"
 						: "bg-green-600 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95"
 				}`}
@@ -132,9 +155,14 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 				title="Submit your work?"
 				onClose={() => !busy && setConfirmOpen(false)}
 			>
+				{assignmentTitle && (
+					<p className="text-sm text-grey-dark mb-2">
+						Assignment: <strong>{assignmentTitle}</strong>
+					</p>
+				)}
 				<p className="text-sm text-grey-dark mb-2">
-					Submitting uses <strong>one of your {limit} submission attempts</strong> ({used}{" "}
-					used, {remaining} remaining).
+					Submitting uses <strong>one of your {limit} attempts for this assignment</strong>{" "}
+					({used} used, {remaining} remaining).
 				</p>
 				<p className="text-sm text-grey-dark mb-4">
 					Your submission is final and immutable — you will not be able to edit or reload

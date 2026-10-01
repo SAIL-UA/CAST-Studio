@@ -20,6 +20,7 @@ import GuestWelcomeTutorial from '@/components/GuestWelcomeTutorial'
 import { handleAuthRequired } from '@/utils/utils';
 import { getImageDataAll, getSessionStatus, getGroups } from '@/services/api';
 import ResearchQuestionsPanel, { type LinkableCard } from '@/components/ResearchQuestionsPanel';
+import AssignmentCriteriaPanel from '@/components/AssignmentCriteriaPanel';
 import { useResearchQuestions } from '@/contexts/ResearchQuestions';
 import { getAvatarColor } from '@/utils/avatarUtils';
 import ControlWorkspaceButton from '@/components/ControlWorkspaceButton';
@@ -48,6 +49,7 @@ const Home = () => {
     const [leftMenuOpen, setLeftMenuOpen] = useState(false);
     const [dataStoriesExpanded, setDataStoriesExpanded] = useState(false);
     const [rqExpanded, setRqExpanded] = useState(false);
+    const [assignmentExpanded, setAssignmentExpanded] = useState(false);
     const [rqCards, setRqCards] = useState<LinkableCard[]>([]);
 
     // Session state for host avatars
@@ -401,38 +403,61 @@ const Home = () => {
                         </div>
                     </div>
 
-                    {/* Research Questions — left-anchored collapsible panel, mirrors Feedback */}
-                    {/* items-center (not items-start) keeps the tab centred against the 80vh panel */}
+                    {/* Assignment + Research Questions — shared left rail, tabs stacked flush */}
                     <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[300] flex flex-row items-start transition-all duration-300">
-                        {/* Toggle bar — vertical on the right edge */}
-                        <button
-                            id="rq-toggle"
-                            log-id="research-questions-toggle"
-                            className="flex items-center justify-center text-xs text-white hover:brightness-110 rounded-r-xl transition-colors duration-150 flex-shrink-0 px-1.5 py-2.5 shadow-lg"
-                            onClick={() => setRqExpanded(!rqExpanded)}
-                            style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', background: '#348b95' }}
-                        >
-                            <svg
-                                className={`w-3 h-3 mb-1.5 transition-transform duration-300 ${rqExpanded ? 'rotate-180' : 'rotate-0'}`}
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        <div className="flex flex-col gap-0.5 flex-shrink-0 shadow-lg rounded-r-xl overflow-hidden">
+                            <button
+                                id="assignment-toggle"
+                                log-id="assignment-criteria-toggle"
+                                className="flex items-center justify-center text-xs text-white hover:brightness-110 transition-colors duration-150 px-1.5 py-2.5"
+                                onClick={() => {
+                                    setAssignmentExpanded(!assignmentExpanded);
+                                    if (!assignmentExpanded) setRqExpanded(false);
+                                }}
+                                style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', background: '#5b4a8a' }}
                             >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                            Research Questions
-                        </button>
-                        {/* Panel content — fixed height, scrollable */}
+                                <svg
+                                    className={`w-3 h-3 mb-1.5 transition-transform duration-300 ${assignmentExpanded ? 'rotate-180' : 'rotate-0'}`}
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                                Assignment
+                            </button>
+                            <button
+                                id="rq-toggle"
+                                log-id="research-questions-toggle"
+                                className="flex items-center justify-center text-xs text-white hover:brightness-110 transition-colors duration-150 px-1.5 py-2.5"
+                                onClick={() => {
+                                    setRqExpanded(!rqExpanded);
+                                    if (!rqExpanded) setAssignmentExpanded(false);
+                                }}
+                                style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', background: '#348b95' }}
+                            >
+                                <svg
+                                    className={`w-3 h-3 mb-1.5 transition-transform duration-300 ${rqExpanded ? 'rotate-180' : 'rotate-0'}`}
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                                Research Questions
+                            </button>
+                        </div>
                         <div
                             className={`rounded-r-xl overflow-hidden shadow-2xl transition-all duration-300 ${
-                                rqExpanded ? 'w-[374px] opacity-100' : 'w-0 opacity-0'
+                                assignmentExpanded || rqExpanded ? 'w-[374px] opacity-100' : 'w-0 opacity-0'
                             }`}
                             style={{ height: '80vh' }}
                         >
                             <div className="h-full bg-grey-lighter-2 overflow-y-auto">
-                                <ResearchQuestionsPanel
-                                    cards={rqCards}
-                                    readOnly={controlledBy !== null}
-                                    onLinksChanged={() => { fetchRqCards(); refreshRqLinks(); }}
-                                />
+                                {assignmentExpanded && <AssignmentCriteriaPanel />}
+                                {rqExpanded && (
+                                    <ResearchQuestionsPanel
+                                        cards={rqCards}
+                                        readOnly={controlledBy !== null}
+                                        onLinksChanged={() => { fetchRqCards(); refreshRqLinks(); }}
+                                    />
+                                )}
                             </div>
                         </div>
                     </div>

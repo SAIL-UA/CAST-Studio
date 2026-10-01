@@ -34,6 +34,8 @@ from .views import (
     AssignmentCreateView,
     AssignmentDetailView,
     AssignmentUpdateView,
+    ActiveAssignmentView,
+    AssignmentGradesExportView,
     InstructorUsersView,
     InstructorWorkspaceView,
     HostSessionView,
@@ -55,6 +57,7 @@ from .views import (
     SubmissionListCreateView,
     SubmissionDetailView,
     SubmissionStatusView,
+    SubmissionGradeView,
 )
 
 urlpatterns = [
@@ -110,6 +113,16 @@ urlpatterns = [
         AssignmentUpdateView.as_view(),
         name="instructor-assignments-update",
     ),
+    path(
+        "instructor/assignments/<uuid:assignment_id>/grades/export/",
+        AssignmentGradesExportView.as_view(),
+        name="instructor-assignments-grades-export",
+    ),
+    path(
+        "assignments/active/",
+        ActiveAssignmentView.as_view(),
+        name="assignments-active",
+    ),
     # Collaborate
     path("collaborate/host/", HostSessionView.as_view(), name="collaborate-host"),
     path(
@@ -154,6 +167,11 @@ urlpatterns = [
         "submissions/<uuid:submission_id>/",
         SubmissionDetailView.as_view(),
         name="submission-detail",
+    ),
+    path(
+        "submissions/<uuid:submission_id>/grade/",
+        SubmissionGradeView.as_view(),
+        name="submission-grade",
     ),
     # Images
     path(

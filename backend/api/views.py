@@ -53,7 +53,8 @@ from .serializers import (
 from .workspace_ops import (
   get_or_create_active_workspace, get_or_create_workspace, get_or_create_media,
   purge_media_if_unreferenced, create_submission, submission_attempt_meta,
-  MAX_SUBMISSIONS_PER_USER,
+  get_active_assignment, deactivate_other_assignments,
+  MAX_SUBMISSIONS_PER_USER, MAX_SUBMISSIONS_PER_ASSIGNMENT,
 )
 
 # Tasks
@@ -1052,12 +1053,17 @@ class AssignmentCreateView(APIView):
     serializer = AssignmentSerializer(data={
       "title": data.get("title", ""),
       "body": data.get("body", ""),
+      "max_points": data.get("max_points", 100),
       "is_active": data.get("is_active", False),
     })
     if not serializer.is_valid():
       return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    assignment = serializer.save(created_by=request.user)
+    from django.db import transaction
+    with transaction.atomic():
+      assignment = serializer.save(created_by=request.user)
+      if assignment.is_active:
+        deactivate_other_assignments(assignment)
     return Response(
       {"message": "Assignment created successfully", "assignment": AssignmentSerializer(assignment).data},
       status=status.HTTP_201_CREATED,
@@ -1095,6 +1101,8 @@ class AssignmentUpdateView(APIView):
       payload["title"] = data["title"]
     if "body" in data:
       payload["body"] = data["body"]
+    if "max_points" in data:
+      payload["max_points"] = data["max_points"]
     if "is_active" in data:
       payload["is_active"] = data["is_active"]
 
@@ -1102,8 +1110,107 @@ class AssignmentUpdateView(APIView):
     if not serializer.is_valid():
       return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer.save()
-    return Response({"message": "Assignment updated successfully", "assignment": serializer.data})
+    from django.db import transaction
+    with transaction.atomic():
+      assignment = serializer.save()
+      if assignment.is_active:
+        deactivate_other_assignments(assignment)
+    return Response({"message": "Assignment updated successfully", "assignment": AssignmentSerializer(assignment).data})
+
+
+class ActiveAssignmentView(APIView):
+  """Any authenticated user can read the single active assignment criteria."""
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    assignment = get_active_assignment()
+    if not assignment:
+      return Response({"assignment": None})
+    return Response({
+      "assignment": {
+        "id": str(assignment.id),
+        "title": assignment.title,
+        "body": assignment.body,
+        "max_points": assignment.max_points,
+      }
+    })
+
+
+class AssignmentGradesExportView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request, assignment_id):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    assignment = Assignment.objects.filter(id=assignment_id).first()
+    if not assignment:
+      return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    from django.contrib.auth import get_user_model
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment
+    from django.http import HttpResponse
+    import re
+
+    User = get_user_model()
+    students = User.objects.filter(is_instructor=False).order_by("last_name", "first_name", "email")
+    submissions = (
+      Submission.objects.filter(assignment=assignment)
+      .select_related("user")
+      .order_by("user_id", "created_at")
+    )
+    by_user = {}
+    for sub in submissions:
+      by_user.setdefault(sub.user_id, []).append(sub)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Grades"
+    headers = [
+      "Student Name",
+      "Email",
+      "Submission 1",
+      "Submission 2",
+      "Submission 3",
+      "Highest Score",
+    ]
+    ws.append(headers)
+    for cell in ws[1]:
+      cell.font = Font(bold=True)
+      cell.alignment = Alignment(horizontal="center")
+
+    for student in students:
+      name = f"{student.first_name} {student.last_name}".strip() or student.username
+      attempts = by_user.get(student.id, [])[:3]
+      scores = []
+      row = [name, student.email or ""]
+      for i in range(3):
+        if i < len(attempts) and attempts[i].points is not None:
+          row.append(attempts[i].points)
+          scores.append(attempts[i].points)
+        else:
+          row.append("")
+      row.append(max(scores) if scores else "")
+      ws.append(row)
+
+    for col in ws.columns:
+      max_len = 0
+      col_letter = col[0].column_letter
+      for cell in col:
+        max_len = max(max_len, len(str(cell.value)) if cell.value is not None else 0)
+      ws.column_dimensions[col_letter].width = min(max(max_len + 2, 12), 40)
+
+    slug = re.sub(r"[^a-zA-Z0-9]+", "_", assignment.title).strip("_").lower()[:40] or "assignment"
+    ts = now().strftime("%Y%m%dT%H%M%SZ")
+    filename = f"assignment_grades_{slug}_{ts}.xlsx"
+
+    response = HttpResponse(
+      content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    wb.save(response)
+    return response
 
 
 class InstructorUsersView(APIView):
@@ -1135,7 +1242,7 @@ class InstructorUsersView(APIView):
         'is_instructor': user['is_instructor'],
         'last_modified': last_modified,
         'submission_count': Submission.objects.filter(user_id=user['id']).count(),
-        'submission_limit': MAX_SUBMISSIONS_PER_USER,
+        'submission_limit': MAX_SUBMISSIONS_PER_ASSIGNMENT,
       })
 
     return Response({"users": result})
@@ -2361,8 +2468,15 @@ class SubmissionListCreateView(APIView):
     if not request.user.is_instructor:
       return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
     user = resolve_target_user(request)
-    qs = Submission.objects.filter(user=user).order_by('created_at')
-    meta = submission_attempt_meta(user)
+    assignment_id = request.query_params.get("assignment_id")
+    qs = Submission.objects.filter(user=user).select_related("assignment").order_by("created_at")
+    if assignment_id:
+      qs = qs.filter(assignment_id=assignment_id)
+    # Meta for the selected assignment, else active assignment, else all-time unused.
+    assignment = None
+    if assignment_id:
+      assignment = Assignment.objects.filter(id=assignment_id).first()
+    meta = submission_attempt_meta(user, assignment=assignment)
     return Response({
       "submissions": SubmissionSerializer(qs, many=True).data,
       **meta,
@@ -2374,18 +2488,27 @@ class SubmissionListCreateView(APIView):
       submission = create_submission(user)
     except ValueError as e:
       code = str(e)
-      if code == 'submission_limit':
+      if code == "submission_limit":
         meta = submission_attempt_meta(user)
         return Response(
           {
-            "error": "Submission limit reached. Please contact your instructor for more information.",
+            "error": "Submission limit reached for this assignment. Please contact your instructor for more information.",
             "code": "submission_limit",
             **meta,
           },
           status=status.HTTP_409_CONFLICT,
         )
+      if code == "no_active_assignment":
+        return Response(
+          {
+            "error": "No active assignment is available to submit to.",
+            "code": "no_active_assignment",
+            **submission_attempt_meta(user),
+          },
+          status=status.HTTP_400_BAD_REQUEST,
+        )
       return Response({"error": code}, status=status.HTTP_400_BAD_REQUEST)
-    meta = submission_attempt_meta(user)
+    meta = submission_attempt_meta(user, assignment=submission.assignment)
     from .signals import broadcast_workspace_update
     broadcast_workspace_update(user.id)
     return Response({
@@ -2401,10 +2524,60 @@ class SubmissionDetailView(APIView):
     if not request.user.is_instructor:
       return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
     user = resolve_target_user(request)
-    sub = Submission.objects.filter(id=submission_id, user=user).first()
+    sub = (
+      Submission.objects.filter(id=submission_id, user=user)
+      .select_related("assignment")
+      .first()
+    )
     if not sub:
       return Response({"error": "Submission not found"}, status=status.HTTP_404_NOT_FOUND)
     return Response({"submission": SubmissionSerializer(sub).data})
+
+
+class SubmissionGradeView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request, submission_id):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    sub = (
+      Submission.objects.filter(id=submission_id)
+      .select_related("assignment")
+      .first()
+    )
+    if not sub:
+      return Response({"error": "Submission not found"}, status=status.HTTP_404_NOT_FOUND)
+    if not sub.assignment_id:
+      return Response(
+        {"error": "Submission is not tied to an assignment"},
+        status=status.HTTP_400_BAD_REQUEST,
+      )
+
+    if "points" not in request.data:
+      return Response({"error": "points is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    raw = request.data.get("points")
+    if raw is None or raw == "":
+      sub.points = None
+    else:
+      try:
+        points = int(raw)
+      except (TypeError, ValueError):
+        return Response({"error": "points must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
+      max_points = sub.assignment.max_points
+      if points < 0 or points > max_points:
+        return Response(
+          {"error": f"points must be between 0 and {max_points}"},
+          status=status.HTTP_400_BAD_REQUEST,
+        )
+      sub.points = points
+
+    sub.save(update_fields=["points", "last_modified"])
+    return Response({
+      "message": "Grade saved",
+      "submission": SubmissionSerializer(sub).data,
+    })
 
 
 class WorkspaceListCreateView(APIView):
