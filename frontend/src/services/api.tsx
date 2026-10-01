@@ -404,6 +404,7 @@ export type AssignmentRecord = {
 	id: string;
 	title: string;
 	body: string;
+	max_points: number;
 	is_active: boolean;
 	created_by: string | null;
 	created_at: string;
@@ -413,7 +414,15 @@ export type AssignmentRecord = {
 export type AssignmentPayload = {
 	title?: string;
 	body?: string;
+	max_points?: number;
 	is_active?: boolean;
+};
+
+export type ActiveAssignment = {
+	id: string;
+	title: string;
+	body: string;
+	max_points: number;
 };
 
 export const getAssignments = async () => {
@@ -426,6 +435,11 @@ export const getAssignment = async (assignmentId: string) => {
 	return response.data as { assignment: AssignmentRecord };
 };
 
+export const getActiveAssignment = async () => {
+	const response = await API.get("/assignments/active/");
+	return response.data as { assignment: ActiveAssignment | null };
+};
+
 export const createAssignment = async (data: AssignmentPayload) => {
 	const response = await API.post("/instructor/assignments/create/", { data });
 	return response.data as { message: string; assignment: AssignmentRecord };
@@ -434,6 +448,22 @@ export const createAssignment = async (data: AssignmentPayload) => {
 export const updateAssignment = async (assignmentId: string, data: AssignmentPayload) => {
 	const response = await API.post(`/instructor/assignments/${assignmentId}/update/`, { data });
 	return response.data as { message: string; assignment: AssignmentRecord };
+};
+
+export const exportAssignmentGrades = async (assignmentId: string) => {
+	const response = await API.get(`/instructor/assignments/${assignmentId}/grades/export/`, {
+		responseType: "blob",
+	});
+	const url = window.URL.createObjectURL(new Blob([response.data]));
+	const link = document.createElement("a");
+	link.href = url;
+	const disposition = response.headers["content-disposition"] || "";
+	const match = disposition.match(/filename="?(.+?)"?$/);
+	link.download = match ? match[1] : "assignment_grades.xlsx";
+	document.body.appendChild(link);
+	link.click();
+	link.remove();
+	window.URL.revokeObjectURL(url);
 };
 
 export const hostSession = async () => {
@@ -619,8 +649,9 @@ export const deleteScaffold = async (scaffoldId?: string) => {
 export type SubmissionRecord = {
 	id: string;
 	name: string;
-	points: number;
-	assignment_id: number | null;
+	points: number | null;
+	assignment_id: string | null;
+	max_points: number | null;
 	narrative_snapshot?: Record<string, unknown>;
 	created_at: string;
 	last_modified: string;
@@ -630,6 +661,9 @@ export type SubmissionAttemptMeta = {
 	used: number;
 	limit: number;
 	remaining: number;
+	assignment_id: string | null;
+	assignment_title: string | null;
+	max_points: number | null;
 };
 
 export const getSubmissionStatus = async () => {
@@ -654,6 +688,11 @@ export const getSubmission = async (submissionId: string, targetUser: string) =>
 		params: { target_user: targetUser },
 	});
 	return response.data as { submission: SubmissionRecord };
+};
+
+export const gradeSubmission = async (submissionId: string, points: number | null) => {
+	const response = await API.post(`/submissions/${submissionId}/grade/`, { points });
+	return response.data as { message: string; submission: SubmissionRecord };
 };
 
 /** @deprecated Snapshots replaced by submissions */

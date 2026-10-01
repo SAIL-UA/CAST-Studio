@@ -298,11 +298,11 @@ class FeatureFlagsAdmin(admin.ModelAdmin):
 
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "name", "points", "assignment_id", "created_at")
+    list_display = ("id", "user", "name", "points", "assignment", "created_at")
     list_filter = ("created_at",)
     search_fields = ("name", "user__username")
     ordering = ("-created_at",)
-    list_select_related = ("user",)
+    list_select_related = ("user", "assignment")
 
 
 @admin.register(Assignment)
@@ -310,6 +310,7 @@ class AssignmentAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "title",
+        "max_points",
         "is_active",
         "created_by",
         "created_at",

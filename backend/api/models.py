@@ -42,8 +42,15 @@ class Submission(models.Model):
         User, on_delete=models.CASCADE, db_column="user_id", related_name="submissions"
     )
     name = models.CharField(max_length=100, default="Submission")
-    points = models.IntegerField(default=0)
-    assignment_id = models.IntegerField(null=True, blank=True)
+    points = models.IntegerField(null=True, blank=True, default=None)
+    assignment = models.ForeignKey(
+        "Assignment",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="submissions",
+        db_column="assignment_id",
+    )
     narrative_snapshot = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
@@ -56,6 +63,7 @@ class Submission(models.Model):
         managed = True
         indexes = [
             models.Index(fields=["user", "created_at"]),
+            models.Index(fields=["user", "assignment"]),
         ]
 
 
@@ -497,12 +505,14 @@ class FeatureFlags(models.Model):
 
 class Assignment(models.Model):
     """
-    Instructor-authored assignment prompt (markdown body). Active flag controls visibility later.
+    Instructor-authored assignment prompt (markdown body).
+    At most one row should be is_active=True (enforced in create/update views).
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     body = models.TextField(blank=True, default="")
+    max_points = models.PositiveIntegerField(default=100)
     is_active = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         User,

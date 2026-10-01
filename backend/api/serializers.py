@@ -29,6 +29,8 @@ class WorkspaceSerializer(serializers.ModelSerializer):
 
 
 class SubmissionSerializer(serializers.ModelSerializer):
+    max_points = serializers.SerializerMethodField()
+
     class Meta:
         model = Submission
         fields = (
@@ -36,11 +38,18 @@ class SubmissionSerializer(serializers.ModelSerializer):
             "name",
             "points",
             "assignment_id",
+            "max_points",
             "narrative_snapshot",
             "created_at",
             "last_modified",
         )
         read_only_fields = fields
+
+    def get_max_points(self, obj):
+        if obj.assignment_id is None:
+            return None
+        # Prefer select_related('assignment') at call sites to avoid N+1.
+        return obj.assignment.max_points if obj.assignment else None
 
 
 class GroupDataSerializer(serializers.ModelSerializer):
@@ -126,6 +135,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "body",
+            "max_points",
             "is_active",
             "created_by",
             "created_at",

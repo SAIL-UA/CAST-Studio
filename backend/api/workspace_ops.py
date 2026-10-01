@@ -14,13 +14,27 @@ from .models import (
     ScaffoldData,
     ResearchQuestion,
     NarrativeCache,
+    Assignment,
 )
 
 MAX_SUBMISSIONS_PER_USER = 3
 # Backward-compatible alias used by older call sites / responses.
 MAX_WORKSPACES_PER_USER = MAX_SUBMISSIONS_PER_USER
+# Cap attempts per student per assignment (AC).
+MAX_SUBMISSIONS_PER_ASSIGNMENT = 3
 EDITOR_WORKSPACE_NAME = "Editor"
 DEFAULT_WORKSPACE_NAME = EDITOR_WORKSPACE_NAME
+
+
+def get_active_assignment():
+    return Assignment.objects.filter(is_active=True).order_by("-last_modified").first()
+
+
+def deactivate_other_assignments(active_assignment):
+    """Ensure at most one assignment is active."""
+    Assignment.objects.exclude(pk=active_assignment.pk).filter(is_active=True).update(
+        is_active=False
+    )
 
 
 def get_or_create_workspace(user):
@@ -214,13 +228,28 @@ def clone_workspace_to_submission(source_workspace, submission):
 
 def create_submission(user):
     """
-    Freeze the editor canvas + narrative into an immutable submission.
+    Freeze the editor canvas + narrative into an immutable submission tied to
+    the single active assignment.
+    Raises ValueError('no_active_assignment') when none is active.
     Raises ValueError('submission_limit') when the user already has
-    MAX_SUBMISSIONS_PER_USER submissions.
+    MAX_SUBMISSIONS_PER_ASSIGNMENT submissions for that assignment.
     """
     with transaction.atomic():
-        used = Submission.objects.select_for_update().filter(user=user).count()
-        if used >= MAX_SUBMISSIONS_PER_USER:
+        assignment = (
+            Assignment.objects.select_for_update()
+            .filter(is_active=True)
+            .order_by("-last_modified")
+            .first()
+        )
+        if not assignment:
+            raise ValueError("no_active_assignment")
+
+        used = (
+            Submission.objects.select_for_update()
+            .filter(user=user, assignment=assignment)
+            .count()
+        )
+        if used >= MAX_SUBMISSIONS_PER_ASSIGNMENT:
             raise ValueError("submission_limit")
 
         editor = get_or_create_workspace(user)
@@ -231,20 +260,33 @@ def create_submission(user):
         submission = Submission.objects.create(
             user=user,
             name=f"Submission {n}"[:100],
-            points=0,
-            assignment_id=None,
+            points=None,
+            assignment=assignment,
             narrative_snapshot=narrative_snapshot_from_cache(user),
         )
         clone_workspace_to_submission(editor, submission)
         return submission
 
 
-def submission_attempt_meta(user):
-    used = Submission.objects.filter(user=user).count()
+def submission_attempt_meta(user, assignment=None):
+    assignment = assignment or get_active_assignment()
+    if not assignment:
+        return {
+            "used": 0,
+            "limit": MAX_SUBMISSIONS_PER_ASSIGNMENT,
+            "remaining": 0,
+            "assignment_id": None,
+            "assignment_title": None,
+            "max_points": None,
+        }
+    used = Submission.objects.filter(user=user, assignment=assignment).count()
     return {
         "used": used,
-        "limit": MAX_SUBMISSIONS_PER_USER,
-        "remaining": max(0, MAX_SUBMISSIONS_PER_USER - used),
+        "limit": MAX_SUBMISSIONS_PER_ASSIGNMENT,
+        "remaining": max(0, MAX_SUBMISSIONS_PER_ASSIGNMENT - used),
+        "assignment_id": str(assignment.id),
+        "assignment_title": assignment.title,
+        "max_points": assignment.max_points,
     }
 
 

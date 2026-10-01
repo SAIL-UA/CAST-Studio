@@ -7,8 +7,10 @@ import {
 	getInstructorUsers,
 	createInstructorNote,
 	getSubmissions,
+	gradeSubmission,
 	type SubmissionRecord,
 } from "@/services/api";
+import { useAlert } from "@/contexts/Alert";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Header from "@/components/Header";
 import Workspace from "@/components/Workspace";
@@ -23,11 +25,23 @@ type StudentInfo = {
 	last_name: string;
 };
 
+const formatSubmissionLabel = (sub: SubmissionRecord) => {
+	const max = sub.max_points;
+	if (sub.points != null && max != null) {
+		return `${sub.name} (${sub.points}/${max})`;
+	}
+	if (sub.points != null) {
+		return `${sub.name} (${sub.points})`;
+	}
+	return sub.name;
+};
+
 const ViewWorkspace = () => {
 	const { studentId } = useParams<{ studentId: string }>();
 	const navigate = useNavigate();
 	const { userAuthenticated, isInstructor } = useAuth();
 	const { refreshRqLinks } = useResearchQuestions();
+	const { showAlert } = useAlert();
 
 	const [student, setStudent] = useState<StudentInfo | null>(null);
 	const [selectedPattern, setSelectedPattern] = useState("");
@@ -41,6 +55,8 @@ const ViewWorkspace = () => {
 	const [submissionLimit, setSubmissionLimit] = useState(3);
 	/** null = live workspace */
 	const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+	const [gradeInput, setGradeInput] = useState("");
+	const [savingGrade, setSavingGrade] = useState(false);
 
 	// Redirect non-admin users
 	useEffect(() => {
@@ -113,12 +129,18 @@ const ViewWorkspace = () => {
 		refreshRqLinks(studentId, selectedSubmissionId ?? undefined);
 	}, [studentId, selectedSubmissionId, refreshRqLinks]);
 
+	useEffect(() => {
+		const sub = submissions.find((s) => s.id === selectedSubmissionId);
+		setGradeInput(sub?.points != null ? String(sub.points) : "");
+	}, [selectedSubmissionId, submissions]);
+
 	const studentName = student
 		? `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.username
 		: "";
 
 	const viewingLive = selectedSubmissionId === null;
 	const selectedSubmission = submissions.find((s) => s.id === selectedSubmissionId);
+	const maxPoints = selectedSubmission?.max_points ?? null;
 
 	const handleGiveFeedback = async () => {
 		if (!studentId || !viewingLive) return;
@@ -127,6 +149,45 @@ const ViewWorkspace = () => {
 			setRefreshKey((prev) => prev + 1);
 		} catch (err) {
 			console.error("Error creating instructor feedback:", err);
+		}
+	};
+
+	const handleSaveGrade = async () => {
+		if (!selectedSubmission) return;
+		if (maxPoints == null) {
+			showAlert({
+				level: "error",
+				message: "This submission is not tied to an assignment.",
+			});
+			return;
+		}
+		const trimmed = gradeInput.trim();
+		let points: number | null = null;
+		if (trimmed !== "") {
+			const parsed = Number(trimmed);
+			if (!Number.isInteger(parsed) || parsed < 0 || parsed > maxPoints) {
+				showAlert({
+					level: "error",
+					message: `Grade must be an integer between 0 and ${maxPoints}.`,
+				});
+				return;
+			}
+			points = parsed;
+		}
+		setSavingGrade(true);
+		try {
+			const result = await gradeSubmission(selectedSubmission.id, points);
+			setSubmissions((prev) =>
+				prev.map((s) => (s.id === result.submission.id ? result.submission : s)),
+			);
+			showAlert({ level: "success", message: "Grade saved." });
+		} catch (err: any) {
+			showAlert({
+				level: "error",
+				message: err?.response?.data?.error || "Could not save grade.",
+			});
+		} finally {
+			setSavingGrade(false);
 		}
 	};
 
@@ -271,7 +332,7 @@ const ViewWorkspace = () => {
 											className={`block w-full text-left text-sm !font-light text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none ${selectedSubmissionId === sub.id ? "font-bold bg-grey-lighter" : ""}`}
 											onSelect={() => setSelectedSubmissionId(sub.id)}
 										>
-											<div>{sub.name}</div>
+											<div>{formatSubmissionLabel(sub)}</div>
 											<div className="text-xs text-grey-dark">
 												{new Date(sub.created_at).toLocaleString()}
 											</div>
@@ -288,6 +349,39 @@ const ViewWorkspace = () => {
 							>
 								Give Feedback
 							</button>
+						)}
+
+						{!viewingLive && selectedSubmission && maxPoints != null && (
+							<div className="flex items-center gap-2 bg-white rounded-full px-3 py-1 shadow-lg border border-grey-light">
+								<label
+									htmlFor="submission-grade"
+									className="text-xs text-grey-dark whitespace-nowrap"
+								>
+									Grade
+								</label>
+								<input
+									id="submission-grade"
+									type="number"
+									min={0}
+									max={maxPoints}
+									step={1}
+									value={gradeInput}
+									onChange={(e) => setGradeInput(e.target.value)}
+									placeholder="—"
+									className="w-14 text-sm text-center border border-grey-light rounded-md px-1 py-0.5 outline-none focus:border-bama-crimson"
+								/>
+								<span className="text-sm text-grey-darkest whitespace-nowrap">
+									/ {maxPoints}
+								</span>
+								<button
+									type="button"
+									disabled={savingGrade}
+									onClick={handleSaveGrade}
+									className="bg-bama-crimson text-xs text-white rounded-full px-3 py-1 hover:brightness-95 transition duration-200 disabled:opacity-50"
+								>
+									{savingGrade ? "Saving…" : "Save"}
+								</button>
+							</div>
 						)}
 					</>
 				}
