@@ -30,6 +30,10 @@ from .views import (
     TaskProgressView,
     GetFeatureFlagsView,
     UpdateFeatureFlagsView,
+    AssignmentListView,
+    AssignmentCreateView,
+    AssignmentDetailView,
+    AssignmentUpdateView,
     InstructorUsersView,
     InstructorWorkspaceView,
     HostSessionView,
@@ -85,6 +89,26 @@ urlpatterns = [
         "instructor/report/export/",
         ExportWorkspaceReportView.as_view(),
         name="instructor-report-export",
+    ),
+    path(
+        "instructor/assignments/",
+        AssignmentListView.as_view(),
+        name="instructor-assignments-list",
+    ),
+    path(
+        "instructor/assignments/create/",
+        AssignmentCreateView.as_view(),
+        name="instructor-assignments-create",
+    ),
+    path(
+        "instructor/assignments/<uuid:assignment_id>/",
+        AssignmentDetailView.as_view(),
+        name="instructor-assignments-detail",
+    ),
+    path(
+        "instructor/assignments/<uuid:assignment_id>/update/",
+        AssignmentUpdateView.as_view(),
+        name="instructor-assignments-update",
     ),
     # Collaborate
     path("collaborate/host/", HostSessionView.as_view(), name="collaborate-host"),

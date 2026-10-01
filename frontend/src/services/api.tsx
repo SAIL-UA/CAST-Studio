@@ -400,6 +400,42 @@ export const getInstructorWorkspace = async (studentId: string) => {
 	return response.data;
 };
 
+export type AssignmentRecord = {
+	id: string;
+	title: string;
+	body: string;
+	is_active: boolean;
+	created_by: string | null;
+	created_at: string;
+	last_modified: string;
+};
+
+export type AssignmentPayload = {
+	title?: string;
+	body?: string;
+	is_active?: boolean;
+};
+
+export const getAssignments = async () => {
+	const response = await API.get("/instructor/assignments/");
+	return response.data as { assignments: AssignmentRecord[] };
+};
+
+export const getAssignment = async (assignmentId: string) => {
+	const response = await API.get(`/instructor/assignments/${assignmentId}/`);
+	return response.data as { assignment: AssignmentRecord };
+};
+
+export const createAssignment = async (data: AssignmentPayload) => {
+	const response = await API.post("/instructor/assignments/create/", { data });
+	return response.data as { message: string; assignment: AssignmentRecord };
+};
+
+export const updateAssignment = async (assignmentId: string, data: AssignmentPayload) => {
+	const response = await API.post(`/instructor/assignments/${assignmentId}/update/`, { data });
+	return response.data as { message: string; assignment: AssignmentRecord };
+};
+
 export const hostSession = async () => {
 	const response = await API.post("/collaborate/host/", {});
 	return response.data;

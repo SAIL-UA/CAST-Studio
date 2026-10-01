@@ -11,6 +11,7 @@ from .models import (
     ResearchQuestion,
     Workspace,
     Submission,
+    Assignment,
 )
 
 
@@ -116,3 +117,18 @@ class ResearchQuestionSerializer(serializers.ModelSerializer):
             "workspace": {"required": False},
             "submission": {"required": False},
         }
+
+
+class AssignmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Assignment
+        fields = (
+            "id",
+            "title",
+            "body",
+            "is_active",
+            "created_by",
+            "created_at",
+            "last_modified",
+        )
+        read_only_fields = ("id", "created_by", "created_at", "last_modified")

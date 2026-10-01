@@ -39,7 +39,7 @@ from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
   JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress, FeatureFlags,
-  SharedSession, SessionParticipant, ResearchQuestion, Workspace, Submission
+  SharedSession, SessionParticipant, ResearchQuestion, Workspace, Submission, Assignment
 )
 
 # Serializers
@@ -47,7 +47,7 @@ from .serializers import (
   ImageDataSerializer, NarrativeCacheSerializer,
   JupyterLogsSerializer, MousePositionLogSerializer,
   UserActionSerializer, ScrollLogSerializer, GroupDataSerializer, ScaffoldDataSerializer,
-  ResearchQuestionSerializer, WorkspaceSerializer, SubmissionSerializer
+  ResearchQuestionSerializer, WorkspaceSerializer, SubmissionSerializer, AssignmentSerializer
 )
 
 from .workspace_ops import (
@@ -1028,6 +1028,82 @@ class UpdateFeatureFlagsView(APIView):
       "annotate_with_ai": flags.annotate_with_ai,
       "select_with_ai": flags.select_with_ai,
     })
+
+
+class AssignmentListView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    assignments = Assignment.objects.all().order_by("-created_at")
+    return Response({"assignments": AssignmentSerializer(assignments, many=True).data})
+
+
+class AssignmentCreateView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    data = request.data.get("data") if isinstance(request.data.get("data"), dict) else request.data
+    serializer = AssignmentSerializer(data={
+      "title": data.get("title", ""),
+      "body": data.get("body", ""),
+      "is_active": data.get("is_active", False),
+    })
+    if not serializer.is_valid():
+      return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    assignment = serializer.save(created_by=request.user)
+    return Response(
+      {"message": "Assignment created successfully", "assignment": AssignmentSerializer(assignment).data},
+      status=status.HTTP_201_CREATED,
+    )
+
+
+class AssignmentDetailView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request, assignment_id):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    assignment = Assignment.objects.filter(id=assignment_id).first()
+    if not assignment:
+      return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response({"assignment": AssignmentSerializer(assignment).data})
+
+
+class AssignmentUpdateView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request, assignment_id):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    assignment = Assignment.objects.filter(id=assignment_id).first()
+    if not assignment:
+      return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    data = request.data.get("data") if isinstance(request.data.get("data"), dict) else request.data
+    payload = {}
+    if "title" in data:
+      payload["title"] = data["title"]
+    if "body" in data:
+      payload["body"] = data["body"]
+    if "is_active" in data:
+      payload["is_active"] = data["is_active"]
+
+    serializer = AssignmentSerializer(assignment, data=payload, partial=True)
+    if not serializer.is_valid():
+      return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer.save()
+    return Response({"message": "Assignment updated successfully", "assignment": serializer.data})
 
 
 class InstructorUsersView(APIView):
