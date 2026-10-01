@@ -8,10 +8,15 @@ import {
 	getInstructorUsers,
 	exportWorkspaceReport,
 	getEngagementReport,
+	getAssignments,
+	createAssignment,
+	updateAssignment,
+	type AssignmentRecord,
 } from "@/services/api";
 import Header from "@/components/Header";
 import CompactSidebar from "@/components/CompactSidebar";
 import Footer from "@/components/Footer";
+import AssignmentEditor from "@/components/AssignmentEditor";
 
 type UserRow = {
 	id: string;
@@ -52,9 +57,18 @@ const Instructor = () => {
 	const [refreshing, setRefreshing] = useState(false);
 	const [engagementData, setEngagementData] = useState<any[] | null>(null);
 	const [engagementCategories, setEngagementCategories] = useState<string[]>([]);
-	const [activeTab, setActiveTab] = useState<"accounts" | "engagement">("accounts");
+	const [activeTab, setActiveTab] = useState<"accounts" | "engagement" | "assignments">(
+		"accounts",
+	);
 	const [sortColumn, setSortColumn] = useState<SortColumn>("last_name");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+	const [assignments, setAssignments] = useState<AssignmentRecord[]>([]);
+	const [assignmentsLoaded, setAssignmentsLoaded] = useState(false);
+	const [loadingAssignments, setLoadingAssignments] = useState(false);
+	const [assignmentView, setAssignmentView] = useState<"list" | "create" | "edit">("list");
+	const [editingAssignment, setEditingAssignment] = useState<AssignmentRecord | null>(null);
+	const [savingAssignment, setSavingAssignment] = useState(false);
+	const [togglingId, setTogglingId] = useState<string | null>(null);
 
 	// Redirect non-instructor users
 	useEffect(() => {
@@ -86,6 +100,90 @@ const Instructor = () => {
 
 		if (isInstructor) load();
 	}, [isInstructor]);
+
+	const loadAssignments = async () => {
+		setLoadingAssignments(true);
+		try {
+			const data = await getAssignments();
+			setAssignments(data.assignments || []);
+			setAssignmentsLoaded(true);
+		} catch (err) {
+			console.error("Error loading assignments:", err);
+			showAlert({
+				level: "error",
+				message: "An error occurred while loading assignments.",
+			});
+		} finally {
+			setLoadingAssignments(false);
+		}
+	};
+
+	useEffect(() => {
+		if (isInstructor && activeTab === "assignments" && !assignmentsLoaded) {
+			loadAssignments();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isInstructor, activeTab, assignmentsLoaded]);
+
+	const handleAssignmentTab = () => {
+		setActiveTab("assignments");
+		setAssignmentView("list");
+		setEditingAssignment(null);
+	};
+
+	const handleToggleActive = async (assignment: AssignmentRecord) => {
+		setTogglingId(assignment.id);
+		try {
+			const result = await updateAssignment(assignment.id, {
+				is_active: !assignment.is_active,
+			});
+			setAssignments((prev) =>
+				prev.map((a) => (a.id === assignment.id ? result.assignment : a)),
+			);
+		} catch (err) {
+			console.error("Error toggling assignment:", err);
+			showAlert({
+				level: "error",
+				message: "An error occurred while updating the assignment.",
+			});
+		} finally {
+			setTogglingId(null);
+		}
+	};
+
+	const handleSaveAssignment = async (data: {
+		title: string;
+		body: string;
+		is_active: boolean;
+	}) => {
+		setSavingAssignment(true);
+		try {
+			if (assignmentView === "edit" && editingAssignment) {
+				const result = await updateAssignment(editingAssignment.id, data);
+				setAssignments((prev) =>
+					prev.map((a) => (a.id === editingAssignment.id ? result.assignment : a)),
+				);
+				showAlert({ level: "success", message: "Assignment updated." });
+			} else {
+				const result = await createAssignment(data);
+				setAssignments((prev) => [result.assignment, ...prev]);
+				showAlert({ level: "success", message: "Assignment created." });
+			}
+			setAssignmentView("list");
+			setEditingAssignment(null);
+		} catch (err: any) {
+			if (err?.response?.status === 403) {
+				showAlert({ level: "error", message: "Not authorized." });
+			} else {
+				showAlert({
+					level: "error",
+					message: "An error occurred while saving the assignment.",
+				});
+			}
+		} finally {
+			setSavingAssignment(false);
+		}
+	};
 
 	const handleSave = async () => {
 		setSaving(true);
@@ -273,6 +371,16 @@ const Instructor = () => {
 							>
 								User Engagement
 							</button>
+							<button
+								onClick={handleAssignmentTab}
+								className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-150 ${
+									activeTab === "assignments"
+										? "bg-white text-grey-darkest border border-grey-light border-b-white"
+										: "bg-grey-lighter text-grey-dark hover:text-grey-darkest"
+								}`}
+							>
+								Assignments
+							</button>
 						</div>
 						{activeTab === "engagement" && (
 							<div className="flex items-center gap-2 mb-1">
@@ -319,6 +427,19 @@ const Instructor = () => {
 									className="bg-bama-crimson text-sm text-white rounded-full px-4 py-1.5 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{exporting ? "Exporting..." : "Export User Engagement Report"}
+								</button>
+							</div>
+						)}
+						{activeTab === "assignments" && assignmentView === "list" && (
+							<div className="flex items-center gap-2 mb-1">
+								<button
+									onClick={() => {
+										setEditingAssignment(null);
+										setAssignmentView("create");
+									}}
+									className="bg-bama-crimson text-sm text-white rounded-full px-4 py-1.5 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+								>
+									+ Create Assignment
 								</button>
 							</div>
 						)}
@@ -540,6 +661,111 @@ const Instructor = () => {
 							)}
 						</div>
 					)}
+
+					{activeTab === "assignments" &&
+						(assignmentView === "create" || assignmentView === "edit" ? (
+							<AssignmentEditor
+								key={editingAssignment?.id ?? "new"}
+								initial={editingAssignment}
+								saving={savingAssignment}
+								onSave={handleSaveAssignment}
+								onCancel={() => {
+									setAssignmentView("list");
+									setEditingAssignment(null);
+								}}
+							/>
+						) : (
+							<div className="bg-white rounded-b-lg rounded-tr-lg shadow-sm border border-grey-light overflow-x-auto">
+								{loadingAssignments ? (
+									<p className="text-sm text-grey-dark text-center p-6">
+										Loading assignments…
+									</p>
+								) : (
+									<table className="w-full text-sm">
+										<thead>
+											<tr className="bg-grey-lighter border-b border-grey-lightest">
+												<th className="text-left p-3 font-medium text-grey-darkest">
+													Title
+												</th>
+												<th className="text-left p-3 font-medium text-grey-darkest">
+													Status
+												</th>
+												<th className="text-left p-3 font-medium text-grey-darkest">
+													Last Modified
+												</th>
+												<th className="text-left p-3 font-medium text-grey-darkest">
+													Actions
+												</th>
+											</tr>
+										</thead>
+										<tbody>
+											{assignments.map((assignment) => (
+												<tr
+													key={assignment.id}
+													className="border-b border-grey-lightest hover:bg-grey-lighter"
+												>
+													<td className="p-3 text-grey-darkest">
+														{assignment.title}
+													</td>
+													<td className="p-3">
+														<label className="inline-flex items-center gap-2 cursor-pointer">
+															<input
+																type="checkbox"
+																checked={assignment.is_active}
+																disabled={
+																	togglingId === assignment.id
+																}
+																onChange={() =>
+																	handleToggleActive(assignment)
+																}
+																className="w-4 h-4 accent-bama-crimson"
+															/>
+															<span
+																className={`text-xs px-2 py-0.5 rounded-full ${
+																	assignment.is_active
+																		? "bg-bama-crimson text-white"
+																		: "bg-grey-lighter text-grey-darkest"
+																}`}
+															>
+																{assignment.is_active
+																	? "Active"
+																	: "Inactive"}
+															</span>
+														</label>
+													</td>
+													<td className="p-3 text-grey-darkest whitespace-nowrap">
+														{formatDate(assignment.last_modified)}
+													</td>
+													<td className="p-3">
+														<button
+															type="button"
+															onClick={() => {
+																setEditingAssignment(assignment);
+																setAssignmentView("edit");
+															}}
+															className="bg-bama-crimson text-xs text-white rounded-full px-3 py-1 hover:brightness-95 transition duration-200"
+														>
+															Edit
+														</button>
+													</td>
+												</tr>
+											))}
+											{assignments.length === 0 && (
+												<tr>
+													<td
+														colSpan={4}
+														className="p-3 text-center text-grey-dark"
+													>
+														No assignments yet. Click "+ Create
+														Assignment" to add one.
+													</td>
+												</tr>
+											)}
+										</tbody>
+									</table>
+								)}
+							</div>
+						))}
 				</div>
 			</div>
 		</>

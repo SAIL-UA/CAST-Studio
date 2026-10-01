@@ -12,6 +12,7 @@ from .models import (
     User,
     FeatureFlags,
     Submission,
+    Assignment,
 )
 
 
@@ -302,3 +303,19 @@ class SubmissionAdmin(admin.ModelAdmin):
     search_fields = ("name", "user__username")
     ordering = ("-created_at",)
     list_select_related = ("user",)
+
+
+@admin.register(Assignment)
+class AssignmentAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "title",
+        "is_active",
+        "created_by",
+        "created_at",
+        "last_modified",
+    )
+    list_filter = ("is_active", "created_at")
+    search_fields = ("title", "body", "created_by__username")
+    ordering = ("-created_at",)
+    list_select_related = ("created_by",)

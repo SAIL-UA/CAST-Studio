@@ -495,6 +495,38 @@ class FeatureFlags(models.Model):
         managed = True
 
 
+class Assignment(models.Model):
+    """
+    Instructor-authored assignment prompt (markdown body). Active flag controls visibility later.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=255)
+    body = models.TextField(blank=True, default="")
+    is_active = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="assignments",
+        db_column="created_by_id",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.title} ({'active' if self.is_active else 'inactive'})"
+
+    class Meta:
+        db_table = "assignments"
+        managed = True
+        indexes = [
+            models.Index(fields=["-created_at"]),
+            models.Index(fields=["is_active"]),
+        ]
+
+
 class SharedSession(models.Model):
     """
     A collaboration session hosted by a user, shareable via a token link.
