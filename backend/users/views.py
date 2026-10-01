@@ -32,7 +32,7 @@ class RegisterView(APIView):
             from api.workspace_ops import EDITOR_WORKSPACE_NAME
 
             Workspace.objects.get_or_create(
-                user=user, is_active=True, defaults={"name": EDITOR_WORKSPACE_NAME}
+                user=user, defaults={"name": EDITOR_WORKSPACE_NAME}
             )
             return Response({"detail": "User created"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -52,9 +52,9 @@ class LoginView(APIView):
                 refresh = RefreshToken.for_user(user)
                 request.session["DATA_PATH"] = settings.DATA_PATH
 
-                from api.workspace_ops import get_or_create_active_workspace
+                from api.workspace_ops import get_or_create_workspace
 
-                get_or_create_active_workspace(user)
+                get_or_create_workspace(user)
 
                 return Response(
                     {
@@ -114,9 +114,7 @@ class GuestLoginView(APIView):
                     is_guest=True,
                 )
 
-                ws = Workspace.objects.create(
-                    user=user, name=EDITOR_WORKSPACE_NAME, is_active=True
-                )
+                ws = Workspace.objects.create(user=user, name=EDITOR_WORKSPACE_NAME)
 
                 # Seed two sticky notes (ImageData rows with empty media).
                 # The user's provided strings go in long_desc (note body/content);

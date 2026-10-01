@@ -39,7 +39,7 @@ from users.models import User
 from .models import (
   UserAction, ImageData, NarrativeCache,
   JupyterLog, MousePositionLog, ScrollLog, GroupData, ScaffoldData, TaskProgress, FeatureFlags,
-  SharedSession, SessionParticipant, ResearchQuestion, Workspace
+  SharedSession, SessionParticipant, ResearchQuestion, Workspace, Submission
 )
 
 # Serializers
@@ -47,13 +47,13 @@ from .serializers import (
   ImageDataSerializer, NarrativeCacheSerializer,
   JupyterLogsSerializer, MousePositionLogSerializer,
   UserActionSerializer, ScrollLogSerializer, GroupDataSerializer, ScaffoldDataSerializer,
-  ResearchQuestionSerializer, WorkspaceSerializer
+  ResearchQuestionSerializer, WorkspaceSerializer, SubmissionSerializer
 )
 
 from .workspace_ops import (
-  get_or_create_active_workspace, get_or_create_media,
-  purge_media_if_unreferenced, save_snapshot, restore_snapshot,
-  delete_workspace, MAX_WORKSPACES_PER_USER,
+  get_or_create_active_workspace, get_or_create_workspace, get_or_create_media,
+  purge_media_if_unreferenced, create_submission, submission_attempt_meta,
+  MAX_SUBMISSIONS_PER_USER,
 )
 
 # Tasks
@@ -99,7 +99,33 @@ def resolve_target_user(request):
 
 
 def active_workspace_for(user):
-  return get_or_create_active_workspace(user)
+  return get_or_create_workspace(user)
+
+
+def resolve_submission_for_request(request, user):
+  """
+  If ?submission_id= is present, return that Submission (instructor-only).
+  Otherwise return None (caller should use the live editor workspace).
+  """
+  submission_id = request.query_params.get('submission_id')
+  if not submission_id:
+    return None
+  if not request.user.is_instructor:
+    from rest_framework.exceptions import PermissionDenied
+    raise PermissionDenied("Only instructors can view submissions")
+  sub = Submission.objects.filter(id=submission_id, user=user).first()
+  if not sub:
+    from rest_framework.exceptions import NotFound
+    raise NotFound("Submission not found")
+  return sub
+
+
+def canvas_filter_kwargs(request, user):
+  """Kwargs to filter canvas rows: either submission=... or workspace=editor."""
+  sub = resolve_submission_for_request(request, user)
+  if sub is not None:
+    return {'submission': sub}
+  return {'workspace': active_workspace_for(user)}
 
 
 class LogsExportRateThrottle(UserRateThrottle):
@@ -276,12 +302,12 @@ class ImageDataView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
     user = resolve_target_user(request)
-    ws = active_workspace_for(user)
+    scope = canvas_filter_kwargs(request, user)
     image_id = request.query_params.get("image_id")
     if image_id: # single image
-      image_data = ImageData.objects.select_related('media').get(id=image_id, workspace=ws)
+      image_data = ImageData.objects.select_related('media').get(id=image_id, **scope)
     else: # all images
-      image_data = ImageData.objects.filter(user=user, workspace=ws).select_related('media')
+      image_data = ImageData.objects.filter(user=user, **scope).select_related('media')
     
     if not image_data:
       return Response({"message": "No image data found"}, status=status.HTTP_204_NO_CONTENT)
@@ -633,12 +659,12 @@ class GetGroupView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
     user = resolve_target_user(request)
-    ws = active_workspace_for(user)
+    scope = canvas_filter_kwargs(request, user)
     group_id = request.query_params.get("group_id")
     if group_id: # single group
-      group_data = GroupData.objects.get(id=group_id, workspace=ws)
+      group_data = GroupData.objects.get(id=group_id, **scope)
     else: # all groups
-      group_data = GroupData.objects.filter(user=user, workspace=ws)
+      group_data = GroupData.objects.filter(user=user, **scope)
     
     if not group_data:
       return Response({"message": "No group data found"}, status=status.HTTP_204_NO_CONTENT)
@@ -716,16 +742,16 @@ class DeleteGroupView(APIView):
 class GetResearchQuestionView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
-    user = get_workspace_user(request)
-    ws = active_workspace_for(user)
+    user = resolve_target_user(request)
+    scope = canvas_filter_kwargs(request, user)
     rq_id = request.query_params.get("rq_id")
 
     if rq_id:  # single question
-      questions = ResearchQuestion.objects.filter(id=rq_id, user=user, workspace=ws).first()
+      questions = ResearchQuestion.objects.filter(id=rq_id, user=user, **scope).first()
       if not questions:
         return Response({"message": "Research question not found"}, status=status.HTTP_404_NOT_FOUND)
-    else:  # all questions for this workspace
-      questions = ResearchQuestion.objects.filter(user=user, workspace=ws)
+    else:  # all questions for this canvas
+      questions = ResearchQuestion.objects.filter(user=user, **scope)
 
     serialized = ResearchQuestionSerializer(questions, many=False if rq_id else True)
     return Response({"research_questions": serialized.data}, status=status.HTTP_200_OK)
@@ -898,25 +924,49 @@ class GetNarrativeCacheView(APIView):
 
   def get(self, request):
     user = resolve_target_user(request)
+    sub = resolve_submission_for_request(request, user)
+    if sub is not None:
+      snap = sub.narrative_snapshot or {}
+      data = {
+        "story_structure_id": snap.get("story_structure_id", ""),
+        "narrative": snap.get("narrative", ""),
+        "order": snap.get("order", []),
+        "theme": snap.get("theme", ""),
+        "categories": snap.get("categories", []),
+        "sequence_justification": snap.get("sequence_justification", ""),
+        "sequence_summary": snap.get("sequence_summary", []),
+        "rq_reasoning": snap.get("rq_reasoning", []),
+      }
+      if isinstance(data['order'], list):
+        data['order'] = [str(item) for item in data['order']]
+      if isinstance(data.get('categories'), list):
+        categories_str = "\n".join([
+          f"[FIGURE: {item['filename']}]: {item['category']}"
+          for item in data['categories']
+          if isinstance(item, dict) and 'filename' in item and 'category' in item
+        ])
+        data['categories'] = categories_str
+      return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
+
     cache = NarrativeCache.objects.filter(user=user).first()
     if cache is None:
       return Response(status=status.HTTP_204_NO_CONTENT)
 
     data = NarrativeCacheSerializer(cache).data
-    
+
     # Convert JSON fields to strings for frontend compatibility
     if 'order' in data and isinstance(data['order'], list):
       data['order'] = [str(item) for item in data['order']]
-    
+
     if 'categories' in data and isinstance(data['categories'], list):
       # Convert array of objects to string representation
       categories_str = "\n".join([
-        f"[FIGURE: {item['filename']}]: {item['category']}" 
+        f"[FIGURE: {item['filename']}]: {item['category']}"
         for item in data['categories']
         if isinstance(item, dict) and 'filename' in item and 'category' in item
       ])
       data['categories'] = categories_str
-    
+
     return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
 
 
@@ -1008,6 +1058,8 @@ class InstructorUsersView(APIView):
         'last_name': user['last_name'],
         'is_instructor': user['is_instructor'],
         'last_modified': last_modified,
+        'submission_count': Submission.objects.filter(user_id=user['id']).count(),
+        'submission_limit': MAX_SUBMISSIONS_PER_USER,
       })
 
     return Response({"users": result})
@@ -2142,18 +2194,18 @@ class GetScaffoldView(APIView):
   permission_classes = [IsAuthenticated]
   def get(self, request):
     user = resolve_target_user(request)
-    ws = active_workspace_for(user)
+    scope = canvas_filter_kwargs(request, user)
     scaffold_id = request.query_params.get("scaffold_id")
     if scaffold_id: # single scaffold
-      scaffold_data = ScaffoldData.objects.get(id=scaffold_id, user=user, workspace=ws)
+      scaffold_data = ScaffoldData.objects.get(id=scaffold_id, user=user, **scope)
     else: # all scaffolds for user
-      scaffold_data = ScaffoldData.objects.filter(user=user, workspace=ws)
-    
+      scaffold_data = ScaffoldData.objects.filter(user=user, **scope)
+
     if not scaffold_data:
       return Response({"message": "No scaffold data found"}, status=status.HTTP_204_NO_CONTENT)
-      
+
     serialized_scaffold_data = ScaffoldDataSerializer(scaffold_data, many=False if scaffold_id else True)
-    
+
     return Response({"scaffolds": serialized_scaffold_data.data}, status=status.HTTP_200_OK)
 
 
@@ -2217,86 +2269,109 @@ class DeleteScaffoldView(APIView):
       return Response({"errors": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class WorkspaceListCreateView(APIView):
+class SubmissionStatusView(APIView):
+  """Student-facing attempt count (no submission payloads)."""
   permission_classes = [IsAuthenticated]
 
   def get(self, request):
+    meta = submission_attempt_meta(request.user)
+    return Response(meta)
+
+
+class SubmissionListCreateView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
     user = resolve_target_user(request)
-    get_or_create_active_workspace(user)
-    qs = Workspace.objects.filter(user=user).order_by('created_at')
+    qs = Submission.objects.filter(user=user).order_by('created_at')
+    meta = submission_attempt_meta(user)
     return Response({
-      "workspaces": WorkspaceSerializer(qs, many=True).data,
-      "limit": MAX_WORKSPACES_PER_USER,
+      "submissions": SubmissionSerializer(qs, many=True).data,
+      **meta,
     })
 
   def post(self, request):
     user = get_workspace_write_user(request)
-    name = request.data.get('name') or ''
-    replace_id = request.data.get('replace_id')
-    story_output = (
-      request.data['story_output']
-      if 'story_output' in request.data
-      else None
-    )
     try:
-      dest = save_snapshot(
-        user, name, replace_id=replace_id, story_output=story_output
-      )
+      submission = create_submission(user)
     except ValueError as e:
       code = str(e)
-      if code == 'workspace_limit':
+      if code == 'submission_limit':
+        meta = submission_attempt_meta(user)
         return Response(
-          {"error": "Snapshot limit reached. Replace one of the saved snapshots.", "code": "workspace_limit", "limit": MAX_WORKSPACES_PER_USER},
+          {
+            "error": "Submission limit reached. Please contact your instructor for more information.",
+            "code": "submission_limit",
+            **meta,
+          },
           status=status.HTTP_409_CONFLICT,
         )
-      if code == 'invalid_replace':
-        return Response({"error": "Choose a snapshot to replace", "code": "invalid_replace"}, status=status.HTTP_400_BAD_REQUEST)
-      if code == 'name_required':
-        return Response({"error": "Name is required", "code": "name_required"}, status=status.HTTP_400_BAD_REQUEST)
       return Response({"error": code}, status=status.HTTP_400_BAD_REQUEST)
+    meta = submission_attempt_meta(user)
     from .signals import broadcast_workspace_update
     broadcast_workspace_update(user.id)
-    return Response({"workspace": WorkspaceSerializer(dest).data}, status=status.HTTP_201_CREATED)
+    return Response({
+      "submission": SubmissionSerializer(submission).data,
+      **meta,
+    }, status=status.HTTP_201_CREATED)
+
+
+class SubmissionDetailView(APIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request, submission_id):
+    if not request.user.is_instructor:
+      return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+    user = resolve_target_user(request)
+    sub = Submission.objects.filter(id=submission_id, user=user).first()
+    if not sub:
+      return Response({"error": "Submission not found"}, status=status.HTTP_404_NOT_FOUND)
+    return Response({"submission": SubmissionSerializer(sub).data})
+
+
+class WorkspaceListCreateView(APIView):
+  """Deprecated snapshot endpoints — submissions replace save/list."""
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    user = resolve_target_user(request)
+    get_or_create_workspace(user)
+    qs = Workspace.objects.filter(user=user).order_by('created_at')
+    return Response({
+      "workspaces": WorkspaceSerializer(qs, many=True).data,
+      "limit": MAX_SUBMISSIONS_PER_USER,
+    })
+
+  def post(self, request):
+    return Response(
+      {"error": "Use POST /api/submissions/ to submit", "code": "use_submissions"},
+      status=status.HTTP_410_GONE,
+    )
 
 
 class WorkspaceDetailView(APIView):
   permission_classes = [IsAuthenticated]
 
   def patch(self, request, workspace_id):
-    user = get_workspace_write_user(request)
-    ws = Workspace.objects.filter(id=workspace_id, user=user).first()
-    if not ws:
-      return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
-    if ws.is_active:
-      return Response({"error": "The editor cannot be renamed", "code": "editor_workspace"}, status=status.HTTP_400_BAD_REQUEST)
-    name = (request.data.get('name') or '').strip()
-    if not name:
-      return Response({"error": "Name is required"}, status=status.HTTP_400_BAD_REQUEST)
-    ws.name = name[:100]
-    ws.save(update_fields=['name', 'last_modified'])
-    return Response({"workspace": WorkspaceSerializer(ws).data})
+    return Response(
+      {"error": "Snapshots can no longer be renamed", "code": "immutable_submission"},
+      status=status.HTTP_410_GONE,
+    )
 
   def delete(self, request, workspace_id):
-    user = get_workspace_write_user(request)
-    try:
-      result = delete_workspace(user, workspace_id)
-    except ValueError as e:
-      if str(e) in ('editor_workspace', 'last_workspace'):
-        return Response({"error": "The editor cannot be deleted", "code": "editor_workspace"}, status=status.HTTP_400_BAD_REQUEST)
-      return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    if not result:
-      return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
-    return Response({"status": "success"})
+    return Response(
+      {"error": "Snapshots can no longer be deleted", "code": "immutable_submission"},
+      status=status.HTTP_410_GONE,
+    )
 
 
 class WorkspaceActivateView(APIView):
   permission_classes = [IsAuthenticated]
 
   def post(self, request, workspace_id):
-    user = get_workspace_write_user(request)
-    ws = restore_snapshot(user, workspace_id)
-    if not ws:
-      return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
-    from .signals import broadcast_workspace_update
-    broadcast_workspace_update(user.id)
-    return Response({"workspace": WorkspaceSerializer(ws).data})
+    return Response(
+      {"error": "Snapshots can no longer be loaded into the editor", "code": "immutable_submission"},
+      status=status.HTTP_410_GONE,
+    )

@@ -26,6 +26,7 @@ import { useResearchQuestions } from "@/contexts/ResearchQuestions";
 
 // Import components
 import ExportButton from "@/components/ExportButton";
+import SubmitButton from "@/components/SubmitButton";
 import { DataStoryLexicalField } from "@/components/dataStory/DataStoryLexicalField";
 
 // Story data interface
@@ -70,6 +71,7 @@ const normalizeNarrativeMarkdown = (markdown: string): string =>
 // DataStories component
 type DataStoriesProps = {
 	targetUser?: string;
+	submissionId?: string;
 	/** Non-owner view: hides Export. Kept separate from canEdit so a host who has delegated
 	 *  control can still export while being unable to edit. */
 	readOnly?: boolean;
@@ -92,11 +94,12 @@ const storyActionSecondary = `${storyActionButton} bg-grey-lightest text-grey-da
 
 const DataStories = ({
 	targetUser,
+	submissionId,
 	readOnly = false,
 	canEdit,
 	refreshTrigger,
 }: DataStoriesProps) => {
-	const editingAllowed = canEdit ?? !readOnly;
+	const editingAllowed = (canEdit ?? !readOnly) && !submissionId;
 
 	// Used to distinguish "user wrote no RQs" (empty state message) from
 	// "LLM call failed to produce reasoning" (error message) in the reasoning tab.
@@ -144,7 +147,7 @@ const DataStories = ({
 	// Check for existing cached narrative on component mount
 	const loadCachedNarrative = async () => {
 		try {
-			const response = await getNarrativeCache(targetUser);
+			const response = await getNarrativeCache(targetUser, submissionId);
 			if (response.status === 204 || !response.data?.data) {
 				setStoryData(null);
 				return;
@@ -169,7 +172,7 @@ const DataStories = ({
 	// Fetch image descriptions to use as captions
 	const loadImageDescriptions = async () => {
 		try {
-			const response = await getImageDataAll(targetUser);
+			const response = await getImageDataAll(targetUser, submissionId);
 			if (response.data && response.data.images) {
 				const descMap: Record<string, string> = {};
 				for (const img of response.data.images) {
@@ -337,6 +340,15 @@ const DataStories = ({
 		window.addEventListener(WORKSPACE_SNAPSHOT_LOADED_EVENT, onSnapshotLoaded);
 		return () => window.removeEventListener(WORKSPACE_SNAPSHOT_LOADED_EVENT, onSnapshotLoaded);
 	}, [targetUser]);
+
+	// Reload when switching live workspace vs a frozen submission.
+	useEffect(() => {
+		setIsEditing(false);
+		setEditNarrative("");
+		setSaveError(null);
+		void loadCachedNarrative();
+		void loadImageDescriptions();
+	}, [targetUser, submissionId]);
 
 	// Catch up on any update that arrived while the editor was open.
 	useEffect(() => {
@@ -689,7 +701,12 @@ const DataStories = ({
 						Data Stories
 					</span>
 
-					{!readOnly && <ExportButton storyData={exportStoryData} />}
+					{!readOnly && (
+						<>
+							<ExportButton storyData={exportStoryData} />
+							{!submissionId && <SubmitButton />}
+						</>
+					)}
 
 					{/* Editing controls — Story tab only, and only when editing is permitted */}
 					{editingAllowed &&

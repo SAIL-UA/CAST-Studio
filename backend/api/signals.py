@@ -83,5 +83,5 @@ def narrative_cache_saved(sender, instance, **kwargs):
 
 @receiver(post_save, sender="api.Workspace")
 def workspace_saved(sender, instance, **kwargs):
-    if instance.user_id and instance.is_active:
+    if instance.user_id:
         broadcast_workspace_update(instance.user_id)
