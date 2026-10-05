@@ -11,6 +11,7 @@ import { captureActionContext } from "@/utils/userActionLogger";
 import { useResearchQuestions } from "@/contexts/ResearchQuestions";
 import RqLinkPicker from "@/components/RqLinkPicker";
 import RqBadges from "@/components/RqBadges";
+import { Share2 } from "lucide-react";
 
 const GroupDiv: React.FC<GroupDivProps> = ({
 	id,
@@ -533,21 +534,7 @@ const GroupDiv: React.FC<GroupDivProps> = ({
 			{/* Header */}
 			<div className="flex justify-between items-center p-2 bg-bama-crimson text-white">
 				<div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-					<svg
-						width="12"
-						height="12"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="1.5"
-						strokeLinecap="round"
-						className="flex-shrink-0"
-					>
-						<circle cx="3" cy="8" r="2" />
-						<circle cx="13" cy="4" r="2" />
-						<circle cx="13" cy="12" r="2" />
-						<path d="M5 8l6-3M5 8l6 3" />
-					</svg>
+					<Share2 className="w-3 h-3 flex-shrink-0" strokeWidth={1.5} aria-hidden />
 					{editingName ? (
 						<input
 							log-id="group-inline-name-input"

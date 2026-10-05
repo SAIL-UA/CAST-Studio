@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import { logAction } from "../utils/userActionLogger";
 import type { ElementWithFullscreen, DocumentWithFullscreen } from "../types/Environment";
 
@@ -91,23 +92,9 @@ const FullscreenButton = () => {
 			aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
 		>
 			{isFullscreen ? (
-				<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-						d="M9 9L4 4m0 0h5M4 4v5m11 6l5 5m0 0v-5m0 5h-5"
-					/>
-				</svg>
+				<Minimize2 className="w-4 h-4" strokeWidth={1.5} aria-hidden />
 			) : (
-				<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-						d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"
-					/>
-				</svg>
+				<Maximize2 className="w-4 h-4" strokeWidth={1.5} aria-hidden />
 			)}
 		</button>
 	);

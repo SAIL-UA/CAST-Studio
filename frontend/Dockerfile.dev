@@ -8,4 +8,5 @@ RUN npm ci
 
 EXPOSE 8050
 
-CMD ["npm", "run", "dev"]
+# Apply package.json changes with `npm install`
+CMD ["sh", "-c", "npm install && npm run dev"]

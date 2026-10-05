@@ -5,6 +5,7 @@ import { uploadFigure, uploadSlides, createNote } from "@/services/api";
 import { useAlert } from "@/contexts/Alert";
 import { logAction } from "@/utils/userActionLogger";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { Plus, ChevronDown, X } from "lucide-react";
 
 type UploadButtonProps = {
 	onUploaded?: () => void | Promise<void>;
@@ -165,25 +166,9 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 						className="bg-bama-crimson text-sm text-white rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
 					>
 						<span className="flex items-center justify-center gap-2">
-							<svg
-								width="14"
-								height="14"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="2"
-								strokeLinecap="round"
-							>
-								<path d="M8 3v10M3 8h10" />
-							</svg>
+							<Plus className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden />
 							Create
-							<svg
-								className="fill-current h-4 w-4"
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-							>
-								<path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
-							</svg>
+							<ChevronDown className="h-4 w-4" strokeWidth={1.5} aria-hidden />
 						</span>
 					</button>
 				</DropdownMenu.Trigger>
@@ -247,11 +232,11 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 									</span>
 									<button
 										type="button"
-										className="text-red-500 hover:text-red-700 font-bold text-lg leading-none"
+										className="text-red-500 hover:text-red-700 leading-none"
 										onClick={() => handleRemoveFile(index)}
 										title="Remove file"
 									>
-										×
+										<X className="w-4 h-4" strokeWidth={1.5} aria-hidden />
 									</button>
 								</div>
 							))}

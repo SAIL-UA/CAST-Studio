@@ -1,6 +1,7 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { takeControl, returnControl } from "@/services/api";
 import { useAlert } from "@/contexts/Alert";
+import { ChevronDown } from "lucide-react";
 
 const menuItemClass =
 	"block w-full bg-grey-lightest border-grey-light border-2 text-grey-darkest text-sm !font-light rounded-sm m-0 py-1 px-2 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 cursor-pointer outline-none text-left";
@@ -53,13 +54,7 @@ const ControlWorkspaceButton = ({
 				<button className="bg-white text-grey-darkest text-xs rounded-full px-3 py-1 shadow-sm hover:translate-y-[-0.05rem] hover:shadow-md transition duration-200 whitespace-nowrap">
 					<span className="flex items-center gap-1">
 						Control
-						<svg
-							className="fill-current h-3 w-3"
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-						>
-							<path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-						</svg>
+						<ChevronDown className="h-3 w-3" strokeWidth={1.5} aria-hidden />
 					</span>
 				</button>
 			</DropdownMenu.Trigger>

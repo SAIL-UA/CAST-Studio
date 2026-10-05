@@ -5,6 +5,7 @@ import { useAlert } from "@/contexts/Alert";
 import { logAction, captureActionContext } from "@/utils/userActionLogger";
 import { useTaskProgress } from "@/hooks/useTaskProgress";
 import ProgressButton from "@/components/ProgressButton";
+import { Reply } from "lucide-react";
 
 type FeedbackItem = { title: string; text: string; section?: string };
 
@@ -101,19 +102,7 @@ const FeedbackButton = () => {
 			disabled={feedbackLoading}
 		>
 			<span className="flex items-center gap-1.5">
-				<svg
-					width="12"
-					height="12"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth="1.5"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-				>
-					<polyline points="6 12 2 8 6 4" />
-					<path d="M14 14v-2a4 4 0 0 0-4-4H2" />
-				</svg>
+				<Reply className="w-3 h-3" strokeWidth={1.5} aria-hidden />
 				{feedbackLoading ? stageName || "Generating..." : "Ask for Feedback"}
 			</span>
 		</ProgressButton>

@@ -11,6 +11,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { useAlert } from "@/contexts/Alert";
 import { logAction } from "@/utils/userActionLogger";
 import type { ImageData, GroupData, ScaffoldData } from "@/types/types";
+import { Eraser } from "lucide-react";
 
 type ClearAllButtonProps = {
 	images: ImageData[];
@@ -185,14 +186,7 @@ const ClearAllButton = ({
 				onClick={handleOpenModal}
 				title="Clear All"
 			>
-				<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-						d="M3 17h6l7.5-7.5a2.12 2.12 0 00-3-3L6 14v3zM12.5 6.5l3 3M21 21H3"
-					/>
-				</svg>
+				<Eraser className="w-4 h-4" strokeWidth={1.5} aria-hidden />
 			</button>
 		</>
 	);

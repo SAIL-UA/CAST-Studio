@@ -4,6 +4,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { exportStory } from "@/services/api";
 import { useAlert } from "@/contexts/Alert";
 import { logAction, captureActionContext } from "@/utils/userActionLogger";
+import { ChevronDown } from "lucide-react";
 
 // Import types
 import type { StoryDataRaw } from "@/types/types";
@@ -65,13 +66,11 @@ const ExportButton = ({ storyData }: ExportButtonProps) => {
 				>
 					<span className="flex items-center justify-center gap-2">
 						Export
-						<svg
-							className={`fill-current h-4 w-4 transition-transform duration-300 ease-in ${open ? "rotate-180" : "rotate-0"}`}
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-						>
-							<path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
-						</svg>
+						<ChevronDown
+							className={`h-4 w-4 transition-transform duration-300 ease-in ${open ? "rotate-180" : "rotate-0"}`}
+							strokeWidth={1.5}
+							aria-hidden
+						/>
 					</span>
 				</button>
 			</DropdownMenu.Trigger>

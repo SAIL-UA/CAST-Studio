@@ -6,6 +6,7 @@ import { SCAFFOLD_GROUP_LABELS } from '@/types/scaffoldMappings';
 import DraggableCard from '@/components/DraggableCard';
 import GroupDiv from '@/components/GroupDiv';
 import { logAction } from '@/utils/userActionLogger';
+import { Rows2, Copy, Play, X } from 'lucide-react';
 
 const SCAFFOLD_NUMBER = 4;
 const MIN_SLOTS = 2;
@@ -277,7 +278,7 @@ const FactorAnalysis = ({
             onMouseDown={readOnly ? undefined : handleMouseDown}
         >
             <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-lg">
-                <h3 className="text-sm font-bold flex items-center gap-1.5"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="10" height="5" rx="1"/><rect x="3" y="9" width="10" height="5" rx="1"/></svg>Narrative Structure: Factor Analysis</h3>
+                <h3 className="text-sm font-bold flex items-center gap-1.5"><Rows2 className="w-3 h-3" strokeWidth={1.5} aria-hidden />Narrative Structure: Factor Analysis</h3>
                 <div className="flex items-center gap-1">
                     {!readOnly && displaySlotCount < MAX_SLOTS && (
                         <button
@@ -314,10 +315,7 @@ const FactorAnalysis = ({
                         style={{ cursor: 'pointer' }}
                         title="Duplicate scaffold"
                     >
-                        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="5" y="5" width="9" height="9" rx="1.5" />
-                            <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2H3.5A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" />
-                        </svg>
+                        <Copy className="w-2.5 h-2.5" strokeWidth={1.5} aria-hidden />
                     </button>
                     )}
                     {!readOnly && (
@@ -327,9 +325,7 @@ const FactorAnalysis = ({
                         style={{ cursor: 'pointer' }}
                         title="Generate story for this scaffold"
                     >
-                        <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M4 2.5v11l9-5.5z" />
-                        </svg>
+                        <Play className="w-2.5 h-2.5" strokeWidth={1.5} aria-hidden />
                     </button>
                     )}
                     {!readOnly && (
@@ -344,7 +340,7 @@ const FactorAnalysis = ({
                         title="Close Factor Analysis scaffold"
                         log-id="scaffold-close"
                     >
-                        ×
+                        <X className="w-3 h-3" strokeWidth={1.5} aria-hidden />
                     </button>
                     )}
                 </div>

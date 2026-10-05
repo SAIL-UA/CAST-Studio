@@ -7,6 +7,7 @@ import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useAlert } from "@/contexts/Alert";
 import { useGuestTourOpen } from "@/utils/useGuestTourOpen";
 import type { ImageData } from "@/types/types";
+import { Pencil, ChevronDown, ChevronRight } from "lucide-react";
 
 // Legacy placeholder text — kept for backward compatibility with existing images
 const DESCRIPTION_PLACEHOLDER = "Ask AI to create a description for this visual.";
@@ -205,51 +206,15 @@ const AnnotateVisualsButton = ({
 						/>
 					)}
 					<span className="invisible whitespace-nowrap flex items-center gap-2">
-						<svg
-							width="14"
-							height="14"
-							viewBox="0 0 16 16"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="1.5"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						>
-							<path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" />
-							<path d="M9.5 3.5l3 3" />
-						</svg>
+						<Pencil className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden />
 						Annotate
-						<svg
-							className="fill-current h-4 w-4"
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-						>
-							<path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
-						</svg>
+						<ChevronDown className="h-4 w-4" strokeWidth={1.5} aria-hidden />
 					</span>
 					<span className="absolute inset-0 flex items-center justify-center z-10 gap-2">
-						<svg
-							width="14"
-							height="14"
-							viewBox="0 0 16 16"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="1.5"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						>
-							<path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" />
-							<path d="M9.5 3.5l3 3" />
-						</svg>
+						<Pencil className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden />
 						Annotate
 						{!aiRunning && (
-							<svg
-								className="fill-current h-4 w-4"
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-							>
-								<path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
-							</svg>
+							<ChevronDown className="h-4 w-4" strokeWidth={1.5} aria-hidden />
 						)}
 					</span>
 				</button>
@@ -268,13 +233,7 @@ const AnnotateVisualsButton = ({
 							<DropdownMenu.Sub>
 								<DropdownMenu.SubTrigger className="block w-full text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none items-center justify-between gap-2">
 									Create with AI
-									<svg
-										className="fill-current h-3 w-3"
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-									>
-										<path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"></path>
-									</svg>
+									<ChevronRight className="h-3 w-3" strokeWidth={1.5} aria-hidden />
 								</DropdownMenu.SubTrigger>
 								<DropdownMenu.Portal>
 									<DropdownMenu.SubContent

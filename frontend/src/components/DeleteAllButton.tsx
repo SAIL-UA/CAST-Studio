@@ -5,7 +5,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { useAlert } from "@/contexts/Alert";
 import { logAction } from "@/utils/userActionLogger";
 import type { ImageData, GroupData, ScaffoldData } from "@/types/types";
-import trashIcon from "@/assets/images/trash.svg";
+import { Trash2 } from "lucide-react";
 
 type DeleteAllButtonProps = {
 	images: ImageData[];
@@ -183,7 +183,7 @@ const DeleteAllButton = ({
 				onClick={handleOpenModal}
 				title="Delete All"
 			>
-				<img src={trashIcon} alt="Delete All" className="w-4 h-4" />
+				<Trash2 className="w-4 h-4" strokeWidth={1.5} aria-hidden />
 			</button>
 		</>
 	);

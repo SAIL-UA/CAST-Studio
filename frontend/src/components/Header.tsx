@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 // Import contexts
 import { useAuth } from '@/contexts/Auth';
 import { logout } from '@/services/api';
+import { Menu, User } from 'lucide-react';
 
 // Define props interface
 type HeaderProps = {
@@ -65,9 +66,7 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, extr
                                 onClick={onMenuOpen}
                                 title="Menu"
                             >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
+                                <Menu className="w-5 h-5" strokeWidth={1.5} aria-hidden />
                             </button>
                         )}
                         <div onClick={() => navigate(pillLink || '/')} className="flex items-center cursor-pointer">
@@ -101,9 +100,7 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, extr
                         <div className="flex items-center bg-bama-crimson rounded-lg px-3 py-2 shadow-lg cursor-pointer">
                             {userAuthenticated ? (
                                 <div className="flex items-center space-x-1 bg-bama-burgundy px-2 py-1 rounded">
-                                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                    </svg>
+                                    <User className="w-4 h-4 text-white" strokeWidth={1.5} aria-hidden />
                                     <span className="text-white text-sm">{username}</span>
                                 </div>
                             ) : (
@@ -152,9 +149,7 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, extr
                             onClick={onMenuOpen}
                             title="Menu"
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
+                            <Menu className="w-5 h-5" strokeWidth={1.5} aria-hidden />
                         </button>
                     )}
                     <div onClick={() => navigate('/')}
@@ -192,9 +187,7 @@ const Header = ({ onMenuOpen, floating = false, menuOpen = false, subtitle, extr
                         <div className="flex items-center cursor-pointer">
                             {userAuthenticated ? (
                                 <div className="flex items-center space-x-1 bg-bama-burgundy px-2 py-1 rounded">
-                                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                    </svg>
+                                    <User className="w-4 h-4 text-white" strokeWidth={1.5} aria-hidden />
                                     <span className="text-white text-sm">{username}</span>
                                 </div>
                             ) : (
