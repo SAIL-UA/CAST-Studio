@@ -47,7 +47,15 @@ export const ConfirmModal = ({
 			role="dialog"
 			ariaLabelledBy={titleId}
 		>
-			<div className="mb-3">
+			<button
+				type="button"
+				onClick={onClose}
+				aria-label="Close"
+				className="absolute top-3 right-3 w-7 h-7 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
+			>
+				×
+			</button>
+			<div className="mb-3 pr-8">
 				<div id={titleId} className="text-sm font-semibold mb-2">
 					{title}
 				</div>
@@ -56,7 +64,7 @@ export const ConfirmModal = ({
 			<div className="flex justify-end gap-2">
 				<button
 					type="button"
-					className="text-sm px-3 py-1 rounded border"
+					className="text-sm px-3 py-1.5 rounded-full bg-grey-light text-grey-darkest hover:bg-grey transition disabled:opacity-50 disabled:cursor-not-allowed"
 					onClick={onClose}
 					disabled={confirmDisabled}
 				>
@@ -68,8 +76,8 @@ export const ConfirmModal = ({
 					className={
 						confirmButtonClassName ??
 						(destructive
-							? "bg-red-600 text-sm text-white rounded px-3 py-1 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-							: "text-sm text-white rounded px-3 py-1 disabled:bg-gray-400 disabled:cursor-not-allowed")
+							? "bg-red-600 text-sm text-white rounded-full px-3 py-1.5 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+							: "text-sm text-white rounded-full px-3 py-1.5 disabled:bg-gray-400 disabled:cursor-not-allowed")
 					}
 					style={
 						confirmButtonClassName || destructive
