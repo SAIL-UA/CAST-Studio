@@ -1,6 +1,5 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from "react";
-import ReactDOM from "react-dom";
 import {
 	updateImageData as updateImageDataAPI,
 	createGroup,
@@ -28,6 +27,7 @@ import ClearAllButton from "./ClearAllButton";
 import FullscreenButton from "./FullscreenButton";
 // import MobileMenuButton from './MobileMenuButton';
 import RecycleBoard from "./Recycle";
+import { ModalShell } from "@/components/ModalShell";
 import { useAlert } from "@/contexts/Alert";
 
 // Import scaffolds
@@ -1575,39 +1575,43 @@ const StoryBoard = ({
 				</div>
 			</div>
 
-			{recycleBinOpen &&
-				ReactDOM.createPortal(
-					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-500">
-						<div className="bg-white rounded-lg shadow-xl w-[80vw] h-[70vh] flex flex-col overflow-hidden">
-							{/* Modal Header */}
-							<div className="flex justify-between items-center px-4 py-3 border-b border-grey-lightest shrink-0">
-								<h3 className="text-lg font-semibold text-grey-darkest">
-									Recycle Bin
-								</h3>
-								<button
-									log-id="close-recycle-bin-modal-button"
-									onClick={() => setRecycleBinOpen(false)}
-									className="w-7 h-7 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
-								>
-									×
-								</button>
-							</div>
-							{/* Modal Content */}
-							<div className="flex-1 min-h-0 relative">
-								<RecycleBoard
-									images={images}
-									setImages={setImages}
-									loading={loading}
-									fetchUserData={fetchUserData}
-									updateImageData={updateImageData}
-									handleImageRecycle={handleImageRecycle}
-									handleImageRestore={handleImageRestore}
-								/>
-							</div>
-						</div>
-					</div>,
-					document.body,
-				)}
+			{recycleBinOpen && (
+				<ModalShell
+					onClose={() => setRecycleBinOpen(false)}
+					overlayClassName="fixed inset-0 z-500 flex items-center justify-center bg-black/50"
+					panelClassName="relative bg-white rounded-lg shadow-xl w-[80vw] h-[70vh] flex flex-col overflow-hidden mx-4"
+					ariaLabelledBy="recycle-bin-title"
+				>
+					{/* Modal Header */}
+					<div className="flex justify-between items-center px-4 py-3 border-b border-grey-lightest shrink-0">
+						<h3
+							id="recycle-bin-title"
+							className="text-lg font-semibold text-grey-darkest"
+						>
+							Recycle Bin
+						</h3>
+						<button
+							log-id="close-recycle-bin-modal-button"
+							onClick={() => setRecycleBinOpen(false)}
+							className="w-7 h-7 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
+						>
+							×
+						</button>
+					</div>
+					{/* Modal Content */}
+					<div className="flex-1 min-h-0 relative">
+						<RecycleBoard
+							images={images}
+							setImages={setImages}
+							loading={loading}
+							fetchUserData={fetchUserData}
+							updateImageData={updateImageData}
+							handleImageRecycle={handleImageRecycle}
+							handleImageRestore={handleImageRestore}
+						/>
+					</div>
+				</ModalShell>
+			)}
 		</div>
 	);
 };

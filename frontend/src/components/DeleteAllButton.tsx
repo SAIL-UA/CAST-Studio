@@ -1,6 +1,7 @@
 // Import dependencies
 import React, { useState } from "react";
 import { deleteFigure, deleteGroup, getGroups, getScaffolds, deleteScaffold } from "@/services/api";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { useAlert } from "@/contexts/Alert";
 import { logAction } from "@/utils/userActionLogger";
 import type { ImageData, GroupData, ScaffoldData } from "@/types/types";
@@ -57,8 +58,8 @@ const DeleteAllButton = ({
 	};
 
 	// Handle deleting all images and groups
-	const handleDeleteAll = async (e: React.MouseEvent) => {
-		logAction(e);
+	const handleDeleteAll = async () => {
+		logAction({ actionType: "click", elementId: "delete-all-confirm-button" });
 		setIsDeleting(true);
 
 		try {
@@ -143,45 +144,29 @@ const DeleteAllButton = ({
 
 	return (
 		<>
-			{showModal && (
-				<div className="fixed inset-0 z-500 flex items-center justify-center">
-					<div className="absolute inset-0 bg-black/50" onClick={handleCloseModal} />
-					<div className="relative bg-white rounded-lg shadow-xl p-4 w-90 max-w-[90vw]">
-						<div className="mb-3">
-							<div className="text-sm font-semibold mb-2">Delete All Items</div>
-							<div className="text-sm text-gray-600 mb-3">
-								Are you sure you want to permanently delete all images, groups, and
-								scaffolds? This action cannot be undone.
-							</div>
-							<div className="text-sm text-gray-500 mb-3">
-								This will delete:
-								<ul className="list-disc list-inside mt-1 ml-2">
-									<li>{imageCount} image(s) from workspace and recycle bin</li>
-									<li>{groupCount} group(s)</li>
-									<li>{scaffoldCount} scaffold(s)</li>
-								</ul>
-							</div>
-						</div>
-						<div className="flex justify-end gap-2">
-							<button
-								className="text-sm px-3 py-1 rounded border"
-								onClick={handleCloseModal}
-								disabled={isDeleting}
-							>
-								Cancel
-							</button>
-							<button
-								log-id="delete-all-confirm-button"
-								className="bg-red-600 text-sm text-white rounded px-3 py-1 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-								onClick={handleDeleteAll}
-								disabled={isDeleting}
-							>
-								{isDeleting ? "Deleting..." : "Delete All"}
-							</button>
-						</div>
-					</div>
+			<ConfirmModal
+				open={showModal}
+				title="Delete All Items"
+				onClose={handleCloseModal}
+				onConfirm={handleDeleteAll}
+				confirmLabel={isDeleting ? "Deleting..." : "Delete All"}
+				confirmDisabled={isDeleting}
+				confirmLogId="delete-all-confirm-button"
+				destructive
+			>
+				<div className="text-sm text-gray-600 mb-3">
+					Are you sure you want to permanently delete all images, groups, and scaffolds?
+					This action cannot be undone.
 				</div>
-			)}
+				<div className="text-sm text-gray-500">
+					This will delete:
+					<ul className="list-disc list-inside mt-1 ml-2">
+						<li>{imageCount} image(s) from workspace and recycle bin</li>
+						<li>{groupCount} group(s)</li>
+						<li>{scaffoldCount} scaffold(s)</li>
+					</ul>
+				</div>
+			</ConfirmModal>
 			<button
 				log-id="delete-all-button"
 				className="w-auto h-auto rounded-full px-3 py-1 flex items-center justify-center gap-1 text-white font-bold text-sm transition-all duration-200"

@@ -1,8 +1,9 @@
 // Import dependencies
 import React, { useRef, useState } from "react";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { uploadFigure, uploadSlides, createNote } from "@/services/api";
 import { useAlert } from "@/contexts/Alert";
-import { logAction, captureActionContext } from "@/utils/userActionLogger";
+import { logAction } from "@/utils/userActionLogger";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 type UploadButtonProps = {
@@ -35,12 +36,11 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 	};
 
 	// Handle actual upload on submit
-	const handleSubmit = async (e: React.MouseEvent) => {
+	const handleSubmit = async () => {
 		if (selectedFiles.length === 0) {
 			showAlert({ level: "warning", message: "Please select at least one file first." });
 			return;
 		}
-		const ctx = captureActionContext(e);
 
 		// Check for PPTX files
 		const pptxFiles = selectedFiles.filter((f) => f.name.toLowerCase().endsWith(".pptx"));
@@ -90,7 +90,10 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 		}
 
 		if (imageFiles.length > 0) {
-			logAction(ctx, { images: figDataArr });
+			logAction(
+				{ actionType: "click", elementId: "upload-submit-button" },
+				{ images: figDataArr },
+			);
 		}
 
 		if (failCount === 0) {
@@ -220,68 +223,51 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 				</DropdownMenu.Portal>
 			</DropdownMenu.Root>
 
-			{/* Upload Modal */}
-			{showModal && (
-				<div className="fixed inset-0 z-500 flex items-center justify-center">
-					<div className="absolute inset-0 bg-black/50" onClick={handleCancel} />
-					<div className="relative bg-white rounded-lg shadow-xl p-4 w-90 max-w-[90vw]">
-						<div className="mb-3">
-							<div className="text-sm font-semibold mb-2">Upload Images</div>
-							{selectedFiles.length > 0 ? (
-								<div className="mb-3 max-h-48 overflow-y-auto">
-									<div className="text-sm text-gray-600 mb-2">
-										Selected files:
-									</div>
-									<div className="space-y-1">
-										{selectedFiles.map((file, index) => (
-											<div
-												key={index}
-												className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded"
-											>
-												<span className="font-medium truncate flex-1 mr-2">
-													{file.name}
-												</span>
-												<button
-													className="text-red-500 hover:text-red-700 font-bold text-lg leading-none"
-													onClick={() => handleRemoveFile(index)}
-													title="Remove file"
-												>
-													×
-												</button>
-											</div>
-										))}
-									</div>
-								</div>
-							) : (
-								<div className="text-sm text-gray-500 mb-3">No files selected</div>
-							)}
-						</div>
-						<div className="flex justify-end gap-2">
-							<button
-								className="text-sm px-3 py-1 rounded border"
-								onClick={handleCancel}
-							>
-								Cancel
-							</button>
-							<button
-								className="bg-gray-500 text-sm text-white rounded px-3 py-1"
-								onClick={() => fileInputRef.current?.click()}
-							>
-								{selectedFiles.length > 0 ? "Add More Files" : "Select Files"}
-							</button>
-							{selectedFiles.length > 0 && (
-								<button
-									log-id="upload-submit-button"
-									className="bg-bama-crimson text-sm text-white rounded px-3 py-1"
-									onClick={handleSubmit}
+			<ConfirmModal
+				open={showModal}
+				title="Upload Images"
+				onClose={handleCancel}
+				onConfirm={handleSubmit}
+				confirmLabel="Upload"
+				confirmDisabled={selectedFiles.length === 0}
+				confirmLogId="upload-submit-button"
+				confirmButtonClassName="bg-bama-crimson text-sm text-white rounded px-3 py-1 hover:brightness-95 disabled:bg-gray-400 disabled:cursor-not-allowed"
+			>
+				{selectedFiles.length > 0 ? (
+					<div className="mb-3 max-h-48 overflow-y-auto">
+						<div className="text-sm text-gray-600 mb-2">Selected files:</div>
+						<div className="space-y-1">
+							{selectedFiles.map((file, index) => (
+								<div
+									key={index}
+									className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded"
 								>
-									Upload
-								</button>
-							)}
+									<span className="font-medium truncate flex-1 mr-2">
+										{file.name}
+									</span>
+									<button
+										type="button"
+										className="text-red-500 hover:text-red-700 font-bold text-lg leading-none"
+										onClick={() => handleRemoveFile(index)}
+										title="Remove file"
+									>
+										×
+									</button>
+								</div>
+							))}
 						</div>
 					</div>
-				</div>
-			)}
+				) : (
+					<div className="text-sm text-gray-500 mb-3">No files selected</div>
+				)}
+				<button
+					type="button"
+					className="bg-gray-500 text-sm text-white rounded px-3 py-1 hover:brightness-95"
+					onClick={() => fileInputRef.current?.click()}
+				>
+					{selectedFiles.length > 0 ? "Add More Files" : "Select Files"}
+				</button>
+			</ConfirmModal>
 
 			<input
 				type="file"

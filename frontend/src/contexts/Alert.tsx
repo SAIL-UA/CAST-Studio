@@ -1,23 +1,18 @@
-import {
-	createContext,
-	useCallback,
-	useContext,
-	useState,
-	type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { AlertModal, type AlertLevel } from "@/components/AlertModal";
 
-type ShowAlertArgs = {
+export type ShowAlertArgs = {
 	level: AlertLevel;
 	message: string;
+	title?: string;
 	onClose?: () => void;
+	actionLabel?: string;
+	onAction?: () => void | Promise<void>;
+	cancelLabel?: string;
+	destructive?: boolean;
 };
 
-type AlertState = {
-	level: AlertLevel;
-	message: string;
-	onClose?: () => void;
-};
+type AlertState = ShowAlertArgs;
 
 type AlertContextType = {
 	showAlert: (args: ShowAlertArgs) => void;
@@ -29,8 +24,8 @@ const AlertContext = createContext<AlertContextType | null>(null);
 export const AlertProvider = ({ children }: { children: ReactNode }) => {
 	const [alert, setAlert] = useState<AlertState | null>(null);
 
-	const showAlert = useCallback(({ level, message, onClose }: ShowAlertArgs) => {
-		setAlert({ level, message, onClose });
+	const showAlert = useCallback((args: ShowAlertArgs) => {
+		setAlert(args);
 	}, []);
 
 	const dismissAlert = useCallback(() => {
@@ -47,7 +42,12 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
 				<AlertModal
 					level={alert.level}
 					message={alert.message}
+					title={alert.title}
 					onClose={dismissAlert}
+					actionLabel={alert.actionLabel}
+					onAction={alert.onAction}
+					cancelLabel={alert.cancelLabel}
+					destructive={alert.destructive}
 				/>
 			)}
 		</AlertContext.Provider>

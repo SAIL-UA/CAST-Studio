@@ -16,7 +16,6 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
 	const [participantCount, setParticipantCount] = useState(0);
 	const [maxParticipants, setMaxParticipants] = useState(3);
 	const [joinLink, setJoinLink] = useState("");
-	const [showConfirmClose, setShowConfirmClose] = useState(false);
 
 	// Check for existing session on mount
 	useEffect(() => {
@@ -55,7 +54,6 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
 			await closeSession();
 			setShareToken(null);
 			setParticipantCount(0);
-			setShowConfirmClose(false);
 			onSessionChange?.(null);
 		} catch (err) {
 			console.error("Error closing session:", err);
@@ -180,7 +178,14 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
 										onClick={(e) => {
 											e.preventDefault();
 											e.stopPropagation();
-											setShowConfirmClose(true);
+											showAlert({
+												level: "warning",
+												message: "This will close the session. Continue?",
+												cancelLabel: "No",
+												actionLabel: "Yes",
+												destructive: true,
+												onAction: () => handleCloseSession(),
+											});
 										}}
 										className="text-xs bg-red-600 text-white rounded-full px-3 py-1 hover:brightness-95 transition"
 									>
@@ -238,31 +243,6 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
 					</DropdownMenu.Content>
 				</DropdownMenu.Portal>
 			</DropdownMenu.Root>
-
-			{/* Confirm Close Modal */}
-			{showConfirmClose && (
-				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]">
-					<div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4">
-						<div className="text-sm text-grey-darkest mb-4">
-							This will close the session. Continue?
-						</div>
-						<div className="flex justify-end gap-2">
-							<button
-								onClick={() => setShowConfirmClose(false)}
-								className="text-sm px-4 py-1.5 rounded border hover:bg-grey-lighter transition"
-							>
-								No
-							</button>
-							<button
-								onClick={handleCloseSession}
-								className="text-sm bg-red-600 text-white rounded px-4 py-1.5 hover:brightness-95 transition"
-							>
-								Yes
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
 		</>
 	);
 };

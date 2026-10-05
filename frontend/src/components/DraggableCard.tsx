@@ -1,11 +1,11 @@
 // DraggableCard component for drag and drop functionality -> cursor generated based off the previous draggable card
 
 import React, { useState, useRef, useEffect } from "react";
-import ReactDOM from "react-dom";
 import { useDrag } from "react-dnd";
 import type { DraggableCardProps, DragItem, ImageData, ImageMetadata } from "@/types/types";
 import { updateImageData, generateDescription, deleteFigure, getImageData } from "@/services/api";
 import { GeneratingPlaceholder } from "@/components/GeneratingPlaceholder";
+import { ModalShell } from "@/components/ModalShell";
 import { logAction, captureActionContext } from "@/utils/userActionLogger";
 import { formatImageMetadata, getImageUrl } from "@/utils/imageUtils";
 import { useAlert } from "@/contexts/Alert";
@@ -255,11 +255,7 @@ function DraggableCard({
 		imageMetadataRef.current = updatedImageMetadata;
 	};
 
-	const handleDelete = async (e: React.MouseEvent) => {
-		const ctx = captureActionContext(e);
-		if (!window.confirm("Are you sure you want to delete this figure?")) {
-			return;
-		}
+	const performDelete = async (ctx: ReturnType<typeof captureActionContext>) => {
 		logAction(ctx, { image_metadata: imageMetadataRef.current });
 		try {
 			const res = await deleteFigure(image.filepath || image.id);
@@ -276,6 +272,17 @@ function DraggableCard({
 			console.error("Error deleting figure:", err);
 			showAlert({ level: "error", message: "An error occurred while deleting the figure" });
 		}
+	};
+
+	const handleDelete = (e: React.MouseEvent) => {
+		const ctx = captureActionContext(e);
+		showAlert({
+			level: "warning",
+			message: "Are you sure you want to delete this figure?",
+			actionLabel: "Delete",
+			destructive: true,
+			onAction: () => performDelete(ctx),
+		});
 	};
 
 	const handleGenerateDescription = async (e: React.MouseEvent) => {
@@ -594,132 +601,129 @@ function DraggableCard({
 				</div>
 			</div>
 
-			{/* Modal for editing - rendered as portal to escape container constraints */}
-			{showModal &&
-				ReactDOM.createPortal(
-					<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-500">
-						<div
-							className="rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
-							style={{ backgroundColor: "#eaf1f7" }}
+			{/* Edit figure modal */}
+			{showModal && (
+				<ModalShell
+					onClose={() => {
+						setShowModal(false);
+						document.body.style.overflow = "auto";
+					}}
+					overlayClassName="fixed inset-0 z-500 flex items-center justify-center bg-black/50"
+					panelClassName="relative rounded-lg bg-[#eaf1f7] p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto shadow-xl"
+					ariaLabelledBy="edit-figure-title"
+				>
+					{/* Modal Header — title + action buttons on one line */}
+					<div className="flex items-center justify-between mb-6 gap-4">
+						<h2
+							id="edit-figure-title"
+							className="text-xl font-bold truncate min-w-0"
+							style={{ maxWidth: "250px" }}
+							title={tempTitle}
 						>
-							{/* Modal Header — title + action buttons on one line */}
-							<div className="flex items-center justify-between mb-6 gap-4">
-								<h2
-									className="text-xl font-bold truncate min-w-0"
-									style={{ maxWidth: "250px" }}
-									title={tempTitle}
-								>
-									{tempTitle}
-								</h2>
-								<div className="flex items-center gap-1 shrink-0">
-									{!isInstructorNote &&
-										(image.in_storyboard ? (
-											<button
-												log-id="move-figure-to-recycle-bin-button"
-												onClick={handleTrash}
-												className="bg-yellow-600 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-											>
-												Move to Recycle Bin
-											</button>
-										) : (
-											<button
-												log-id="restore-figure-to-storyboard-button"
-												onClick={handleUnTrash}
-												className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-											>
-												Restore to Storyboard
-											</button>
-										))}
+							{tempTitle}
+						</h2>
+						<div className="flex items-center gap-1 shrink-0">
+							{!isInstructorNote &&
+								(image.in_storyboard ? (
 									<button
-										log-id="delete-figure-button"
-										onClick={handleDelete}
-										className="bg-red-700 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+										log-id="move-figure-to-recycle-bin-button"
+										onClick={handleTrash}
+										className="bg-yellow-600 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
 									>
-										Permanently Delete
+										Move to Recycle Bin
 									</button>
+								) : (
 									<button
-										log-id="save-and-close-figure-button"
-										onClick={(e) => handleClose(e)}
-										className="text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
-										style={{ backgroundColor: "#348b94" }}
+										log-id="restore-figure-to-storyboard-button"
+										onClick={handleUnTrash}
+										className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
 									>
-										Save & Close
+										Restore to Storyboard
 									</button>
-								</div>
-							</div>
-
-							{/* Image Display — only for visuals, not notes */}
-							{image.filepath && (
-								<div className="text-center mb-4">
-									<img
-										src={imageUrl}
-										alt={image.id}
-										className="w-4/5 h-auto mx-auto rounded-lg"
-									/>
-								</div>
-							)}
-
-							{/* Form Fields */}
-							<div className="space-y-4">
-								<div>
-									<h4 className="text-base font-semibold text-grey-darkest mb-2">
-										Title
-									</h4>
-									<input
-										id="titleInput"
-										type="text"
-										value={tempTitle}
-										onChange={(e) => setTempTitle(e.target.value)}
-										className="w-full px-3 py-2 text-xs border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-										style={{ backgroundColor: "#f4f7fa" }}
-										placeholder="Add a title for this visual"
-									/>
-								</div>
-
-								<div>
-									<div className="flex items-center justify-between mb-2">
-										<h4 className="text-base font-semibold text-grey-darkest">
-											{image.filepath ? "Description" : "Text"}
-										</h4>
-										{image.filepath && annotateWithAI && (
-											<button
-												log-id="generate-description-button"
-												onClick={handleGenerateDescription}
-												disabled={loadingGenDesc}
-												className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-											>
-												{loadingGenDesc
-													? "Generating..."
-													: "Generate Description"}
-											</button>
-										)}
-									</div>
-									{loadingGenDesc ? (
-										<GeneratingPlaceholder
-											contentName="description"
-											lines={5}
-										/>
-									) : (
-										<textarea
-											id="longDesc"
-											rows={isInstructorNote ? 12 : 6}
-											value={tempLongDesc}
-											onChange={(e) => setTempLongDesc(e.target.value)}
-											className="w-full px-3 py-2 text-xs border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-											style={{ backgroundColor: "#f4f7fa" }}
-											placeholder={
-												isInstructorNote
-													? "Type your feedback here."
-													: "Click 'Generate Description' to create with AI, or type a description here."
-											}
-										/>
-									)}
-								</div>
-							</div>
+								))}
+							<button
+								log-id="delete-figure-button"
+								onClick={handleDelete}
+								className="bg-red-700 text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+							>
+								Permanently Delete
+							</button>
+							<button
+								log-id="save-and-close-figure-button"
+								onClick={(e) => handleClose(e)}
+								className="text-sm text-white rounded-full px-3 py-1 whitespace-nowrap hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+								style={{ backgroundColor: "#348b94" }}
+							>
+								Save & Close
+							</button>
 						</div>
-					</div>,
-					document.body,
-				)}
+					</div>
+
+					{/* Image Display — only for visuals, not notes */}
+					{image.filepath && (
+						<div className="text-center mb-4">
+							<img
+								src={imageUrl}
+								alt={image.id}
+								className="w-4/5 h-auto mx-auto rounded-lg"
+							/>
+						</div>
+					)}
+
+					{/* Form Fields */}
+					<div className="space-y-4">
+						<div>
+							<h4 className="text-base font-semibold text-grey-darkest mb-2">
+								Title
+							</h4>
+							<input
+								id="titleInput"
+								type="text"
+								value={tempTitle}
+								onChange={(e) => setTempTitle(e.target.value)}
+								className="w-full px-3 py-2 text-xs border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+								style={{ backgroundColor: "#f4f7fa" }}
+								placeholder="Add a title for this visual"
+							/>
+						</div>
+
+						<div>
+							<div className="flex items-center justify-between mb-2">
+								<h4 className="text-base font-semibold text-grey-darkest">
+									{image.filepath ? "Description" : "Text"}
+								</h4>
+								{image.filepath && annotateWithAI && (
+									<button
+										log-id="generate-description-button"
+										onClick={handleGenerateDescription}
+										disabled={loadingGenDesc}
+										className="bg-bama-crimson text-sm text-white rounded-full px-3 py-1 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{loadingGenDesc ? "Generating..." : "Generate Description"}
+									</button>
+								)}
+							</div>
+							{loadingGenDesc ? (
+								<GeneratingPlaceholder contentName="description" lines={5} />
+							) : (
+								<textarea
+									id="longDesc"
+									rows={isInstructorNote ? 12 : 6}
+									value={tempLongDesc}
+									onChange={(e) => setTempLongDesc(e.target.value)}
+									className="w-full px-3 py-2 text-xs border border-grey-lightest rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+									style={{ backgroundColor: "#f4f7fa" }}
+									placeholder={
+										isInstructorNote
+											? "Type your feedback here."
+											: "Click 'Generate Description' to create with AI, or type a description here."
+									}
+								/>
+							)}
+						</div>
+					</div>
+				</ModalShell>
+			)}
 		</>
 	);
 }
