@@ -8,6 +8,5 @@ RUN npm ci
 
 EXPOSE 8050
 
-# Reconcile deps when package.json changes; the named node_modules volume
-# otherwise keeps a stale install across rebuilds.
+# Apply package.json changes with `npm install`
 CMD ["sh", "-c", "npm install && npm run dev"]
