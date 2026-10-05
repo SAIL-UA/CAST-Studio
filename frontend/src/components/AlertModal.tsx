@@ -130,13 +130,13 @@ export const AlertModal = ({
 					{title}
 				</h2>
 			)}
-			<div className={`flex items-start gap-3 rounded-md px-4 py-3 ${styles.panel}`}>
+			<div className={`flex items-center gap-3 rounded-md px-4 py-3 ${styles.panel}`}>
 				<LevelIcon level={level} className={styles.icon} />
 				<p id={messageId} className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-5">
 					{message}
 				</p>
 				{isConfirm ? (
-					<div className="flex shrink-0 items-center gap-3 self-center">
+					<div className="flex shrink-0 items-center gap-3">
 						<button
 							type="button"
 							onClick={onClose}
