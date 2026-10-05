@@ -139,9 +139,9 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 					</p>
 				)}
 				<p className="text-sm text-grey-dark mb-2">
-					Submitting uses{" "}
-					<strong>one of your {limit} attempts for this assignment</strong> ({used} used,{" "}
-					{remaining} remaining).
+					<strong>
+						{used} of {limit} attempts used, {remaining} remaining
+					</strong>
 				</p>
 				<p className="text-sm text-grey-dark">
 					Your submission is final and immutable — you will not be able to edit or reload
