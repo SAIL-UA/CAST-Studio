@@ -467,7 +467,7 @@ const SessionWorkspace = () => {
 			</div>
 
 			{/* Assignment + Research Questions — shared left rail, tabs stacked flush */}
-			<div className="fixed top-[60%] -translate-y-1/2 left-0 z-[300] flex flex-row items-start transition-all duration-300">
+			<div className="fixed top-[55%] -translate-y-1/2 left-0 z-[300] flex flex-row items-start transition-all duration-300">
 				<div className="flex flex-col gap-0.5 flex-shrink-0 shadow-lg rounded-r-xl overflow-hidden">
 					<button
 						id="assignment-toggle"
@@ -499,12 +499,11 @@ const SessionWorkspace = () => {
 					</button>
 				</div>
 				<div
-					className={`rounded-r-xl overflow-hidden shadow-2xl transition-all duration-300 ${
+					className={`rounded-r-xl h-[65dvh] overflow-y-auto shadow-2xl transition-all duration-300 ${
 						assignmentExpanded || rqExpanded ? "w-[374px] opacity-100" : "w-0 opacity-0"
 					}`}
-					style={{ height: "80vh" }}
 				>
-					<div className="h-full bg-grey-lighter-2 overflow-y-auto">
+					<div className="h-full bg-grey-lighter-2">
 						{assignmentExpanded && <AssignmentCriteriaPanel />}
 						{rqExpanded && (
 							<ResearchQuestionsPanel
@@ -522,7 +521,7 @@ const SessionWorkspace = () => {
 			</div>
 
 			{/* Feedback — right-anchored collapsible panel */}
-			<div className="fixed top-[60%] -translate-y-1/2 right-0 z-[300] flex flex-row-reverse items-start transition-all duration-300">
+			<div className="fixed top-[55%] -translate-y-1/2 right-0 z-[300] flex flex-row-reverse items-start transition-all duration-300">
 				<button
 					title={feedbackExpanded ? "Collapse Feedback" : "Expand Feedback"}
 					aria-label={feedbackExpanded ? "Collapse Feedback" : "Expand Feedback"}
@@ -532,19 +531,16 @@ const SessionWorkspace = () => {
 					<MessageSquare className="w-4 h-4" strokeWidth={1.5} aria-hidden />
 				</button>
 				<div
-					className={`rounded-l-xl overflow-hidden shadow-2xl transition-all duration-300 ${
+					className={`rounded-l-xl h-[65dvh] overflow-y-auto shadow-2xl transition-all duration-300 ${
 						feedbackExpanded ? "w-[288px] opacity-100" : "w-0 opacity-0"
 					}`}
-					style={{ height: "80vh" }}
 				>
-					<div className="h-full rounded-l-xl">
-						<div className="h-full bg-grey-lighter-2 overflow-y-auto">
-							<FeedbackPanel
-								items={feedbackItems}
-								instructorNotes={instructorNotes}
-								onClose={() => setFeedbackExpanded(false)}
-							/>
-						</div>
+					<div className="h-full bg-grey-lighter-2">
+						<FeedbackPanel
+							items={feedbackItems}
+							instructorNotes={instructorNotes}
+							onClose={() => setFeedbackExpanded(false)}
+						/>
 					</div>
 				</div>
 			</div>

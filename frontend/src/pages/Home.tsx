@@ -333,7 +333,7 @@ const Home = () => {
 			{/* Session info — under the pill, visible when host has active session with participants */}
 			{sessionShareToken &&
 				sessionParticipants.filter((p) => p.is_online !== false).length > 0 && (
-					<div className="fixed top-16 left-3 z-[350] flex items-center gap-2">
+					<div className="fixed top-16 left-3 z-350 flex items-center gap-2">
 						{controlledByName && (
 							<span className="bg-bama-crimson text-white text-xs rounded-full px-3 py-1 whitespace-nowrap shadow-sm">
 								{controlledByName} Controlling {username}'s Workspace
@@ -420,13 +420,13 @@ const Home = () => {
 					{/* DataStories — bottom-anchored overlay */}
 					<div
 						data-tour-target="story-browser"
-						className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-1/2 z-[300] flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
-							dataStoriesExpanded ? "max-h-[75vh]" : "max-h-[32px]"
+						className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-1/2 z-300 flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
+							dataStoriesExpanded ? "max-h-[75vh]" : "max-h-8"
 						}`}
 					>
 						{/* Collapse/Expand toggle bar */}
 						<button
-							className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 flex-shrink-0"
+							className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 shrink-0"
 							onClick={() => setDataStoriesExpanded(!dataStoriesExpanded)}
 						>
 							<ChevronUp
@@ -453,8 +453,8 @@ const Home = () => {
 					</div>
 
 					{/* Assignment + Research Questions — shared left rail, tabs stacked flush */}
-					<div className="fixed top-[60%] -translate-y-1/2 left-0 z-[300] flex flex-row items-start transition-all duration-300">
-						<div className="flex flex-col gap-0.5 flex-shrink-0 shadow-lg rounded-r-xl overflow-hidden">
+					<div className="fixed top-[50%] -translate-y-1/2 left-0 z-300 flex flex-row items-start transition-all duration-300">
+						<div className="flex flex-col gap-0.5 shrink-0 shadow-lg rounded-r-xl overflow-hidden">
 							<button
 								id="assignment-toggle"
 								log-id="assignment-criteria-toggle"
@@ -485,14 +485,13 @@ const Home = () => {
 							</button>
 						</div>
 						<div
-							className={`rounded-r-xl overflow-hidden shadow-2xl transition-all duration-300 ${
+							className={`rounded-r-xl h-[75dvh] overflow-y-auto shadow-2xl transition-all duration-300 ${
 								assignmentExpanded || rqExpanded
-									? "w-[374px] opacity-100"
+									? "w-93.5 opacity-100"
 									: "w-0 opacity-0"
 							}`}
-							style={{ height: "80vh" }}
 						>
-							<div className="h-full bg-grey-lighter-2 overflow-y-auto">
+							<div className="h-full bg-grey-lighter-2">
 								{assignmentExpanded && <AssignmentCriteriaPanel />}
 								{rqExpanded && (
 									<ResearchQuestionsPanel
@@ -509,24 +508,23 @@ const Home = () => {
 					</div>
 
 					{/* Feedback — right-anchored collapsible panel */}
-					<div className="fixed top-[60%] -translate-y-1/2 right-0 z-[300] flex flex-row-reverse items-start transition-all duration-300">
+					<div className="fixed top-[50%] -translate-y-1/2 right-0 z-300 flex flex-row-reverse items-start transition-all duration-300">
 						{/* Collapse/Expand toggle bar — icon on the left edge */}
 						<button
 							title={feedbackExpanded ? "Collapse Feedback" : "Expand Feedback"}
 							aria-label={feedbackExpanded ? "Collapse Feedback" : "Expand Feedback"}
-							className="flex flex-col items-center justify-center bg-bama-crimson text-white hover:brightness-110 rounded-l-xl transition-colors duration-150 flex-shrink-0 px-2 py-3 shadow-lg"
+							className="flex flex-col items-center justify-center bg-bama-crimson text-white hover:brightness-110 rounded-l-xl transition-colors duration-150 shrink-0 px-2 py-3 shadow-lg"
 							onClick={() => setFeedbackExpanded(!feedbackExpanded)}
 						>
 							<MessageSquare className="w-4 h-4" strokeWidth={1.5} aria-hidden />
 						</button>
 						{/* Feedback content — fixed height, scrollable */}
 						<div
-							className={`rounded-l-xl overflow-hidden shadow-2xl transition-all duration-300 ${
+							className={`rounded-l-xl h-[75dvh] overflow-y-auto shadow-2xl transition-all duration-300 ${
 								feedbackExpanded ? "w-[288px] opacity-100" : "w-0 opacity-0"
 							}`}
-							style={{ height: "80vh" }}
 						>
-							<div className="h-full bg-grey-lighter-2 overflow-y-auto">
+							<div className="h-full bg-grey-lighter-2">
 								<FeedbackPanel
 									items={feedbackItems}
 									instructorNotes={instructorNotes}
@@ -541,10 +539,10 @@ const Home = () => {
 				{leftMenuOpen && (
 					<>
 						<div
-							className="fixed inset-0 bg-black/30 z-[400]"
+							className="fixed inset-0 bg-black/30 z-400"
 							onClick={() => setLeftMenuOpen(false)}
 						/>
-						<div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto pt-8">
+						<div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-401 overflow-y-auto pt-8">
 							<CompactSidebar
 								setCenterNarrativePatternsOpen={(val: boolean) => {
 									setCenterNarrativePatternsOpen(val);
@@ -566,7 +564,7 @@ const Home = () => {
 					<>
 						{/* Backdrop */}
 						<div
-							className="fixed inset-0 bg-black/30 z-[500]"
+							className="fixed inset-0 bg-black/30 z-500"
 							onClick={() => {
 								setRightNarrativePatternsOpen(false);
 								setRightNarrativeExamplesOpen(false);
@@ -575,7 +573,7 @@ const Home = () => {
 						{/* Panel */}
 						<div
 							id="right-home"
-							className="fixed top-0 right-0 bottom-0 w-1/5 min-w-[256px] bg-grey-lighter-2 shadow-xl z-[501] overflow-y-auto"
+							className="fixed top-0 right-0 bottom-0 w-1/5 min-w-[256px] bg-grey-lighter-2 shadow-xl z-501 overflow-y-auto"
 						>
 							{/* Close button */}
 							<div className="flex justify-end p-2">
