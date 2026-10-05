@@ -1,9 +1,17 @@
+import { useState } from "react";
+import { ModalShell } from "@/components/ModalShell";
+
 export type AlertLevel = "success" | "info" | "warning" | "error";
 
-type AlertModalProps = {
+export type AlertModalProps = {
 	level: AlertLevel;
 	message: string;
+	title?: string;
 	onClose: () => void;
+	actionLabel?: string;
+	onAction?: () => void | Promise<void>;
+	cancelLabel?: string;
+	destructive?: boolean;
 };
 
 const levelStyles: Record<AlertLevel, { panel: string; icon: string; label: string }> = {
@@ -68,7 +76,6 @@ const LevelIcon = ({ level, className }: { level: AlertLevel; className?: string
 		);
 	}
 
-	// info
 	return (
 		<svg className={common} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
 			<path
@@ -80,34 +87,55 @@ const LevelIcon = ({ level, className }: { level: AlertLevel; className?: string
 	);
 };
 
-export const AlertModal = ({ level, message, onClose }: AlertModalProps) => {
+export const AlertModal = ({
+	level,
+	message,
+	title,
+	onClose,
+	actionLabel,
+	onAction,
+	cancelLabel = "Cancel",
+	destructive = false,
+}: AlertModalProps) => {
 	const styles = levelStyles[level];
+	const [actionPending, setActionPending] = useState(false);
+	const isConfirm = Boolean(onAction && actionLabel);
+	const messageId = "alert-modal-message";
+	const titleId = "alert-modal-title";
+
+	const handleAction = async () => {
+		if (!onAction || actionPending) return;
+		setActionPending(true);
+		try {
+			await onAction();
+			onClose();
+		} catch {
+			// Callers show errors via showAlert inside onAction; dismiss either way.
+			onClose();
+		} finally {
+			setActionPending(false);
+		}
+	};
 
 	return (
-		<div
-			className="fixed inset-0 z-500 flex items-center justify-center bg-black/50"
-			// Close modal on click outside modal
-			onClick={(e) => {
-				if (e.target === e.currentTarget) {
-					onClose();
-				}
-			}}
+		<ModalShell
+			onClose={onClose}
+			role={isConfirm ? "dialog" : "alertdialog"}
+			ariaLabel={isConfirm ? undefined : styles.label}
+			ariaLabelledBy={isConfirm && title ? titleId : undefined}
+			ariaDescribedBy={messageId}
 		>
-			<div
-				className="relative mx-4 w-full max-w-lg rounded-lg bg-white p-4 shadow-xl"
-				role="alertdialog"
-				aria-modal="true"
-				aria-label={styles.label}
-				aria-describedby="alert-modal-message"
-			>
-				<div className={`flex items-start gap-3 rounded-md px-4 py-3 ${styles.panel}`}>
-					<LevelIcon level={level} className={styles.icon} />
-					<p
-						id="alert-modal-message"
-						className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-5"
-					>
-						{message}
-					</p>
+			{title && isConfirm && (
+				<h2 id={titleId} className="mb-2 text-base font-semibold text-grey-darkest">
+					{title}
+				</h2>
+			)}
+			<div className={`flex items-start gap-3 rounded-md px-4 py-3 ${styles.panel}`}>
+				<LevelIcon level={level} className={styles.icon} />
+				<p id={messageId} className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-5">
+					{message}
+				</p>
+				{!isConfirm && (
 					<button
 						type="button"
 						log-id="alert-close-button"
@@ -124,9 +152,32 @@ export const AlertModal = ({ level, message, onClose }: AlertModalProps) => {
 							<path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
 						</svg>
 					</button>
-				</div>
+				)}
 			</div>
-		</div>
+			{isConfirm && (
+				<div className="mt-4 flex justify-end gap-2">
+					<button
+						type="button"
+						onClick={onClose}
+						className="text-sm px-4 py-1.5 rounded border hover:bg-grey-lighter transition"
+					>
+						{cancelLabel}
+					</button>
+					<button
+						type="button"
+						onClick={() => void handleAction()}
+						disabled={actionPending}
+						className={
+							destructive
+								? "text-sm bg-red-600 text-white rounded px-4 py-1.5 hover:brightness-95 transition disabled:opacity-50"
+								: "text-sm bg-bama-crimson text-white rounded px-4 py-1.5 hover:brightness-95 transition disabled:opacity-50"
+						}
+					>
+						{actionPending ? "…" : actionLabel}
+					</button>
+				</div>
+			)}
+		</ModalShell>
 	);
 };
 
