@@ -11,6 +11,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { Undo2, Redo2 } from "lucide-react";
 import {
 	$createHeadingNode,
 	$isHeadingNode,
@@ -263,19 +264,7 @@ function EditorToolbar() {
 				onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
 				className={pillBaseClass}
 			>
-				<svg
-					width="12"
-					height="12"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth="1.8"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-				>
-					<path d="M3 8h7a3 3 0 0 1 0 6H7" />
-					<path d="M6 5 3 8l3 3" />
-				</svg>
+				<Undo2 className="w-3 h-3" strokeWidth={1.5} aria-hidden />
 			</button>
 			<button
 				type="button"
@@ -287,19 +276,7 @@ function EditorToolbar() {
 				onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
 				className={pillBaseClass}
 			>
-				<svg
-					width="12"
-					height="12"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth="1.8"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-				>
-					<path d="M13 8H6a3 3 0 0 0 0 6h3" />
-					<path d="M10 5l3 3-3 3" />
-				</svg>
+				<Redo2 className="w-3 h-3" strokeWidth={1.5} aria-hidden />
 			</button>
 		</div>
 	);

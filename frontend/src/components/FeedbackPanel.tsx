@@ -1,5 +1,5 @@
 import React from 'react';
-import squares from '@/assets/images/squares.svg';
+import { LayoutGrid } from 'lucide-react';
 
 export type FeedbackCardData = {
   title: string;
@@ -86,7 +86,7 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ items, instructorNotes = 
           <div key={idx} className="bg-white rounded-md shadow-sm border border-grey-lightest overflow-hidden">
             {/* Integrated title strip as part of card */}
             <div className="flex items-center gap-2 bg-[#4d8497] text-white px-3 py-2">
-              <img src={squares} alt="section" className="w-4 h-4 opacity-90" />
+              <LayoutGrid className="w-4 h-4 opacity-90" strokeWidth={1.5} aria-hidden />
               <h4 className="font-semibold text-sm">{it.title || 'Feedback'}</h4>
             </div>
 

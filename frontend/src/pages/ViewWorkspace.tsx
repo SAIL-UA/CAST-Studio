@@ -17,6 +17,7 @@ import Workspace from "@/components/Workspace";
 import DataStories from "@/components/DataStories";
 import CompactSidebar from "@/components/CompactSidebar";
 import Footer from "@/components/Footer";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 type StudentInfo = {
 	id: string;
@@ -242,13 +243,7 @@ const ViewWorkspace = () => {
 							<DropdownMenu.Trigger asChild>
 								<button className="flex items-center gap-2 bg-bama-crimson text-white text-sm rounded-full px-3 py-1 whitespace-nowrap shadow-lg hover:brightness-95 transition duration-200">
 									Viewing: {studentName}
-									<svg
-										className="fill-current h-4 w-4"
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-									>
-										<path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
-									</svg>
+									<ChevronDown className="h-4 w-4" strokeWidth={1.5} aria-hidden />
 								</button>
 							</DropdownMenu.Trigger>
 							<DropdownMenu.Portal>
@@ -296,13 +291,7 @@ const ViewWorkspace = () => {
 									<span className="text-xs text-grey-dark">
 										({submissions.length}/{submissionLimit})
 									</span>
-									<svg
-										className="fill-current h-4 w-4"
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-									>
-										<path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
-									</svg>
+									<ChevronDown className="h-4 w-4" strokeWidth={1.5} aria-hidden />
 								</button>
 							</DropdownMenu.Trigger>
 							<DropdownMenu.Portal>
@@ -428,19 +417,11 @@ const ViewWorkspace = () => {
 					className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 flex-shrink-0"
 					onClick={() => setDataStoriesExpanded(!dataStoriesExpanded)}
 				>
-					<svg
+					<ChevronUp
 						className={`w-3 h-3 transition-transform duration-300 ${dataStoriesExpanded ? "rotate-180" : ""}`}
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M5 15l7-7 7 7"
-						/>
-					</svg>
+						strokeWidth={1.5}
+						aria-hidden
+					/>
 					{dataStoriesExpanded ? "Collapse" : "Expand"} Story
 				</button>
 				<div

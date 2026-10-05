@@ -4,6 +4,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { logAction } from '@/utils/userActionLogger';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useGuestTourOpen } from '@/utils/useGuestTourOpen';
+import { Rows2, ChevronDown, Check } from 'lucide-react';
 
 type GenerateStoryButtonProps = {
     setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -61,9 +62,7 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
 
     // Tick mark component
     const Tick = () => (
-        <svg className="w-3.5 h-3.5 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
+        <Check className="w-3.5 h-3.5 mr-1.5 inline-block" strokeWidth={3} aria-hidden />
     );
 
     // Visible component
@@ -77,15 +76,9 @@ const GenerateStoryButton = ({ setRightNarrativePatternsOpen, setSelectedPattern
                     disabled={storyLoading}
                 >
                     <span className="flex items-center justify-center gap-2">
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="10" height="5" rx="1"/><rect x="3" y="9" width="10" height="5" rx="1"/></svg>
+                        <Rows2 className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden />
                         {storyLoading ? 'Generating...' : 'Select Narrative'}
-                        <svg
-                            className="fill-current h-4 w-4"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                        >
-                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path>
-                        </svg>
+                        <ChevronDown className="h-4 w-4" strokeWidth={1.5} aria-hidden />
                     </span>
                 </button>
             </DropdownMenu.Trigger>

@@ -13,6 +13,7 @@ import FeedbackPanel, { type FeedbackCardData, type InstructorNote } from '@/com
 import CompactSidebar from '@/components/CompactSidebar';
 import ControlWorkspaceButton from '@/components/ControlWorkspaceButton';
 import Footer from '@/components/Footer';
+import { ChevronUp, ChevronRight } from 'lucide-react';
 
 type ParticipantInfo = {
     username: string;
@@ -405,12 +406,11 @@ const SessionWorkspace = () => {
                     className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 flex-shrink-0"
                     onClick={() => setDataStoriesExpanded(!dataStoriesExpanded)}
                 >
-                    <svg
+                    <ChevronUp
                         className={`w-3 h-3 transition-transform duration-300 ${dataStoriesExpanded ? 'rotate-180' : ''}`}
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                    </svg>
+                        strokeWidth={1.5}
+                        aria-hidden
+                    />
                     {dataStoriesExpanded ? 'Collapse' : 'Expand'} Story
                 </button>
                 <div className={`flex-1 min-h-0 overflow-y-auto px-1 pb-1 ${dataStoriesExpanded ? '' : 'hidden'}`}>
@@ -442,12 +442,11 @@ const SessionWorkspace = () => {
                         }}
                         style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', background: '#5b4a8a' }}
                     >
-                        <svg
+                        <ChevronRight
                             className={`w-3 h-3 mb-1.5 transition-transform duration-300 ${assignmentExpanded ? 'rotate-180' : 'rotate-0'}`}
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                            strokeWidth={1.5}
+                            aria-hidden
+                        />
                         Assignment
                     </button>
                     <button
@@ -460,12 +459,11 @@ const SessionWorkspace = () => {
                         }}
                         style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', background: '#348b95' }}
                     >
-                        <svg
+                        <ChevronRight
                             className={`w-3 h-3 mb-1.5 transition-transform duration-300 ${rqExpanded ? 'rotate-180' : 'rotate-0'}`}
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                            strokeWidth={1.5}
+                            aria-hidden
+                        />
                         Research Questions
                     </button>
                 </div>
@@ -496,12 +494,11 @@ const SessionWorkspace = () => {
                     onClick={() => setFeedbackExpanded(!feedbackExpanded)}
                     style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
                 >
-                    <svg
+                    <ChevronRight
                         className={`w-3 h-3 mb-1.5 transition-transform duration-300 ${feedbackExpanded ? 'rotate-0' : 'rotate-180'}`}
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                        strokeWidth={1.5}
+                        aria-hidden
+                    />
                     {feedbackExpanded ? 'Collapse' : 'Expand'} Feedback
                 </button>
                 <div

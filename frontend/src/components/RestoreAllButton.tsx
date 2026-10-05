@@ -3,6 +3,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { useAlert } from "@/contexts/Alert";
 import { logAction } from "@/utils/userActionLogger";
 import type { ImageData } from "@/types/types";
+import { Undo2 } from "lucide-react";
 
 type RestoreAllButtonProps = {
 	images: ImageData[];
@@ -84,14 +85,7 @@ const RestoreAllButton = ({
 				onClick={handleOpenModal}
 				title="Restore all to storyboard"
 			>
-				<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-						d="M3 10h10a5 5 0 015 5v2M3 10l4-4M3 10l4 4"
-					/>
-				</svg>
+				<Undo2 className="w-4 h-4" strokeWidth={1.5} aria-hidden />
 			</button>
 		</>
 	);

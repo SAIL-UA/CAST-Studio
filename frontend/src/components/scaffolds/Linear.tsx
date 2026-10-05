@@ -13,6 +13,7 @@ import type { ImageData, DragItem, ScaffoldData, GroupData } from "@/types/types
 import DraggableCard from "@/components/DraggableCard";
 import GroupDiv from "@/components/GroupDiv";
 import { logAction } from "@/utils/userActionLogger";
+import { Copy, Play, X, GripVertical } from "lucide-react";
 
 const MIN_SLOTS = 1;
 const MAX_SLOTS = 15;
@@ -79,14 +80,7 @@ const GripIcon = React.forwardRef<HTMLDivElement, { listeners?: any; attributes?
 			}}
 			title="Drag to reorder"
 		>
-			<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-				<circle cx="5" cy="3" r="1.5" />
-				<circle cx="11" cy="3" r="1.5" />
-				<circle cx="5" cy="8" r="1.5" />
-				<circle cx="11" cy="8" r="1.5" />
-				<circle cx="5" cy="13" r="1.5" />
-				<circle cx="11" cy="13" r="1.5" />
-			</svg>
+			<GripVertical className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden />
 		</div>
 	),
 );
@@ -557,19 +551,7 @@ const Linear = ({
 								style={{ cursor: "pointer" }}
 								title="Duplicate scaffold"
 							>
-								<svg
-									width="10"
-									height="10"
-									viewBox="0 0 16 16"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="1.5"
-									strokeLinecap="round"
-									strokeLinejoin="round"
-								>
-									<rect x="5" y="5" width="9" height="9" rx="1.5" />
-									<path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2H3.5A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" />
-								</svg>
+								<Copy className="w-2.5 h-2.5" strokeWidth={1.5} aria-hidden />
 							</button>
 							{/* Generate story */}
 							<button
@@ -585,9 +567,7 @@ const Linear = ({
 								style={{ cursor: "pointer" }}
 								title="Generate story for this scaffold"
 							>
-								<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
-									<path d="M4 2.5v11l9-5.5z" />
-								</svg>
+								<Play className="w-2.5 h-2.5" strokeWidth={1.5} aria-hidden />
 							</button>
 							{/* Close */}
 							<button
@@ -601,7 +581,7 @@ const Linear = ({
 								style={{ cursor: "pointer" }}
 								title="Close scaffold"
 							>
-								×
+								<X className="w-3 h-3" strokeWidth={1.5} aria-hidden />
 							</button>
 						</div>
 					)}
