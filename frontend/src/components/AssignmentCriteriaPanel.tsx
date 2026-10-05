@@ -11,16 +11,22 @@ const markdownComponents = {
 		<h2 className="text-xl font-bold text-grey-darkest mb-2 mt-2 leading-tight">{children}</h2>
 	),
 	h3: ({ children }: { children?: React.ReactNode }) => (
-		<h3 className="text-lg font-semibold text-grey-darkest mb-2 mt-1 leading-snug">{children}</h3>
+		<h3 className="text-lg font-semibold text-grey-darkest mb-2 mt-1 leading-snug">
+			{children}
+		</h3>
 	),
 	p: ({ children }: { children?: React.ReactNode }) => (
 		<p className="mb-3 text-sm text-grey-darkest leading-relaxed">{children}</p>
 	),
 	ul: ({ children }: { children?: React.ReactNode }) => (
-		<ul className="list-disc list-inside mb-3 text-sm text-grey-darkest space-y-1">{children}</ul>
+		<ul className="list-disc list-inside mb-3 text-sm text-grey-darkest space-y-1">
+			{children}
+		</ul>
 	),
 	ol: ({ children }: { children?: React.ReactNode }) => (
-		<ol className="list-decimal list-inside mb-3 text-sm text-grey-darkest space-y-1">{children}</ol>
+		<ol className="list-decimal list-inside mb-3 text-sm text-grey-darkest space-y-1">
+			{children}
+		</ol>
 	),
 	strong: ({ children }: { children?: React.ReactNode }) => (
 		<strong className="font-bold">{children}</strong>
@@ -57,37 +63,50 @@ const AssignmentCriteriaPanel = ({ refreshKey = 0 }: AssignmentCriteriaPanelProp
 		};
 	}, [refreshKey]);
 
-	if (loading) {
-		return (
-			<div className="p-4 text-sm text-grey-dark">Loading assignment…</div>
-		);
-	}
-
-	if (!assignment) {
-		return (
-			<div className="p-4 text-sm text-grey-dark">
-				No active assignment right now. Check back when your instructor posts one.
-			</div>
-		);
-	}
-
 	return (
-		<div className="p-4 space-y-3">
-			<div>
-				<h2 className="text-base font-semibold text-grey-darkest">{assignment.title}</h2>
-				<p className="text-xs text-grey-dark mt-0.5">
-					Max points: {assignment.max_points}
+		<div className="w-full p-3">
+			{/* Panel header — permanent pill, mirrors Research Questions / Feedback. */}
+			<div className="flex flex-row w-full">
+				<span
+					style={{ background: "#5b4a8a" }}
+					className="text-white text-lg font-roboto-semibold px-3 py-1.5 rounded-lg inline-block"
+				>
+					Assignment
+				</span>
+			</div>
+
+			{loading && <p className="text-sm text-grey-dark mt-4">Loading assignment…</p>}
+
+			{!loading && !assignment && (
+				<p className="text-sm text-grey-dark mt-4">
+					No active assignment right now. Check back when your instructor posts one.
 				</p>
-			</div>
-			<div className="border-t border-grey-light pt-3">
-				{assignment.body.trim() ? (
-					<ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-						{assignment.body}
-					</ReactMarkdown>
-				) : (
-					<p className="text-sm text-grey-dark">No criteria provided.</p>
-				)}
-			</div>
+			)}
+
+			{!loading && assignment && (
+				<div className="space-y-3 mt-4">
+					<div>
+						<h2 className="text-base font-semibold text-grey-darkest">
+							{assignment.title}
+						</h2>
+						<p className="text-xs text-grey-dark mt-0.5">
+							Max points: {assignment.max_points}
+						</p>
+					</div>
+					<div className="border-t border-grey-light pt-3">
+						{assignment.body.trim() ? (
+							<ReactMarkdown
+								remarkPlugins={[remarkGfm]}
+								components={markdownComponents}
+							>
+								{assignment.body}
+							</ReactMarkdown>
+						) : (
+							<p className="text-sm text-grey-dark">No criteria provided.</p>
+						)}
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };
