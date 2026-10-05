@@ -7,6 +7,7 @@ import {
 	getScaffolds,
 	deleteScaffold,
 } from "@/services/api";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { useAlert } from "@/contexts/Alert";
 import { logAction } from "@/utils/userActionLogger";
 import type { ImageData, GroupData, ScaffoldData } from "@/types/types";
@@ -62,8 +63,8 @@ const ClearAllButton = ({
 	};
 
 	// Handle clearing all: delete groups/scaffolds and move images to recycle bin
-	const handleClearAll = async (e: React.MouseEvent) => {
-		logAction(e);
+	const handleClearAll = async () => {
+		logAction({ actionType: "click", elementId: "clear-all-confirm-button" });
 		setIsClearing(true);
 
 		try {
@@ -145,45 +146,29 @@ const ClearAllButton = ({
 
 	return (
 		<>
-			{showModal && (
-				<div className="fixed inset-0 z-500 flex items-center justify-center">
-					<div className="absolute inset-0 bg-black/50" onClick={handleCloseModal} />
-					<div className="relative bg-white rounded-lg shadow-xl p-4 w-90 max-w-[90vw]">
-						<div className="mb-3">
-							<div className="text-sm font-semibold mb-2">Clear All Items</div>
-							<div className="text-sm text-gray-600 mb-3">
-								This will move all images to the recycle bin and permanently delete
-								all groups and scaffolds. Groups and scaffolds cannot be recovered.
-							</div>
-							<div className="text-sm text-gray-500 mb-3">
-								This will:
-								<ul className="list-disc list-inside mt-1 ml-2">
-									<li>Move {imageCount} image(s) to recycle bin</li>
-									<li>Permanently delete {groupCount} group(s)</li>
-									<li>Permanently delete {scaffoldCount} scaffold(s)</li>
-								</ul>
-							</div>
-						</div>
-						<div className="flex justify-end gap-2">
-							<button
-								className="text-sm px-3 py-1 rounded border"
-								onClick={handleCloseModal}
-								disabled={isClearing}
-							>
-								Cancel
-							</button>
-							<button
-								log-id="clear-all-confirm-button"
-								className="bg-red-600 text-sm text-white rounded px-3 py-1 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-								onClick={handleClearAll}
-								disabled={isClearing}
-							>
-								{isClearing ? "Clearing..." : "Clear All"}
-							</button>
-						</div>
-					</div>
+			<ConfirmModal
+				open={showModal}
+				title="Clear All Items"
+				onClose={handleCloseModal}
+				onConfirm={handleClearAll}
+				confirmLabel={isClearing ? "Clearing..." : "Clear All"}
+				confirmDisabled={isClearing}
+				confirmLogId="clear-all-confirm-button"
+				destructive
+			>
+				<div className="text-sm text-gray-600 mb-3">
+					This will move all images to the recycle bin and permanently delete all groups
+					and scaffolds. Groups and scaffolds cannot be recovered.
 				</div>
-			)}
+				<div className="text-sm text-gray-500">
+					This will:
+					<ul className="list-disc list-inside mt-1 ml-2">
+						<li>Move {imageCount} image(s) to recycle bin</li>
+						<li>Permanently delete {groupCount} group(s)</li>
+						<li>Permanently delete {scaffoldCount} scaffold(s)</li>
+					</ul>
+				</div>
+			</ConfirmModal>
 			<button
 				log-id="clear-all-button"
 				className="w-auto h-auto rounded-full px-3 py-1 flex items-center justify-center gap-1 text-white font-bold text-sm transition-all duration-200"

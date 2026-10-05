@@ -51,8 +51,6 @@ const CraftStoryButton = ({
 }: CraftStoryButtonProps) => {
 	const { showAlert } = useAlert();
 	const [taskId, setTaskId] = useState<string | null>(null);
-	const [confirmModal, setConfirmModal] = useState<string | null>(null);
-	const [pendingGeneration, setPendingGeneration] = useState<(() => void) | null>(null);
 	const targetScaffoldIdRef = useRef<string | null>(null);
 	const streamSocketRef = useRef<WebSocket | null>(null);
 	// Set to true when the WebSocket signals 'complete' — polling in
@@ -274,10 +272,14 @@ const CraftStoryButton = ({
 			}
 
 			if (scaffoldUnannotated.length > 0) {
-				setConfirmModal(
-					`${scaffoldUnannotated.length} image(s) in this scaffold don't have descriptions and will be excluded. Continue?`,
-				);
-				setPendingGeneration(() => () => startGeneration(ctx));
+				showAlert({
+					level: "warning",
+					message: `${scaffoldUnannotated.length} image(s) in this scaffold don't have descriptions and will be excluded. Continue?`,
+					actionLabel: "Continue",
+					onAction: () => {
+						void startGeneration(ctx);
+					},
+				});
 				return;
 			}
 		} else {
@@ -303,10 +305,14 @@ const CraftStoryButton = ({
 			}
 
 			if (unannotatedImages.length > 0) {
-				setConfirmModal(
-					`${unannotatedImages.length} image(s) don't have descriptions and will be excluded from the story. Continue?`,
-				);
-				setPendingGeneration(() => () => startGeneration(ctx));
+				showAlert({
+					level: "warning",
+					message: `${unannotatedImages.length} image(s) don't have descriptions and will be excluded from the story. Continue?`,
+					actionLabel: "Continue",
+					onAction: () => {
+						void startGeneration(ctx);
+					},
+				});
 				return;
 			}
 		}
@@ -316,9 +322,6 @@ const CraftStoryButton = ({
 	};
 
 	const startGeneration = async (ctx: any) => {
-		setConfirmModal(null);
-		setPendingGeneration(null);
-
 		// Generate story with selected pattern
 		setStoryLoading(true);
 
@@ -609,33 +612,6 @@ const CraftStoryButton = ({
 						{storyLoading ? stageName || "Generating..." : "Generate Story"}
 					</span>
 				</button>
-			)}
-
-			{confirmModal && (
-				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-500">
-					<div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4">
-						<div className="text-sm text-grey-darkest">{confirmModal}</div>
-						<div className="flex justify-end gap-2 mt-6">
-							<button
-								onClick={() => {
-									setConfirmModal(null);
-									setPendingGeneration(null);
-								}}
-								className="text-sm px-4 py-1.5 rounded border hover:bg-grey-lighter transition"
-							>
-								Cancel
-							</button>
-							<button
-								onClick={() => {
-									if (pendingGeneration) pendingGeneration();
-								}}
-								className="text-sm bg-bama-crimson text-white rounded px-4 py-1.5 hover:brightness-95 transition"
-							>
-								Continue
-							</button>
-						</div>
-					</div>
-				</div>
 			)}
 		</>
 	);

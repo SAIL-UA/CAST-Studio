@@ -255,11 +255,7 @@ function DraggableCard({
 		imageMetadataRef.current = updatedImageMetadata;
 	};
 
-	const handleDelete = async (e: React.MouseEvent) => {
-		const ctx = captureActionContext(e);
-		if (!window.confirm("Are you sure you want to delete this figure?")) {
-			return;
-		}
+	const performDelete = async (ctx: ReturnType<typeof captureActionContext>) => {
 		logAction(ctx, { image_metadata: imageMetadataRef.current });
 		try {
 			const res = await deleteFigure(image.filepath || image.id);
@@ -276,6 +272,17 @@ function DraggableCard({
 			console.error("Error deleting figure:", err);
 			showAlert({ level: "error", message: "An error occurred while deleting the figure" });
 		}
+	};
+
+	const handleDelete = (e: React.MouseEvent) => {
+		const ctx = captureActionContext(e);
+		showAlert({
+			level: "warning",
+			message: "Are you sure you want to delete this figure?",
+			actionLabel: "Delete",
+			destructive: true,
+			onAction: () => performDelete(ctx),
+		});
 	};
 
 	const handleGenerateDescription = async (e: React.MouseEvent) => {

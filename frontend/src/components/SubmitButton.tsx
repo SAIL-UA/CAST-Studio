@@ -1,38 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { createSubmission, getSubmissionStatus } from "@/services/api";
 import { logAction } from "@/utils/userActionLogger";
 import { useAlert } from "@/contexts/Alert";
 
 type SubmitButtonProps = {
 	disabled?: boolean;
-};
-
-const Modal = ({
-	open,
-	title,
-	children,
-	onClose,
-}: {
-	open: boolean;
-	title: string;
-	children: ReactNode;
-	onClose: () => void;
-}) => {
-	if (!open) return null;
-	return (
-		<div
-			className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
-			onClick={onClose}
-		>
-			<div
-				className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-5"
-				onClick={(e) => e.stopPropagation()}
-			>
-				<h3 className="text-lg font-semibold text-grey-darkest mb-3">{title}</h3>
-				{children}
-			</div>
-		</div>
-	);
 };
 
 const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
@@ -150,10 +123,15 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 				{busy ? "Submitting..." : "Submit"}
 			</button>
 
-			<Modal
+			<ConfirmModal
 				open={confirmOpen}
 				title="Submit your work?"
-				onClose={() => !busy && setConfirmOpen(false)}
+				onClose={() => setConfirmOpen(false)}
+				onConfirm={doSubmit}
+				confirmLabel={busy ? "Submitting..." : "Submit"}
+				confirmDisabled={busy}
+				maxWidthClass="max-w-md"
+				confirmButtonClassName="text-sm px-3 py-1.5 rounded-full bg-green-600 text-white hover:brightness-95 disabled:opacity-50"
 			>
 				{assignmentTitle && (
 					<p className="text-sm text-grey-dark mb-2">
@@ -161,32 +139,15 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 					</p>
 				)}
 				<p className="text-sm text-grey-dark mb-2">
-					Submitting uses <strong>one of your {limit} attempts for this assignment</strong>{" "}
-					({used} used, {remaining} remaining).
+					Submitting uses{" "}
+					<strong>one of your {limit} attempts for this assignment</strong> ({used} used,{" "}
+					{remaining} remaining).
 				</p>
-				<p className="text-sm text-grey-dark mb-4">
+				<p className="text-sm text-grey-dark">
 					Your submission is final and immutable — you will not be able to edit or reload
 					it later. You can keep working in your live workspace afterward.
 				</p>
-				<div className="flex justify-end gap-2">
-					<button
-						type="button"
-						disabled={busy}
-						onClick={() => setConfirmOpen(false)}
-						className="text-sm px-3 py-1.5 rounded-full border border-grey-light text-grey-darkest hover:bg-grey-lighter"
-					>
-						Cancel
-					</button>
-					<button
-						type="button"
-						disabled={busy}
-						onClick={doSubmit}
-						className="text-sm px-3 py-1.5 rounded-full bg-green-600 text-white hover:brightness-95 disabled:opacity-50"
-					>
-						{busy ? "Submitting..." : "Submit"}
-					</button>
-				</div>
-			</Modal>
+			</ConfirmModal>
 		</>
 	);
 };

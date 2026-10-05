@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { useAlert } from "@/contexts/Alert";
 import { logAction } from "@/utils/userActionLogger";
 import type { ImageData } from "@/types/types";
@@ -33,8 +34,8 @@ const RestoreAllButton = ({
 		setShowModal(false);
 	};
 
-	const handleRestoreAll = async (e: React.MouseEvent) => {
-		logAction(e);
+	const handleRestoreAll = async () => {
+		logAction({ actionType: "click", elementId: "restore-all-confirm-button" });
 		setIsRestoring(true);
 
 		try {
@@ -54,38 +55,19 @@ const RestoreAllButton = ({
 
 	return (
 		<>
-			{showModal && (
-				<div className="fixed inset-0 z-500 flex items-center justify-center">
-					<div className="absolute inset-0 bg-black/50" onClick={handleCloseModal} />
-					<div className="relative bg-white rounded-lg shadow-xl p-4 w-90 max-w-[90vw]">
-						<div className="mb-3">
-							<div className="text-sm font-semibold mb-2">Restore All Items</div>
-							<div className="text-sm text-gray-600 mb-3">
-								This will restore {recycledImages.length} image(s) back to the
-								storyboard.
-							</div>
-						</div>
-						<div className="flex justify-end gap-2">
-							<button
-								className="text-sm px-3 py-1 rounded border"
-								onClick={handleCloseModal}
-								disabled={isRestoring}
-							>
-								Cancel
-							</button>
-							<button
-								log-id="restore-all-confirm-button"
-								className="text-sm text-white rounded px-3 py-1 disabled:bg-gray-400 disabled:cursor-not-allowed"
-								style={{ backgroundColor: "#348b94" }}
-								onClick={handleRestoreAll}
-								disabled={isRestoring}
-							>
-								{isRestoring ? "Restoring..." : "Restore All"}
-							</button>
-						</div>
-					</div>
+			<ConfirmModal
+				open={showModal}
+				title="Restore All Items"
+				onClose={handleCloseModal}
+				onConfirm={handleRestoreAll}
+				confirmLabel={isRestoring ? "Restoring..." : "Restore All"}
+				confirmDisabled={isRestoring}
+				confirmLogId="restore-all-confirm-button"
+			>
+				<div className="text-sm text-gray-600">
+					This will restore {recycledImages.length} image(s) back to the storyboard.
 				</div>
-			)}
+			</ConfirmModal>
 			<button
 				log-id="restore-all-button"
 				className="w-auto h-auto rounded-full px-3 py-1 flex items-center justify-center gap-1 text-white font-bold text-sm transition-all duration-200"
