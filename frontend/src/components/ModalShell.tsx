@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 type ModalShellProps = {
 	onClose: () => void;
@@ -29,9 +30,11 @@ export const ModalShell = ({
 		return () => window.removeEventListener("keydown", onKeyDown);
 	}, [onClose]);
 
-	return (
+	// Portal + z-[600]: edit modals / menus sit at z-500; alerts must stack above them
+	// and escape any parent stacking context (e.g. transformed workspace panels).
+	return createPortal(
 		<div
-			className="fixed inset-0 z-500 flex items-center justify-center bg-black/50"
+			className="fixed inset-0 z-600 flex items-center justify-center bg-black/50"
 			onClick={(e) => {
 				if (e.target === e.currentTarget) {
 					onClose();
@@ -49,7 +52,8 @@ export const ModalShell = ({
 			>
 				{children}
 			</div>
-		</div>
+		</div>,
+		document.body,
 	);
 };
 

@@ -135,7 +135,30 @@ export const AlertModal = ({
 				<p id={messageId} className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-5">
 					{message}
 				</p>
-				{!isConfirm && (
+				{isConfirm ? (
+					<div className="flex shrink-0 items-center gap-3 self-center">
+						<button
+							type="button"
+							onClick={onClose}
+							disabled={actionPending}
+							className="text-sm font-medium opacity-70 transition hover:opacity-100 focus:outline-none focus:underline disabled:opacity-50"
+						>
+							{cancelLabel}
+						</button>
+						<button
+							type="button"
+							onClick={() => void handleAction()}
+							disabled={actionPending}
+							className={
+								destructive
+									? "text-sm font-semibold text-red-700 transition hover:underline focus:outline-none focus:underline disabled:opacity-50"
+									: "text-sm font-semibold transition hover:underline focus:outline-none focus:underline disabled:opacity-50"
+							}
+						>
+							{actionPending ? "…" : actionLabel}
+						</button>
+					</div>
+				) : (
 					<button
 						type="button"
 						log-id="alert-close-button"
@@ -154,29 +177,6 @@ export const AlertModal = ({
 					</button>
 				)}
 			</div>
-			{isConfirm && (
-				<div className="mt-4 flex justify-end gap-2">
-					<button
-						type="button"
-						onClick={onClose}
-						className="text-sm px-4 py-1.5 rounded border hover:bg-grey-lighter transition"
-					>
-						{cancelLabel}
-					</button>
-					<button
-						type="button"
-						onClick={() => void handleAction()}
-						disabled={actionPending}
-						className={
-							destructive
-								? "text-sm bg-red-600 text-white rounded px-4 py-1.5 hover:brightness-95 transition disabled:opacity-50"
-								: "text-sm bg-bama-crimson text-white rounded px-4 py-1.5 hover:brightness-95 transition disabled:opacity-50"
-						}
-					>
-						{actionPending ? "…" : actionLabel}
-					</button>
-				</div>
-			)}
 		</ModalShell>
 	);
 };
