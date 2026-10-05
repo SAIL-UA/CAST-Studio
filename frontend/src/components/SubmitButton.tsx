@@ -117,7 +117,7 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 				className={`text-sm text-white rounded-full px-3 py-1 mx-1 transition duration-200 ${
 					disabled || busy || !hasActiveAssignment || atCap
 						? "bg-green-600/50 cursor-not-allowed"
-						: "bg-green-600 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95"
+						: "bg-green-600 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95"
 				}`}
 			>
 				{busy ? "Submitting..." : "Submit"}

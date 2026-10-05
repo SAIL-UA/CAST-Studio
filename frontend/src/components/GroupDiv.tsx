@@ -1,9 +1,9 @@
 // Import dependencies
 import React, { useState, useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom';
 import { useDrag, useDrop } from 'react-dnd';
 import type { GroupDivProps, DragItem } from '@/types/types';
 import DraggableCard from '@/components/DraggableCard';
+import { ModalShell } from '@/components/ModalShell';
 import { formatImageMetadata } from '@/utils/imageUtils';
 import { formatGroupMetadata } from '@/utils/groupUtils';
 import { logAction } from '@/utils/userActionLogger';
@@ -423,9 +423,11 @@ const GroupDiv: React.FC<GroupDivProps> = ({
     document.body.style.overflow = 'hidden';
   };
 
-  const handleCloseEditModal = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    logAction(e, { group_metadata: groupMetadataRef.current });
+  const handleCloseEditModal = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (e) {
+      logAction(e, { group_metadata: groupMetadataRef.current });
+    }
     setShowEditModal(false);
     document.body.style.overflow = 'auto';
   };
@@ -665,99 +667,95 @@ const GroupDiv: React.FC<GroupDivProps> = ({
         )}
       </div>
 
-      {/* Edit Modal — portaled to body to escape parent stacking context */}
-      {showEditModal && ReactDOM.createPortal(
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[500]"
-          onClick={handleCloseEditModal}
+      {/* Edit Modal */}
+      {showEditModal && (
+        <ModalShell
+          onClose={() => handleCloseEditModal()}
+          overlayClassName="fixed inset-0 z-500 flex items-center justify-center bg-black/50"
+          panelClassName="relative bg-white rounded-lg shadow-xl w-96 max-w-[90vw] max-h-[90vh] overflow-y-auto mx-4"
+          ariaLabelledBy="edit-group-title"
         >
-          <div
-            className="bg-white rounded-lg shadow-xl w-96 max-w-[90vw] max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="flex justify-between items-center p-4 border-b border-grey-lightest">
-              <h3 className="text-lg font-semibold text-grey-darkest">
-                Edit Group
-              </h3>
-              <button
-                log-id="group-close-edit-modal-button"
-                onClick={handleCloseEditModal}
-                className="w-6 h-6 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
-              >
-                ×
-              </button>
+          {/* Modal Header */}
+          <div className="flex justify-between items-center p-4 border-b border-grey-lightest">
+            <h3 id="edit-group-title" className="text-lg font-semibold text-grey-darkest">
+              Edit Group
+            </h3>
+            <button
+              log-id="group-close-edit-modal-button"
+              onClick={handleCloseEditModal}
+              className="w-6 h-6 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Modal Content */}
+          <div className="p-4 space-y-4">
+            {/* Group Name */}
+            <div>
+              <label className="block text-sm font-medium text-grey-darkest mb-2">
+                Group Name
+              </label>
+              <input
+                type="text"
+                value={tempName}
+                onChange={(e) => setTempName(e.target.value)}
+                className="w-full px-3 py-2 border border-grey-lighter rounded-md focus:outline-none focus:ring-2 focus:ring-bama-crimson focus:border-transparent"
+                placeholder="Enter group name..."
+              />
             </div>
 
-            {/* Modal Content */}
-            <div className="p-4 space-y-4">
-              {/* Group Name */}
-              <div>
-                <label className="block text-sm font-medium text-grey-darkest mb-2">
-                  Group Name
-                </label>
-                <input
-                  type="text"
-                  value={tempName}
-                  onChange={(e) => setTempName(e.target.value)}
-                  className="w-full px-3 py-2 border border-grey-lighter rounded-md focus:outline-none focus:ring-2 focus:ring-bama-crimson focus:border-transparent"
-                  placeholder="Enter group name..."
-                />
-              </div>
+            {/* Group Description */}
+            <div>
+              <label className="block text-sm font-medium text-grey-darkest mb-2">
+                Description
+              </label>
+              <textarea
+                value={tempDescription}
+                onChange={(e) => setTempDescription(e.target.value)}
+                rows={4}
+                className="w-full px-3 py-2 border border-grey-lighter rounded-md focus:outline-none focus:ring-2 focus:ring-bama-crimson focus:border-transparent resize-none"
+                placeholder="Enter group description..."
+              />
+            </div>
 
-              {/* Group Description */}
-              <div>
-                <label className="block text-sm font-medium text-grey-darkest mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={tempDescription}
-                  onChange={(e) => setTempDescription(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-grey-lighter rounded-md focus:outline-none focus:ring-2 focus:ring-bama-crimson focus:border-transparent resize-none"
-                  placeholder="Enter group description..."
-                />
-              </div>
-
-              {/* Group Info */}
-              <div className="bg-grey-lightest p-3 rounded-md">
-                <div className="text-sm text-grey-dark">
-                  <div className="flex justify-between mb-1">
-                    <span>Group Number:</span>
-                    <span className="font-medium">{number}</span>
-                  </div>
-                  <div className="flex justify-between mb-1">
-                    <span>Cards in Group:</span>
-                    <span className="font-medium">{cards.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Group ID:</span>
-                    <span className="font-mono text-xs">{id.substring(0, 8)}...</span>
-                  </div>
+            {/* Group Info */}
+            <div className="bg-grey-lightest p-3 rounded-md">
+              <div className="text-sm text-grey-dark">
+                <div className="flex justify-between mb-1">
+                  <span>Group Number:</span>
+                  <span className="font-medium">{number}</span>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <span>Cards in Group:</span>
+                  <span className="font-medium">{cards.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Group ID:</span>
+                  <span className="font-mono text-xs">{id.substring(0, 8)}...</span>
                 </div>
               </div>
             </div>
-
-            {/* Modal Footer */}
-            <div className="flex justify-end space-x-3 p-4 border-t border-grey-lightest">
-              <button
-              log-id="group-cancel-edit-button"
-                onClick={handleCloseEditModal}
-                className="px-4 py-2 text-grey-darker bg-grey-lighter hover:bg-grey-light rounded-md transition-colors duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                log-id="group-save-changes-button"
-                onClick={handleSaveEditModal}
-                className="px-4 py-2 bg-bama-crimson hover:bg-bama-crimson-dark text-white rounded-md transition-colors duration-200"
-              >
-                Save Changes
-              </button>
-            </div>
           </div>
-        </div>,
-        document.body
+
+          {/* Modal Footer */}
+          <div className="flex justify-end space-x-3 p-4 border-t border-grey-lightest">
+            <button
+              log-id="group-cancel-edit-button"
+              onClick={handleCloseEditModal}
+              className="px-4 py-2 text-grey-darker bg-grey-lighter hover:bg-grey-light rounded-md transition-colors duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              log-id="group-save-changes-button"
+              onClick={handleSaveEditModal}
+              className="px-4 py-2 bg-bama-crimson hover:bg-bama-crimson-dark text-white rounded-md transition-colors duration-200"
+            >
+              Save Changes
+            </button>
+          </div>
+        </ModalShell>
       )}
     </div>
   );

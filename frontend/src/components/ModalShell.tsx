@@ -5,6 +5,8 @@ type ModalShellProps = {
 	onClose: () => void;
 	children: ReactNode;
 	panelClassName?: string;
+	/** Overlay classes; default keeps alerts/confirms above content dialogs (z-500). */
+	overlayClassName?: string;
 	role?: "dialog" | "alertdialog";
 	ariaLabel?: string;
 	ariaLabelledBy?: string;
@@ -15,6 +17,7 @@ export const ModalShell = ({
 	onClose,
 	children,
 	panelClassName = "relative mx-4 w-full max-w-lg rounded-lg bg-white p-4 shadow-xl",
+	overlayClassName = "fixed inset-0 z-600 flex items-center justify-center bg-black/50",
 	role = "dialog",
 	ariaLabel,
 	ariaLabelledBy,
@@ -30,11 +33,10 @@ export const ModalShell = ({
 		return () => window.removeEventListener("keydown", onKeyDown);
 	}, [onClose]);
 
-	// Portal + z-[600]: edit modals / menus sit at z-500; alerts must stack above them
-	// and escape any parent stacking context (e.g. transformed workspace panels).
+	// Portal so overlays escape parent stacking contexts (e.g. transformed workspace panels).
 	return createPortal(
 		<div
-			className="fixed inset-0 z-600 flex items-center justify-center bg-black/50"
+			className={overlayClassName}
 			onClick={(e) => {
 				if (e.target === e.currentTarget) {
 					onClose();
