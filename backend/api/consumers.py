@@ -11,7 +11,7 @@ def story_stream_group_name(user_id) -> str:
     """Canonical channel-group name for a user's story-stream. Both the consumer
     and the celery task producer must agree on this — export a helper so no one
     has to remember the format string."""
-    return f'story_stream_{user_id}'
+    return f"story_stream_{user_id}"
 
 
 class StoryStreamConsumer(AsyncJsonWebsocketConsumer):
@@ -28,7 +28,7 @@ class StoryStreamConsumer(AsyncJsonWebsocketConsumer):
     """
 
     async def connect(self):
-        self.user = self.scope.get('user')
+        self.user = self.scope.get("user")
         if not self.user or self.user.is_anonymous:
             await self.close()
             return
@@ -36,10 +36,9 @@ class StoryStreamConsumer(AsyncJsonWebsocketConsumer):
         self.group_name = story_stream_group_name(self.user.id)
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
-        logger.info(f"[WS] {self.user.username} connected to story-stream group {self.group_name}")
 
     async def disconnect(self, close_code):
-        group_name = getattr(self, 'group_name', None)
+        group_name = getattr(self, "group_name", None)
         if group_name:
             await self.channel_layer.group_discard(group_name, self.channel_name)
 
@@ -49,8 +48,8 @@ class StoryStreamConsumer(AsyncJsonWebsocketConsumer):
              ...payload}
         The wrapper `type` is Channels routing plumbing; the client sees the
         inner `event` string plus the payload keys."""
-        payload = {k: v for k, v in event.items() if k not in ('type', 'event')}
-        payload['type'] = event.get('event', 'chunk')
+        payload = {k: v for k, v in event.items() if k not in ("type", "event")}
+        payload["type"] = event.get("event", "chunk")
         await self.send_json(payload)
 
 
@@ -62,9 +61,9 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
     """
 
     async def connect(self):
-        self.share_token = self.scope['url_route']['kwargs']['share_token']
-        self.group_name = f'session_{self.share_token}'
-        self.user = self.scope.get('user')
+        self.share_token = self.scope["url_route"]["kwargs"]["share_token"]
+        self.group_name = f"session_{self.share_token}"
+        self.user = self.scope.get("user")
 
         # Validate session and participant
         is_valid = await self.validate_session()
@@ -81,12 +80,10 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_send(
             self.group_name,
             {
-                'type': 'participant_joined',
-                'username': username,
-            }
+                "type": "participant_joined",
+                "username": username,
+            },
         )
-
-        logger.info(f"[WS] {username} connected to session {self.share_token}")
 
     async def disconnect(self, close_code):
         # Auto-return control if this user had it
@@ -100,44 +97,45 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_send(
             self.group_name,
             {
-                'type': 'participant_left',
-                'username': username,
-            }
+                "type": "participant_left",
+                "username": username,
+            },
         )
-
-        logger.info(f"[WS] {username} disconnected from session {self.share_token}")
 
     async def receive_json(self, content):
         """Handle incoming messages from clients and broadcast to the group."""
-        msg_type = content.get('type', '')
-        logger.info(f"[WS] Received {msg_type} from {await self.get_username()}")
+        msg_type = content.get("type", "")
 
-        if msg_type == 'panel_open':
+        if msg_type == "panel_open":
             await self.channel_layer.group_send(
                 self.group_name,
                 {
-                    'type': 'panel_open',
-                    'panel': content.get('panel'),
-                    'items': content.get('items'),
-                    'sender': await self.get_username(),
-                }
+                    "type": "panel_open",
+                    "panel": content.get("panel"),
+                    "items": content.get("items"),
+                    "sender": await self.get_username(),
+                },
             )
 
     # --- Group message handlers ---
 
     async def participant_joined(self, event):
         """Broadcast to all clients when someone joins."""
-        await self.send_json({
-            'type': 'participant_joined',
-            'username': event['username'],
-        })
+        await self.send_json(
+            {
+                "type": "participant_joined",
+                "username": event["username"],
+            }
+        )
 
     async def participant_left(self, event):
         """Broadcast to all clients when someone leaves."""
-        await self.send_json({
-            'type': 'participant_left',
-            'username': event['username'],
-        })
+        await self.send_json(
+            {
+                "type": "participant_left",
+                "username": event["username"],
+            }
+        )
 
     async def workspace_update(self, event):
         """Broadcast workspace changes to all clients."""
@@ -145,20 +143,24 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
 
     async def panel_open(self, event):
         """Broadcast panel open events to all clients."""
-        await self.send_json({
-            'type': 'panel_open',
-            'panel': event.get('panel'),
-            'items': event.get('items'),
-            'sender': event.get('sender'),
-        })
+        await self.send_json(
+            {
+                "type": "panel_open",
+                "panel": event.get("panel"),
+                "items": event.get("items"),
+                "sender": event.get("sender"),
+            }
+        )
 
     async def control_changed(self, event):
         """Broadcast control changes to all clients."""
-        await self.send_json({
-            'type': 'control_changed',
-            'controlled_by': event.get('controlled_by'),
-            'controlled_by_name': event.get('controlled_by_name'),
-        })
+        await self.send_json(
+            {
+                "type": "control_changed",
+                "controlled_by": event.get("controlled_by"),
+                "controlled_by_name": event.get("controlled_by_name"),
+            }
+        )
 
     # --- Helpers ---
 
@@ -168,13 +170,17 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
         from api.models import SharedSession, SessionParticipant
 
         try:
-            session = SharedSession.objects.get(share_token=self.share_token, is_active=True)
+            session = SharedSession.objects.get(
+                share_token=self.share_token, is_active=True
+            )
         except SharedSession.DoesNotExist:
             logger.warning(f"[WS] Session {self.share_token} not found or inactive")
             return False
 
         if not self.user or self.user.is_anonymous:
-            logger.warning(f"[WS] Anonymous user tried to connect to session {self.share_token}")
+            logger.warning(
+                f"[WS] Anonymous user tried to connect to session {self.share_token}"
+            )
             return False
 
         # Allow the host to connect too
@@ -187,7 +193,9 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
         ).exists()
 
         if not is_participant:
-            logger.warning(f"[WS] User {self.user.username} is not a participant in session {self.share_token}")
+            logger.warning(
+                f"[WS] User {self.user.username} is not a participant in session {self.share_token}"
+            )
             return False
 
         return True
@@ -196,17 +204,20 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
     def get_username(self):
         if self.user and not self.user.is_anonymous:
             return self.user.username
-        return 'anonymous'
+        return "anonymous"
 
     @database_sync_to_async
     def _return_control_if_held(self):
         """Check if this user holds control and return it to host. Returns True if control was returned."""
         from api.models import SharedSession
+
         try:
-            session = SharedSession.objects.get(share_token=self.share_token, is_active=True)
+            session = SharedSession.objects.get(
+                share_token=self.share_token, is_active=True
+            )
             if session.controlled_by and session.controlled_by == self.user:
                 session.controlled_by = None
-                session.save(update_fields=['controlled_by'])
+                session.save(update_fields=["controlled_by"])
                 return True
         except SharedSession.DoesNotExist:
             pass
@@ -217,15 +228,13 @@ class SessionConsumer(AsyncJsonWebsocketConsumer):
         try:
             returned = await self._return_control_if_held()
             if returned:
-                username = await self.get_username()
-                logger.info(f"[WS] Auto-returned control from {username} in session {self.share_token}")
                 await self.channel_layer.group_send(
                     self.group_name,
                     {
-                        'type': 'control_changed',
-                        'controlled_by': None,
-                        'controlled_by_name': None,
-                    }
+                        "type": "control_changed",
+                        "controlled_by": None,
+                        "controlled_by_name": None,
+                    },
                 )
         except Exception as e:
             logger.error(f"[WS] Error auto-returning control: {e}")

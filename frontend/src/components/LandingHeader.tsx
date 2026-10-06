@@ -6,6 +6,7 @@
 import type { CSSProperties } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { Menu } from 'lucide-react';
 
 export const ACCENT = '#00849E';
 export const SANS = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
@@ -132,11 +133,7 @@ export const LandingHeader = ({ active, subtitle, onSignUp, signUpLabel = 'Sign 
                                 background: 'rgba(10,10,10,0.06)', color: '#1a1a1a',
                                 fontSize: 13.5, fontWeight: 600, letterSpacing: '-0.005em',
                             }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="4" y1="7" x2="20" y2="7" />
-                                    <line x1="4" y1="12" x2="20" y2="12" />
-                                    <line x1="4" y1="17" x2="20" y2="17" />
-                                </svg>
+                                <Menu size={14} strokeWidth={2} aria-hidden />
                                 Menu
                             </button>
                         </DropdownMenu.Trigger>

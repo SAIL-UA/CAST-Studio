@@ -1,776 +1,783 @@
 // Import dependencies
-import React, { useState, useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom';
-import { useDrag, useDrop } from 'react-dnd';
-import { GroupDivProps, DragItem } from '../types/types';
-import DraggableCard from './DraggableCard';
-import { formatImageMetadata } from '../utils/imageUtils';
-import { formatGroupMetadata } from '../utils/groupUtils';
-import { logAction } from '../utils/userActionLogger';
-import { captureActionContext } from '../utils/userActionLogger';
-import { useResearchQuestions } from '../contexts/ResearchQuestions';
-import RqLinkPicker from './RqLinkPicker';
-import RqBadges from './RqBadges';
+import React, { useState, useEffect, useRef } from "react";
+import { useDrag, useDrop } from "react-dnd";
+import type { GroupDivProps, DragItem } from "@/types/types";
+import DraggableCard from "@/components/DraggableCard";
+import { ModalShell } from "@/components/ModalShell";
+import { formatImageMetadata } from "@/utils/imageUtils";
+import { formatGroupMetadata } from "@/utils/groupUtils";
+import { logAction } from "@/utils/userActionLogger";
+import { captureActionContext } from "@/utils/userActionLogger";
+import { useResearchQuestions } from "@/contexts/ResearchQuestions";
+import RqLinkPicker from "@/components/RqLinkPicker";
+import RqBadges from "@/components/RqBadges";
+import { Share2 } from "lucide-react";
 
 const GroupDiv: React.FC<GroupDivProps> = ({
-  id,
-  number,
-  name,
-  description,
-  cards,
-  initialPosition,
-  onClose,
-  onPositionUpdate,
-  onCardAdd,
-  onCardRemove,
-  onNameChange,
-  onDescriptionChange,
-  onGroupUpdate,
-  storyBinRef,
-  scaffoldId,
-  disableDrag,
-  zoomLevel = 1,
-  panOffset = { x: 0, y: 0 }
+	id,
+	number,
+	name,
+	description,
+	cards,
+	initialPosition,
+	onClose,
+	onPositionUpdate,
+	onCardAdd,
+	onCardRemove,
+	onNameChange,
+	onDescriptionChange,
+	onGroupUpdate,
+	storyBinRef,
+	scaffoldId,
+	disableDrag,
+	zoomLevel = 1,
+	panOffset = { x: 0, y: 0 },
 }) => {
-  const [position, setPosition] = useState(initialPosition);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-
-  // Sync position when initialPosition prop changes (e.g., from WebSocket refresh)
-  useEffect(() => {
-    if (!isDragging) {
-      setPosition(initialPosition);
-    }
-  }, [initialPosition.x, initialPosition.y]);
-  const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
-  const dragEventContext = useRef<any>(null);
-  const groupRef = useRef<HTMLDivElement>(null);
-  const { rqLabelsByCard } = useResearchQuestions();
-  const rqLabels = rqLabelsByCard[id] || [];
-  const [editingName, setEditingName] = useState(false);
-  const [tempName, setTempName] = useState(name);
-  const [tempDescription, setTempDescription] = useState(description);
-  const [showEditModal, setShowEditModal] = useState(false);
-
-  // Track group metadata for logging (following DraggableCard pattern)
-  const groupMetadataRef = useRef<any>(null);
-
-  // Load metadata on mount and when group changes
-  useEffect(() => {
-    const loadMetadata = async () => {
-      const metadata = await formatGroupMetadata({
-        id,
-        number,
-        name,
-        description,
-        cards,
-        initialPosition,
-        onClose,
-        onPositionUpdate,
-        onCardAdd,
-        onCardRemove,
-        onNameChange,
-        onDescriptionChange,
-        onGroupUpdate,
-        storyBinRef
-      });
-      groupMetadataRef.current = metadata;
-    };
-    loadMetadata();
-  }, [id, name, description, cards.length]);
-
-  // React DnD hook for drop functionality (accept cards)
-  const [{ isOver: isOverCard, canDrop: canDropCard }, dropCard] = useDrop(() => ({
-    accept: 'image',
-    drop: (item: DragItem, monitor) => {
-      // Only handle if not already in this group and group isn't full
-      if (item.groupId !== id && cards.length < 6) {
-        console.log(`Card ${item.id} dropped into group ${id}`);
-        onCardAdd(item.id, id);
-
-        // Generate metadata synchronously if ref is not initialized yet
-        // This handles the case when groups are loaded from backend
-        const currentMetadata = groupMetadataRef.current || {
-          id,
-          number,
-          name,
-          description,
-          card_ids: cards.map(c => c.id),
-          card_count: cards.length
-        };
-
-        // Return group info with current state BEFORE the addition
-        // Plus indication of what's being added for accurate logging
-        return {
-          droppedInGroup: true,
-          groupId: id,
-          groupMetadata: {
-            ...currentMetadata,
-            card_count: cards.length,
-            card_count_after_drop: cards.length + 1,
-            card_being_added: item.id
-          }
-        };
-      }
-      return { droppedInGroup: false };
-    },
-    canDrop: (item: DragItem) => {
-      // Can drop if: not already in this group AND group has less than 6 cards
-      return item.groupId !== id && cards.length < 6;
-    },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-      canDrop: monitor.canDrop(),
-    }),
-  }), [id, onCardAdd, cards.length]);
-
-  // React DnD hook for drag functionality - conditionally disable if disableDrag is true
-  const [{ isDraggingDnd }, drag] = useDrag(() => ({
-    type: 'group',
-    canDrag: !disableDrag,  // Disable dragging if disableDrag is true
-    item: () => {
-      if (disableDrag) return null;  // Return null if dragging is disabled
-      
-      if (groupRef.current && storyBinRef.current) {
-        const groupRect = groupRef.current.getBoundingClientRect();
-        const binRect = storyBinRef.current.getBoundingClientRect();
-        
-        const event = window.event as MouseEvent;
-        const offsetX = event.clientX - groupRect.left;
-        const offsetY = event.clientY - groupRect.top;
-        
-        return {
-          id: id,
-          type: 'group',
-          oldX: position.x,
-          oldY: position.y,
-          offsetX,
-          offsetY,
-          scaffoldId: scaffoldId,  // Include scaffoldId from props
-        };
-      }
-      return {
-        id: id,
-        type: 'group',
-        oldX: position.x,
-        oldY: position.y,
-        offsetX: 0,
-        offsetY: 0,
-        scaffoldId: scaffoldId,  // Include scaffoldId from props
-      };
-    },
-    end: (item, monitor) => {
-      // Update position when drag ends
-      const dropResult = monitor.getDropResult();
-      const clientOffset = monitor.getClientOffset();
-
-      let finalX = item.oldX;
-      let finalY = item.oldY;
-      let positionChanged = false;
-
-      // If dropped on a target that returned position data, use that
-      if (dropResult && typeof dropResult === 'object' && 'x' in dropResult && 'y' in dropResult) {
-        const newPosition = dropResult as { x: number; y: number };
-        finalX = newPosition.x;
-        finalY = newPosition.y;
-        setPosition({ x: finalX, y: finalY });
-
-        // Check if position actually changed
-        positionChanged =
-          Math.abs(finalX - item.oldX) > 1 ||
-          Math.abs(finalY - item.oldY) > 1;
-
-        if (positionChanged) {
-          onPositionUpdate(finalX, finalY);
-        }
-      }
-      // Otherwise calculate position (for drops outside valid targets)
-      else if (clientOffset && storyBinRef.current) {
-        // Find the actual bin element (scrollable container) within the wrapper
-        const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
-        if (!binElement) return;
-        
-        const binRect = binElement.getBoundingClientRect();
-        // Account for scroll position within the bin
-        const scrollLeft = binElement.scrollLeft;
-        const scrollTop = binElement.scrollTop;
-
-        // Calculate new position relative to scrollable content container (zoom + pan compensated)
-        let newX = (clientOffset.x - binRect.left - panOffset.x) / zoomLevel - item.offsetX;
-        let newY = (clientOffset.y - binRect.top - panOffset.y) / zoomLevel - item.offsetY;
-
-        // Constrain: only prevent negative positions, allow free placement otherwise
-        newX = Math.max(0, newX);
-        newY = Math.max(0, newY);
-
-        finalX = newX;
-        finalY = newY;
-        setPosition({ x: finalX, y: finalY });
-
-        // Check if position actually changed
-        positionChanged =
-          Math.abs(finalX - item.oldX) > 1 ||
-          Math.abs(finalY - item.oldY) > 1;
-
-        if (positionChanged) {
-          onPositionUpdate(finalX, finalY);
-        }
-      }
-
-      // Log the drag if position changed and we have event context
-      if (positionChanged && dragEventContext.current) {
-        const stateInfo: any = {
-          group_metadata: groupMetadataRef.current,
-          position_before: { x: item.oldX, y: item.oldY },
-          position_after: { x: finalX, y: finalY }
-        };
-        logAction(dragEventContext.current, stateInfo);
-        dragEventContext.current = null;
-      }
-    },
-    collect: (monitor) => ({
-      isDraggingDnd: !!monitor.isDragging(),
-    }),
-  }), [id, position, storyBinRef, scaffoldId, disableDrag, zoomLevel, panOffset]);
-
-  const handleDragStart = (e: React.DragEvent) => {
-    // Capture event context for logging at the end
-    dragEventContext.current = captureActionContext(e as React.SyntheticEvent);
-    dragStartPosition.current = { x: position.x, y: position.y };
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    // Cleanup - logging is handled in React DnD end callback
-    dragEventContext.current = null;
-    dragStartPosition.current = null;
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Disable dragging if disableDrag is true - but allow event to bubble to scaffold
-    if (disableDrag) {
-      // Don't stop propagation - let the scaffold handle the drag
-      // Just prevent this component's drag behavior
-      return;
-    }
-    
-    // Don't start custom drag if React DnD is already handling it
-    if (isDraggingDnd) return;
-
-    if (!storyBinRef.current) return;
-
-    // Find the actual bin element (scrollable container) within the wrapper
-    const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
-    if (!binElement) return;
-
-    const binRect = binElement.getBoundingClientRect();
-    // Account for scroll position within the bin
-    const scrollLeft = binElement.scrollLeft;
-    const scrollTop = binElement.scrollTop;
-
-    setIsDragging(true);
-    dragStartPosition.current = { x: position.x, y: position.y }; // Store initial position
-    setDragOffset({
-      x: (e.clientX - binRect.left - panOffset.x) / zoomLevel - position.x,
-      y: (e.clientY - binRect.top - panOffset.y) / zoomLevel - position.y
-    });
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      // Stop custom drag if React DnD takes over
-      if (!isDragging || !storyBinRef.current || isDraggingDnd) {
-        setIsDragging(false);
-        return;
-      }
-
-      // Find the actual bin element (scrollable container) within the wrapper
-      const binElement = storyBinRef.current.querySelector('#story-bin') as HTMLElement;
-      if (!binElement) {
-        setIsDragging(false);
-        return;
-      }
-
-      const binRect = binElement.getBoundingClientRect();
-      // Account for scroll position within the bin
-      const scrollLeft = binElement.scrollLeft;
-      const scrollTop = binElement.scrollTop;
-
-      // Calculate new position relative to scrollable content container (zoom + pan compensated)
-      let newX = (e.clientX - binRect.left - panOffset.x) / zoomLevel - dragOffset.x;
-      let newY = (e.clientY - binRect.top - panOffset.y) / zoomLevel - dragOffset.y;
-
-      // Constrain: only prevent negative positions, allow free placement otherwise
-      newX = Math.max(0, newX);
-      newY = Math.max(0, newY);
-
-      const newPosition = { x: newX, y: newY };
-      setPosition(newPosition);
-      // Don't call onPositionUpdate here - only update local state during drag
-    };
-
-    const handleMouseUp = () => {
-      if (isDragging && dragStartPosition.current) {
-        // Only call onPositionUpdate if position actually changed
-        const positionChanged =
-          Math.abs(position.x - dragStartPosition.current.x) > 1 ||
-          Math.abs(position.y - dragStartPosition.current.y) > 1;
-
-        if (positionChanged) {
-          onPositionUpdate(position.x, position.y);
-        }
-        dragStartPosition.current = null;
-      }
-      setIsDragging(false);
-    };
-
-    if (isDragging && !isDraggingDnd) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, dragOffset, isDraggingDnd]);
-
-  // Stop custom dragging when React DnD starts
-  useEffect(() => {
-    if (isDraggingDnd && isDragging) {
-      setIsDragging(false);
-    }
-  }, [isDraggingDnd, isDragging]);
-
-
-  const handleClose = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering drag
-
-    // Log group closure
-    logAction(e, {
-      group_metadata: groupMetadataRef.current
-    });
-
-    onClose(id);
-  };
-
-  // Position relative to the container (like draggable cards)
-  const getContainerPosition = () => {
-    return {
-      left: position.x,
-      top: position.y
-    };
-  };
-
-  const containerPos = getContainerPosition();
-
-  // Handle name editing
-  const handleNameSave = async (e: React.FocusEvent | React.KeyboardEvent) => {
-    setEditingName(false);
-
-    // Only call API if name actually changed
-    if (tempName === name) {
-      return; // No change, skip API call and logging
-    }
-
-    const ctx = captureActionContext(e as React.SyntheticEvent);
-    const groupMetadataBefore = groupMetadataRef.current;
-
-    onNameChange(id, tempName);
-
-    // Update metadata and log
-    const groupMetadataAfter = await formatGroupMetadata({
-      id,
-      number,
-      name: tempName,
-      description,
-      cards,
-      initialPosition,
-      onClose,
-      onPositionUpdate,
-      onCardAdd,
-      onCardRemove,
-      onNameChange,
-      onDescriptionChange,
-      onGroupUpdate,
-      storyBinRef
-    });
-
-    logAction(ctx, {
-      group_metadata_before: groupMetadataBefore,
-      group_metadata_after: groupMetadataAfter
-    });
-
-    groupMetadataRef.current = groupMetadataAfter;
-  };
-
-  // Handle card removal from group (only called from remove button with event)
-  const handleCardRemove = async (e: React.MouseEvent, cardId: string) => {
-    const ctx = captureActionContext(e as React.SyntheticEvent);
-    const imageMetadata = await formatImageMetadata(cardId);
-    const groupMetadata = groupMetadataRef.current;
-
-    logAction(ctx, {
-      image_metadata: imageMetadata,
-      group_metadata: groupMetadata,
-      cards_in_group_before: cards.length
-    });
-
-    onCardRemove(cardId, id);
-  };
-
-  // Handle edit modal
-  const handleShowEditModal = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering drag
-
-    // Log opening edit modal
-    logAction(e, {
-      group_metadata: groupMetadataRef.current
-    });
-
-    setTempName(name);
-    setTempDescription(description);
-    setShowEditModal(true);
-    document.body.style.overflow = 'hidden';
-  };
-
-  const handleCloseEditModal = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    logAction(e, { group_metadata: groupMetadataRef.current });
-    setShowEditModal(false);
-    document.body.style.overflow = 'auto';
-  };
-
-  const handleSaveEditModal = async (e: React.MouseEvent) => {
-    setShowEditModal(false);
-    document.body.style.overflow = 'auto';
-
-    // Build object with only changed fields
-    const updates: { name?: string; description?: string } = {};
-    const nameChanged = tempName !== name;
-    const descriptionChanged = tempDescription !== description;
-
-    if (nameChanged) {
-      updates.name = tempName;
-    }
-    if (descriptionChanged) {
-      updates.description = tempDescription;
-    }
-
-    // If nothing changed, skip API call and logging
-    if (!nameChanged && !descriptionChanged) {
-      return;
-    }
-
-    const ctx = captureActionContext(e as React.SyntheticEvent);
-    const groupMetadataBefore = groupMetadataRef.current;
-
-    // Single API call with all changes
-    onGroupUpdate(id, updates);
-
-    // Get updated metadata
-    const groupMetadataAfter = await formatGroupMetadata({
-      id,
-      number,
-      name: updates.name || name,
-      description: updates.description || description,
-      cards,
-      initialPosition,
-      onClose,
-      onPositionUpdate,
-      onCardAdd,
-      onCardRemove,
-      onNameChange,
-      onDescriptionChange,
-      onGroupUpdate,
-      storyBinRef
-    });
-
-    logAction(ctx, {
-      group_metadata_before: groupMetadataBefore,
-      group_metadata_after: groupMetadataAfter,
-      name_changed: nameChanged,
-      description_changed: descriptionChanged
-    });
-
-    groupMetadataRef.current = groupMetadataAfter;
-  };
-
-  // Combine refs for drag and drop functionality
-  const combinedRef = (element: HTMLDivElement | null) => {
-    if (element) {
-      drag(element);
-      dropCard(element);
-      groupRef.current = element;
-    }
-  };
-
-  return (
-    <div 
-      log-id="group"
-      ref={combinedRef}
-      className={`absolute w-[27rem] bg-grey-lighter-2 select-none rounded-lg overflow-hidden shadow-md border transition-all duration-200 z-[200] ${
-        isOverCard && canDropCard 
-          ? 'border-blue-400 border-2 bg-blue-50' 
-          : isOverCard && !canDropCard
-          ? 'border-red-400 border-2 bg-red-50'
-          : 'border-grey-lightest'
-      }`}
-      style={{
-        left: containerPos.left,
-        top: containerPos.top,
-        cursor: disableDrag ? 'default' : (isDragging || isDraggingDnd ? 'grabbing' : 'grab'),
-        opacity: isDraggingDnd ? 0.5 : 1,
-        pointerEvents: 'auto'
-      }}
-      onMouseDown={handleMouseDown}
-      onDragStart={disableDrag ? undefined : handleDragStart}
-      onDragEnd={disableDrag ? undefined : handleDragEnd}
-    >
-      {/* Header */}
-      <div className="flex justify-between items-center p-2 bg-bama-crimson text-white">
-        <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="flex-shrink-0"><circle cx="3" cy="8" r="2"/><circle cx="13" cy="4" r="2"/><circle cx="13" cy="12" r="2"/><path d="M5 8l6-3M5 8l6 3"/></svg>
-        {editingName ? (
-          <input
-            log-id="group-inline-name-input"
-            type="text"
-            value={tempName}
-            onChange={(e) => setTempName(e.target.value)}
-            onBlur={handleNameSave}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleNameSave(e);
-              }
-            }}
-            className="text-xs font-bold bg-transparent border-b border-white text-white placeholder-white placeholder-opacity-70 outline-none"
-            placeholder="Group name"
-            autoFocus
-            onClick={(e) => e.stopPropagation()}
-          />
-        ) : (
-          <h4
-            className="text-xs font-bold cursor-pointer hover:underline truncate min-w-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingName(true);
-            }}
-          >
-            {name || `Group ${number}`}
-          </h4>
-        )}
-        </div>
-
-        {/* Right block — badges plus action buttons. Rendered even in read-only/disabled drag
+	const [position, setPosition] = useState(initialPosition);
+	const [isDragging, setIsDragging] = useState(false);
+	const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+	// Sync position when initialPosition prop changes (e.g., from WebSocket refresh)
+	useEffect(() => {
+		if (!isDragging) {
+			setPosition(initialPosition);
+		}
+	}, [initialPosition.x, initialPosition.y]);
+	const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
+	const dragEventContext = useRef<any>(null);
+	const groupRef = useRef<HTMLDivElement>(null);
+	const { rqLabelsByCard } = useResearchQuestions();
+	const rqLabels = rqLabelsByCard[id] || [];
+	const [editingName, setEditingName] = useState(false);
+	const [tempName, setTempName] = useState(name);
+	const [tempDescription, setTempDescription] = useState(description);
+	const [showEditModal, setShowEditModal] = useState(false);
+
+	// Track group metadata for logging (following DraggableCard pattern)
+	const groupMetadataRef = useRef<any>(null);
+
+	// Load metadata on mount and when group changes
+	useEffect(() => {
+		const loadMetadata = async () => {
+			const metadata = await formatGroupMetadata({
+				id,
+				number,
+				name,
+				description,
+				cards,
+				initialPosition,
+				onClose,
+				onPositionUpdate,
+				onCardAdd,
+				onCardRemove,
+				onNameChange,
+				onDescriptionChange,
+				onGroupUpdate,
+				storyBinRef,
+			});
+			groupMetadataRef.current = metadata;
+		};
+		loadMetadata();
+	}, [id, name, description, cards.length]);
+
+	// React DnD hook for drop functionality (accept cards)
+	const [{ isOver: isOverCard, canDrop: canDropCard }, dropCard] = useDrop(
+		() => ({
+			accept: "image",
+			drop: (item: DragItem) => {
+				// Only handle if not already in this group and group isn't full
+				if (item.groupId !== id && cards.length < 6) {
+					console.log(`Card ${item.id} dropped into group ${id}`);
+					onCardAdd(item.id, id);
+
+					// Generate metadata synchronously if ref is not initialized yet
+					// This handles the case when groups are loaded from backend
+					const currentMetadata = groupMetadataRef.current || {
+						id,
+						number,
+						name,
+						description,
+						card_ids: cards.map((c) => c.id),
+						card_count: cards.length,
+					};
+
+					// Return group info with current state BEFORE the addition
+					// Plus indication of what's being added for accurate logging
+					return {
+						droppedInGroup: true,
+						groupId: id,
+						groupMetadata: {
+							...currentMetadata,
+							card_count: cards.length,
+							card_count_after_drop: cards.length + 1,
+							card_being_added: item.id,
+						},
+					};
+				}
+				return { droppedInGroup: false };
+			},
+			canDrop: (item: DragItem) => {
+				// Can drop if: not already in this group AND group has less than 6 cards
+				return item.groupId !== id && cards.length < 6;
+			},
+			collect: (monitor) => ({
+				isOver: monitor.isOver(),
+				canDrop: monitor.canDrop(),
+			}),
+		}),
+		[id, onCardAdd, cards.length],
+	);
+
+	// React DnD hook for drag functionality - conditionally disable if disableDrag is true
+	const [{ isDraggingDnd }, drag] = useDrag(
+		() => ({
+			type: "group",
+			canDrag: !disableDrag, // Disable dragging if disableDrag is true
+			item: () => {
+				if (disableDrag) return null; // Return null if dragging is disabled
+
+				if (groupRef.current && storyBinRef.current) {
+					const groupRect = groupRef.current.getBoundingClientRect();
+
+					const event = window.event as MouseEvent;
+					const offsetX = event.clientX - groupRect.left;
+					const offsetY = event.clientY - groupRect.top;
+
+					return {
+						id: id,
+						type: "group",
+						oldX: position.x,
+						oldY: position.y,
+						offsetX,
+						offsetY,
+						scaffoldId: scaffoldId, // Include scaffoldId from props
+					};
+				}
+				return {
+					id: id,
+					type: "group",
+					oldX: position.x,
+					oldY: position.y,
+					offsetX: 0,
+					offsetY: 0,
+					scaffoldId: scaffoldId, // Include scaffoldId from props
+				};
+			},
+			end: (item, monitor) => {
+				// Update position when drag ends
+				const dropResult = monitor.getDropResult();
+				const clientOffset = monitor.getClientOffset();
+
+				let finalX = item.oldX;
+				let finalY = item.oldY;
+				let positionChanged = false;
+
+				// If dropped on a target that returned position data, use that
+				if (
+					dropResult &&
+					typeof dropResult === "object" &&
+					"x" in dropResult &&
+					"y" in dropResult
+				) {
+					const newPosition = dropResult as { x: number; y: number };
+					finalX = newPosition.x;
+					finalY = newPosition.y;
+					setPosition({ x: finalX, y: finalY });
+
+					// Check if position actually changed
+					positionChanged =
+						Math.abs(finalX - item.oldX) > 1 || Math.abs(finalY - item.oldY) > 1;
+
+					if (positionChanged) {
+						onPositionUpdate(finalX, finalY);
+					}
+				}
+				// Otherwise calculate position (for drops outside valid targets)
+				else if (clientOffset && storyBinRef.current) {
+					// Find the actual bin element (scrollable container) within the wrapper
+					const binElement = storyBinRef.current.querySelector(
+						"#story-bin",
+					) as HTMLElement;
+					if (!binElement) return;
+
+					const binRect = binElement.getBoundingClientRect();
+
+					// Calculate new position relative to scrollable content container (zoom + pan compensated)
+					let newX =
+						(clientOffset.x - binRect.left - panOffset.x) / zoomLevel - item.offsetX;
+					let newY =
+						(clientOffset.y - binRect.top - panOffset.y) / zoomLevel - item.offsetY;
+
+					// Constrain: only prevent negative positions, allow free placement otherwise
+					newX = Math.max(0, newX);
+					newY = Math.max(0, newY);
+
+					finalX = newX;
+					finalY = newY;
+					setPosition({ x: finalX, y: finalY });
+
+					// Check if position actually changed
+					positionChanged =
+						Math.abs(finalX - item.oldX) > 1 || Math.abs(finalY - item.oldY) > 1;
+
+					if (positionChanged) {
+						onPositionUpdate(finalX, finalY);
+					}
+				}
+
+				// Log the drag if position changed and we have event context
+				if (positionChanged && dragEventContext.current) {
+					const stateInfo: any = {
+						group_metadata: groupMetadataRef.current,
+						position_before: { x: item.oldX, y: item.oldY },
+						position_after: { x: finalX, y: finalY },
+					};
+					logAction(dragEventContext.current, stateInfo);
+					dragEventContext.current = null;
+				}
+			},
+			collect: (monitor) => ({
+				isDraggingDnd: !!monitor.isDragging(),
+			}),
+		}),
+		[id, position, storyBinRef, scaffoldId, disableDrag, zoomLevel, panOffset],
+	);
+
+	const handleDragStart = (e: React.DragEvent) => {
+		// Capture event context for logging at the end
+		dragEventContext.current = captureActionContext(e as React.SyntheticEvent);
+		dragStartPosition.current = { x: position.x, y: position.y };
+	};
+
+	const handleDragEnd = () => {
+		// Cleanup - logging is handled in React DnD end callback
+		dragEventContext.current = null;
+		dragStartPosition.current = null;
+	};
+
+	const handleMouseDown = (e: React.MouseEvent) => {
+		// Disable dragging if disableDrag is true - but allow event to bubble to scaffold
+		if (disableDrag) {
+			// Don't stop propagation - let the scaffold handle the drag
+			// Just prevent this component's drag behavior
+			return;
+		}
+
+		// Don't start custom drag if React DnD is already handling it
+		if (isDraggingDnd) return;
+
+		if (!storyBinRef.current) return;
+
+		// Find the actual bin element (scrollable container) within the wrapper
+		const binElement = storyBinRef.current.querySelector("#story-bin") as HTMLElement;
+		if (!binElement) return;
+
+		const binRect = binElement.getBoundingClientRect();
+
+		setIsDragging(true);
+		dragStartPosition.current = { x: position.x, y: position.y }; // Store initial position
+		setDragOffset({
+			x: (e.clientX - binRect.left - panOffset.x) / zoomLevel - position.x,
+			y: (e.clientY - binRect.top - panOffset.y) / zoomLevel - position.y,
+		});
+	};
+
+	useEffect(() => {
+		const handleMouseMove = (e: MouseEvent) => {
+			// Stop custom drag if React DnD takes over
+			if (!isDragging || !storyBinRef.current || isDraggingDnd) {
+				setIsDragging(false);
+				return;
+			}
+
+			// Find the actual bin element (scrollable container) within the wrapper
+			const binElement = storyBinRef.current.querySelector("#story-bin") as HTMLElement;
+			if (!binElement) {
+				setIsDragging(false);
+				return;
+			}
+
+			const binRect = binElement.getBoundingClientRect();
+
+			// Calculate new position relative to scrollable content container (zoom + pan compensated)
+			let newX = (e.clientX - binRect.left - panOffset.x) / zoomLevel - dragOffset.x;
+			let newY = (e.clientY - binRect.top - panOffset.y) / zoomLevel - dragOffset.y;
+
+			// Constrain: only prevent negative positions, allow free placement otherwise
+			newX = Math.max(0, newX);
+			newY = Math.max(0, newY);
+
+			const newPosition = { x: newX, y: newY };
+			setPosition(newPosition);
+			// Don't call onPositionUpdate here - only update local state during drag
+		};
+
+		const handleMouseUp = () => {
+			if (isDragging && dragStartPosition.current) {
+				// Only call onPositionUpdate if position actually changed
+				const positionChanged =
+					Math.abs(position.x - dragStartPosition.current.x) > 1 ||
+					Math.abs(position.y - dragStartPosition.current.y) > 1;
+
+				if (positionChanged) {
+					onPositionUpdate(position.x, position.y);
+				}
+				dragStartPosition.current = null;
+			}
+			setIsDragging(false);
+		};
+
+		if (isDragging && !isDraggingDnd) {
+			document.addEventListener("mousemove", handleMouseMove);
+			document.addEventListener("mouseup", handleMouseUp);
+		}
+
+		return () => {
+			document.removeEventListener("mousemove", handleMouseMove);
+			document.removeEventListener("mouseup", handleMouseUp);
+		};
+	}, [isDragging, dragOffset, isDraggingDnd]);
+
+	// Stop custom dragging when React DnD starts
+	useEffect(() => {
+		if (isDraggingDnd && isDragging) {
+			setIsDragging(false);
+		}
+	}, [isDraggingDnd, isDragging]);
+
+	const handleClose = (e: React.MouseEvent) => {
+		e.stopPropagation(); // Prevent triggering drag
+
+		// Log group closure
+		logAction(e, {
+			group_metadata: groupMetadataRef.current,
+		});
+
+		onClose(id);
+	};
+
+	// Position relative to the container (like draggable cards)
+	const getContainerPosition = () => {
+		return {
+			left: position.x,
+			top: position.y,
+		};
+	};
+
+	const containerPos = getContainerPosition();
+
+	// Handle name editing
+	const handleNameSave = async (e: React.FocusEvent | React.KeyboardEvent) => {
+		setEditingName(false);
+
+		// Only call API if name actually changed
+		if (tempName === name) {
+			return; // No change, skip API call and logging
+		}
+
+		const ctx = captureActionContext(e as React.SyntheticEvent);
+		const groupMetadataBefore = groupMetadataRef.current;
+
+		onNameChange(id, tempName);
+
+		// Update metadata and log
+		const groupMetadataAfter = await formatGroupMetadata({
+			id,
+			number,
+			name: tempName,
+			description,
+			cards,
+			initialPosition,
+			onClose,
+			onPositionUpdate,
+			onCardAdd,
+			onCardRemove,
+			onNameChange,
+			onDescriptionChange,
+			onGroupUpdate,
+			storyBinRef,
+		});
+
+		logAction(ctx, {
+			group_metadata_before: groupMetadataBefore,
+			group_metadata_after: groupMetadataAfter,
+		});
+
+		groupMetadataRef.current = groupMetadataAfter;
+	};
+
+	// Handle card removal from group (only called from remove button with event)
+	const handleCardRemove = async (e: React.MouseEvent, cardId: string) => {
+		const ctx = captureActionContext(e as React.SyntheticEvent);
+		const imageMetadata = await formatImageMetadata(cardId);
+		const groupMetadata = groupMetadataRef.current;
+
+		logAction(ctx, {
+			image_metadata: imageMetadata,
+			group_metadata: groupMetadata,
+			cards_in_group_before: cards.length,
+		});
+
+		onCardRemove(cardId, id);
+	};
+
+	// Handle edit modal
+	const handleShowEditModal = (e: React.MouseEvent) => {
+		e.stopPropagation(); // Prevent triggering drag
+
+		// Log opening edit modal
+		logAction(e, {
+			group_metadata: groupMetadataRef.current,
+		});
+
+		setTempName(name);
+		setTempDescription(description);
+		setShowEditModal(true);
+		document.body.style.overflow = "hidden";
+	};
+
+	const handleCloseEditModal = (e?: React.MouseEvent) => {
+		e?.stopPropagation();
+		if (e) {
+			logAction(e, { group_metadata: groupMetadataRef.current });
+		}
+		setShowEditModal(false);
+		document.body.style.overflow = "auto";
+	};
+
+	const handleSaveEditModal = async (e: React.MouseEvent) => {
+		setShowEditModal(false);
+		document.body.style.overflow = "auto";
+
+		// Build object with only changed fields
+		const updates: { name?: string; description?: string } = {};
+		const nameChanged = tempName !== name;
+		const descriptionChanged = tempDescription !== description;
+
+		if (nameChanged) {
+			updates.name = tempName;
+		}
+		if (descriptionChanged) {
+			updates.description = tempDescription;
+		}
+
+		// If nothing changed, skip API call and logging
+		if (!nameChanged && !descriptionChanged) {
+			return;
+		}
+
+		const ctx = captureActionContext(e as React.SyntheticEvent);
+		const groupMetadataBefore = groupMetadataRef.current;
+
+		// Single API call with all changes
+		onGroupUpdate(id, updates);
+
+		// Get updated metadata
+		const groupMetadataAfter = await formatGroupMetadata({
+			id,
+			number,
+			name: updates.name || name,
+			description: updates.description || description,
+			cards,
+			initialPosition,
+			onClose,
+			onPositionUpdate,
+			onCardAdd,
+			onCardRemove,
+			onNameChange,
+			onDescriptionChange,
+			onGroupUpdate,
+			storyBinRef,
+		});
+
+		logAction(ctx, {
+			group_metadata_before: groupMetadataBefore,
+			group_metadata_after: groupMetadataAfter,
+			name_changed: nameChanged,
+			description_changed: descriptionChanged,
+		});
+
+		groupMetadataRef.current = groupMetadataAfter;
+	};
+
+	// Combine refs for drag and drop functionality
+	const combinedRef = (element: HTMLDivElement | null) => {
+		if (element) {
+			drag(element);
+			dropCard(element);
+			groupRef.current = element;
+		}
+	};
+
+	return (
+		<div
+			log-id="group"
+			ref={combinedRef}
+			className={`absolute w-[27rem] bg-grey-lighter-2 select-none rounded-lg overflow-hidden shadow-md border transition-all duration-200 z-[200] ${
+				isOverCard && canDropCard
+					? "border-blue-400 border-2 bg-blue-50"
+					: isOverCard && !canDropCard
+						? "border-red-400 border-2 bg-red-50"
+						: "border-grey-lightest"
+			}`}
+			style={{
+				left: containerPos.left,
+				top: containerPos.top,
+				cursor: disableDrag ? "default" : isDragging || isDraggingDnd ? "grabbing" : "grab",
+				opacity: isDraggingDnd ? 0.5 : 1,
+				pointerEvents: "auto",
+			}}
+			onMouseDown={handleMouseDown}
+			onDragStart={disableDrag ? undefined : handleDragStart}
+			onDragEnd={disableDrag ? undefined : handleDragEnd}
+		>
+			{/* Header */}
+			<div className="flex justify-between items-center p-2 bg-bama-crimson text-white">
+				<div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+					<Share2 className="w-3 h-3 flex-shrink-0" strokeWidth={1.5} aria-hidden />
+					{editingName ? (
+						<input
+							log-id="group-inline-name-input"
+							type="text"
+							value={tempName}
+							onChange={(e) => setTempName(e.target.value)}
+							onBlur={handleNameSave}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									e.preventDefault();
+									handleNameSave(e);
+								}
+							}}
+							className="text-xs font-bold bg-transparent border-b border-white text-white placeholder-white/70 outline-none"
+							placeholder="Group name"
+							autoFocus
+							onClick={(e) => e.stopPropagation()}
+						/>
+					) : (
+						<h4
+							className="text-xs font-bold cursor-pointer hover:underline truncate min-w-0"
+							onClick={(e) => {
+								e.stopPropagation();
+								setEditingName(true);
+							}}
+						>
+							{name || `Group ${number}`}
+						</h4>
+					)}
+				</div>
+
+				{/* Right block — badges plus action buttons. Rendered even in read-only/disabled drag
             mode, since the RQ badges belong here and the buttons are what get hidden. */}
-        <div className="flex items-center space-x-1 flex-shrink-0 ml-1">
-          {/* Linked research questions — right-aligned beside the link button, capped so a
+				<div className="flex items-center space-x-1 flex-shrink-0 ml-1">
+					{/* Linked research questions — right-aligned beside the link button, capped so a
               heavily-linked group can't crowd out its name */}
-          <RqBadges labels={rqLabels} max={1} />
-          {!disableDrag && (
-            <>
-              {/* Link research questions */}
-              <RqLinkPicker
-                cardId={id}
-                isGroup
-                buttonClassName="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200 z-[210] flex-shrink-0"
-                iconSize={11}
-              />
-              {/* Edit button */}
-              <button
-                log-id="group-edit-button"
-                className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200 z-[210]"
-                onClick={handleShowEditModal}
-                style={{ cursor: 'pointer' }}
-                title="Edit group"
-              >
-                ✎
-              </button>
+					<RqBadges labels={rqLabels} max={1} />
+					{!disableDrag && (
+						<>
+							{/* Link research questions */}
+							<RqLinkPicker
+								cardId={id}
+								isGroup
+								buttonClassName="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200 z-[210] flex-shrink-0"
+								iconSize={11}
+							/>
+							{/* Edit button */}
+							<button
+								log-id="group-edit-button"
+								className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200 z-[210]"
+								onClick={handleShowEditModal}
+								style={{ cursor: "pointer" }}
+								title="Edit group"
+							>
+								✎
+							</button>
 
-              {/* Close button */}
-              <button
-                log-id="group-close-button"
-                className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
-                onClick={handleClose}
-                style={{ cursor: 'pointer' }}
-                title="Close group"
-              >
-                ×
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-      
-      {/* Group content area */}
-      <div className="p-2 pb-3 overflow-hidden relative" style={{ minHeight: '150px' }}>
-        {/* Drop zone indicator when empty and card is being dragged over */}
-        {isOverCard && canDropCard && cards.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 z-[250] m-2">
-            <div className="text-blue-600 text-sm font-medium">
-              Drop card here
-            </div>
-          </div>
-        )}
-        
-        {/* Drop zone indicator when cards are present and card is being dragged over */}
-        {isOverCard && canDropCard && cards.length > 0 && cards.length < 6 && (
-          <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 z-[250] m-2">
-            <div className="text-blue-600 text-sm font-medium">
-              Drop here
-            </div>
-          </div>
-        )}
-        
-        {/* Full group indicator when trying to drop on full group */}
-        {isOverCard && !canDropCard && cards.length >= 6 && (
-          <div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-red-400 rounded-lg bg-red-50 z-[250] m-2">
-            <div className="text-red-600 text-sm font-medium">
-              Group is full (Max: 6 visuals)
-            </div>
-          </div>
-        )}
-        
-        {/* Card components - arranged in grid */}
-        {cards.length > 0 ? (
-          <div className="flex flex-wrap gap-2 relative">
-            {cards.map((card) => (
-              <div key={card.id} className="relative group">
-                <div style={{ zoom: 0.75 }}>
-                  <DraggableCard
-                    image={card}
-                    index={card.index}
-                    onDescriptionsUpdate={() => {}}
-                    onDelete={() => {}}
-                    onTrash={() => onCardRemove(card.id, id)}
-                    onUnTrash={() => {}}
-                    draggable={false}
-                    readOnly={disableDrag}
-                  />
-                </div>
-                {/* Remove button overlay — outside zoom so it's full size and visible, hidden in readOnly */}
-                {!disableDrag && (
-                  <button
-                    log-id="group-remove-card-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCardRemove(e, card.id);
-                    }}
-                    className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[305] shadow-md"
-                    style={{ top: '2px', right: '2px' }}
-                    title="Remove from group"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : !isOverCard && (
-          <div className="flex items-top justify-top h-full text-grey-dark text-sm text-top">
-            <div>
-              <span className="text-xs">Drag a visual in here to begin. <br/>You can include up to six visuals in a group.</span>
-            </div>
-          </div>
-        )}
-      </div>
+							{/* Close button */}
+							<button
+								log-id="group-close-button"
+								className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
+								onClick={handleClose}
+								style={{ cursor: "pointer" }}
+								title="Close group"
+							>
+								×
+							</button>
+						</>
+					)}
+				</div>
+			</div>
 
-      {/* Edit Modal — portaled to body to escape parent stacking context */}
-      {showEditModal && ReactDOM.createPortal(
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[500]"
-          onClick={handleCloseEditModal}
-        >
-          <div
-            className="bg-white rounded-lg shadow-xl w-96 max-w-[90vw] max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="flex justify-between items-center p-4 border-b border-grey-lightest">
-              <h3 className="text-lg font-semibold text-grey-darkest">
-                Edit Group
-              </h3>
-              <button
-                log-id="group-close-edit-modal-button"
-                onClick={handleCloseEditModal}
-                className="w-6 h-6 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
-              >
-                ×
-              </button>
-            </div>
+			{/* Group content area */}
+			<div className="p-2 pb-3 overflow-hidden relative" style={{ minHeight: "150px" }}>
+				{/* Drop zone indicator when empty and card is being dragged over */}
+				{isOverCard && canDropCard && cards.length === 0 && (
+					<div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 z-[250] m-2">
+						<div className="text-blue-600 text-sm font-medium">Drop card here</div>
+					</div>
+				)}
 
-            {/* Modal Content */}
-            <div className="p-4 space-y-4">
-              {/* Group Name */}
-              <div>
-                <label className="block text-sm font-medium text-grey-darkest mb-2">
-                  Group Name
-                </label>
-                <input
-                  type="text"
-                  value={tempName}
-                  onChange={(e) => setTempName(e.target.value)}
-                  className="w-full px-3 py-2 border border-grey-lighter rounded-md focus:outline-none focus:ring-2 focus:ring-bama-crimson focus:border-transparent"
-                  placeholder="Enter group name..."
-                />
-              </div>
+				{/* Drop zone indicator when cards are present and card is being dragged over */}
+				{isOverCard && canDropCard && cards.length > 0 && cards.length < 6 && (
+					<div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 z-[250] m-2">
+						<div className="text-blue-600 text-sm font-medium">Drop here</div>
+					</div>
+				)}
 
-              {/* Group Description */}
-              <div>
-                <label className="block text-sm font-medium text-grey-darkest mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={tempDescription}
-                  onChange={(e) => setTempDescription(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-grey-lighter rounded-md focus:outline-none focus:ring-2 focus:ring-bama-crimson focus:border-transparent resize-none"
-                  placeholder="Enter group description..."
-                />
-              </div>
+				{/* Full group indicator when trying to drop on full group */}
+				{isOverCard && !canDropCard && cards.length >= 6 && (
+					<div className="absolute inset-0 flex items-center justify-center border-2 border-dashed border-red-400 rounded-lg bg-red-50 z-[250] m-2">
+						<div className="text-red-600 text-sm font-medium">
+							Group is full (Max: 6 visuals)
+						</div>
+					</div>
+				)}
 
-              {/* Group Info */}
-              <div className="bg-grey-lightest p-3 rounded-md">
-                <div className="text-sm text-grey-dark">
-                  <div className="flex justify-between mb-1">
-                    <span>Group Number:</span>
-                    <span className="font-medium">{number}</span>
-                  </div>
-                  <div className="flex justify-between mb-1">
-                    <span>Cards in Group:</span>
-                    <span className="font-medium">{cards.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Group ID:</span>
-                    <span className="font-mono text-xs">{id.substring(0, 8)}...</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+				{/* Card components - arranged in grid */}
+				{cards.length > 0 ? (
+					<div className="flex flex-wrap gap-2 relative">
+						{cards.map((card) => (
+							<div key={card.id} className="relative group">
+								<div style={{ zoom: 0.75 }}>
+									<DraggableCard
+										image={card}
+										index={card.index}
+										onDescriptionsUpdate={() => {}}
+										onDelete={() => {}}
+										onTrash={() => onCardRemove(card.id, id)}
+										onUnTrash={() => {}}
+										draggable={false}
+										readOnly={disableDrag}
+									/>
+								</div>
+								{/* Remove button overlay — outside zoom so it's full size and visible, hidden in readOnly */}
+								{!disableDrag && (
+									<button
+										log-id="group-remove-card-button"
+										onClick={(e) => {
+											e.stopPropagation();
+											handleCardRemove(e, card.id);
+										}}
+										className="absolute w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[305] shadow-md"
+										style={{ top: "2px", right: "2px" }}
+										title="Remove from group"
+									>
+										×
+									</button>
+								)}
+							</div>
+						))}
+					</div>
+				) : (
+					!isOverCard && (
+						<div className="flex items-top justify-top h-full text-grey-dark text-sm text-top">
+							<div>
+								<span className="text-xs">
+									Drag a visual in here to begin. <br />
+									You can include up to six visuals in a group.
+								</span>
+							</div>
+						</div>
+					)
+				)}
+			</div>
 
-            {/* Modal Footer */}
-            <div className="flex justify-end space-x-3 p-4 border-t border-grey-lightest">
-              <button
-              log-id="group-cancel-edit-button"
-                onClick={handleCloseEditModal}
-                className="px-4 py-2 text-grey-darker bg-grey-lighter hover:bg-grey-light rounded-md transition-colors duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                log-id="group-save-changes-button"
-                onClick={handleSaveEditModal}
-                className="px-4 py-2 bg-bama-crimson hover:bg-bama-crimson-dark text-white rounded-md transition-colors duration-200"
-              >
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-    </div>
-  );
+			{/* Edit Modal */}
+			{showEditModal && (
+				<ModalShell
+					onClose={() => handleCloseEditModal()}
+					overlayClassName="fixed inset-0 z-500 flex items-center justify-center bg-black/50"
+					panelClassName="relative bg-white rounded-lg shadow-xl w-96 max-w-[90vw] max-h-[90vh] overflow-y-auto mx-4"
+					ariaLabelledBy="edit-group-title"
+				>
+					{/* Modal Header */}
+					<div className="flex justify-between items-center p-4 border-b border-grey-lightest">
+						<h3
+							id="edit-group-title"
+							className="text-lg font-semibold text-grey-darkest"
+						>
+							Edit Group
+						</h3>
+						<button
+							log-id="group-close-edit-modal-button"
+							onClick={handleCloseEditModal}
+							className="w-6 h-6 bg-grey-lighter hover:bg-grey-light rounded-full flex items-center justify-center text-grey-darker hover:text-grey-darkest transition-colors duration-200"
+						>
+							×
+						</button>
+					</div>
+
+					{/* Modal Content */}
+					<div className="p-4 space-y-4">
+						{/* Group Name */}
+						<div>
+							<label className="block text-sm font-medium text-grey-darkest mb-2">
+								Group Name
+							</label>
+							<input
+								type="text"
+								value={tempName}
+								onChange={(e) => setTempName(e.target.value)}
+								className="w-full px-3 py-2 border border-grey-lighter rounded-md focus:outline-none focus:ring-2 focus:ring-bama-crimson focus:border-transparent"
+								placeholder="Enter group name..."
+							/>
+						</div>
+
+						{/* Group Description */}
+						<div>
+							<label className="block text-sm font-medium text-grey-darkest mb-2">
+								Description
+							</label>
+							<textarea
+								value={tempDescription}
+								onChange={(e) => setTempDescription(e.target.value)}
+								rows={4}
+								className="w-full px-3 py-2 border border-grey-lighter rounded-md focus:outline-none focus:ring-2 focus:ring-bama-crimson focus:border-transparent resize-none"
+								placeholder="Enter group description..."
+							/>
+						</div>
+
+						{/* Group Info */}
+						<div className="bg-grey-lightest p-3 rounded-md">
+							<div className="text-sm text-grey-dark">
+								<div className="flex justify-between mb-1">
+									<span>Group Number:</span>
+									<span className="font-medium">{number}</span>
+								</div>
+								<div className="flex justify-between mb-1">
+									<span>Cards in Group:</span>
+									<span className="font-medium">{cards.length}</span>
+								</div>
+								<div className="flex justify-between">
+									<span>Group ID:</span>
+									<span className="font-mono text-xs">
+										{id.substring(0, 8)}...
+									</span>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					{/* Modal Footer */}
+					<div className="flex justify-end space-x-3 p-4 border-t border-grey-lightest">
+						<button
+							log-id="group-cancel-edit-button"
+							onClick={handleCloseEditModal}
+							className="px-4 py-2 text-grey-darker bg-grey-lighter hover:bg-grey-light rounded-md transition-colors duration-200"
+						>
+							Cancel
+						</button>
+						<button
+							log-id="group-save-changes-button"
+							onClick={handleSaveEditModal}
+							className="px-4 py-2 bg-bama-crimson hover:bg-bama-crimson-dark text-white rounded-md transition-colors duration-200"
+						>
+							Save Changes
+						</button>
+					</div>
+				</ModalShell>
+			)}
+		</div>
+	);
 };
 
 export default GroupDiv;

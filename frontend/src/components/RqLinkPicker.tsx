@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { useResearchQuestions } from '../contexts/ResearchQuestions';
+import { useResearchQuestions } from '@/contexts/ResearchQuestions';
+import { Link } from 'lucide-react';
 
 interface RqLinkPickerProps {
   /** ImageData id for visuals/notes, GroupData id for groups. */
@@ -60,14 +61,12 @@ const RqLinkPicker: React.FC<RqLinkPickerProps> = ({
         className={buttonClassName}
         title={linkedCount > 0 ? `Linked to ${linkedCount} research question(s)` : 'Link a research question'}
       >
-        <svg
-          width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"
-          style={{ transform: 'scaleX(-1)' }}
-        >
-          <path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1" />
-          <path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1" />
-        </svg>
+        <Link
+          className="flex-shrink-0"
+          style={{ width: iconSize, height: iconSize, transform: 'scaleX(-1)' }}
+          strokeWidth={1.5}
+          aria-hidden
+        />
       </button>
 
       {open && coords && ReactDOM.createPortal(

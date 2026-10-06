@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { getTaskProgress } from '../services/api';
+import { getTaskProgress } from '@/services/api';
 
 export type TaskProgressData = {
     progress: number;

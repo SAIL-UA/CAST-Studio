@@ -1,11 +1,12 @@
 // Import dependencies
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDrop } from 'react-dnd';
-import { ImageData, DragItem, ScaffoldData, GroupData } from '../../types/types';
-import { SCAFFOLD_VALID_GROUP_NUMBERS, SCAFFOLD_GROUP_LABELS } from '../../types/scaffoldMappings';
-import DraggableCard from '../DraggableCard';
-import GroupDiv from '../GroupDiv';
-import { logAction } from '../../utils/userActionLogger';
+import type { ImageData, DragItem, ScaffoldData, GroupData } from '@/types/types';
+import { SCAFFOLD_GROUP_LABELS } from '@/types/scaffoldMappings';
+import DraggableCard from '@/components/DraggableCard';
+import GroupDiv from '@/components/GroupDiv';
+import { logAction } from '@/utils/userActionLogger';
+import { Rows2, Copy, Play, X } from 'lucide-react';
 
 const SCAFFOLD_NUMBER = 3;
 const MIN_SLOTS = 2;
@@ -52,7 +53,6 @@ function getMaxSlotInData(scaffold: ScaffoldData | null, images: ImageData[]): n
 const TimeBased = ({
     images,
     storyBinRef,
-    setSelectedPattern,
     scaffold,
     updateImageData,
     onPositionUpdate,
@@ -82,7 +82,6 @@ const TimeBased = ({
     const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    const validGroupNumbers = SCAFFOLD_VALID_GROUP_NUMBERS[SCAFFOLD_NUMBER] || [1, 2, 3, 4];
     const groupLabels = SCAFFOLD_GROUP_LABELS[SCAFFOLD_NUMBER] || { 1: 'Period 1', 2: 'Period 2', 3: 'Period 3', 4: 'Period 4' };
 
     // Display slot count: derive from data (max scaffold_group_number in groups + images), default 2 when no data
@@ -144,7 +143,7 @@ const TimeBased = ({
         logAction({ actionType: 'click', elementId: 'scaffold-card-add' }, { scaffoldType: 'time_based', groupNumber: period });
     };
 
-    const handleCardRemove = async (cardId: string, groupId: string) => {
+    const handleCardRemove = async (cardId: string) => {
         if (!scaffold) return;
 
         await updateImageData(cardId, {
@@ -278,7 +277,7 @@ const TimeBased = ({
             onMouseDown={readOnly ? undefined : handleMouseDown}
         >
             <div className="flex justify-between items-center p-2 bg-bama-crimson text-white rounded-t-lg">
-                <h3 className="text-sm font-bold flex items-center gap-1.5"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="10" height="5" rx="1"/><rect x="3" y="9" width="10" height="5" rx="1"/></svg>Narrative Structure: Timeline</h3>
+                <h3 className="text-sm font-bold flex items-center gap-1.5"><Rows2 className="w-3 h-3" strokeWidth={1.5} aria-hidden />Narrative Structure: Timeline</h3>
                 <div className="flex items-center gap-1">
                     {!readOnly && displaySlotCount < MAX_SLOTS && (
                         <button
@@ -287,7 +286,7 @@ const TimeBased = ({
                                 logAction(e);
                                 handleAddPeriod();
                             }}
-                            className="px-2 py-0.5 text-xs bg-white bg-opacity-20 hover:bg-opacity-40 rounded transition-all duration-200"
+                            className="px-2 py-0.5 text-xs bg-white/20 hover:bg-white/40 rounded transition-all duration-200"
                             title="Add period"
                             log-id="scaffold-slot-add"
                         >
@@ -301,7 +300,7 @@ const TimeBased = ({
                                 logAction(e);
                                 handleRemovePeriod();
                             }}
-                            className="px-2 py-0.5 text-xs bg-white bg-opacity-20 hover:bg-opacity-40 rounded transition-all duration-200"
+                            className="px-2 py-0.5 text-xs bg-white/20 hover:bg-white/40 rounded transition-all duration-200"
                             title="Remove last period"
                             log-id="scaffold-slot-remove"
                         >
@@ -311,26 +310,21 @@ const TimeBased = ({
                     {!readOnly && (
                     <button
                         onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('createScaffold', { detail: { pattern: 'time_based' } })); }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Duplicate scaffold"
                     >
-                        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="5" y="5" width="9" height="9" rx="1.5" />
-                            <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2H3.5A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" />
-                        </svg>
+                        <Copy className="w-2.5 h-2.5" strokeWidth={1.5} aria-hidden />
                     </button>
                     )}
                     {!readOnly && (
                     <button
                         onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('generateScaffoldStory', { detail: { scaffoldId: scaffold?.id || '' } })); }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Generate story for this scaffold"
                     >
-                        <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M4 2.5v11l9-5.5z" />
-                        </svg>
+                        <Play className="w-2.5 h-2.5" strokeWidth={1.5} aria-hidden />
                     </button>
                     )}
                     {!readOnly && (
@@ -340,12 +334,12 @@ const TimeBased = ({
                             logAction(e);
                             onClose();
                         }}
-                        className="w-5 h-5 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
+                        className="w-5 h-5 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white font-bold text-xs transition-all duration-200"
                         style={{ cursor: 'pointer' }}
                         title="Close Timeline scaffold"
                         log-id="scaffold-close"
                     >
-                        ×
+                        <X className="w-3 h-3" strokeWidth={1.5} aria-hidden />
                     </button>
                     )}
                 </div>
@@ -424,7 +418,7 @@ const TimeBasedPeriod = ({
     const [{ isOver, canDrop }, drop] = useDrop(
         () => ({
             accept: ['image', 'group'],
-            drop: (item: DragItem, monitor) => {
+            drop: (item: DragItem) => {
                 if (item.id === 'time-based-scaffold') return { droppedInGroup: false };
                 if (item.type !== 'group' && item.groupId !== id && cards.length < 6) {
                     onCardAdd(item.id, id);

@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/Auth';
-import { login, register, guestLogin } from '../services/api';
-import HighlightWord from '../components/HighlightWord';
-import FeatureVisual from '../components/FeatureVisual';
-import { LandingHeader, ACCENT as SHARED_ACCENT, SANS as SHARED_SANS, MONO as SHARED_MONO } from '../components/LandingHeader';
+import { useAuth } from '@/contexts/Auth';
+import { login, register, guestLogin } from '@/services/api';
+import HighlightWord from '@/components/HighlightWord';
+import FeatureVisual from '@/components/FeatureVisual';
+import { LandingHeader, ACCENT as SHARED_ACCENT, SANS as SHARED_SANS } from '@/components/LandingHeader';
 
 // Re-alias shared constants so existing usages in this file don't need renaming.
 const ACCENT = SHARED_ACCENT;
@@ -20,87 +20,9 @@ const FEATURES: { t: string; d: string; icon: string; highlight: string }[] = [
     { t: 'Receive Feedback', d: 'Provide and receive AI or instructor feedback seamlessly during a data-storytelling workflow.', icon: 'reply', highlight: 'feedback' },
 ];
 const SANS = SHARED_SANS;
-const MONO = SHARED_MONO;
 
 // Bulb / LogoMark / Wordmark / NAV_LINKS now live in ../components/LandingHeader
 // and are consumed via <LandingHeader />. Local copies removed.
-
-const Tag = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-    <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: 8,
-        fontSize: 12.5, fontWeight: 500, letterSpacing: '-0.005em',
-        color: ACCENT, background: `${ACCENT}14`,
-        padding: '6px 12px', borderRadius: 999, fontFamily: SANS,
-        ...style,
-    }}>
-        <span style={{ width: 6, height: 6, background: ACCENT, borderRadius: 999 }} />
-        {children}
-    </span>
-);
-
-// ── Feature Icons ───────────────────────────────────────────────────
-type FeatureIconProps = {
-    kind: string;
-    boxSize?: number;
-    boxRadius?: number;
-    boxBg?: string;
-    iconSize?: number;
-    stroke?: string;
-    strokeWidth?: number;
-};
-const FeatureIcon = ({ kind, boxSize = 64, boxRadius = 16, boxBg = `${ACCENT}12`, iconSize = 32, stroke = ACCENT, strokeWidth = 1.8 }: FeatureIconProps) => {
-    const box: React.CSSProperties = { width: boxSize, height: boxSize, borderRadius: boxRadius, background: boxBg, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-    const svgProps = { width: iconSize, height: iconSize, viewBox: '0 0 24 24', fill: 'none', stroke, strokeWidth, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
-
-    if (kind === 'notebook') return (
-        <div style={box}>
-            <svg {...svgProps}>
-                <path d="M4 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4" />
-                <path d="M4 4v16" />
-                <path d="M8 4v16" />
-                <path d="M11 8h4" /><path d="M11 12h4" /><path d="M11 16h2" />
-                <path d="M4 8h2" /><path d="M4 14h2" />
-            </svg>
-        </div>
-    );
-    if (kind === 'graph') return (
-        <div style={box}>
-            <svg {...svgProps}>
-                <circle cx="6" cy="6" r="2" fill={stroke} fillOpacity="0.2" />
-                <circle cx="18" cy="6" r="2" fill={stroke} fillOpacity="0.2" />
-                <circle cx="6" cy="18" r="2" fill={stroke} fillOpacity="0.2" />
-                <circle cx="18" cy="18" r="2" fill={stroke} fillOpacity="0.2" />
-                <circle cx="12" cy="12" r="2.5" fill={stroke} fillOpacity="0.3" />
-                <path d="M8 8l2.5 2.5" /><path d="M16 8l-2.5 2.5" />
-                <path d="M8 16l2.5-2.5" /><path d="M16 16l-2.5-2.5" />
-            </svg>
-        </div>
-    );
-    if (kind === 'plus') return (
-        <div style={box}>
-            <svg {...svgProps}>
-                <path d="M12 5v14" /><path d="M5 12h14" />
-            </svg>
-        </div>
-    );
-    if (kind === 'chain') return (
-        <div style={box}>
-            <svg {...svgProps}>
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
-        </div>
-    );
-    if (kind === 'reply') return (
-        <div style={box}>
-            <svg {...svgProps}>
-                <polyline points="9 17 4 12 9 7" />
-                <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
-            </svg>
-        </div>
-    );
-    return <div style={box} />;
-};
 
 // ── Feature Band ────────────────────────────────────────────────────
 // One full-width band per feature. Alternating text/card side per row (zigzag) and
@@ -146,27 +68,6 @@ const FeatureBand = ({ title, description, icon, index, highlight }: { title: st
                 </div>
             </div>
         </section>
-    );
-};
-
-// ── Mini Chart ──────────────────────────────────────────────────────
-const MiniChart = ({ kind = 'lines' }: { kind?: 'lines' | 'bars' | 'area' }) => {
-    const W = 380, H = 150, ins = { t: 14, r: 12, b: 18, l: 12 };
-    const y = (v: number) => H - ins.b - (v / 100) * (H - ins.t - ins.b);
-    const lineData = [[12,28,22,40,36,58,52,72,66,84,80,96],[40,36,44,30,38,28,36,26,34,22,30,22]];
-    const bars = [22,36,28,48,42,60,54,72,68,82];
-    const area = [30,26,38,32,50,44,60,54,70,64,78,72];
-    return (
-        <div style={{ border: '1px solid rgba(10,10,10,0.06)', borderRadius: 16, padding: 8, background: '#fff' }}>
-            <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }}>
-                <line x1={ins.l} y1={H-ins.b} x2={W-ins.r} y2={H-ins.b} stroke="#0a0a0a" strokeWidth="1" />
-                <line x1={ins.l} y1={ins.t} x2={ins.l} y2={H-ins.b} stroke="#0a0a0a" strokeWidth="1" />
-                {[25,50,75].map(g => <line key={g} x1={ins.l} y1={y(g)} x2={W-ins.r} y2={y(g)} stroke="#e6e6e6" strokeDasharray="2 3" />)}
-                {kind==='lines' && lineData.map((s,si) => { const step=(W-ins.l-ins.r)/(s.length-1); return <path key={si} d={s.map((v,i)=>`${i===0?'M':'L'} ${ins.l+i*step} ${y(v)}`).join(' ')} fill="none" stroke={si===0?ACCENT:'#0a0a0a'} strokeWidth={si===0?2:1} />; })}
-                {kind==='bars' && (()=>{ const step=(W-ins.l-ins.r)/bars.length; return bars.map((v,i)=><rect key={i} x={ins.l+i*step+step*0.18} y={y(v)} width={step*0.64} height={H-ins.b-y(v)} fill={i===bars.length-1?ACCENT:'#0a0a0a'} rx={3} />); })()}
-                {kind==='area' && (()=>{ const step=(W-ins.l-ins.r)/(area.length-1); const top=area.map((v,i)=>`${i===0?'M':'L'} ${ins.l+i*step} ${y(v)}`).join(' '); return <><path d={top+` L ${ins.l+(area.length-1)*step} ${H-ins.b} L ${ins.l} ${H-ins.b} Z`} fill={ACCENT} fillOpacity="0.18" /><path d={top} fill="none" stroke={ACCENT} strokeWidth="2" /></>; })()}
-            </svg>
-        </div>
     );
 };
 

@@ -1,4 +1,4 @@
-import { logScrollBatch } from '../services/api';
+import { logScrollBatch } from '@/services/api';
 
 interface ScrollEventData {
   scrollTop: number;

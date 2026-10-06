@@ -1,7 +1,7 @@
 // Import dependencies
 
 // Import compopnents
-import Header from '../components/Header';
+import Header from '@/components/Header';
 
 // Visible component
 const Construction = () => {

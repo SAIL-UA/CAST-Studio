@@ -1,94 +1,103 @@
-import { CodeNode } from '@lexical/code';
-import { $convertFromMarkdownString, $convertToMarkdownString } from '@lexical/markdown';
-import { AutoLinkNode, LinkNode } from '@lexical/link';
-import { ListItemNode, ListNode } from '@lexical/list';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
-import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
-import { ListPlugin } from '@lexical/react/LexicalListPlugin';
-import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
-import { HeadingNode, QuoteNode } from '@lexical/rich-text';
+import { CodeNode } from "@lexical/code";
+import { $convertFromMarkdownString, $convertToMarkdownString } from "@lexical/markdown";
+import { AutoLinkNode, LinkNode } from "@lexical/link";
+import { ListItemNode, ListNode } from "@lexical/list";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { ContentEditable } from "@lexical/react/LexicalContentEditable";
+import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
+import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import { ListPlugin } from "@lexical/react/LexicalListPlugin";
+import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
+import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { Undo2, Redo2 } from "lucide-react";
 import {
-    $getRoot,
-    $getSelection,
-    $isRangeSelection,
-    CAN_REDO_COMMAND,
-    CAN_UNDO_COMMAND,
-    COMMAND_PRIORITY_LOW,
-    FORMAT_TEXT_COMMAND,
-    REDO_COMMAND,
-    TextFormatType,
-    UNDO_COMMAND,
-} from 'lexical';
-import { useEffect, useMemo, useRef, useState } from 'react';
+	$createHeadingNode,
+	$isHeadingNode,
+	HeadingNode,
+	QuoteNode,
+	type HeadingTagType,
+} from "@lexical/rich-text";
+import { $setBlocksType } from "@lexical/selection";
+import {
+	$createParagraphNode,
+	$getRoot,
+	$getSelection,
+	$isRangeSelection,
+	CAN_REDO_COMMAND,
+	CAN_UNDO_COMMAND,
+	COMMAND_PRIORITY_LOW,
+	FORMAT_TEXT_COMMAND,
+	REDO_COMMAND,
+	type TextFormatType,
+	UNDO_COMMAND,
+} from "lexical";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { DataStoryLexicalEnvProvider } from './DataStoryLexicalEnv';
-import { DATA_STORY_TRANSFORMERS } from './dataStoryTransformers';
-import { FigureNode } from './FigureNode';
+import { DataStoryLexicalEnvProvider } from "@/components/dataStory/DataStoryLexicalEnv";
+import { DATA_STORY_TRANSFORMERS } from "@/components/dataStory/dataStoryTransformers";
+import { FigureNode } from "@/components/dataStory/FigureNode";
 
 function InitialMarkdownPlugin({ markdown }: { markdown: string }) {
-    const [editor] = useLexicalComposerContext();
-    const initialRef = useRef(markdown);
+	const [editor] = useLexicalComposerContext();
+	const initialRef = useRef(markdown);
 
-    useEffect(() => {
-        const md = initialRef.current;
-        editor.update(() => {
-            const root = $getRoot();
-            root.clear();
-            $convertFromMarkdownString(md, DATA_STORY_TRANSFORMERS);
-        });
-    }, [editor]);
+	useEffect(() => {
+		const md = initialRef.current;
+		editor.update(() => {
+			const root = $getRoot();
+			root.clear();
+			$convertFromMarkdownString(md, DATA_STORY_TRANSFORMERS);
+		});
+	}, [editor]);
 
-    return null;
+	return null;
 }
 
 function EditablePlugin({ editable }: { editable: boolean }) {
-    const [editor] = useLexicalComposerContext();
-    useEffect(() => {
-        editor.setEditable(editable);
-    }, [editor, editable]);
-    return null;
+	const [editor] = useLexicalComposerContext();
+	useEffect(() => {
+		editor.setEditable(editable);
+	}, [editor, editable]);
+	return null;
 }
 
 function OnChangeMarkdownPlugin({
-    onMarkdownChange,
-    enabled,
+	onMarkdownChange,
+	enabled,
 }: {
-    onMarkdownChange: (markdown: string) => void;
-    enabled: boolean;
+	onMarkdownChange: (markdown: string) => void;
+	enabled: boolean;
 }) {
-    const [editor] = useLexicalComposerContext();
-    const lastRef = useRef<string | null>(null);
-    const skipFirstChangeRef = useRef(true);
+	const [editor] = useLexicalComposerContext();
+	const lastRef = useRef<string | null>(null);
+	const skipFirstChangeRef = useRef(true);
 
-    useEffect(() => {
-        if (!enabled) {
-            lastRef.current = null;
-            skipFirstChangeRef.current = true;
-            return;
-        }
-        skipFirstChangeRef.current = true;
-        return editor.registerUpdateListener(({ editorState }) => {
-            editorState.read(() => {
-                const md = $convertToMarkdownString(DATA_STORY_TRANSFORMERS);
-                if (lastRef.current === md) {
-                    return;
-                }
-                lastRef.current = md;
-                if (skipFirstChangeRef.current) {
-                    skipFirstChangeRef.current = false;
-                    return;
-                }
-                onMarkdownChange(md);
-            });
-        });
-    }, [editor, enabled, onMarkdownChange]);
+	useEffect(() => {
+		if (!enabled) {
+			lastRef.current = null;
+			skipFirstChangeRef.current = true;
+			return;
+		}
+		skipFirstChangeRef.current = true;
+		return editor.registerUpdateListener(({ editorState }) => {
+			editorState.read(() => {
+				const md = $convertToMarkdownString(DATA_STORY_TRANSFORMERS);
+				if (lastRef.current === md) {
+					return;
+				}
+				lastRef.current = md;
+				if (skipFirstChangeRef.current) {
+					skipFirstChangeRef.current = false;
+					return;
+				}
+				onMarkdownChange(md);
+			});
+		});
+	}, [editor, enabled, onMarkdownChange]);
 
-    return null;
+	return null;
 }
 
 /**
@@ -104,220 +113,283 @@ function OnChangeMarkdownPlugin({
  * remounting on a new edit (via composerKey) starts a fresh stack, and nothing is persisted.
  */
 const pillBaseClass =
-    'flex items-center justify-center min-w-[1.75rem] h-7 px-3 text-xs text-grey-darkest ' +
-    'border border-grey-light rounded-full bg-white hover:bg-grey-lighter transition duration-150 ' +
-    'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white';
-const pillActiveClass = 'bg-grey-light hover:bg-grey-light text-grey-darkest';
+	"flex items-center justify-center min-w-[1.75rem] h-7 px-3 text-xs text-grey-darkest " +
+	"border border-grey-light rounded-full bg-white hover:bg-grey-lighter transition duration-150 " +
+	"disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white";
+const pillActiveClass = "bg-grey-light hover:bg-grey-light text-grey-darkest";
 
 function FormatPill({
-    format,
-    label,
-    title,
-    glyphClass,
+	format,
+	label,
+	title,
+	glyphClass,
 }: {
-    format: TextFormatType;
-    label: string;
-    title: string;
-    glyphClass: string;
+	format: TextFormatType;
+	label: string;
+	title: string;
+	glyphClass: string;
 }) {
-    const [editor] = useLexicalComposerContext();
-    const [isActive, setIsActive] = useState(false);
+	const [editor] = useLexicalComposerContext();
+	const [isActive, setIsActive] = useState(false);
 
-    useEffect(() => {
-        return editor.registerUpdateListener(({ editorState }) => {
-            editorState.read(() => {
-                const selection = $getSelection();
-                if ($isRangeSelection(selection)) {
-                    setIsActive(selection.hasFormat(format));
-                } else {
-                    setIsActive(false);
-                }
-            });
-        });
-    }, [editor, format]);
+	useEffect(() => {
+		return editor.registerUpdateListener(({ editorState }) => {
+			editorState.read(() => {
+				const selection = $getSelection();
+				if ($isRangeSelection(selection)) {
+					setIsActive(selection.hasFormat(format));
+				} else {
+					setIsActive(false);
+				}
+			});
+		});
+	}, [editor, format]);
 
-    return (
-        <button
-            type="button"
-            log-id={`data-story-format-${format}-button`}
-            title={title}
-            aria-label={title}
-            aria-pressed={isActive}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)}
-            className={`${pillBaseClass} ${isActive ? pillActiveClass : ''}`}
-        >
-            <span className={glyphClass}>{label}</span>
-        </button>
-    );
+	return (
+		<button
+			type="button"
+			log-id={`data-story-format-${format}-button`}
+			title={title}
+			aria-label={title}
+			aria-pressed={isActive}
+			onMouseDown={(e) => e.preventDefault()}
+			onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)}
+			className={`${pillBaseClass} ${isActive ? pillActiveClass : ""}`}
+		>
+			<span className={glyphClass}>{label}</span>
+		</button>
+	);
+}
+
+function HeadingPill({ tag, label, title }: { tag: HeadingTagType; label: string; title: string }) {
+	const [editor] = useLexicalComposerContext();
+	const [isActive, setIsActive] = useState(false);
+
+	useEffect(() => {
+		return editor.registerUpdateListener(({ editorState }) => {
+			editorState.read(() => {
+				const selection = $getSelection();
+				if (!$isRangeSelection(selection)) {
+					setIsActive(false);
+					return;
+				}
+				const block = selection.anchor.getNode().getTopLevelElementOrThrow();
+				setIsActive($isHeadingNode(block) && block.getTag() === tag);
+			});
+		});
+	}, [editor, tag]);
+
+	return (
+		<button
+			type="button"
+			log-id={`data-story-heading-${tag}-button`}
+			title={title}
+			aria-label={title}
+			aria-pressed={isActive}
+			onMouseDown={(e) => e.preventDefault()}
+			onClick={() => {
+				editor.update(() => {
+					const selection = $getSelection();
+					if (!$isRangeSelection(selection)) {
+						return;
+					}
+					const block = selection.anchor.getNode().getTopLevelElementOrThrow();
+					if ($isHeadingNode(block) && block.getTag() === tag) {
+						$setBlocksType(selection, () => $createParagraphNode());
+					} else {
+						$setBlocksType(selection, () => $createHeadingNode(tag));
+					}
+				});
+			}}
+			className={`${pillBaseClass} ${isActive ? pillActiveClass : ""}`}
+		>
+			<span className="font-semibold">{label}</span>
+		</button>
+	);
 }
 
 function EditorToolbar() {
-    const [editor] = useLexicalComposerContext();
-    const [canUndo, setCanUndo] = useState(false);
-    const [canRedo, setCanRedo] = useState(false);
+	const [editor] = useLexicalComposerContext();
+	const [canUndo, setCanUndo] = useState(false);
+	const [canRedo, setCanRedo] = useState(false);
 
-    useEffect(() => {
-        const unregisterCanUndo = editor.registerCommand<boolean>(
-            CAN_UNDO_COMMAND,
-            (payload) => {
-                setCanUndo(payload);
-                return false;
-            },
-            COMMAND_PRIORITY_LOW,
-        );
-        const unregisterCanRedo = editor.registerCommand<boolean>(
-            CAN_REDO_COMMAND,
-            (payload) => {
-                setCanRedo(payload);
-                return false;
-            },
-            COMMAND_PRIORITY_LOW,
-        );
-        return () => {
-            unregisterCanUndo();
-            unregisterCanRedo();
-        };
-    }, [editor]);
+	useEffect(() => {
+		const unregisterCanUndo = editor.registerCommand<boolean>(
+			CAN_UNDO_COMMAND,
+			(payload) => {
+				setCanUndo(payload);
+				return false;
+			},
+			COMMAND_PRIORITY_LOW,
+		);
+		const unregisterCanRedo = editor.registerCommand<boolean>(
+			CAN_REDO_COMMAND,
+			(payload) => {
+				setCanRedo(payload);
+				return false;
+			},
+			COMMAND_PRIORITY_LOW,
+		);
+		return () => {
+			unregisterCanUndo();
+			unregisterCanRedo();
+		};
+	}, [editor]);
 
-    return (
-        <div className="flex items-center gap-1 px-3 py-2 bg-grey-lighter-2 border-b border-[#d9dde1]">
-            <FormatPill format="bold" label="B" title="Bold (Cmd/Ctrl+B)" glyphClass="font-bold" />
-            <FormatPill format="italic" label="I" title="Italic (Cmd/Ctrl+I)" glyphClass="italic font-serif" />
+	return (
+		<div className="flex items-center gap-1 px-3 py-2 bg-grey-lighter-2 border-b border-[#d9dde1]">
+			<HeadingPill tag="h1" label="H1" title="Heading 1 (# then space)" />
+			<HeadingPill tag="h2" label="H2" title="Heading 2 (## then space)" />
+			<HeadingPill tag="h3" label="H3" title="Heading 3 (### then space)" />
 
-            <span className="mx-2 w-px h-4 bg-grey-light" aria-hidden="true" />
+			<span className="mx-2 w-px h-4 bg-grey-light" aria-hidden="true" />
 
-            <button
-                type="button"
-                log-id="data-story-undo-button"
-                title="Undo (Cmd/Ctrl+Z)"
-                aria-label="Undo"
-                disabled={!canUndo}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
-                className={pillBaseClass}
-            >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 8h7a3 3 0 0 1 0 6H7" />
-                    <path d="M6 5 3 8l3 3" />
-                </svg>
-            </button>
-            <button
-                type="button"
-                log-id="data-story-redo-button"
-                title="Redo (Cmd/Ctrl+Shift+Z)"
-                aria-label="Redo"
-                disabled={!canRedo}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
-                className={pillBaseClass}
-            >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M13 8H6a3 3 0 0 0 0 6h3" />
-                    <path d="M10 5l3 3-3 3" />
-                </svg>
-            </button>
-        </div>
-    );
+			<FormatPill format="bold" label="B" title="Bold (Cmd/Ctrl+B)" glyphClass="font-bold" />
+			<FormatPill
+				format="italic"
+				label="I"
+				title="Italic (Cmd/Ctrl+I)"
+				glyphClass="italic font-serif"
+			/>
+
+			<span className="mx-2 w-px h-4 bg-grey-light" aria-hidden="true" />
+
+			<button
+				type="button"
+				log-id="data-story-undo-button"
+				title="Undo (Cmd/Ctrl+Z)"
+				aria-label="Undo"
+				disabled={!canUndo}
+				onMouseDown={(e) => e.preventDefault()}
+				onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
+				className={pillBaseClass}
+			>
+				<Undo2 className="w-3 h-3" strokeWidth={1.5} aria-hidden />
+			</button>
+			<button
+				type="button"
+				log-id="data-story-redo-button"
+				title="Redo (Cmd/Ctrl+Shift+Z)"
+				aria-label="Redo"
+				disabled={!canRedo}
+				onMouseDown={(e) => e.preventDefault()}
+				onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
+				className={pillBaseClass}
+			>
+				<Redo2 className="w-3 h-3" strokeWidth={1.5} aria-hidden />
+			</button>
+		</div>
+	);
 }
 
 const editorTheme = {
-    paragraph: 'mb-4',
-    text: {
-        bold: 'font-bold',
-        italic: 'italic',
-        underline: 'underline',
-        strikethrough: 'line-through',
-        code: 'font-mono bg-grey-lighter-2 px-1 rounded',
-    },
+	paragraph: "mb-4",
+	heading: {
+		h1: "text-2xl font-bold text-grey-darkest mb-3 mt-1 leading-tight",
+		h2: "text-xl font-bold text-grey-darkest mb-2 mt-1 leading-tight",
+		h3: "text-lg font-semibold text-grey-darkest mb-2 mt-1 leading-snug",
+		h4: "text-base font-semibold text-grey-darkest mb-1 mt-1",
+		h5: "text-sm font-semibold text-grey-darkest mb-1",
+		h6: "text-sm font-medium text-grey-darkest mb-1",
+	},
+	list: {
+		ul: "list-disc list-inside mb-4",
+		ol: "list-decimal list-inside mb-4",
+		listitem: "mb-1",
+	},
+	quote: "border-l-4 border-grey-light pl-3 italic text-grey-dark mb-4",
+	text: {
+		bold: "font-bold",
+		italic: "italic",
+		underline: "underline",
+		strikethrough: "line-through",
+		code: "font-mono bg-grey-lighter-2 px-1 rounded",
+	},
 };
 
 export type DataStoryLexicalFieldProps = {
-    /** Stable key segment so the composer remounts when the story snapshot or edit session changes. */
-    composerKey: string;
-    initialMarkdown: string;
-    editable: boolean;
-    getCaption: (filename: string) => string;
-    onMarkdownChange: (markdown: string) => void;
-    /** When false, onChange listener is not registered (view mode). */
-    trackChanges: boolean;
-    placeholder?: string;
-    contentEditableClassName?: string;
-    'aria-label'?: string;
+	/** Stable key segment so the composer remounts when the story snapshot or edit session changes. */
+	composerKey: string;
+	initialMarkdown: string;
+	editable: boolean;
+	getCaption: (filename: string) => string;
+	onMarkdownChange: (markdown: string) => void;
+	/** When false, onChange listener is not registered (view mode). */
+	trackChanges: boolean;
+	placeholder?: string;
+	contentEditableClassName?: string;
+	"aria-label"?: string;
 };
 
 export function DataStoryLexicalField({
-    composerKey,
-    initialMarkdown,
-    editable,
-    getCaption,
-    onMarkdownChange,
-    trackChanges,
-    placeholder = 'Start typing…',
-    // No inner px/py: the wrapper's p-4 provides all breathing room, and adding
-    // more here made the cursor sit below-and-right of the absolute-positioned
-    // placeholder text. With no inner padding, cursor and placeholder both anchor
-    // to (16px, 16px) from the wrapper edge.
-    contentEditableClassName = 'prose max-w-none min-h-[8rem] outline-none text-grey-darkest leading-relaxed text-base',
-    'aria-label': ariaLabel,
+	composerKey,
+	initialMarkdown,
+	editable,
+	getCaption,
+	onMarkdownChange,
+	trackChanges,
+	placeholder = "Start typing…",
+	// No inner px/py: the wrapper's p-4 provides all breathing room, and adding
+	// more here made the cursor sit below-and-right of the absolute-positioned
+	// placeholder text. With no inner padding, cursor and placeholder both anchor
+	// to (16px, 16px) from the wrapper edge.
+	contentEditableClassName = "prose max-w-none min-h-[8rem] outline-none text-grey-darkest leading-relaxed text-base",
+	"aria-label": ariaLabel,
 }: DataStoryLexicalFieldProps) {
-    const initialConfig = useMemo(
-        () => ({
-            namespace: `DataStory-${composerKey}`,
-            theme: editorTheme,
-            onError: (e: Error) => {
-                if (process.env.NODE_ENV === 'development') {
-                    console.error(e);
-                }
-            },
-            nodes: [
-                HeadingNode,
-                QuoteNode,
-                ListNode,
-                ListItemNode,
-                CodeNode,
-                LinkNode,
-                AutoLinkNode,
-                FigureNode,
-            ],
-        }),
-        [composerKey],
-    );
+	const initialConfig = useMemo(
+		() => ({
+			namespace: `DataStory-${composerKey}`,
+			theme: editorTheme,
+			onError: (e: Error) => {
+				if (import.meta.env.DEV) {
+					console.error(e);
+				}
+			},
+			nodes: [
+				HeadingNode,
+				QuoteNode,
+				ListNode,
+				ListItemNode,
+				CodeNode,
+				LinkNode,
+				AutoLinkNode,
+				FigureNode,
+			],
+		}),
+		[composerKey],
+	);
 
-    return (
-        <DataStoryLexicalEnvProvider getCaption={getCaption}>
-            <LexicalComposer key={composerKey} initialConfig={initialConfig}>
-                <InitialMarkdownPlugin markdown={initialMarkdown} />
-                <EditablePlugin editable={editable} />
-                <OnChangeMarkdownPlugin onMarkdownChange={onMarkdownChange} enabled={trackChanges} />
-                {editable && <EditorToolbar />}
-                <div className={`relative ${editable ? 'p-4 bg-white' : ''}`}>
-                    <RichTextPlugin
-                        contentEditable={
-                            <ContentEditable
-                                className={contentEditableClassName}
-                                aria-label={ariaLabel}
-                            />
-                        }
-                        placeholder={
-                            // top-4 left-4 aligns the placeholder with the ContentEditable's
-                            // first-character position — the wrapper adds `p-4` in edit mode,
-                            // so anything less than left-4 makes the placeholder appear to
-                            // hug the border while typed text starts further in. text-base
-                            // matches the ContentEditable's `text-base` so the caret height
-                            // agrees with the placeholder's cap height.
-                            <div className="pointer-events-none absolute top-4 left-4 text-base text-grey-dark/60">
-                                {placeholder}
-                            </div>
-                        }
-                        ErrorBoundary={LexicalErrorBoundary}
-                    />
-                </div>
-                <HistoryPlugin />
-                <ListPlugin />
-                <LinkPlugin />
-                <MarkdownShortcutPlugin transformers={DATA_STORY_TRANSFORMERS} />
-            </LexicalComposer>
-        </DataStoryLexicalEnvProvider>
-    );
+	return (
+		<DataStoryLexicalEnvProvider getCaption={getCaption}>
+			<LexicalComposer key={composerKey} initialConfig={initialConfig}>
+				<InitialMarkdownPlugin markdown={initialMarkdown} />
+				<EditablePlugin editable={editable} />
+				<OnChangeMarkdownPlugin
+					onMarkdownChange={onMarkdownChange}
+					enabled={trackChanges}
+				/>
+				{editable && <EditorToolbar />}
+				<div className={`relative ${editable ? "p-4 bg-white" : ""}`}>
+					<RichTextPlugin
+						contentEditable={
+							<ContentEditable
+								className={contentEditableClassName}
+								aria-label={ariaLabel}
+							/>
+						}
+						placeholder={
+							<div className="pointer-events-none absolute top-4 left-4 text-base text-grey-dark/60">
+								{placeholder}
+							</div>
+						}
+						ErrorBoundary={LexicalErrorBoundary}
+					/>
+				</div>
+				<HistoryPlugin />
+				<ListPlugin />
+				<LinkPlugin />
+				<MarkdownShortcutPlugin transformers={DATA_STORY_TRANSFORMERS} />
+			</LexicalComposer>
+		</DataStoryLexicalEnvProvider>
+	);
 }

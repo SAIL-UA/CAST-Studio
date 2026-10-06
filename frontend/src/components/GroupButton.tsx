@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { logAction } from '../utils/userActionLogger';
-import { GroupData } from '../types/types';
-import { formatGroupMetadata } from '../utils/groupUtils';
-import { aiGroupImages } from '../services/api';
-import { useTaskProgress } from '../hooks/useTaskProgress';
-import { useGuestTourOpen } from '../utils/useGuestTourOpen';
+import { logAction } from '@/utils/userActionLogger';
+import type { GroupData } from '@/types/types';
+import { formatGroupMetadata } from '@/utils/groupUtils';
+import { aiGroupImages } from '@/services/api';
+import { useTaskProgress } from '@/hooks/useTaskProgress';
+import { useGuestTourOpen } from '@/utils/useGuestTourOpen';
+import { Share2, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface GroupButtonProps {
     onClick?: () => Promise<GroupData | undefined>;
@@ -93,9 +94,9 @@ const GroupButton = ({ onClick, onGroupComplete, onError, images = [] }: GroupBu
                         <div className="absolute top-0 left-0 h-full transition-[width] duration-500 ease-out" style={{ width: `${progress}%`, backgroundColor: '#005c84' }} />
                     )}
                     <span className="relative z-10 flex items-center justify-center gap-1.5">
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="3" cy="8" r="2"/><circle cx="13" cy="4" r="2"/><circle cx="13" cy="12" r="2"/><path d="M5 8l6-3M5 8l6 3"/></svg>
+                        <Share2 className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden />
                         {isLoading ? (stageName || 'Grouping...') : 'Group'}
-                        {!isLoading && <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"></path></svg>}
+                        {!isLoading && <ChevronDown className="h-4 w-4" strokeWidth={1.5} aria-hidden />}
                     </span>
                 </button>
             </DropdownMenu.Trigger>
@@ -113,7 +114,7 @@ const GroupButton = ({ onClick, onGroupComplete, onError, images = [] }: GroupBu
                             className="flex w-full items-center justify-between text-left text-sm text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none data-[state=open]:bg-grey-lighter"
                         >
                             Group with AI
-                            <svg className="fill-current h-3 w-3 ml-2 opacity-60" viewBox="0 0 20 20"><path d="M7.293 4.293l1.414 1.414L5.414 9H17v2H5.414l3.293 3.293-1.414 1.414L1.586 10z" transform="rotate(180 10 10)"/></svg>
+                            <ChevronRight className="h-3 w-3 ml-2 opacity-60" strokeWidth={1.5} aria-hidden />
                         </DropdownMenu.SubTrigger>
                         <DropdownMenu.Portal>
                             <DropdownMenu.SubContent

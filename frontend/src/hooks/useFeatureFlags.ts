@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getFeatureFlags } from '../services/api';
+import { getFeatureFlags } from '@/services/api';
 
 export type FeatureFlagsData = {
     annotateWithAI: boolean;

@@ -3,8 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 // Import context
-import { useAuth } from '../contexts/Auth';
-import { login, register, guestLogin } from '../services/api';
+import { useAuth } from '@/contexts/Auth';
+import { login, register, guestLogin } from '@/services/api';
 
 // Import components
 

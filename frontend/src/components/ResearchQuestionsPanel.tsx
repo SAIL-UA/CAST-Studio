@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useResearchQuestions } from '../contexts/ResearchQuestions';
+import { useResearchQuestions } from '@/contexts/ResearchQuestions';
 import {
   getResearchQuestions,
   createResearchQuestion,
   updateResearchQuestion,
   deleteResearchQuestion,
   updateResearchQuestionLinks,
-} from '../services/api';
+} from '@/services/api';
+import { CircleHelp, Pencil, X, ChevronDown } from 'lucide-react';
 
 export type ResearchQuestion = {
   id: string;
@@ -274,36 +275,26 @@ const ResearchQuestionsPanel: React.FC<ResearchQuestionsPanelProps> = ({
                 style={{ background: '#348b95' }}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-90 flex-shrink-0" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                  </svg>
+                  <CircleHelp className="w-3.5 h-3.5 opacity-90 flex-shrink-0" strokeWidth={1.5} aria-hidden />
                   <h4 className="font-semibold text-sm">Q{idx + 1}</h4>
                 </div>
                 {!readOnly && editingId !== rq.id && (
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => { setEditingId(rq.id); setEditingText(rq.text); }}
-                      className="w-4 h-4 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                      className="w-4 h-4 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                       title="Edit question"
                       log-id="research-question-edit-button"
                     >
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 20h9" />
-                        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-                      </svg>
+                      <Pencil className="w-[9px] h-[9px]" strokeWidth={1.5} aria-hidden />
                     </button>
                     <button
                       onClick={() => handleDelete(rq.id)}
-                      className="w-4 h-4 bg-white bg-opacity-20 hover:bg-opacity-40 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                      className="w-4 h-4 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-200"
                       title="Delete question"
                       log-id="research-question-delete-button"
                     >
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                      </svg>
+                      <X className="w-[9px] h-[9px]" strokeWidth={1.5} aria-hidden />
                     </button>
                   </div>
                 )}
@@ -363,12 +354,11 @@ const ResearchQuestionsPanel: React.FC<ResearchQuestionsPanelProps> = ({
                       log-id="research-question-linked-dropdown"
                     >
                       <span>{linkedCount(rq)} linked</span>
-                      <svg
-                        width="10" height="10" viewBox="0 0 20 20" fill="currentColor"
-                        className={`transition-transform duration-200 ${linkingId === rq.id ? 'rotate-180' : ''}`}
-                      >
-                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
+                      <ChevronDown
+                        className={`w-2.5 h-2.5 transition-transform duration-200 ${linkingId === rq.id ? 'rotate-180' : ''}`}
+                        strokeWidth={1.5}
+                        aria-hidden
+                      />
                     </button>
                   )}
                 </div>
