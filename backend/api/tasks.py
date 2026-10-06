@@ -13,7 +13,7 @@ from .pydandtic import STORY_SCAFFOLDS
 logger = logging.getLogger(__name__)
 
 
-def _active_ws(user):
+def _active_workspace(user):
     from api.workspace_ops import get_or_create_active_workspace
 
     return get_or_create_active_workspace(user)
@@ -1051,7 +1051,7 @@ def _collect_in_story_items(recommended_order: list[str], user) -> list[str]:
         if not clean:
             continue
         img = ImageData.objects.filter(
-            user=user, workspace=_active_ws(user), media__filepath=clean
+            user=user, workspace=_active_workspace(user), media__filepath=clean
         ).first()
         if img and img.short_desc:
             label = img.short_desc
@@ -1476,7 +1476,7 @@ def _load_rqs_for_prompts(user, storyboard_image_ids: set | None = None) -> dict
     """
     ResearchQuestion = _get_model("api", "ResearchQuestion")
     rqs_qs = ResearchQuestion.objects.filter(
-        user=user, workspace=_active_ws(user)
+        user=user, workspace=_active_workspace(user)
     ).prefetch_related("images", "groups")
     rq_labels_by_image: dict = {}
     rq_labels_by_group: dict = {}
@@ -1784,13 +1784,13 @@ def generate_feedback_task(
 
         # Fetch storyboard images
         storyboard_images_qs = ImageData.objects.filter(
-            user=user, workspace=_active_ws(user), in_storyboard=True
+            user=user, workspace=_active_workspace(user), in_storyboard=True
         ).select_related("media")
         storyboard_images_count = storyboard_images_qs.count()
 
         # Counts
         groups_qs = GroupData.objects.filter(
-            user=user, workspace=_active_ws(user)
+            user=user, workspace=_active_workspace(user)
         ).prefetch_related("images")
         groups_count = groups_qs.count()
         nongrouped_count = storyboard_images_qs.filter(group_id__isnull=True).count()
@@ -2220,10 +2220,10 @@ def _fetch_all_storyboard_data(
 
     # Fetch all groups and images
     all_groups = GroupData.objects.filter(
-        user=user, workspace=_active_ws(user)
+        user=user, workspace=_active_workspace(user)
     ).prefetch_related("images")
     all_images = ImageData.objects.filter(
-        user=user, workspace=_active_ws(user), in_storyboard=True
+        user=user, workspace=_active_workspace(user), in_storyboard=True
     ).select_related("media")
 
     # Load RQ context once and thread it through every builder below so figures and
@@ -2270,7 +2270,7 @@ def _fetch_all_storyboard_data(
     elif not story_structure_id:
         # All workspace — no specific structure type, fetch all scaffolds
         all_scaffolds = ScaffoldData.objects.filter(
-            user=user, workspace=_active_ws(user)
+            user=user, workspace=_active_workspace(user)
         )
         scaffold_count = all_scaffolds.count()
 
@@ -2344,10 +2344,12 @@ def _fetch_all_storyboard_data(
 
         scaffolds_qs = (
             ScaffoldData.objects.filter(
-                user=user, workspace=_active_ws(user), number=scaffold_number
+                user=user, workspace=_active_workspace(user), number=scaffold_number
             )
             if scaffold_number
-            else ScaffoldData.objects.filter(user=user, workspace=_active_ws(user))
+            else ScaffoldData.objects.filter(
+                user=user, workspace=_active_workspace(user)
+            )
         )
         scaffold = scaffolds_qs.first()
         if scaffold:
@@ -2439,7 +2441,7 @@ def generate_narrative_task(
         PLACEHOLDER = "Ask AI to create a description for this visual."
 
         storyboard_qs = ImageData.objects.filter(
-            user=user, workspace=_active_ws(user), in_storyboard=True
+            user=user, workspace=_active_workspace(user), in_storyboard=True
         ).select_related("media")
 
         images_needing_desc = storyboard_qs.filter(media__isnull=False).filter(
@@ -2702,7 +2704,7 @@ def generate_narrative_task(
         elif use_groups:
             # Group-aware narrative generation without scaffolds (existing behavior)
             groups = GroupData.objects.filter(
-                user=user, workspace=_active_ws(user)
+                user=user, workspace=_active_workspace(user)
             ).prefetch_related("images")
 
             grouped_images = storyboard_images.filter(group_id__isnull=False)
@@ -3083,7 +3085,7 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
         # If "all" mode, delete existing non-scaffold groups first
         if mode == "all":
             non_scaffold_groups = GroupData.objects.filter(
-                user=user, workspace=_active_ws(user), scaffold_id__isnull=True
+                user=user, workspace=_active_workspace(user), scaffold_id__isnull=True
             )
             # Clearing group_id on images happens via SET_NULL on delete
             non_scaffold_groups.delete()
@@ -3091,7 +3093,7 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
         # Fetch eligible images
         base_qs = ImageData.objects.filter(
             user=user,
-            workspace=_active_ws(user),
+            workspace=_active_workspace(user),
             in_storyboard=True,
             scaffold_id__isnull=True,
         ).select_related("media")
@@ -3187,7 +3189,7 @@ def group_with_ai_task(self, user_id, mode="ungrouped"):
                 offset_y = (i // 4) * 300
                 group = GroupData.objects.create(
                     user=user,
-                    workspace=_active_ws(user),
+                    workspace=_active_workspace(user),
                     name=pg["title"][:100],
                     description=(
                         pg["description"][:500] if pg.get("description") else ""

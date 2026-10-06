@@ -39,12 +39,12 @@ def deactivate_other_assignments(active_assignment):
 
 def get_or_create_workspace(user):
     """Return the user's sole live editor canvas, creating it if needed."""
-    ws = Workspace.objects.filter(user=user).first()
-    if ws:
-        if ws.name != EDITOR_WORKSPACE_NAME:
-            ws.name = EDITOR_WORKSPACE_NAME
-            ws.save(update_fields=["name"])
-        return ws
+    workspace = Workspace.objects.filter(user=user).first()
+    if workspace:
+        if workspace.name != EDITOR_WORKSPACE_NAME:
+            workspace.name = EDITOR_WORKSPACE_NAME
+            workspace.save(update_fields=["name"])
+        return workspace
     return Workspace.objects.create(user=user, name=EDITOR_WORKSPACE_NAME)
 
 

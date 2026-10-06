@@ -114,14 +114,16 @@ class GuestLoginView(APIView):
                     is_guest=True,
                 )
 
-                ws = Workspace.objects.create(user=user, name=EDITOR_WORKSPACE_NAME)
+                workspace = Workspace.objects.create(
+                    user=user, name=EDITOR_WORKSPACE_NAME
+                )
 
                 # Seed two sticky notes (ImageData rows with empty media).
                 # The user's provided strings go in long_desc (note body/content);
                 # short_desc holds the title.
                 ImageData.objects.create(
                     user=user,
-                    workspace=ws,
+                    workspace=workspace,
                     media=None,
                     index=0,
                     x=400.0,
@@ -131,7 +133,7 @@ class GuestLoginView(APIView):
                 )
                 ImageData.objects.create(
                     user=user,
-                    workspace=ws,
+                    workspace=workspace,
                     media=None,
                     index=1,
                     x=600.0,
@@ -172,7 +174,7 @@ class GuestLoginView(APIView):
                         ImageData.objects.create(
                             id=new_uuid,
                             user=user,
-                            workspace=ws,
+                            workspace=workspace,
                             media=media,
                             index=2 + i,
                             x=x,
@@ -187,7 +189,7 @@ class GuestLoginView(APIView):
                 # it. Fields mirror what the frontend Linear component expects.
                 ScaffoldData.objects.create(
                     user=user,
-                    workspace=ws,
+                    workspace=workspace,
                     name="Linear",
                     number=10,
                     valid_group_numbers=[

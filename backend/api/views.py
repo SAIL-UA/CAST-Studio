@@ -482,8 +482,8 @@ class UploadFigureView(APIView):
 
         # Find the first available index for workspace user's images
         workspace_user = get_workspace_user(request)
-        ws = active_workspace_for(workspace_user)
-        user_images = ImageData.objects.filter(workspace=ws)
+        workspace = active_workspace_for(workspace_user)
+        user_images = ImageData.objects.filter(workspace=workspace)
         used_indices = set(user_images.values_list("index", flat=True))
 
         # Find first available index starting from 0
@@ -496,7 +496,7 @@ class UploadFigureView(APIView):
         image = ImageData.objects.create(
             id=figure_id,
             user=workspace_user,
-            workspace=ws,
+            workspace=workspace,
             media=media,
             short_desc=request.data.get("short_desc")
             or f"Visual {first_available_index + 1}",
@@ -635,8 +635,8 @@ class UploadSlidesView(APIView):
                 # Limit to MAX_SLIDES
                 png_files = png_files[: self.MAX_SLIDES]
 
-                ws = active_workspace_for(workspace_user)
-                user_images = ImageData.objects.filter(workspace=ws)
+                workspace = active_workspace_for(workspace_user)
+                user_images = ImageData.objects.filter(workspace=workspace)
                 used_indices = set(user_images.values_list("index", flat=True))
                 next_index = 0
                 while next_index in used_indices:
@@ -659,7 +659,7 @@ class UploadSlidesView(APIView):
                     ImageData.objects.create(
                         id=figure_id,
                         user=workspace_user,
-                        workspace=ws,
+                        workspace=workspace,
                         media=media,
                         short_desc=f"{slide_num}",
                         long_desc="",
@@ -729,8 +729,8 @@ class CreateNoteView(APIView):
             return Response(
                 {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
             )
-        ws = active_workspace_for(owner)
-        user_images = ImageData.objects.filter(workspace=ws)
+        workspace = active_workspace_for(owner)
+        user_images = ImageData.objects.filter(workspace=workspace)
         used_indices = set(user_images.values_list("index", flat=True))
         first_available_index = 0
         while first_available_index in used_indices:
@@ -756,7 +756,7 @@ class CreateNoteView(APIView):
         image = ImageData.objects.create(
             id=note_id,
             user=owner,
-            workspace=ws,
+            workspace=workspace,
             media=None,
             short_desc=title,
             long_desc=long_desc,
@@ -792,7 +792,7 @@ class DeleteFigureView(APIView):
             )
 
         workspace_user = get_workspace_user(request)
-        ws = active_workspace_for(workspace_user)
+        workspace = active_workspace_for(workspace_user)
         base_name, _ = os.path.splitext(filename)
 
         image_data = None
@@ -800,7 +800,7 @@ class DeleteFigureView(APIView):
             image_id = uuid.UUID(base_name)
             image_data = (
                 ImageData.objects.select_related("media")
-                .filter(id=image_id, workspace=ws)
+                .filter(id=image_id, workspace=workspace)
                 .first()
             )
         except ValueError:
@@ -809,7 +809,7 @@ class DeleteFigureView(APIView):
         if not image_data:
             image_data = (
                 ImageData.objects.select_related("media")
-                .filter(workspace=ws, media__filepath=filename)
+                .filter(workspace=workspace, media__filepath=filename)
                 .first()
             )
 
@@ -1066,13 +1066,13 @@ class CreateResearchQuestionView(APIView):
         try:
             rq_data = request.data.get("data") or {}
             rq_data["user"] = user.id
-            ws = active_workspace_for(user)
-            rq_data["workspace"] = ws.id
+            workspace = active_workspace_for(user)
+            rq_data["workspace"] = workspace.id
 
             # New questions land at the bottom of the list.
             if "order" not in rq_data:
                 last = (
-                    ResearchQuestion.objects.filter(workspace=ws)
+                    ResearchQuestion.objects.filter(workspace=workspace)
                     .order_by("-order")
                     .first()
                 )
@@ -1625,8 +1625,8 @@ class AssignmentGradesExportView(APIView):
             by_user.setdefault(sub.user_id, []).append(sub)
 
         wb = Workbook()
-        ws = wb.active
-        ws.title = "Grades"
+        worksheet = wb.active
+        worksheet.title = "Grades"
         headers = [
             "Student Name",
             "Email",
@@ -1635,8 +1635,8 @@ class AssignmentGradesExportView(APIView):
             "Submission 3",
             "Highest Score",
         ]
-        ws.append(headers)
-        for cell in ws[1]:
+        worksheet.append(headers)
+        for cell in worksheet[1]:
             cell.font = Font(bold=True)
             cell.alignment = Alignment(horizontal="center")
 
@@ -1654,16 +1654,16 @@ class AssignmentGradesExportView(APIView):
                 else:
                     row.append("")
             row.append(max(scores) if scores else "")
-            ws.append(row)
+            worksheet.append(row)
 
-        for col in ws.columns:
+        for col in worksheet.columns:
             max_len = 0
             col_letter = col[0].column_letter
             for cell in col:
                 max_len = max(
                     max_len, len(str(cell.value)) if cell.value is not None else 0
                 )
-            ws.column_dimensions[col_letter].width = min(max(max_len + 2, 12), 40)
+            worksheet.column_dimensions[col_letter].width = min(max(max_len + 2, 12), 40)
 
         slug = (
             re.sub(r"[^a-zA-Z0-9]+", "_", assignment.title).strip("_").lower()[:40]
@@ -2487,9 +2487,9 @@ class GenerateDescriptionsView(APIView):
         else:
             # Handle all images
             workspace_user = get_workspace_user(request)
-            ws = active_workspace_for(workspace_user)
+            workspace = active_workspace_for(workspace_user)
             images = ImageData.objects.filter(
-                workspace=ws, in_storyboard=True
+                workspace=workspace, in_storyboard=True
             ).select_related("media")
 
             count = 0
@@ -3215,14 +3215,14 @@ class DeleteScaffoldView(APIView):
     def post(self, request):
         try:
             workspace_user = get_workspace_user(request)
-            ws = active_workspace_for(workspace_user)
+            workspace = active_workspace_for(workspace_user)
             scaffold_id = request.data.get("scaffold_id")
 
             if scaffold_id:
                 # Delete a specific scaffold
                 try:
                     scaffold = ScaffoldData.objects.get(
-                        id=scaffold_id, user=workspace_user, workspace=ws
+                        id=scaffold_id, user=workspace_user, workspace=workspace
                     )
                 except ScaffoldData.DoesNotExist:
                     return Response(
@@ -3231,10 +3231,10 @@ class DeleteScaffoldView(APIView):
                     )
 
                 # Clear associations for items in this scaffold only
-                ImageData.objects.filter(workspace=ws, scaffold_id=scaffold).update(
+                ImageData.objects.filter(workspace=workspace, scaffold_id=scaffold).update(
                     scaffold_id=None, scaffold_group_number=None
                 )
-                GroupData.objects.filter(workspace=ws, scaffold_id=scaffold).update(
+                GroupData.objects.filter(workspace=workspace, scaffold_id=scaffold).update(
                     scaffold_id=None, scaffold_group_number=None
                 )
                 scaffold.delete()
@@ -3246,16 +3246,16 @@ class DeleteScaffoldView(APIView):
             else:
                 # Delete all scaffolds (backward compatible)
                 scaffolds = ScaffoldData.objects.filter(
-                    user=workspace_user, workspace=ws
+                    user=workspace_user, workspace=workspace
                 )
                 for scaffold in scaffolds:
                     scaffold.delete()
 
                 ImageData.objects.filter(
-                    workspace=ws, scaffold_id__isnull=False
+                    workspace=workspace, scaffold_id__isnull=False
                 ).update(scaffold_id=None, scaffold_group_number=None)
                 GroupData.objects.filter(
-                    workspace=ws, scaffold_id__isnull=False
+                    workspace=workspace, scaffold_id__isnull=False
                 ).update(scaffold_id=None, scaffold_group_number=None)
 
                 return Response(
