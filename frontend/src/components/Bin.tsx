@@ -36,7 +36,7 @@ function Bin({
 	}, [panOffset]);
 
 	// React DnD hook for drop functionality
-	const [{ isOver, canDrop }, drop] = useDrop(
+	const [, drop] = useDrop(
 		() => ({
 			accept: ["image", "group", "instructor_note"],
 			drop: (item: DragItem, monitor) => {
@@ -189,29 +189,14 @@ function Bin({
 		}
 	};
 
-	// Dynamic styling based on drop state
+	// Static bin styling
 	const getBinClasses = () => {
 		const overflowClass = scrollable ? "overflow-auto" : "overflow-hidden";
-		const baseClasses = `absolute inset-0 w-full h-full ${overflowClass} rounded-sm transition-colors duration-200 grid-background border border-dashed`;
-
-		if (isOver && canDrop) {
-			return `${baseClasses} bg-blue-50 border-blue-400`;
-		} else if (canDrop) {
-			return `${baseClasses} bg-grey-lightest border-grey-lightest`;
-		} else {
-			return `${baseClasses} bg-white border-grey-lightest`;
-		}
+		return `absolute inset-0 w-full h-full ${overflowClass} rounded-sm transition-colors duration-200 grid-background border border-dashed bg-white border-grey-lightest`;
 	};
 
 	return (
 		<div id={id} ref={dropRef} className={getBinClasses()} onContextMenu={handleContextMenu}>
-			{/* Drop zone indicator */}
-			{isOver && canDrop && (
-				<div className="absolute flex items-center justify-center bg-blue-100/75 rounded-lg border-2 border-dashed border-blue-400 z-[50] w-full h-full pointer-events-none">
-					<div className="text-blue-600 text-lg font-semibold">Drop image here</div>
-				</div>
-			)}
-
 			{/* Bin content - pannable and zoomable (no background — grid stays on outer div) */}
 			<div
 				ref={contentRef}

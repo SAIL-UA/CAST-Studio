@@ -12,6 +12,7 @@ import {
 	deleteScaffold,
 } from "../services/api";
 import { Trash2 } from "lucide-react";
+import { usePasteToCreateNote } from "../hooks/usePasteToCreateNote";
 
 // Import components
 import UploadButton from "./UploadButton";
@@ -108,6 +109,19 @@ const StoryBoard = ({
 
 	// References
 	const storyBinRef = useRef<HTMLDivElement>(null);
+
+	// Cmd+V / Ctrl+V anywhere on the page (outside editable targets) creates a
+	// sticky note pre-populated with the clipboard text at the mouse cursor.
+	// See hook source for the full contract (image paste ignored, 10K cap,
+	// readOnly disables it, session collaboration works via workspace_update).
+	usePasteToCreateNote({
+		readOnly,
+		targetUser,
+		workspaceRef: storyBinRef,
+		zoomLevel,
+		panOffset,
+		onCreated: fetchUserData,
+	});
 
 	// Compute the center of the visible viewport in content coordinates
 	const getVisibleCenter = () => {
@@ -1493,7 +1507,7 @@ const StoryBoard = ({
 					<input
 						type="range"
 						min={0.1}
-						max={1.2}
+						max={1.5}
 						step={0.01}
 						value={zoomLevel}
 						onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
@@ -1502,9 +1516,9 @@ const StoryBoard = ({
 					<button
 						className="text-sm font-medium px-1 hover:text-blue-600 disabled:opacity-30"
 						onClick={() =>
-							setZoomLevel((z) => Math.min(1.2, Math.round((z + 0.1) * 100) / 100))
+							setZoomLevel((z) => Math.min(1.5, Math.round((z + 0.1) * 100) / 100))
 						}
-						disabled={zoomLevel >= 1.2}
+						disabled={zoomLevel >= 1.5}
 					>
 						+
 					</button>

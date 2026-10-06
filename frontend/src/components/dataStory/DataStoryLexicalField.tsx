@@ -329,7 +329,11 @@ export function DataStoryLexicalField({
 	onMarkdownChange,
 	trackChanges,
 	placeholder = "Start typing…",
-	contentEditableClassName = "prose max-w-none min-h-[8rem] outline-none text-grey-darkest leading-relaxed text-base px-1 py-2",
+	// No inner px/py: the wrapper's p-4 provides all breathing room, and adding
+	// more here made the cursor sit below-and-right of the absolute-positioned
+	// placeholder text. With no inner padding, cursor and placeholder both anchor
+	// to (16px, 16px) from the wrapper edge.
+	contentEditableClassName = "prose max-w-none min-h-[8rem] outline-none text-grey-darkest leading-relaxed text-base",
 	"aria-label": ariaLabel,
 }: DataStoryLexicalFieldProps) {
 	const initialConfig = useMemo(
@@ -374,7 +378,7 @@ export function DataStoryLexicalField({
 							/>
 						}
 						placeholder={
-							<div className="pointer-events-none absolute top-2 left-1 text-sm text-grey-dark/60">
+							<div className="pointer-events-none absolute top-4 left-4 text-base text-grey-dark/60">
 								{placeholder}
 							</div>
 						}
