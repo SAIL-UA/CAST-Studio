@@ -243,17 +243,21 @@ const ViewWorkspace = () => {
 							<DropdownMenu.Trigger asChild>
 								<button className="flex items-center gap-2 bg-bama-crimson text-white text-sm rounded-full px-3 py-1 whitespace-nowrap shadow-lg hover:brightness-95 transition duration-200">
 									Viewing: {studentName}
-									<ChevronDown className="h-4 w-4" strokeWidth={1.5} aria-hidden />
+									<ChevronDown
+										className="h-4 w-4"
+										strokeWidth={1.5}
+										aria-hidden
+									/>
 								</button>
 							</DropdownMenu.Trigger>
 							<DropdownMenu.Portal>
 								<DropdownMenu.Content
-									className="mt-1 shadow-lg z-[500] bg-white rounded-lg py-1 min-w-[200px] max-h-[400px] overflow-y-auto"
+									className="mt-1 shadow-lg z-500 bg-white rounded-lg py-1 min-w-50 max-h-100 overflow-y-auto"
 									sideOffset={4}
 									align="start"
 								>
 									<DropdownMenu.Item
-										className="block w-full text-left text-sm !font-light text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
+										className="block w-full text-left text-sm font-light! text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none"
 										onSelect={() => navigate("/instructor")}
 									>
 										Back to Instructor View
@@ -265,7 +269,7 @@ const ViewWorkspace = () => {
 									{allUsers.map((user) => (
 										<DropdownMenu.Item
 											key={user.id}
-											className={`block w-full text-left text-sm !font-light text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none ${user.id === studentId ? "font-bold bg-grey-lighter" : ""}`}
+											className={`block w-full text-left text-sm font-light! text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none ${user.id === studentId ? "font-bold bg-grey-lighter" : ""}`}
 											onSelect={() => {
 												if (user.id !== studentId) {
 													navigate(`/workspace/${user.id}`);
@@ -291,12 +295,16 @@ const ViewWorkspace = () => {
 									<span className="text-xs text-grey-dark">
 										({submissions.length}/{submissionLimit})
 									</span>
-									<ChevronDown className="h-4 w-4" strokeWidth={1.5} aria-hidden />
+									<ChevronDown
+										className="h-4 w-4"
+										strokeWidth={1.5}
+										aria-hidden
+									/>
 								</button>
 							</DropdownMenu.Trigger>
 							<DropdownMenu.Portal>
 								<DropdownMenu.Content
-									className="mt-1 shadow-lg z-[500] bg-white rounded-lg py-1 min-w-[240px] max-h-[400px] overflow-y-auto"
+									className="mt-1 shadow-lg z-500 bg-white rounded-lg py-1 min-w-60 max-h-100 overflow-y-auto"
 									sideOffset={4}
 									align="start"
 								>
@@ -304,7 +312,7 @@ const ViewWorkspace = () => {
 										Canvas version
 									</DropdownMenu.Label>
 									<DropdownMenu.Item
-										className={`block w-full text-left text-sm !font-light text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none ${viewingLive ? "font-bold bg-grey-lighter" : ""}`}
+										className={`block w-full text-left text-sm font-light! text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none ${viewingLive ? "font-bold bg-grey-lighter" : ""}`}
 										onSelect={() => setSelectedSubmissionId(null)}
 									>
 										Live workspace
@@ -318,7 +326,7 @@ const ViewWorkspace = () => {
 									{submissions.map((sub) => (
 										<DropdownMenu.Item
 											key={sub.id}
-											className={`block w-full text-left text-sm !font-light text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none ${selectedSubmissionId === sub.id ? "font-bold bg-grey-lighter" : ""}`}
+											className={`block w-full text-left text-sm font-light! text-grey-darkest px-3 py-1.5 hover:bg-grey-lighter cursor-pointer outline-none ${selectedSubmissionId === sub.id ? "font-bold bg-grey-lighter" : ""}`}
 											onSelect={() => setSelectedSubmissionId(sub.id)}
 										>
 											<div>{formatSubmissionLabel(sub)}</div>
@@ -334,7 +342,7 @@ const ViewWorkspace = () => {
 						{viewingLive && (
 							<button
 								onClick={handleGiveFeedback}
-								className="bg-red-400 text-sm text-white rounded-full px-3 py-1 shadow-lg hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 whitespace-nowrap"
+								className="bg-red-400 text-sm text-white rounded-full px-3 py-1 shadow-lg hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 whitespace-nowrap"
 							>
 								Give Feedback
 							</button>
@@ -379,14 +387,17 @@ const ViewWorkspace = () => {
 			{leftMenuOpen && (
 				<>
 					<div
-						className="fixed inset-0 bg-black/30 z-[400]"
+						className="fixed inset-0 bg-black/30 z-400"
 						onClick={() => setLeftMenuOpen(false)}
 					/>
-					<div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto pt-8">
+					<div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-401 overflow-y-auto pt-8">
 						<CompactSidebar
 							setCenterNarrativePatternsOpen={() => setLeftMenuOpen(false)}
 						/>
-						<div id="footer" className="fixed bottom-[25px] w-1/5 flex flex-col justify-start items-start mb-6">
+						<div
+							id="footer"
+							className="fixed bottom-6.25 w-1/5 flex flex-col justify-start items-start mb-6"
+						>
 							<Footer />
 						</div>
 					</div>
@@ -409,12 +420,12 @@ const ViewWorkspace = () => {
 			</div>
 
 			<div
-				className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-1/2 z-[300] flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
-					dataStoriesExpanded ? "max-h-[75vh]" : "max-h-[32px]"
+				className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-1/2 z-300 flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
+					dataStoriesExpanded ? "max-h-[75vh]" : "max-h-8"
 				}`}
 			>
 				<button
-					className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 flex-shrink-0"
+					className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 shrink-0"
 					onClick={() => setDataStoriesExpanded(!dataStoriesExpanded)}
 				>
 					<ChevronUp

@@ -124,7 +124,7 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
 
 				<DropdownMenu.Portal>
 					<DropdownMenu.Content
-						className="mt-1 shadow-lg z-[400] bg-white rounded-lg py-2 w-[300px]"
+						className="mt-1 shadow-lg z-400 bg-white rounded-lg py-2 w-75"
 						sideOffset={4}
 						align="start"
 						onCloseAutoFocus={(e) => e.preventDefault()}

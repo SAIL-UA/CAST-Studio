@@ -95,7 +95,7 @@ const GenerateStoryButton = ({
 
 			<DropdownMenu.Portal>
 				<DropdownMenu.Content
-					className="mt-1 ml-1 shadow-lg z-[400] bg-white rounded-lg py-1 min-w-[200px]"
+					className="mt-1 ml-1 shadow-lg z-400 bg-white rounded-lg py-1 min-w-50"
 					sideOffset={4}
 					align="start"
 					onCloseAutoFocus={(e) => e.preventDefault()}

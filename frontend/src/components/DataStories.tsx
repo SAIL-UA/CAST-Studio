@@ -792,12 +792,7 @@ const DataStories = ({
 			<div
 				id="data-stories-content"
 				log-id="data-stories-content"
-				// min-h-[15rem] keeps the panel from shrinking when switching from the
-				// Story tab (which has the always-open editor with min-h-[8rem]) to
-				// the Reasoning tab (which is just a short message when no story
-				// has been generated yet). Both tabs now settle to at least the
-				// Story tab's initial height, so switching feels stable.
-				className="flex flex-col w-full rounded-sm p-4 bg-grey-lighter-2 min-h-[15rem]"
+				className="flex flex-col w-full rounded-sm p-4 bg-grey-lighter-2 min-h-60"
 				onScroll={handleScroll}
 			>
 				{narrativeSelected ? (

@@ -443,7 +443,7 @@ function DraggableCard({
 					log-id={"draggable-card"}
 					ref={cardRef}
 					onDragEnd={handleDragEnd}
-					className={`w-[162px] overflow-hidden rounded-lg shadow-md border border-grey-lightest ${
+					className={`w-40.5 overflow-hidden rounded-lg shadow-md border border-grey-lightest ${
 						image.source === "instructor"
 							? "bg-rose-50"
 							: image.filepath
@@ -534,7 +534,7 @@ function DraggableCard({
 							<img
 								src={imageUrl}
 								alt={image.id}
-								className="w-full h-[94px] object-cover"
+								className="w-full h-23.5 object-cover"
 							/>
 						</div>
 					)}

@@ -139,9 +139,7 @@ const Instructor = () => {
 				is_active: !assignment.is_active,
 			});
 			setAssignments((prev) => {
-				const updated = prev.map((a) =>
-					a.id === assignment.id ? result.assignment : a,
-				);
+				const updated = prev.map((a) => (a.id === assignment.id ? result.assignment : a));
 				if (result.assignment.is_active) {
 					return updated.map((a) =>
 						a.id === result.assignment.id ? a : { ...a, is_active: false },
@@ -330,7 +328,10 @@ const Instructor = () => {
 						<CompactSidebar
 							setCenterNarrativePatternsOpen={() => setLeftMenuOpen(false)}
 						/>
-						<div id="footer" className="fixed bottom-[25px] w-1/5 flex flex-col justify-start items-start mb-6">
+						<div
+							id="footer"
+							className="fixed bottom-6.25 w-1/5 flex flex-col justify-start items-start mb-6"
+						>
 							<Footer />
 						</div>
 					</div>
@@ -786,7 +787,9 @@ const Instructor = () => {
 															<button
 																type="button"
 																onClick={() => {
-																	setEditingAssignment(assignment);
+																	setEditingAssignment(
+																		assignment,
+																	);
 																	setAssignmentView("edit");
 																}}
 																className="bg-bama-crimson text-xs text-white rounded-full px-3 py-1 hover:brightness-95 transition duration-200"
