@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     libgl1 \
     libglib2.0-0 \
+    libreoffice-impress \
+    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements

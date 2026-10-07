@@ -12,14 +12,14 @@ type UploadButtonProps = {
 	targetUser?: string;
 };
 
-// Per-file size caps. Enforced client-side here (to give immediate feedback
-// and skip wasted upload attempts) AND server-side in UploadFigureView /
-// UploadSlidesView (defense-in-depth against scripted / bypassed requests).
-// Keep these in sync with the backend MAX_FILE_SIZE constants if you change them.
+// per file size caps, keep in sync with backend
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB per image
 const MAX_PPTX_BYTES = 20 * 1024 * 1024; // 20 MB per PPTX
+const MAX_SLIDES = 15; // Keep in sync with UploadSlidesView.MAX_SLIDES
 
-const isPptx = (f: File) => f.name.toLowerCase().endsWith(".pptx");
+const isPptx = (f: File) =>
+	f.name.toLowerCase().endsWith(".pptx") ||
+	f.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 const sizeLimitFor = (f: File) => (isPptx(f) ? MAX_PPTX_BYTES : MAX_IMAGE_BYTES);
 const fmtMB = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
 
@@ -49,7 +49,9 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 				if (f.size > sizeLimitFor(f)) {
 					const limitMB = sizeLimitFor(f) / (1024 * 1024);
 					rejected.push(
-						`${f.name} (${fmtMB(f.size)} MB — max ${limitMB} MB${isPptx(f) ? " for PPTX" : ""})`,
+						`${f.name} (${fmtMB(f.size)} MB — max ${limitMB} MB${
+							isPptx(f) ? ` for PPTX, ${MAX_SLIDES} slides` : ""
+						})`,
 					);
 				} else {
 					ok.push(f);
@@ -85,17 +87,19 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 			return;
 		}
 
-		// Check for PPTX files
-		const pptxFiles = selectedFiles.filter((f) => f.name.toLowerCase().endsWith(".pptx"));
-		const imageFiles = selectedFiles.filter((f) => !f.name.toLowerCase().endsWith(".pptx"));
+		const pptxFiles = selectedFiles.filter(isPptx);
+		const imageFiles = selectedFiles.filter((f) => !isPptx(f));
 
 		let successCount = 0;
-		let failCount = 0;
 		let figDataArr = [];
+		const failures: string[] = [];
+
+		const pptxLimitMsg = `Max ${MAX_SLIDES} slides and ${MAX_PPTX_BYTES / (1024 * 1024)} MB per PowerPoint file.`;
+		const imageLimitMsg = `Max ${MAX_IMAGE_BYTES / (1024 * 1024)} MB per image.`;
 
 		setIsSubmitting(true);
 		try {
-			// Handle PPTX files
+			// Route PPTX files to the slides endpoint
 			for (const file of pptxFiles) {
 				try {
 					const result = await uploadSlides(file);
@@ -110,13 +114,11 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 						err?.response?.status,
 						err?.response?.data || err,
 					);
-					const msg = err?.response?.data?.message || "Slide upload failed";
-					showAlert({ level: "error", message: msg });
-					failCount++;
+					failures.push(`• ${file.name} — ${pptxLimitMsg}`);
 				}
 			}
 
-			// Handle image files
+			// Route image files to the figure endpoint
 			for (const file of imageFiles) {
 				const formData = new FormData();
 				formData.append("figure", file, file.name);
@@ -134,7 +136,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 						err?.response?.status,
 						err?.response?.data || err,
 					);
-					failCount++;
+					failures.push(`• ${file.name} — ${imageLimitMsg}`);
 				}
 			}
 
@@ -145,16 +147,17 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 				);
 			}
 
-			if (failCount === 0) {
-				const slideCount = pptxFiles.length > 0 ? " (including slides)" : "";
+			if (failures.length === 0) {
 				showAlert({
 					level: "success",
-					message: `${successCount} item(s) uploaded successfully${slideCount}.`,
+					message: `${successCount} item(s) uploaded successfully.`,
 				});
 			} else {
 				showAlert({
 					level: "warning",
-					message: `Upload complete: ${successCount} succeeded, ${failCount} failed.`,
+					message:
+						`Upload complete: ${successCount} succeeded, ${failures.length} failed.\n\n` +
+						failures.join("\n"),
 				});
 			}
 
@@ -263,7 +266,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 
 			<ConfirmModal
 				open={showModal}
-				title="Upload Images"
+				title="Upload Visuals"
 				onClose={handleCancel}
 				onConfirm={handleSubmit}
 				confirmLabel={isSubmitting ? "Uploading…" : "Upload"}
@@ -311,7 +314,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 
 			<input
 				type="file"
-				accept=".png,.jpg,.jpeg,.gif,.webp,.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+				accept="image/*,.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
 				multiple
 				ref={fileInputRef}
 				onChange={handleFileChange}

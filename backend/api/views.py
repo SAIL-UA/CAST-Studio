@@ -543,7 +543,11 @@ class UploadSlidesView(APIView):
         if slides_file.size > self.MAX_FILE_SIZE:
             return Response(
                 {
-                    "message": f"'{slides_file.name}' is {slides_file.size // (1024*1024)} MB. Max per PPTX is {self.MAX_FILE_SIZE // (1024*1024)} MB."
+                    "message": (
+                        f"'{slides_file.name}' is {slides_file.size // (1024*1024)} MB. "
+                        f"Max per PPTX is {self.MAX_FILE_SIZE // (1024*1024)} MB "
+                        f"and {self.MAX_SLIDES} slides."
+                    )
                 },
                 status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             )
@@ -632,8 +636,17 @@ class UploadSlidesView(APIView):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
-                # Limit to MAX_SLIDES
-                png_files = png_files[: self.MAX_SLIDES]
+                total_slides = len(png_files)
+                if total_slides > self.MAX_SLIDES:
+                    return Response(
+                        {
+                            "message": (
+                                f"This presentation has {total_slides} slides. "
+                                f"Maximum is {self.MAX_SLIDES} slides per upload."
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
                 workspace = active_workspace_for(workspace_user)
                 user_images = ImageData.objects.filter(workspace=workspace)
@@ -685,9 +698,7 @@ class UploadSlidesView(APIView):
                     {
                         "message": f"Successfully imported {len(created_images)} slides",
                         "slides": created_images,
-                        "total_slides_in_file": len(
-                            glob_module.glob(os.path.join(output_dir, "*.png"))
-                        ),
+                        "total_slides_in_file": total_slides,
                     },
                     status=status.HTTP_200_OK,
                 )
