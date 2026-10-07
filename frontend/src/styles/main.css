@@ -10,6 +10,8 @@
 	--color-transparent: transparent;
 	--color-bama-crimson: #005c84;
 	--color-bama-burgundy: #05648d;
+	--color-bama-teal: #00849e;
+	--color-submit-green: rgb(63, 157, 97);
 	--color-black: #22292f;
 	--color-grey-darkest: #3d4852;
 	--color-grey-darker: #606f7b;
@@ -28,6 +30,8 @@
 	--color-indigo-lighter: #b2b7ff;
 	--color-indigo-lightest: #e6e8ff;
 	--font-roboto: Roboto, sans-serif;
+	--text-tiny: 0.5rem;
+	--text-somewhat-tiny: 0.7rem;
 	--breakpoint-min-sm: 576px;
 	--breakpoint-min-md: 768px;
 	--breakpoint-min-lg: 992px;
@@ -73,10 +77,6 @@ body {
 	font-weight: 700;
 }
 
-.text-tiny {
-	font-size: 0.5rem;
-}
-
 /* On-load text highlight — ported from Codrops OnScrollTextHighlight (hx-5).
    Each character fades + scales in with a stagger; a rounded rectangle behind
    the word scales up simultaneously. Consumed by <HighlightWord>. */
@@ -115,7 +115,7 @@ body {
 	bottom: -7.5%;
 	width: 105%;
 	z-index: -1;
-	background: #00849e;
+	background: var(--color-bama-teal);
 	border-radius: 8px;
 	transform: scale(0);
 	animation: hx5-after-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -324,32 +324,6 @@ body {
 	}
 }
 
-.text-somewhat-tiny {
-	font-size: 0.7rem;
-}
-
-.text-somewhat-tiny-bold {
-	font-size: 0.7rem;
-	font-weight: 500;
-}
-
-.text-tiny-bold {
-	font-size: 0.6rem;
-	font-weight: 500;
-}
-
-.card-width {
-	width: 162px;
-}
-
-.image-height {
-	height: 94px;
-}
-
-#data-stories-content {
-	background-color: #eaf1f7;
-}
-
 .grid-background {
 	background:
 		linear-gradient(-90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
@@ -385,91 +359,6 @@ body {
 			width 0.3s ease,
 			left 0.3s ease;
 		transform: translateX(-50%);
-	}
-
-	#story-bin-header {
-		border-bottom-width: 0px;
-	}
-
-	#footer {
-		position: fixed;
-		bottom: 25px;
-		width: 20%;
-	}
-
-	#story-bin-wrapper {
-		height: 500px;
-	}
-
-	#nav-dropdown {
-		position: fixed;
-		top: 70px;
-	}
-
-	#home-search-bar {
-		padding-top: 6px;
-	}
-
-	#upload-button {
-		font-size: 0.75rem;
-	}
-
-	#group-button {
-		font-size: 0.75rem;
-	}
-
-	#generate-story-button {
-		font-size: 0.75rem;
-	}
-
-	#craft-story-button {
-		font-size: 0.75rem;
-	}
-
-	#select-narrative-button {
-		font-size: 0.75rem;
-	}
-
-	#annotate-visuals-button {
-		font-size: 0.75rem;
-	}
-
-	#export-button {
-		font-size: 0.75rem;
-	}
-
-	#edit-story-button,
-	#save-story-button,
-	#cancel-edit-story-button {
-		font-size: 0.75rem;
-	}
-
-	#feedback-button {
-		font-size: 0.75rem;
-	}
-
-	#collaborate-button {
-		font-size: 0.75rem;
-	}
-
-	#submit-button {
-		font-size: 0.75rem;
-	}
-
-	#home-search-icon {
-		padding-left: 5px;
-	}
-
-	#right-top {
-		padding-top: 20px;
-	}
-
-	#submit-button {
-		background-color: rgb(63, 157, 97);
-	}
-
-	#feedback-button {
-		background-color: rgb(226, 109, 109);
 	}
 
 	.underline-animate:hover::after,

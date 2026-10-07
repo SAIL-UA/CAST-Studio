@@ -28,6 +28,7 @@ import { useResearchQuestions } from "@/contexts/ResearchQuestions";
 import ExportButton from "@/components/ExportButton";
 import SubmitButton from "@/components/SubmitButton";
 import { DataStoryLexicalField } from "@/components/dataStory/DataStoryLexicalField";
+import { toolbarBtnBase } from "@/styles/toolbarButtonClasses";
 
 // Story data interface
 interface StoryData {
@@ -91,10 +92,8 @@ type DataStoriesProps = {
 //   - Cancel opts back into a visible border via the secondary variant so it
 //     stays distinguishable as a secondary action.
 const storyActionButton =
-	"flex items-center whitespace-nowrap shrink-0 text-sm " +
-	"rounded-t-2xl rounded-b-2xl px-3 py-1 hover:-translate-y-[.05rem] hover:shadow-lg " +
-	"hover:brightness-95 transition duration-200 disabled:opacity-50 " +
-	"disabled:cursor-not-allowed disabled:hover:translate-y-0";
+	`flex items-center whitespace-nowrap shrink-0 ${toolbarBtnBase} ` +
+	"rounded-t-2xl rounded-b-2xl px-3 py-1 disabled:hover:translate-y-0";
 const storyActionPrimary = `${storyActionButton} bg-bama-crimson text-white`;
 const storyActionSecondary = `${storyActionButton} bg-grey-lightest text-grey-darkest border border-grey-light`;
 

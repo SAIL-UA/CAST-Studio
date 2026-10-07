@@ -7,6 +7,7 @@ import { aiGroupImages } from '@/services/api';
 import { useTaskProgress } from '@/hooks/useTaskProgress';
 import { useGuestTourOpen } from '@/utils/useGuestTourOpen';
 import { Share2, ChevronDown, ChevronRight } from 'lucide-react';
+import { toolbarBtnRound } from '@/styles/toolbarButtonClasses';
 
 interface GroupButtonProps {
     onClick?: () => Promise<GroupData | undefined>;
@@ -86,7 +87,7 @@ const GroupButton = ({ onClick, onGroupComplete, onError, images = [] }: GroupBu
             <DropdownMenu.Trigger asChild disabled={isLoading}>
                 <button id="group-button"
                     data-tour-target="group"
-                    className="relative overflow-hidden bg-bama-crimson text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:cursor-not-allowed"
+                    className={`relative overflow-hidden bg-bama-crimson text-white ${toolbarBtnRound}`}
                     style={isLoading ? { backgroundColor: '#005c8466' } : undefined}
                     disabled={isLoading}
                 >
