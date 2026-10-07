@@ -88,11 +88,12 @@ const ClearAllButton = ({
 				}
 			}
 
-			// Move all images to recycle bin (set in_storyboard to false)
+			// Move active-workspace images to recycle bin (skip ones already recycled)
 			let successCount = 0;
 			let failCount = 0;
+			const activeImages = images.filter((img) => img.in_storyboard);
 
-			for (const image of images) {
+			for (const image of activeImages) {
 				try {
 					await updateImageData(image.id, { in_storyboard: false });
 					successCount++;
@@ -141,9 +142,8 @@ const ClearAllButton = ({
 		}
 	};
 
-	// Count total items
-	const totalImages = images.length;
-	const imageCount = totalImages > 0 ? totalImages : 0;
+	// Only count images still on the workspace (not already in recycle bin)
+	const imageCount = images.filter((img) => img.in_storyboard).length;
 
 	return (
 		<>
