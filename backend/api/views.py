@@ -674,7 +674,7 @@ class UploadSlidesView(APIView):
                         user=workspace_user,
                         workspace=workspace,
                         media=media,
-                        short_desc=f"{slide_num}",
+                        short_desc=f"Visual {next_index + 1}",
                         long_desc="",
                         source="pptx",
                         in_storyboard=True,

@@ -12,15 +12,23 @@ type UploadButtonProps = {
 	targetUser?: string;
 };
 
-// per file size caps, keep in sync with backend
+// Size / type caps, keep in sync with UploadFigureView / UploadSlidesView
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB per image
 const MAX_PPTX_BYTES = 20 * 1024 * 1024; // 20 MB per PPTX
-const MAX_SLIDES = 15; // Keep in sync with UploadSlidesView.MAX_SLIDES
+const MAX_SLIDES = 15;
+const ALLOWED_IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
+// Soft picker filter; handleFileChange enforces the same set as the backend.
+const FILE_ACCEPT =
+	".png,.jpg,.jpeg,.gif,.webp,.pptx," +
+	"image/png,image/jpeg,image/gif,image/webp," +
+	"application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
-const isPptx = (f: File) =>
-	f.name.toLowerCase().endsWith(".pptx") ||
-	f.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-const sizeLimitFor = (f: File) => (isPptx(f) ? MAX_PPTX_BYTES : MAX_IMAGE_BYTES);
+const fileExt = (name: string) => {
+	const i = name.lastIndexOf(".");
+	return i >= 0 ? name.slice(i).toLowerCase() : "";
+};
+const isPptx = (f: File) => fileExt(f.name) === ".pptx";
+const isAllowedImage = (f: File) => ALLOWED_IMAGE_EXTS.has(fileExt(f.name));
 const fmtMB = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
 
 // Upload button component
@@ -32,13 +40,9 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 	// Selected files state
 	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 	const [showModal, setShowModal] = useState<boolean>(false);
-	// True while a submit is in flight — used to disable the Upload button and
-	// prevent double-submits from a second click before the first finishes.
 	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-	// Handle file selection (does not upload yet). Filters out oversized files
-	// right at selection so users see the rejection immediately instead of after
-	// clicking Upload.
+	// Filter bad files so users see errors right away instead of after upload
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const files = e.target.files;
 		if (files && files.length > 0) {
@@ -46,12 +50,21 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 			const ok: File[] = [];
 			const rejected: string[] = [];
 			for (const f of incoming) {
-				if (f.size > sizeLimitFor(f)) {
-					const limitMB = sizeLimitFor(f) / (1024 * 1024);
+				if (isPptx(f)) {
+					if (f.size > MAX_PPTX_BYTES) {
+						rejected.push(
+							`${f.name} (${fmtMB(f.size)} MB — max ${MAX_PPTX_BYTES / (1024 * 1024)} MB for PPTX, ${MAX_SLIDES} slides)`,
+						);
+					} else {
+						ok.push(f);
+					}
+				} else if (!isAllowedImage(f)) {
 					rejected.push(
-						`${f.name} (${fmtMB(f.size)} MB — max ${limitMB} MB${
-							isPptx(f) ? ` for PPTX, ${MAX_SLIDES} slides` : ""
-						})`,
+						`${f.name} — unsupported type (use PNG, JPG, JPEG, GIF, WebP, or PPTX)`,
+					);
+				} else if (f.size > MAX_IMAGE_BYTES) {
+					rejected.push(
+						`${f.name} (${fmtMB(f.size)} MB — max ${MAX_IMAGE_BYTES / (1024 * 1024)} MB per image)`,
 					);
 				} else {
 					ok.push(f);
@@ -62,7 +75,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 				showAlert({
 					level: "warning",
 					message:
-						`The following file${rejected.length === 1 ? " was" : "s were"} too large and skipped:\n\n` +
+						`The following file${rejected.length === 1 ? " was" : "s were"} skipped:\n\n` +
 						rejected.map((r) => `• ${r}`).join("\n"),
 				});
 			}
@@ -78,9 +91,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 
 	// Handle actual upload on submit
 	const handleSubmit = async () => {
-		// Guard against a second click while the first submit is still in flight.
-		// Even with the button disabled, a fast double-click can slip through
-		// during the render tick between click and disabled-attr application.
+		// Guard against double click bouncing
 		if (isSubmitting) return;
 		if (selectedFiles.length === 0) {
 			showAlert({ level: "warning", message: "Please select at least one file first." });
@@ -314,7 +325,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 
 			<input
 				type="file"
-				accept="image/*,.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+				accept={FILE_ACCEPT}
 				multiple
 				ref={fileInputRef}
 				onChange={handleFileChange}
