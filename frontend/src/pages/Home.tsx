@@ -551,7 +551,7 @@ const Home = () => {
 							/>
 							<div
 								id="footer"
-								className="flex flex-col justify-start items-start mb-6"
+								className="fixed bottom-[25px] w-1/5 flex flex-col justify-start items-start mb-6"
 							>
 								<Footer />
 							</div>

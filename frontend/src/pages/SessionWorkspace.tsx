@@ -353,7 +353,7 @@ const SessionWorkspace = () => {
 			/>
 
 			{/* Session info — under the pill */}
-			<div className="fixed top-16 left-3 z-[350] flex items-center gap-2">
+			<div className="fixed top-16 left-3 z-350 flex items-center gap-2">
 				<span className="bg-bama-crimson text-white text-xs rounded-full px-3 py-1 whitespace-nowrap shadow-sm">
 					{controlledBy === userId
 						? `Controlling ${hostName}'s Workspace`
@@ -404,14 +404,17 @@ const SessionWorkspace = () => {
 			{leftMenuOpen && (
 				<>
 					<div
-						className="fixed inset-0 bg-black/30 z-[400]"
+						className="fixed inset-0 bg-black/30 z-400"
 						onClick={() => setLeftMenuOpen(false)}
 					/>
-					<div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-[401] overflow-y-auto pt-8">
+					<div className="fixed top-0 left-0 bottom-0 w-1/5 min-w-[320px] bg-grey-lighter-2 shadow-xl z-401 overflow-y-auto pt-8">
 						<CompactSidebar
 							setCenterNarrativePatternsOpen={() => setLeftMenuOpen(false)}
 						/>
-						<div id="footer" className="flex flex-col justify-start items-start mb-6">
+						<div
+							id="footer"
+							className="fixed bottom-6.25 w-1/5 flex flex-col justify-start items-start mb-6"
+						>
 							<Footer />
 						</div>
 					</div>
@@ -433,12 +436,12 @@ const SessionWorkspace = () => {
 
 			{/* DataStories — bottom-anchored overlay */}
 			<div
-				className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-1/2 z-[300] flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
-					dataStoriesExpanded ? "max-h-[75vh]" : "max-h-[32px]"
+				className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-1/2 z-300 flex flex-col bg-bama-crimson rounded-t-xl shadow-2xl transition-all duration-300 ${
+					dataStoriesExpanded ? "max-h-[75vh]" : "max-h-8"
 				}`}
 			>
 				<button
-					className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 flex-shrink-0"
+					className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-white hover:brightness-110 rounded-t-xl transition-colors duration-150 shrink-0"
 					onClick={() => setDataStoriesExpanded(!dataStoriesExpanded)}
 				>
 					<ChevronUp
@@ -467,8 +470,8 @@ const SessionWorkspace = () => {
 			</div>
 
 			{/* Assignment + Research Questions — shared left rail, tabs stacked flush */}
-			<div className="fixed top-[55%] -translate-y-1/2 left-0 z-[300] flex flex-row items-start transition-all duration-300">
-				<div className="flex flex-col gap-0.5 flex-shrink-0 shadow-lg rounded-r-xl overflow-hidden">
+			<div className="fixed top-[55%] -translate-y-1/2 left-0 z-300 flex flex-row items-start transition-all duration-300">
+				<div className="flex flex-col gap-0.5 shrink-0 shadow-lg rounded-r-xl overflow-hidden">
 					<button
 						id="assignment-toggle"
 						log-id="assignment-criteria-toggle"
@@ -500,7 +503,7 @@ const SessionWorkspace = () => {
 				</div>
 				<div
 					className={`rounded-r-xl h-[65dvh] overflow-y-auto shadow-2xl transition-all duration-300 ${
-						assignmentExpanded || rqExpanded ? "w-[374px] opacity-100" : "w-0 opacity-0"
+						assignmentExpanded || rqExpanded ? "w-93.5 opacity-100" : "w-0 opacity-0"
 					}`}
 				>
 					<div className="h-full bg-grey-lighter-2">
@@ -521,11 +524,11 @@ const SessionWorkspace = () => {
 			</div>
 
 			{/* Feedback — right-anchored collapsible panel */}
-			<div className="fixed top-[55%] -translate-y-1/2 right-0 z-[300] flex flex-row-reverse items-start transition-all duration-300">
+			<div className="fixed top-[55%] -translate-y-1/2 right-0 z-300 flex flex-row-reverse items-start transition-all duration-300">
 				<button
 					title={feedbackExpanded ? "Collapse Feedback" : "Expand Feedback"}
 					aria-label={feedbackExpanded ? "Collapse Feedback" : "Expand Feedback"}
-					className="flex flex-col items-center justify-center bg-bama-crimson text-white hover:brightness-110 rounded-l-xl transition-colors duration-150 flex-shrink-0 px-2 py-3 shadow-lg"
+					className="flex flex-col items-center justify-center bg-bama-crimson text-white hover:brightness-110 rounded-l-xl transition-colors duration-150 shrink-0 px-2 py-3 shadow-lg"
 					onClick={() => setFeedbackExpanded(!feedbackExpanded)}
 				>
 					<MessageSquare className="w-4 h-4" strokeWidth={1.5} aria-hidden />

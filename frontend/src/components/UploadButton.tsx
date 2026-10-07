@@ -6,6 +6,7 @@ import { useAlert } from "@/contexts/Alert";
 import { logAction } from "@/utils/userActionLogger";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Plus, ChevronDown, X } from "lucide-react";
+import { toolbarBtnPill } from "@/styles/toolbarButtonClasses";
 
 type UploadButtonProps = {
 	onUploaded?: () => void | Promise<void>;
@@ -230,7 +231,7 @@ const UploadButton = ({ onUploaded, targetUser }: UploadButtonProps) => {
 					<button
 						id="upload-button"
 						data-tour-target="create-button"
-						className="bg-bama-crimson text-sm text-white rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+						className={`bg-bama-crimson text-white ${toolbarBtnPill}`}
 					>
 						<span className="flex items-center justify-center gap-2">
 							<Plus className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden />

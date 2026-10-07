@@ -8,6 +8,7 @@ import { useAlert } from "@/contexts/Alert";
 import { useGuestTourOpen } from "@/utils/useGuestTourOpen";
 import type { ImageData } from "@/types/types";
 import { Pencil, ChevronDown, ChevronRight } from "lucide-react";
+import { toolbarBtnPill } from "@/styles/toolbarButtonClasses";
 
 // Legacy placeholder text — kept for backward compatibility with existing images
 const DESCRIPTION_PLACEHOLDER = "Ask AI to create a description for this visual.";
@@ -192,7 +193,7 @@ const AnnotateVisualsButton = ({
 					id="annotate-visuals-button"
 					log-id="annotate-visuals-button"
 					data-tour-target="annotate"
-					className="relative overflow-hidden flex items-center text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+					className={`relative overflow-hidden flex items-center text-white ${toolbarBtnPill}`}
 					style={{ backgroundColor: bgColor }}
 					disabled={isDisabled}
 				>

@@ -22,6 +22,7 @@ import {
 // Import types
 import type { ImageData, ScaffoldData } from "@/types/types";
 import { Play, ChevronDown } from "lucide-react";
+import { toolbarBtnPill } from "@/styles/toolbarButtonClasses";
 const DESCRIPTION_PLACEHOLDER = "Ask AI to create a description for this visual.";
 
 // Props interface
@@ -512,7 +513,7 @@ const CraftStoryButton = ({
 							id="craft-story-button"
 							log-id="craft-story-button"
 							data-tour-target="story"
-							className="relative overflow-hidden flex items-center text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+							className={`relative overflow-hidden flex items-center text-white ${toolbarBtnPill}`}
 							style={{ backgroundColor: storyLoading ? "#348b9466" : "#348b94" }}
 							disabled={storyLoading}
 						>
@@ -573,7 +574,7 @@ const CraftStoryButton = ({
 					id="craft-story-button"
 					log-id="craft-story-button"
 					data-tour-target="story"
-					className="relative overflow-hidden flex items-center text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+					className={`relative overflow-hidden flex items-center text-white ${toolbarBtnPill}`}
 					style={{ backgroundColor: storyLoading ? "#348b9466" : "#348b94" }}
 					disabled={storyLoading}
 					onClick={handleCraft}

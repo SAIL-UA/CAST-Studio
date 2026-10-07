@@ -3,6 +3,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { createSubmission, getSubmissionStatus } from "@/services/api";
 import { logAction } from "@/utils/userActionLogger";
 import { useAlert } from "@/contexts/Alert";
+import { toolbarBtnRound } from "@/styles/toolbarButtonClasses";
 
 type SubmitButtonProps = {
 	disabled?: boolean;
@@ -114,10 +115,10 @@ const SubmitButton = ({ disabled = false }: SubmitButtonProps) => {
 				disabled={disabled || busy || !hasActiveAssignment || atCap}
 				title={titleHint}
 				onClick={openConfirm}
-				className={`text-sm text-white rounded-full px-3 py-1 mx-1 transition duration-200 ${
+				className={`text-white ${toolbarBtnRound} ${
 					disabled || busy || !hasActiveAssignment || atCap
-						? "bg-green-600/50 cursor-not-allowed"
-						: "bg-green-600 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95"
+						? "bg-submit-green/50 cursor-not-allowed"
+						: "bg-submit-green"
 				}`}
 			>
 				{busy ? "Submitting..." : "Submit"}

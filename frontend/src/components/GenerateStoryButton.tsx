@@ -5,6 +5,7 @@ import { logAction } from "@/utils/userActionLogger";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useGuestTourOpen } from "@/utils/useGuestTourOpen";
 import { Rows2, ChevronDown, Check } from "lucide-react";
+import { toolbarBtnPill } from "@/styles/toolbarButtonClasses";
 
 type GenerateStoryButtonProps = {
 	setRightNarrativePatternsOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -81,7 +82,7 @@ const GenerateStoryButton = ({
 				<button
 					id="select-narrative-button"
 					data-tour-target="narrative"
-					className="flex items-center whitespace-nowrap bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+					className={`flex items-center whitespace-nowrap bg-bama-crimson text-white ${toolbarBtnPill}`}
 					disabled={storyLoading}
 				>
 					<span className="flex items-center justify-center gap-2">

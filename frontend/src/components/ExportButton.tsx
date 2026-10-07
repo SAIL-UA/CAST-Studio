@@ -5,6 +5,7 @@ import { exportStory } from "@/services/api";
 import { useAlert } from "@/contexts/Alert";
 import { logAction, captureActionContext } from "@/utils/userActionLogger";
 import { ChevronDown } from "lucide-react";
+import { toolbarBtnBase } from "@/styles/toolbarButtonClasses";
 
 // Import types
 import type { StoryDataRaw } from "@/types/types";
@@ -62,7 +63,7 @@ const ExportButton = ({ storyData }: ExportButtonProps) => {
 				<button
 					id="export-button"
 					log-id="export-button"
-					className="flex items-center bg-bama-crimson text-white text-sm rounded-t-2xl rounded-b-2xl px-3 py-1 hover:translate-y-[-0.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+					className={`flex items-center bg-bama-crimson text-white ${toolbarBtnBase} rounded-t-2xl rounded-b-2xl px-3 py-1`}
 				>
 					<span className="flex items-center justify-center gap-2">
 						Export

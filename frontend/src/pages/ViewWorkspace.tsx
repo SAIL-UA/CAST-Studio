@@ -386,7 +386,7 @@ const ViewWorkspace = () => {
 						<CompactSidebar
 							setCenterNarrativePatternsOpen={() => setLeftMenuOpen(false)}
 						/>
-						<div id="footer" className="flex flex-col justify-start items-start mb-6">
+						<div id="footer" className="fixed bottom-[25px] w-1/5 flex flex-col justify-start items-start mb-6">
 							<Footer />
 						</div>
 					</div>

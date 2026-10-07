@@ -5,6 +5,7 @@ import { useAlert } from "@/contexts/Alert";
 import { logAction } from "@/utils/userActionLogger";
 import { useNavigate } from "react-router-dom";
 import { Link, ChevronDown } from "lucide-react";
+import { toolbarBtnPill } from "@/styles/toolbarButtonClasses";
 
 type CollaborateButtonProps = {
 	onSessionChange?: (shareToken: string | null) => void;
@@ -111,7 +112,7 @@ const CollaborateButton = ({ onSessionChange }: CollaborateButtonProps) => {
 				<DropdownMenu.Trigger asChild>
 					<button
 						id="collaborate-button"
-						className="bg-bama-crimson text-sm text-white rounded-t-2xl rounded-b-2xl px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200"
+						className={`bg-bama-crimson text-white ${toolbarBtnPill}`}
 					>
 						<span className="flex items-center justify-center gap-2">
 							<Link className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden />

@@ -1,4 +1,5 @@
 import React from 'react';
+import { toolbarBtnRound } from '@/styles/toolbarButtonClasses';
 
 type ProgressButtonProps = {
     progress: number;
@@ -32,7 +33,7 @@ const ProgressButton = ({
         <button
             id={id}
             log-id={logId}
-            className={`relative overflow-hidden text-sm text-white rounded-full px-3 py-1 mx-1 hover:-translate-y-[.05rem] hover:shadow-lg hover:brightness-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+            className={`relative overflow-hidden text-white ${toolbarBtnRound} ${className}`}
             style={{ backgroundColor: baseColor }}
             disabled={disabled}
             onClick={onClick}

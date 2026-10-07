@@ -759,7 +759,7 @@ const StoryBoard = ({
 		<div id="story-board-container" className="flex flex-col h-full w-full bg-white">
 			<div
 				id="story-bin-header"
-				className={`flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-76.25 shrink-0 grid-background ${hideToolbar ? "min-h-14.5" : ""}`}
+				className={`flex w-full flex-0 items-center justify-start pt-5 pb-2 pl-76.25 shrink-0 border-b-0 grid-background ${hideToolbar ? "min-h-14.5" : ""}`}
 			>
 				{!hideToolbar && (
 					<div
